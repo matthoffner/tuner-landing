@@ -5,27 +5,43 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Tuner — Hoffner Systems</title>
     <style>
-      :root{--bg:#0d140d;--panel:#122012;--line:#2d5a2d;--text:#d9ffd9;--muted:#b2e8b2}
-      body{margin:0;font-family:Menlo,Consolas,monospace;background:var(--bg);color:var(--text)}
-      .wrap{max-width:900px;margin:0 auto;padding:24px}
-      .term{border:1px solid var(--line);background:var(--panel)}
-      .top{display:flex;justify-content:space-between;padding:8px 12px;border-bottom:1px solid var(--line);color:var(--muted);font-size:12px}
-      .body{padding:16px}
-      h1{margin:8px 0 12px;line-height:1.2}
-      p{color:var(--muted);line-height:1.55}
-      a{color:var(--text)}
+      :root{--bg:#fffaf4;--ink:#1f170f;--muted:#5c4a3b;--accent:#c46b16;--line:#e7c7a8}
+      *{box-sizing:border-box} body{margin:0;font-family:Georgia,ui-serif,serif;background:linear-gradient(180deg,#fffaf4,#fff3e7);color:var(--ink)}
+      .wrap{max-width:980px;margin:0 auto;padding:38px 22px 64px}
+      .tag{display:inline-block;border:1px solid var(--line);padding:6px 10px;border-radius:4px;color:var(--muted);font-size:12px;letter-spacing:.09em;text-transform:uppercase;background:#fff}
+      h1{font-size:clamp(2.1rem,5vw,3.9rem);line-height:1.08;margin:16px 0}
+      p{line-height:1.7;color:var(--muted);max-width:72ch}
+      .split{display:grid;grid-template-columns:1.2fr .8fr;gap:16px;margin-top:22px}
+      .panel{border:1px solid var(--line);background:#fff;padding:16px}
+      ul{margin:0;padding-left:18px;line-height:1.7;color:var(--muted)}
+      .cta{display:inline-block;margin-top:18px;padding:11px 14px;background:var(--accent);color:#fff;text-decoration:none;border-radius:2px}
+      @media (max-width:780px){.split{grid-template-columns:1fr}}
     </style>
   </head>
   <body>
     <main class="wrap">
-      <section class="term">
-        <div class="top"><span>HOFFNER SYSTEMS</span><span>LIVE</span></div>
-        <div class="body">
-          <p>$ initializing product page...</p>
-          <h1>Tuner</h1>
-          <p>Domain fine-tuning + local inference on-prem or cloud. Build your moat with domain data.</p>
-        </div>
+      <span class="tag">Tuner • Domain Model Performance</span>
+      <h1>Turn proprietary data into model advantage.</h1>
+      <p>Tuner is your domain tuning pipeline: ingest, clean, label, train, evaluate, and deploy local inference models on-prem or in cloud. Keep privacy, improve outcomes, and compound your data moat.</p>
+      <section class="split">
+        <article class="panel">
+          <h3>What makes it different</h3>
+          <ul>
+            <li>Built for regulated and private data environments</li>
+            <li>Local inference paths for cost and control</li>
+            <li>Evaluation-first workflow tied to business metrics</li>
+          </ul>
+        </article>
+        <article class="panel">
+          <h3>Best fit teams</h3>
+          <ul>
+            <li>Support ops with repetitive domain workflows</li>
+            <li>Knowledge-heavy vertical products</li>
+            <li>Teams replacing generic-model drift</li>
+          </ul>
+        </article>
       </section>
+      <a class="cta" href="mailto:matt@hoffnersystems.com?subject=Tuner%20Assessment">Request Tuner Assessment</a>
     </main>
   </body>
 </html>
