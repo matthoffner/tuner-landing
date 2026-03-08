@@ -3,45 +3,45 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Tuner — Hoffner Systems</title>
+    <title>Tuner — Domain Model Advantage</title>
     <style>
-      :root{--bg:#fffaf4;--ink:#1f170f;--muted:#5c4a3b;--accent:#c46b16;--line:#e7c7a8}
-      *{box-sizing:border-box} body{margin:0;font-family:Georgia,ui-serif,serif;background:linear-gradient(180deg,#fffaf4,#fff3e7);color:var(--ink)}
-      .wrap{max-width:980px;margin:0 auto;padding:38px 22px 64px}
-      .tag{display:inline-block;border:1px solid var(--line);padding:6px 10px;border-radius:4px;color:var(--muted);font-size:12px;letter-spacing:.09em;text-transform:uppercase;background:#fff}
-      h1{font-size:clamp(2.1rem,5vw,3.9rem);line-height:1.08;margin:16px 0}
-      p{line-height:1.7;color:var(--muted);max-width:72ch}
-      .split{display:grid;grid-template-columns:1.2fr .8fr;gap:16px;margin-top:22px}
-      .panel{border:1px solid var(--line);background:#fff;padding:16px}
-      ul{margin:0;padding-left:18px;line-height:1.7;color:var(--muted)}
-      .cta{display:inline-block;margin-top:18px;padding:11px 14px;background:var(--accent);color:#fff;text-decoration:none;border-radius:2px}
-      @media (max-width:780px){.split{grid-template-columns:1fr}}
+      :root{--bg:#fcfaf6;--ink:#13100d;--muted:#5f5448;--line:#e7d8c8;--accent:#b85e17}
+      *{box-sizing:border-box} html,body{margin:0}
+      body{font-family:Inter,ui-sans-serif,system-ui;background:linear-gradient(180deg,#fffdf9,#f8f2ea);color:var(--ink)}
+      .wrap{max-width:1120px;margin:0 auto;padding:30px 20px 72px}
+      .hero{display:grid;grid-template-columns:1.2fr .8fr;gap:14px}
+      .panel{border:1px solid var(--line);background:#fff;padding:22px;border-radius:16px}
+      .kicker{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+      h1{font-size:clamp(2rem,5vw,4.2rem);line-height:1.05;margin:10px 0 12px}
+      p{line-height:1.7;color:var(--muted)}
+      .cta{display:inline-block;margin-top:12px;padding:11px 15px;border-radius:999px;background:var(--accent);color:#fff;text-decoration:none;font-weight:700}
+      .metric{border:1px solid var(--line);padding:12px;border-radius:12px;margin-bottom:10px}.metric b{font-size:1.15rem;display:block}
+      .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-top:14px}
+      .card{border:1px solid var(--line);background:#fff;padding:14px;border-radius:14px}
+      @media(max-width:860px){.hero{grid-template-columns:1fr}}
     </style>
   </head>
   <body>
     <main class="wrap">
-      <span class="tag">Tuner • Domain Model Performance</span>
-      <h1>Turn proprietary data into model advantage.</h1>
-      <p>Tuner is your domain tuning pipeline: ingest, clean, label, train, evaluate, and deploy local inference models on-prem or in cloud. Keep privacy, improve outcomes, and compound your data moat.</p>
-      <section class="split">
+      <section class="hero">
         <article class="panel">
-          <h3>What makes it different</h3>
-          <ul>
-            <li>Built for regulated and private data environments</li>
-            <li>Local inference paths for cost and control</li>
-            <li>Evaluation-first workflow tied to business metrics</li>
-          </ul>
+          <div class="kicker">Tuner • Hoffner Systems</div>
+          <h1>Convert proprietary data into model advantage.</h1>
+          <p>Tuner is a full domain-model pipeline: ingest, clean, label, train, evaluate, and deploy with local inference options for privacy, control, and lower long-term cost.</p>
+          <a class="cta" href="mailto:matt@hoffnersystems.com?subject=Tuner%20Assessment">Request Tuner Assessment</a>
         </article>
-        <article class="panel">
-          <h3>Best fit teams</h3>
-          <ul>
-            <li>Support ops with repetitive domain workflows</li>
-            <li>Knowledge-heavy vertical products</li>
-            <li>Teams replacing generic-model drift</li>
-          </ul>
-        </article>
+        <aside class="panel">
+          <div class="metric"><b>On-prem or cloud</b><span>Choose deployment by compliance and latency needs.</span></div>
+          <div class="metric"><b>Eval-first workflow</b><span>Track lift against business outcomes, not vanity scores.</span></div>
+          <div class="metric"><b>Moat compounding</b><span>Every high-quality domain example improves defensibility.</span></div>
+        </aside>
       </section>
-      <a class="cta" href="mailto:matt@hoffnersystems.com?subject=Tuner%20Assessment">Request Tuner Assessment</a>
+
+      <section class="grid">
+        <article class="card"><h3>Data quality loop</h3><p>Schema checks, conflict detection, and targeted relabeling before training spend.</p></article>
+        <article class="card"><h3>Model ops you can trust</h3><p>Repeatable training configs, rollout gates, and versioned evaluations for safer releases.</p></article>
+        <article class="card"><h3>Local inference paths</h3><p>Run where your data lives for stronger privacy posture and lower serving risk.</p></article>
+      </section>
     </main>
   </body>
 </html>
