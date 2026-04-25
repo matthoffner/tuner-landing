@@ -20,3 +20,7 @@ Created from Pixelbox.
 - Shared lock: `.automoat/state/loop.lock`
 - Human journal: [.automoat/logs/agent-journal.md](./.automoat/logs/agent-journal.md)
 - Session policy: [HEARTBEAT.md](./HEARTBEAT.md)
+
+## Deploy
+
+- Vercel should rebuild from pushes to `main`.
