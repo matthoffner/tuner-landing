@@ -4,9 +4,9 @@ Current priority: make the Dallas electricians MVP executable, not just conceptu
 
 ## Immediate Objectives
 
-1. Define the minimal ingestion schema for Dallas residential electrical permits and inspections.
-2. Define the first eval task set.
-3. Define the business-first discovery artifacts for a Dallas electrical business user.
+1. Keep the Dallas electricians MVP executable, not just well-described.
+2. Prefer thin local writers that turn normalized rows into reusable Dallas artifacts.
+3. Tighten reviewed-label and reference-action generation before widening scope.
 
 ## Good Outputs
 
@@ -37,12 +37,21 @@ Recent progress:
 - `generated/evals/dallas-electrician-sample-v1/` now demonstrates the dataset-first task row and split contracts
 - `generated/fixtures/dallas-electrician-sequences-v1/` now provides reusable Dallas permit and inspection sequences plus pattern slices for all current eval families
 - `scripts/generate_dallas_eval_artifacts.py` now emits `generated/evals/dallas-electrician-sample-v1/` deterministically from the Dallas fixture pack
+- `generated/evals/dallas-electrician-sample-v1/label_reviews.json` now makes reviewed failure labels and next-action references explicit for fixture-backed eval rows
+- `evals.md` now defines the durable `label_reviews.json` contract so reviewed supervision can survive the move from fixtures to normalized Dallas records
+- `scripts/generate_dallas_discovery_artifacts.py` now emits `generated/discovery/dallas-electrician-sample-v1/` deterministically from a structured Dallas business intake fixture
+- `generated/intake/dallas-electrician-sample-v1/intake.json` now provides the first reusable Dallas business-first intake scaffold
 
 Updated next best artifacts:
 
-- a thin local writer that emits `generated/discovery/...` artifacts from structured intake
-- a thin local writer that emits the Dallas fixture pack shape directly from normalized permit and inspection rows
-- a thin local writer that can emit the new reusable discovery artifact shape from structured Dallas intake
+- a thin local writer that emits `label_reviews.json` from normalized permit and inspection rows instead of fixture-backed sequences
+- a thin local writer that can turn real Dallas business intake variants into multiple generated discovery runs without hand-editing fixtures
+- a sample normalized Dallas dataset directory that can widen from synthetic rows to imported Dallas records without changing downstream contracts
+
+Latest bounded improvement completed:
+
+- `generated/normalized/dallas-electrician-sample-v1/` now provides row-shaped Dallas sample records
+- `scripts/generate_dallas_fixture_pack.py` now emits the Dallas fixture pack deterministically from normalized permit and inspection rows
 
 ## Constraints
 

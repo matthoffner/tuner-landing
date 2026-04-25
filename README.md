@@ -16,6 +16,7 @@ Created from Pixelbox.
 - Loop runner: `./scripts/codex-loop.sh -- <command>`
 - Work session runner: `./scripts/codex-session.sh [minutes]`
 - Dallas eval artifact writer: `./scripts/generate_dallas_eval_artifacts.py`
+- Dallas discovery artifact writer: `./scripts/generate_dallas_discovery_artifacts.py`
 - Shared lock: `.automoat/state/loop.lock`
 - Human journal: [.automoat/logs/agent-journal.md](./.automoat/logs/agent-journal.md)
 - Session policy: [HEARTBEAT.md](./HEARTBEAT.md)

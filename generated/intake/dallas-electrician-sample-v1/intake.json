@@ -1,0 +1,290 @@
+{
+  "business_name": "North Oak Residential Electric",
+  "service_area": [
+    "Dallas, Texas"
+  ],
+  "service_area_summary": "East and northeast Dallas ZIP codes",
+  "trade": "electrical",
+  "customer_focus": "mixed_residential",
+  "job_types": [
+    "service panel upgrades",
+    "EV charger installs",
+    "residential remodel wiring",
+    "meter base and service repairs"
+  ],
+  "pain_points": [
+    "Failed final inspections create repeat truck rolls and schedule churn.",
+    "Correction notes live in text messages and crew memory instead of a reusable system.",
+    "Permit status checks are manual and inconsistent across office staff."
+  ],
+  "systems_of_record": [
+    "Jobber",
+    "Google Drive permit folders",
+    "dispatcher text threads",
+    "email inbox for inspection notices"
+  ],
+  "available_data_assets": [
+    "Permit spreadsheet exports by job",
+    "Inspection results copied into office notes",
+    "Photos of panel and service corrections",
+    "Field notes from failed inspections"
+  ],
+  "crew_size": 6,
+  "license_context": "Texas licensed electrical contractor working primarily on residential jobs",
+  "target_zip_codes": [
+    "75214",
+    "75218",
+    "75228",
+    "75231"
+  ],
+  "after_hours_or_emergency_work": true,
+  "permit_handling_style": "Office files permits, field crew relays correction details after inspections",
+  "workflow_steps": [
+    {
+      "name": "Lead Intake",
+      "owner": "office manager",
+      "system": "Jobber + inbound phone calls",
+      "repeated_judgment": "decide whether the job likely needs a permit before sending an estimator",
+      "delay_point": "permit-heavy jobs are sometimes quoted before the permit path is fully understood",
+      "data_produced": "customer info, address, rough scope",
+      "data_saved_well": "partially"
+    },
+    {
+      "name": "Estimating And Scope",
+      "owner": "estimator or master electrician",
+      "system": "Jobber estimate, handwritten notes, phone photos",
+      "repeated_judgment": "determine whether the job is a service upgrade, remodel, repair, or miscellaneous electrical work",
+      "delay_point": "scope language is inconsistent, which makes later permit filtering hard",
+      "data_produced": "scope notes, estimated valuation, likely permit category",
+      "data_saved_well": "partially"
+    },
+    {
+      "name": "Permit Filing",
+      "owner": "office manager",
+      "system": "Dallas permit portal plus Google Drive folder",
+      "repeated_judgment": "match the job to the right permit description and gather attachments",
+      "delay_point": "permit status is checked manually and follow-up timing is inconsistent",
+      "data_produced": "permit number, filing date, status snapshots",
+      "data_saved_well": "yes, but spread across folders and emails"
+    },
+    {
+      "name": "Work Execution",
+      "owner": "field crew",
+      "system": "crew text threads, photos, job notes",
+      "repeated_judgment": "decide whether work is ready for inspection or still missing a correction item",
+      "delay_point": "field notes do not consistently roll back into a structured checklist",
+      "data_produced": "install photos, as-built observations, correction reminders",
+      "data_saved_well": "weakly"
+    },
+    {
+      "name": "Inspection Scheduling",
+      "owner": "office manager",
+      "system": "permit portal, phone, email",
+      "repeated_judgment": "when to schedule and whether the site is truly ready",
+      "delay_point": "avoidable not-ready or fail outcomes when the office lacks complete field status",
+      "data_produced": "scheduled inspection date, type, result",
+      "data_saved_well": "yes for dates, weakly for context"
+    },
+    {
+      "name": "Failed Inspection Handling",
+      "owner": "master electrician + office manager",
+      "system": "inspector notes, text threads, callback list",
+      "repeated_judgment": "interpret what the inspector really wants and translate it into crew actions",
+      "delay_point": "repeated failure reasons are not normalized, so the same lessons are relearned job by job",
+      "data_produced": "correction list, follow-up plan, reinspection timing",
+      "data_saved_well": "poorly"
+    },
+    {
+      "name": "Reinspection Or Closeout",
+      "owner": "office manager + field lead",
+      "system": "permit portal, invoice packet, job notes",
+      "repeated_judgment": "verify whether the correction path is complete enough to pass final inspection",
+      "delay_point": "closeout checklists vary by crew and permit type",
+      "data_produced": "final inspection outcome, closeout status, callback avoidance notes",
+      "data_saved_well": "final status yes, reusable lessons no"
+    }
+  ],
+  "moat_decisions": [
+    "Interpreting which failed inspection notes imply a service issue versus a documentation issue",
+    "Knowing which jobs are likely to require a reinspection even if the crew believes the work is ready",
+    "Turning neighborhood and job-type patterns into a pre-inspection checklist before the truck rolls"
+  ],
+  "moat_hypotheses": [
+    {
+      "hypothesis_id": "hyp:dallas-electrical:approval-pattern:01",
+      "title": "Service upgrade jobs have repeat final-inspection risk patterns",
+      "hypothesis_type": "approval-pattern",
+      "business_problem": "Final inspection failures on service upgrades create repeat truck rolls and delayed payments.",
+      "local_signal": "Dallas residential service upgrade permits paired with inspection sequences and result notes.",
+      "evidence_we_expect": "Higher fail rates for service panel and meter-base work, especially when the first follow-up happens within a short window.",
+      "why_generic_models_miss_it": "The failure modes depend on Dallas-local inspection patterns and the company's actual correction history, not generic electrical advice.",
+      "value_if_true": "A job-type-specific readiness checklist could reduce avoidable failed finals and speed cash collection.",
+      "test_plan": "Run next-inspection-outcome and recommended-next-action evals on service-upgrade permits first.",
+      "confidence": "medium"
+    },
+    {
+      "hypothesis_id": "hyp:dallas-electrical:correction-heuristic:02",
+      "title": "Failed inspection notes can be normalized into a reusable correction playbook",
+      "hypothesis_type": "correction-heuristic",
+      "business_problem": "Correction knowledge currently lives in texts and crew memory.",
+      "local_signal": "Inspector notes, field correction messages, and failed-to-passed reinspection sequences.",
+      "evidence_we_expect": "A small set of repeated issue categories such as grounding, panel labeling, scope mismatch, and incomplete work.",
+      "why_generic_models_miss_it": "The exact note style and correction sequence are local and company-specific, especially when notes are short or messy.",
+      "value_if_true": "The business can standardize reinspection prep and shorten time to pass.",
+      "test_plan": "Label a small sample of failed inspections with the schema vocabulary and score failure-reason plus next-action tasks.",
+      "confidence": "high"
+    },
+    {
+      "hypothesis_id": "hyp:dallas-electrical:property-or-neighborhood-pattern:03",
+      "title": "ZIP-level housing stock patterns change the most likely correction path",
+      "hypothesis_type": "property-or-neighborhood-pattern",
+      "business_problem": "Crews lose time when older homes need corrections that were not anticipated in the estimate.",
+      "local_signal": "Permit addresses, ZIP codes, and repeated failure reasons grouped by neighborhood slice.",
+      "evidence_we_expect": "Certain ZIP codes show recurring panel, grounding, or service-equipment correction patterns.",
+      "why_generic_models_miss_it": "Neighborhood-specific housing stock and local inspector behavior are not captured in general model knowledge.",
+      "value_if_true": "Estimating, truck prep, and pre-inspection checklists can be tailored by area.",
+      "test_plan": "Use pattern-extraction tasks on grouped permit and inspection slices by ZIP code and job type.",
+      "confidence": "medium"
+    }
+  ],
+  "data_sources": [
+    {
+      "name": "Failed Inspection Notes",
+      "source_name": "inspector result notes and office follow-up notes",
+      "why_it_matters": "labels the failure reason and recommended-next-action tasks directly",
+      "availability": "partly exists internally",
+      "collection_difficulty": "medium",
+      "privacy_sensitivity": "medium",
+      "expected_lift_for_eval_quality": "high",
+      "recommended_collection_order": "first"
+    },
+    {
+      "name": "Reinspection Outcome History",
+      "source_name": "permit timeline with failed-to-passed sequences",
+      "why_it_matters": "creates the clearest supervision for next action and approval-path analysis",
+      "availability": "partly exists publicly and internally",
+      "collection_difficulty": "medium",
+      "privacy_sensitivity": "low",
+      "expected_lift_for_eval_quality": "high",
+      "recommended_collection_order": "second"
+    },
+    {
+      "name": "Internal Correction Photos And Crew Notes",
+      "source_name": "photos, texts, and field notes attached to callbacks",
+      "why_it_matters": "turns vague failures into concrete correction evidence",
+      "availability": "exists internally but fragmented",
+      "collection_difficulty": "high",
+      "privacy_sensitivity": "medium",
+      "expected_lift_for_eval_quality": "medium",
+      "recommended_collection_order": "third"
+    },
+    {
+      "name": "Dallas Rule And Guidance Snippets",
+      "source_name": "Dallas electrical inspection guidance, permit FAQs, and code reminder sheets",
+      "why_it_matters": "supports retrieval and explanation quality for recommendations",
+      "availability": "public",
+      "collection_difficulty": "low",
+      "privacy_sensitivity": "low",
+      "expected_lift_for_eval_quality": "medium",
+      "recommended_collection_order": "fourth"
+    },
+    {
+      "name": "Permit Status Snapshots",
+      "source_name": "permit spreadsheet exports and portal status checks",
+      "why_it_matters": "supports permit-state normalization and operational reporting",
+      "availability": "exists internally and publicly",
+      "collection_difficulty": "low",
+      "privacy_sensitivity": "low",
+      "expected_lift_for_eval_quality": "medium",
+      "recommended_collection_order": "fifth"
+    }
+  ],
+  "immediate_recommendation": {
+    "summary": "Start with a reviewed sample of 25 to 50 failed or partial inspections where the business can reconstruct:",
+    "required_fields": [
+      "permit type",
+      "inspection type",
+      "raw result note",
+      "what correction was made",
+      "whether the next inspection passed"
+    ],
+    "closing_note": "That sample is enough to power the first recommended-next-action and failure-reason eval draft without waiting for full ingestion automation."
+  },
+  "eval_opportunities": [
+    {
+      "opportunity_id": "opp:dallas-electrical:next-outcome:01",
+      "task_type": "next_inspection_outcome",
+      "business_question": "Can we predict whether a Dallas residential electrical job is likely to pass or fail the next inspection before we schedule it?",
+      "minimum_required_data": [
+        "normalized permit rows",
+        "ordered prior inspection results",
+        "target next inspection label"
+      ],
+      "label_source": "subsequent inspection result in permit history",
+      "expected_output": "predicted normalized outcome with confidence and short explanation",
+      "business_value": "Reduces avoidable not-ready and failed inspection attempts.",
+      "readiness": "ready_now"
+    },
+    {
+      "opportunity_id": "opp:dallas-electrical:failure-reason:02",
+      "task_type": "failure_reason_classification",
+      "business_question": "Can we normalize failed inspection notes into a short set of repeated issue categories?",
+      "minimum_required_data": [
+        "failed inspection rows",
+        "raw notes or office follow-up notes",
+        "reviewed failure reason labels"
+      ],
+      "label_source": "human-reviewed mapping from notes to schema vocabulary",
+      "expected_output": "one normalized failure reason with supporting evidence",
+      "business_value": "Creates a reusable correction memory instead of relearning the same failures.",
+      "readiness": "needs_review"
+    },
+    {
+      "opportunity_id": "opp:dallas-electrical:next-action:03",
+      "task_type": "recommended_next_action",
+      "business_question": "Can we recommend the most likely action that gets a failed Dallas inspection to pass on the next visit?",
+      "minimum_required_data": [
+        "permits with failed-to-passed inspection sequences",
+        "inspection notes",
+        "reference action list derived from correction path"
+      ],
+      "label_source": "review of what changed between the failed inspection and the next successful outcome",
+      "expected_output": "ranked next actions with rationale",
+      "business_value": "Directly lowers repeat truck rolls and speeds approval.",
+      "readiness": "ready_now"
+    },
+    {
+      "opportunity_id": "opp:dallas-electrical:pattern-extraction:04",
+      "task_type": "pattern_extraction",
+      "business_question": "Which Dallas ZIP codes, permit types, or contractor segments show repeated inspection friction patterns?",
+      "minimum_required_data": [
+        "grouped normalized permit and inspection records",
+        "support counts",
+        "optional rule snippets"
+      ],
+      "label_source": "reviewed slice memo grounded in grouped records",
+      "expected_output": "pattern summary, support count, and why it matters",
+      "business_value": "Provides moat-language evidence for the business-first pitch and targeting.",
+      "readiness": "needs_review"
+    }
+  ],
+  "discovery_summary": {
+    "business_snapshot": "North Oak Residential Electric is a small Dallas residential electrical contractor doing service upgrades, remodel wiring, EV charger installs, and repair work. The business already captures permit numbers, inspection dates, and some correction context, but the reusable lessons are fragmented across text threads, office notes, and crew memory.",
+    "likely_moat_candidates": [
+      "Service-upgrade and panel-related jobs appear likely to have repeat final-inspection risk patterns.",
+      "Failed inspection notes can likely be normalized into a small correction playbook that the company does not currently store well.",
+      "Neighborhood and housing-stock differences may change which correction path is most likely by ZIP code."
+    ],
+    "best_first_eval": "The best first eval is `recommended_next_action`. It is the most business-legible task and only needs a reviewed sample of failed-to-passed sequences plus correction notes. It also creates immediate operational value if the output quality is strong.",
+    "most_important_missing_data": [
+      "Better capture of failed inspection notes",
+      "A reviewed mapping from raw notes to normalized failure reasons",
+      "Clear records of what changed between a failed inspection and the next pass"
+    ],
+    "next_weeks_recommendations": [
+      "Assemble 25 to 50 failed or partial Dallas residential electrical inspections with their follow-up outcomes.",
+      "Review those rows into the `failure_reason_normalized` and action vocabularies already defined in `schema.md` and `evals.md`.",
+      "Use that reviewed sample as the seed dataset for the first local `recommended_next_action` and `failure_reason_classification` task files."
+    ]
+  }
+}

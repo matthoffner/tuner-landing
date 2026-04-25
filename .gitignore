@@ -1,3 +1,4 @@
+.vercel
 .automoat/runs/
 .automoat/state/last-run.txt
 .automoat/state/loop.lock/

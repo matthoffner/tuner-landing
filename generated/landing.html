@@ -466,7 +466,7 @@
                 <li>Chosen locality: Dallas, Texas</li>
                 <li>Chosen trade: electricians</li>
                 <li>Chosen workflow: residential permits and inspections</li>
-                <li>Current goal: the Dallas eval writer now generates sample task rows from fixture sequences; next is a thin local writer for discovery outputs or fixture-pack generation</li>
+                <li>Current goal: the Dallas MVP now has a sample normalized row pack and a thin writer that generates fixture sequences from it; next is row-derived <code>label_reviews.json</code> generation from normalized Dallas permit and inspection rows</li>
               </ul>
             </div>
           </div>
@@ -554,6 +554,14 @@
             <div class="timeline">
               <div class="timeline-item">
                 <div class="timeline-meta">Latest Update</div>
+                <div>Tightened the Dallas eval contract so <code>generated/evals/dallas-electrician-sample-v1/label_reviews.json</code> preserves reviewed failure labels and ranked next-action references as durable artifacts.</div>
+              </div>
+              <div class="timeline-item">
+                <div class="timeline-meta">Latest Update</div>
+                <div>Added <code>scripts/generate_dallas_discovery_artifacts.py</code> plus a structured intake fixture, and regenerated the Dallas sample discovery scaffold deterministically from business-first input.</div>
+              </div>
+              <div class="timeline-item">
+                <div class="timeline-meta">Update</div>
                 <div>Added <code>scripts/generate_dallas_eval_artifacts.py</code> and regenerated the Dallas sample eval scaffold directly from the reusable fixture pack.</div>
               </div>
               <div class="timeline-item">
@@ -627,10 +635,13 @@
               <a class="doc-pill" href="../schema.md">schema.md</a>
               <a class="doc-pill" href="../evals.md">evals.md</a>
               <a class="doc-pill" href="../discovery-artifacts.md">discovery-artifacts.md</a>
+              <a class="doc-pill" href="../scripts/generate_dallas_discovery_artifacts.py">discovery writer</a>
               <a class="doc-pill" href="../scripts/generate_dallas_eval_artifacts.py">eval writer</a>
+              <a class="doc-pill" href="./intake/dallas-electrician-sample-v1/intake.json">sample intake</a>
               <a class="doc-pill" href="./fixtures/dallas-electrician-sequences-v1/README.md">fixture pack</a>
               <a class="doc-pill" href="./discovery/dallas-electrician-sample-v1/discovery-summary.md">sample discovery run</a>
               <a class="doc-pill" href="./evals/dallas-electrician-sample-v1/reports/sample-contract.md">sample eval run</a>
+              <a class="doc-pill" href="./evals/dallas-electrician-sample-v1/label_reviews.json">label reviews</a>
               <a class="doc-pill" href="../.pixelbox/handoff.md">handoff.md</a>
             </div>
             <p class="muted-note">

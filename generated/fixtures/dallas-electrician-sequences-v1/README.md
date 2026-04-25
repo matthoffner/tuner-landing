@@ -7,6 +7,7 @@ It exists to bridge:
 - [schema.md](../../../schema.md)
 - [evals.md](../../../evals.md)
 - future local writers that need concrete normalized examples
+- `generated/normalized/dallas-electrician-sample-v1/`, which now acts as the row-shaped source for this synthetic pack
 
 ## Scope
 
@@ -40,5 +41,9 @@ Use these fixtures when:
 - testing a thin local writer
 - generating sample `tasks.jsonl` rows
 - checking that controlled vocabularies stay consistent across docs and generated artifacts
+
+Generate or refresh this pack with:
+
+- `python3 scripts/generate_dallas_fixture_pack.py`
 
 Do not treat this pack as a benchmark dataset. It is a reusable contract fixture for implementation scaffolding.

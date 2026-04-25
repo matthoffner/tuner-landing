@@ -50,6 +50,7 @@ A future eval scaffold should be able to materialize these files under a generat
 
 - `tasks.jsonl`
 - `task_splits.json`
+- `label_reviews.json`
 - `predictions/<run_id>.jsonl`
 - `scores/<run_id>.json`
 - `reports/<run_id>.md`
@@ -318,6 +319,57 @@ For next-action references:
 
 - derive the reference action from the next successful step when obvious
 - if multiple actions were clearly required, include up to 3 ranked actions
+
+### Row-Backed Derivation
+
+When a sample or real Dallas dataset is already normalized:
+
+- derive `reference_actions` from the failed or partial inspection plus the first later corrective pass when available
+- map `failure_reason_normalized` into the current action vocabulary before appending `schedule_reinspection`
+- keep the derivation deterministic so regenerated eval artifacts do not drift across runs
+
+## Label Review Artifact
+
+`label_reviews.json` is the durable bridge between normalized rows and reviewed eval labels.
+
+It should contain one row per reviewed label decision for the current eval dataset.
+
+Required fields per row:
+
+- `review_id`
+- `task_id`
+- `task_type`
+- `permit_id`
+- `inspection_id` when the target is tied to one inspection event
+- `review_status`: `fixture_generated`, `reviewed`, or `needs_review`
+- `label_source`: `schema_field`, `fixture_sequence`, or `human_review`
+- `label_payload`: reviewed label object such as `failure_reason_normalized` or `reference_actions`
+- `evidence`: short supporting snippets pulled from normalized notes, later outcomes, or grouped counts
+- `reviewer_note`
+
+This artifact should be emitted even for synthetic fixture-backed rows so the implementation path stays consistent when real Dallas records replace the fixtures.
+
+### Failure Reason Review Rules
+
+For `failure_reason_classification` rows:
+
+- emit one label review row per task
+- include the failed inspection as `inspection_id`
+- copy the reviewed `failure_reason_normalized` into `label_payload`
+- include `notes_raw` or another short justification excerpt in `evidence`
+- mark synthetic labels as `fixture_generated`
+- mark uncertain real-world labels as `needs_review` instead of guessing
+
+### Next Action Reference Rules
+
+For `recommended_next_action` rows:
+
+- emit one label review row per task
+- use the latest failing, partial, or not-ready inspection in context as `inspection_id`
+- store ranked `reference_actions` in `label_payload`
+- include the later passing or successful follow-up event summary in `evidence`
+- keep the ranked action list short and practical
+- if the later path does not clearly imply what changed, mark the row `needs_review`
 - do not invent an action that is not supported by later history or rule text
 
 For pattern extraction:
@@ -403,3 +455,5 @@ The eval phase is ready for implementation when:
 - a future scaffold could generate `tasks.jsonl` and score reports without product re-interpretation
 
 The current repo now also has a reusable synthetic fixture pack that covers all four task families, so future writers can validate row generation against a shared Dallas-specific example set before touching real source data.
+
+The next step for eval execution is to preserve reviewed label decisions as first-class generated artifacts instead of leaving failure-reason and next-action supervision implicit inside task rows.

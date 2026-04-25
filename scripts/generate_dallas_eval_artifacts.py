@@ -178,6 +178,78 @@ def build_pattern_tasks(pattern_slices):
     return tasks
 
 
+def build_label_reviews(tasks, sequences):
+    sequence_by_id = {sequence["sequence_id"]: sequence for sequence in sequences}
+    reviews = []
+    counters = {
+        "failure_reason_classification": 1,
+        "recommended_next_action": 1,
+    }
+
+    for task in tasks:
+        task_type = task["task_type"]
+        if task_type not in counters:
+            continue
+
+        sequence = sequence_by_id[task["metadata"]["sequence_id"]]
+        inspections = sequence["inspections"]
+
+        if task_type == "failure_reason_classification":
+            target_inspection_id = task["input"]["target_inspection_id"]
+            target_inspection = next(
+                row for row in inspections if row["inspection_id"] == target_inspection_id
+            )
+            review = {
+                "review_id": f"label-review:dallas:failure-reason:{counters[task_type]:04d}",
+                "task_id": task["task_id"],
+                "task_type": task_type,
+                "permit_id": task["input"]["permit_id"],
+                "inspection_id": target_inspection_id,
+                "review_status": "fixture_generated",
+                "label_source": "fixture_sequence",
+                "label_payload": {
+                    "failure_reason_normalized": task["target"]["failure_reason_normalized"],
+                },
+                "evidence": [
+                    target_inspection.get("notes_raw", ""),
+                ],
+                "reviewer_note": "Fixture-backed failure reason derived from the failed inspection note.",
+            }
+        else:
+            context_ids = task["input"]["inspection_ids_context"]
+            decision_inspection = next(
+                row for row in inspections if row["inspection_id"] == context_ids[-1]
+            )
+            later_inspections = [
+                row for row in inspections if row["inspection_id"] not in context_ids
+            ]
+            followup = later_inspections[0] if later_inspections else None
+            evidence = [decision_inspection.get("notes_raw", "")]
+            if followup:
+                evidence.append(
+                    f"{followup['inspection_date']} {followup['inspection_type_normalized']} -> {followup['result_normalized']}: {followup.get('notes_raw', '')}"
+                )
+            review = {
+                "review_id": f"label-review:dallas:next-action:{counters[task_type]:04d}",
+                "task_id": task["task_id"],
+                "task_type": task_type,
+                "permit_id": task["input"]["permit_id"],
+                "inspection_id": decision_inspection["inspection_id"],
+                "review_status": "fixture_generated",
+                "label_source": "fixture_sequence",
+                "label_payload": {
+                    "reference_actions": task["target"]["reference_actions"],
+                },
+                "evidence": evidence,
+                "reviewer_note": "Fixture-backed action reference derived from the later successful follow-up path.",
+            }
+
+        reviews.append(review)
+        counters[task_type] += 1
+
+    return reviews
+
+
 def assign_splits(tasks):
     for task in tasks:
         task["split"] = "test" if task["task_type"] == "pattern_extraction" else "dev"
@@ -209,7 +281,7 @@ def build_split_manifest(tasks):
     }
 
 
-def build_report(tasks, split_manifest):
+def build_report(tasks, split_manifest, label_reviews):
     counts_by_type = {}
     for task in tasks:
         counts_by_type[task["task_type"]] = counts_by_type.get(task["task_type"], 0) + 1
@@ -225,6 +297,7 @@ def build_report(tasks, split_manifest):
         f"- Total tasks: `{len(tasks)}`",
         f"- Dev tasks: `{split_manifest['counts']['dev']}`",
         f"- Test tasks: `{split_manifest['counts']['test']}`",
+        f"- Reviewed label rows: `{len(label_reviews)}`",
         "",
         "## Task Family Counts",
         "",
@@ -240,12 +313,14 @@ def build_report(tasks, split_manifest):
             "",
             "- `generated/fixtures/dallas-electrician-sequences-v1/permit-inspection-sequences.json`",
             "- `generated/fixtures/dallas-electrician-sequences-v1/pattern-slices.json`",
+            "- `label_reviews.json` generated from fixture-backed failure labels and next-action references",
             "",
             "## Notes",
             "",
             "- This is implementation scaffolding for the Dallas electricians MVP, not a production benchmark dataset.",
             "- Sequence-backed tasks stay grouped by synthetic permit sequence.",
             "- Pattern extraction stays isolated in the test split to keep slice-style tasks separated from sequence-style tasks.",
+            "- Reviewed label rows make failure-reason and next-action supervision explicit instead of leaving them implicit in task targets alone.",
         ]
     )
 
@@ -274,15 +349,17 @@ def main():
     tasks.extend(build_next_action_tasks(sequence_payload["sequences"]))
     tasks.extend(build_pattern_tasks(pattern_payload["pattern_slices"]))
     assign_splits(tasks)
+    label_reviews = build_label_reviews(tasks, sequence_payload["sequences"])
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     (OUTPUT_DIR / "reports").mkdir(parents=True, exist_ok=True)
 
     split_manifest = build_split_manifest(tasks)
-    report = build_report(tasks, split_manifest)
+    report = build_report(tasks, split_manifest, label_reviews)
 
     write_jsonl(OUTPUT_DIR / "tasks.jsonl", tasks)
     write_json(OUTPUT_DIR / "task_splits.json", split_manifest)
+    write_json(OUTPUT_DIR / "label_reviews.json", label_reviews)
     (OUTPUT_DIR / "reports" / "sample-contract.md").write_text(report)
 
 

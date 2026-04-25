@@ -5,10 +5,12 @@
     "trade": "electricians",
     "workflow": "residential electrical permits and inspections"
   },
+  "generated_by": "scripts/generate_dallas_fixture_pack.py",
+  "source_dataset_dir": "generated/normalized/dallas-electrician-sample-v1",
   "sequences": [
     {
       "sequence_id": "sequence:dallas:res-elec-0001",
-      "sequence_summary": "Residential remodel with a passing rough-in, failed final due to incomplete work, and successful correction follow-up.",
+      "sequence_summary": "Residential electrical remodel permit with a pass, fail, pass inspection path and incomplete work before final approval.",
       "property": {
         "property_id": "property:214-main-st-dallas-tx-75214",
         "normalized_address": "214 MAIN ST DALLAS TX 75214",
@@ -16,18 +18,13 @@
         "city": "Dallas",
         "state": "TX",
         "zip_code": "75214",
-        "property_type": "single_family"
-      },
-      "contractor": {
-        "contractor_id": "contractor:dallas:lakewood-electric",
-        "name": "Lakewood Electric",
-        "city": "Dallas",
-        "state": "TX"
+        "property_type": "single_family",
+        "address_confidence": "high"
       },
       "permit": {
         "permit_id": "permit:dallas:res-elec-0001",
         "source_record_id": "source:permit:dallas:res-elec-0001",
-        "source_system": "fixture_pack",
+        "source_system": "normalized_sample",
         "source_permit_number": "ELR-2026-0001",
         "property_id": "property:214-main-st-dallas-tx-75214",
         "permit_type_raw": "Residential electrical remodel",
@@ -80,16 +77,25 @@
       ],
       "eval_task_coverage": [
         "next_inspection_outcome",
+        "failure_reason_classification",
         "recommended_next_action"
       ],
       "reference_actions": [
         "complete_remaining_work",
         "schedule_reinspection"
-      ]
+      ],
+      "contractor": {
+        "contractor_id": "contractor:dallas:lakewood-electric",
+        "name": "Lakewood Electric",
+        "city": "Dallas",
+        "state": "TX",
+        "registration_status": "registered",
+        "license_type": "electrical_contractor"
+      }
     },
     {
       "sequence_id": "sequence:dallas:res-elec-0002",
-      "sequence_summary": "Residential service upgrade with a failed service release driven by grounding and panel labeling corrections.",
+      "sequence_summary": "Residential electrical service upgrade permit with a pass, fail, pass inspection path and grounding and bonding corrections.",
       "property": {
         "property_id": "property:908-elmwood-ave-dallas-tx-75208",
         "normalized_address": "908 ELMWOOD AVE DALLAS TX 75208",
@@ -97,18 +103,13 @@
         "city": "Dallas",
         "state": "TX",
         "zip_code": "75208",
-        "property_type": "single_family"
-      },
-      "contractor": {
-        "contractor_id": "contractor:dallas:oak-cliff-electric",
-        "name": "Oak Cliff Electric",
-        "city": "Dallas",
-        "state": "TX"
+        "property_type": "single_family",
+        "address_confidence": "high"
       },
       "permit": {
         "permit_id": "permit:dallas:res-elec-0002",
         "source_record_id": "source:permit:dallas:res-elec-0002",
-        "source_system": "fixture_pack",
+        "source_system": "normalized_sample",
         "source_permit_number": "ELS-2026-0002",
         "property_id": "property:908-elmwood-ave-dallas-tx-75208",
         "permit_type_raw": "Electrical service upgrade",
@@ -160,19 +161,27 @@
         }
       ],
       "eval_task_coverage": [
+        "next_inspection_outcome",
         "failure_reason_classification",
-        "recommended_next_action",
-        "next_inspection_outcome"
+        "recommended_next_action"
       ],
       "reference_actions": [
         "correct_grounding_or_bonding",
         "add_labels_or_documentation",
         "schedule_reinspection"
-      ]
+      ],
+      "contractor": {
+        "contractor_id": "contractor:dallas:oak-cliff-electric",
+        "name": "Oak Cliff Electric",
+        "city": "Dallas",
+        "state": "TX",
+        "registration_status": "registered",
+        "license_type": "electrical_contractor"
+      }
     },
     {
       "sequence_id": "sequence:dallas:res-elec-0003",
-      "sequence_summary": "Residential repair permit with a partial final inspection and a clean reinspection after crew completion.",
+      "sequence_summary": "Residential electrical repair permit with a pass, partial, pass inspection path and incomplete work before final approval.",
       "property": {
         "property_id": "property:4418-monticello-ave-dallas-tx-75205",
         "normalized_address": "4418 MONTICELLO AVE DALLAS TX 75205",
@@ -180,18 +189,13 @@
         "city": "Dallas",
         "state": "TX",
         "zip_code": "75205",
-        "property_type": "single_family"
-      },
-      "contractor": {
-        "contractor_id": "contractor:dallas:highland-park-electric",
-        "name": "Highland Park Electric",
-        "city": "Dallas",
-        "state": "TX"
+        "property_type": "single_family",
+        "address_confidence": "high"
       },
       "permit": {
         "permit_id": "permit:dallas:res-elec-0003",
         "source_record_id": "source:permit:dallas:res-elec-0003",
-        "source_system": "fixture_pack",
+        "source_system": "normalized_sample",
         "source_permit_number": "ELP-2026-0003",
         "property_id": "property:4418-monticello-ave-dallas-tx-75205",
         "permit_type_raw": "Electrical repair",
@@ -226,7 +230,8 @@
           "inspection_date": "2026-01-24",
           "result_raw": "Partial",
           "result_normalized": "partial",
-          "notes_raw": "Bedroom AFCI device replacement complete but hallway trim-out not finished."
+          "notes_raw": "Bedroom AFCI device replacement complete but hallway trim-out not finished.",
+          "failure_reason_normalized": "incomplete_work"
         },
         {
           "inspection_id": "inspection:dallas:res-elec-0003:2026-01-28:correction_followup",
@@ -242,13 +247,21 @@
         }
       ],
       "eval_task_coverage": [
-        "recommended_next_action",
-        "next_inspection_outcome"
+        "next_inspection_outcome",
+        "recommended_next_action"
       ],
       "reference_actions": [
         "complete_remaining_work",
         "schedule_reinspection"
-      ]
+      ],
+      "contractor": {
+        "contractor_id": "contractor:dallas:highland-park-electric",
+        "name": "Highland Park Electric",
+        "city": "Dallas",
+        "state": "TX",
+        "registration_status": "registered",
+        "license_type": "electrical_contractor"
+      }
     }
   ]
 }
