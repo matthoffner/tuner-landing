@@ -466,7 +466,7 @@
                 <li>Chosen locality: Dallas, Texas</li>
                 <li>Chosen trade: electricians</li>
                 <li>Chosen workflow: residential permits and inspections</li>
-                <li>Current goal: the Dallas MVP now emits row-derived <code>label_reviews.json</code> from normalized permit and inspection rows; next is widening the normalized Dallas sample toward imported records without breaking downstream contracts</li>
+                <li>Current goal: the loop can now auto-report to the landing page, sync deploy state, and push to <code>main</code>; next is widening the normalized Dallas sample toward imported records without breaking downstream contracts</li>
               </ul>
             </div>
           </div>
@@ -552,6 +552,10 @@
             </div>
             <h2>Current project trajectory.</h2>
             <div class="timeline">
+              <div class="timeline-item">
+                <div class="timeline-meta">Latest Update</div>
+                <div>Added a 24-hour supervisor run with automatic publish, stale-lock recovery, and a reporter pass that keeps the landing page aligned with real repo progress.</div>
+              </div>
               <div class="timeline-item">
                 <div class="timeline-meta">Latest Update</div>
                 <div>Finished the row-derived review path with <code>scripts/generate_dallas_label_reviews.py</code>, so reviewed failure labels and next-action references now come directly from normalized Dallas permit and inspection rows.</div>
@@ -642,6 +646,8 @@
               <a class="doc-pill" href="../scripts/generate_dallas_discovery_artifacts.py">discovery writer</a>
               <a class="doc-pill" href="../scripts/generate_dallas_eval_artifacts.py">eval writer</a>
               <a class="doc-pill" href="../scripts/generate_dallas_label_reviews.py">label review writer</a>
+              <a class="doc-pill" href="../scripts/codex-day.sh">24h supervisor</a>
+              <a class="doc-pill" href="../scripts/codex-publish.sh">publish helper</a>
               <a class="doc-pill" href="./intake/dallas-electrician-sample-v1/intake.json">sample intake</a>
               <a class="doc-pill" href="./fixtures/dallas-electrician-sequences-v1/README.md">fixture pack</a>
               <a class="doc-pill" href="./discovery/dallas-electrician-sample-v1/discovery-summary.md">sample discovery run</a>

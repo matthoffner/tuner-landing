@@ -46,6 +46,18 @@ Each iteration should:
 - leave at least one artifact, decision, or refinement
 - update [.automoat/logs/agent-journal.md](./.automoat/logs/agent-journal.md) when meaningful progress happens
 - update [generated/landing.html](./generated/landing.html) if the high-level status changes
+- keep [index.html](./index.html) deploy-aligned with [generated/landing.html](./generated/landing.html)
+- publish material changes to `main` when running in unattended session or day mode
+
+## Reporter Pass
+
+Long unattended runs should include a narrow reporter pass after the main worker pass.
+
+The reporter pass should:
+
+- read the latest journal, handoff, next task, and generated artifacts
+- update [generated/landing.html](./generated/landing.html) as a high-level landing page and changelog
+- avoid speculative claims or broad product rewrites
 
 ## Avoid
 

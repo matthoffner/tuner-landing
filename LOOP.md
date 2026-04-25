@@ -39,6 +39,10 @@ For multi-iteration unattended work sessions, use:
 
 - [scripts/codex-session.sh](./scripts/codex-session.sh)
 
+For a one-command 24-hour supervisor run, use:
+
+- [scripts/codex-day.sh](./scripts/codex-day.sh)
+
 That script creates a repo-local lock at:
 
 - `.automoat/state/loop.lock`
@@ -48,6 +52,8 @@ If the lock exists, do not start another run. Exit cleanly.
 The point is to serialize all agents and loop invocations that agree to this contract.
 
 `scripts/codex-session.sh` holds the same lock for the full session, so no other participating agent should start while that session is active.
+
+The loop runners now recover stale locks automatically by checking the recorded PID. If the owning process is gone, the old lock is archived under `.automoat/state/loop.lock.stale-<timestamp>/` and the new run continues.
 
 ## Required Outputs Per Run
 
@@ -64,6 +70,12 @@ Every run must also:
 - append a concise human-readable note to [.automoat/logs/agent-journal.md](./.automoat/logs/agent-journal.md)
 - append or update [.pixelbox/handoff.md](./.pixelbox/handoff.md)
 - keep [generated/landing.html](./generated/landing.html) aligned with the high-level project state when needed
+- sync [generated/landing.html](./generated/landing.html) to [index.html](./index.html) before publish
+
+For unattended sessions and day runs:
+
+- run a narrow reporter pass after the main worker pass to keep the landing page current
+- publish material changes to `main` automatically
 
 ## Logging
 
@@ -71,6 +83,7 @@ Automated runner logs live under:
 
 - `.automoat/logs/loop.log`
 - `.automoat/runs/<timestamp>/`
+- `.automoat/runs/day-<timestamp>/`
 
 Human-readable agent notes live in:
 

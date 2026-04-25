@@ -103,3 +103,7 @@ Use this file to coordinate between editor/runtime lanes.
 - status: finished the row-derived reviewed-label path so the Dallas eval scaffold now emits `label_reviews.json` directly from normalized permit and inspection rows
 - files: scripts/generate_dallas_label_reviews.py, scripts/generate_dallas_eval_artifacts.py, generated/evals/dallas-electrician-sample-v1/label_reviews.json, generated/evals/dallas-electrician-sample-v1/reports/sample-contract.md, README.md, NEXT_TASK.md, .automoat/logs/agent-journal.md, generated/landing.html
 - next: widen the normalized Dallas sample toward imported records and add more intake variants without changing downstream contracts
+- lane: editor
+- status: upgraded the unattended loop to support 24-hour supervised runs with automatic publish, stale-lock recovery, and a reporter pass that keeps the landing page deploy-aligned
+- files: scripts/codex-loop.sh, scripts/codex-session.sh, scripts/codex-day.sh, scripts/codex-publish.sh, LOOP.md, HEARTBEAT.md, README.md, .automoat/logs/agent-journal.md, generated/landing.html
+- next: start the 24-hour supervisor or continue widening the normalized Dallas sample under the new auto-publish loop

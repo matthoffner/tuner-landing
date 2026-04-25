@@ -15,11 +15,30 @@ LAST_RUN_FILE="$STATE_DIR/last-run.txt"
 
 mkdir -p "$STATE_DIR" "$LOG_DIR" "$RUNS_DIR"
 
-if ! mkdir "$LOCK_DIR" 2>/dev/null; then
-  echo "loop lock already held: $LOCK_DIR" >&2
-  if [[ -f "$LOCK_DIR/meta.txt" ]]; then
-    cat "$LOCK_DIR/meta.txt" >&2
+acquire_lock() {
+  if mkdir "$LOCK_DIR" 2>/dev/null; then
+    return 0
   fi
+
+  local meta_file="$LOCK_DIR/meta.txt"
+  local stale_stamp
+  stale_stamp="$(date -u +%Y%m%dT%H%M%SZ)"
+
+  if [[ -f "$meta_file" ]]; then
+    local lock_pid=""
+    lock_pid="$(awk -F= '/^pid=/{print $2}' "$meta_file" | tail -n 1)"
+    if [[ -n "$lock_pid" ]] && kill -0 "$lock_pid" 2>/dev/null; then
+      echo "loop lock already held: $LOCK_DIR" >&2
+      cat "$meta_file" >&2
+      return 1
+    fi
+  fi
+
+  mv "$LOCK_DIR" "$STATE_DIR/loop.lock.stale-$stale_stamp"
+  mkdir "$LOCK_DIR"
+}
+
+if ! acquire_lock; then
   exit 3
 fi
 
