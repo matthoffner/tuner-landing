@@ -4,3 +4,4 @@
 .automoat/state/loop.lock/
 .automoat/state/loop.lock.stale-*/
 .automoat/logs/loop.log
+__pycache__/

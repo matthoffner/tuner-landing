@@ -37,21 +37,22 @@ Recent progress:
 - `generated/evals/dallas-electrician-sample-v1/` now demonstrates the dataset-first task row and split contracts
 - `generated/fixtures/dallas-electrician-sequences-v1/` now provides reusable Dallas permit and inspection sequences plus pattern slices for all current eval families
 - `scripts/generate_dallas_eval_artifacts.py` now emits `generated/evals/dallas-electrician-sample-v1/` deterministically from the Dallas fixture pack
-- `generated/evals/dallas-electrician-sample-v1/label_reviews.json` now makes reviewed failure labels and next-action references explicit for fixture-backed eval rows
-- `evals.md` now defines the durable `label_reviews.json` contract so reviewed supervision can survive the move from fixtures to normalized Dallas records
+- `generated/evals/dallas-electrician-sample-v1/label_reviews.json` now makes reviewed failure labels and next-action references explicit as a normalized-row artifact
+- `evals.md` now defines the durable `label_reviews.json` contract so reviewed supervision stays stable as the Dallas sample widens toward imported records
 - `scripts/generate_dallas_discovery_artifacts.py` now emits `generated/discovery/dallas-electrician-sample-v1/` deterministically from a structured Dallas business intake fixture
 - `generated/intake/dallas-electrician-sample-v1/intake.json` now provides the first reusable Dallas business-first intake scaffold
 
 Updated next best artifacts:
 
-- a thin local writer that emits `label_reviews.json` from normalized permit and inspection rows instead of fixture-backed sequences
 - a thin local writer that can turn real Dallas business intake variants into multiple generated discovery runs without hand-editing fixtures
 - a sample normalized Dallas dataset directory that can widen from synthetic rows to imported Dallas records without changing downstream contracts
+- a wider normalized Dallas sample that can preserve the same eval and review contracts while moving from synthetic rows toward imported records
 
 Latest bounded improvement completed:
 
 - `generated/normalized/dallas-electrician-sample-v1/` now provides row-shaped Dallas sample records
 - `scripts/generate_dallas_fixture_pack.py` now emits the Dallas fixture pack deterministically from normalized permit and inspection rows
+- `scripts/generate_dallas_label_reviews.py` now emits reviewed label rows directly from normalized Dallas permit and inspection records, and `scripts/generate_dallas_eval_artifacts.py` now uses that row-derived supervision path
 
 ## Constraints
 

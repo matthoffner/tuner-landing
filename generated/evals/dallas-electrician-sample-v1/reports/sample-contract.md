@@ -21,11 +21,13 @@ This sample eval scaffold is generated from the reusable Dallas electrician fixt
 
 - `generated/fixtures/dallas-electrician-sequences-v1/permit-inspection-sequences.json`
 - `generated/fixtures/dallas-electrician-sequences-v1/pattern-slices.json`
-- `label_reviews.json` generated from fixture-backed failure labels and next-action references
+- `generated/normalized/dallas-electrician-sample-v1/permits.jsonl`
+- `generated/normalized/dallas-electrician-sample-v1/inspections.jsonl`
+- `label_reviews.json` generated from normalized Dallas permit and inspection rows
 
 ## Notes
 
 - This is implementation scaffolding for the Dallas electricians MVP, not a production benchmark dataset.
 - Sequence-backed tasks stay grouped by synthetic permit sequence.
 - Pattern extraction stays isolated in the test split to keep slice-style tasks separated from sequence-style tasks.
-- Reviewed label rows make failure-reason and next-action supervision explicit instead of leaving them implicit in task targets alone.
+- Reviewed label rows are now derived from normalized Dallas rows instead of fixture-only sequence payloads.

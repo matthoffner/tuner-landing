@@ -5,31 +5,19 @@
     "task_type": "failure_reason_classification",
     "permit_id": "permit:dallas:res-elec-0001",
     "inspection_id": "inspection:dallas:res-elec-0001:2026-02-19:final",
-    "review_status": "fixture_generated",
-    "label_source": "fixture_sequence",
+    "review_status": "normalized_row_generated",
+    "label_source": "normalized_rows",
     "label_payload": {
       "failure_reason_normalized": "incomplete_work"
     },
     "evidence": [
       "GFCI devices missing at kitchen counters and cover plates incomplete."
     ],
-    "reviewer_note": "Fixture-backed failure reason derived from the failed inspection note."
-  },
-  {
-    "review_id": "label-review:dallas:failure-reason:0002",
-    "task_id": "eval:dallas:failure-reason:0002",
-    "task_type": "failure_reason_classification",
-    "permit_id": "permit:dallas:res-elec-0002",
-    "inspection_id": "inspection:dallas:res-elec-0002:2026-03-03:service_release",
-    "review_status": "fixture_generated",
-    "label_source": "fixture_sequence",
-    "label_payload": {
-      "failure_reason_normalized": "grounding_or_bonding_issue"
+    "metadata": {
+      "permit_type_normalized": "electrical_remodel",
+      "inspection_type_normalized": "final"
     },
-    "evidence": [
-      "Service disconnect not labeled and grounding electrode conductor termination incomplete."
-    ],
-    "reviewer_note": "Fixture-backed failure reason derived from the failed inspection note."
+    "reviewer_note": "Derived directly from normalized failed inspection rows and preserved notes."
   },
   {
     "review_id": "label-review:dallas:next-action:0001",
@@ -37,8 +25,8 @@
     "task_type": "recommended_next_action",
     "permit_id": "permit:dallas:res-elec-0001",
     "inspection_id": "inspection:dallas:res-elec-0001:2026-02-19:final",
-    "review_status": "fixture_generated",
-    "label_source": "fixture_sequence",
+    "review_status": "normalized_row_generated",
+    "label_source": "normalized_rows",
     "label_payload": {
       "reference_actions": [
         "complete_remaining_work",
@@ -49,7 +37,32 @@
       "GFCI devices missing at kitchen counters and cover plates incomplete.",
       "2026-02-24 correction_followup -> pass: Missing devices installed and trim complete."
     ],
-    "reviewer_note": "Fixture-backed action reference derived from the later successful follow-up path."
+    "metadata": {
+      "permit_type_normalized": "electrical_remodel",
+      "latest_result_normalized": "fail",
+      "followup_result_normalized": "pass"
+    },
+    "reviewer_note": "Derived directly from normalized inspection progression and follow-up notes."
+  },
+  {
+    "review_id": "label-review:dallas:failure-reason:0002",
+    "task_id": "eval:dallas:failure-reason:0002",
+    "task_type": "failure_reason_classification",
+    "permit_id": "permit:dallas:res-elec-0002",
+    "inspection_id": "inspection:dallas:res-elec-0002:2026-03-03:service_release",
+    "review_status": "normalized_row_generated",
+    "label_source": "normalized_rows",
+    "label_payload": {
+      "failure_reason_normalized": "grounding_or_bonding_issue"
+    },
+    "evidence": [
+      "Service disconnect not labeled and grounding electrode conductor termination incomplete."
+    ],
+    "metadata": {
+      "permit_type_normalized": "electrical_service_upgrade",
+      "inspection_type_normalized": "service_release"
+    },
+    "reviewer_note": "Derived directly from normalized failed inspection rows and preserved notes."
   },
   {
     "review_id": "label-review:dallas:next-action:0002",
@@ -57,8 +70,8 @@
     "task_type": "recommended_next_action",
     "permit_id": "permit:dallas:res-elec-0002",
     "inspection_id": "inspection:dallas:res-elec-0002:2026-03-03:service_release",
-    "review_status": "fixture_generated",
-    "label_source": "fixture_sequence",
+    "review_status": "normalized_row_generated",
+    "label_source": "normalized_rows",
     "label_payload": {
       "reference_actions": [
         "correct_grounding_or_bonding",
@@ -70,7 +83,12 @@
       "Service disconnect not labeled and grounding electrode conductor termination incomplete.",
       "2026-03-06 correction_followup -> pass: Grounding corrected, disconnect labeled, release approved."
     ],
-    "reviewer_note": "Fixture-backed action reference derived from the later successful follow-up path."
+    "metadata": {
+      "permit_type_normalized": "electrical_service_upgrade",
+      "latest_result_normalized": "fail",
+      "followup_result_normalized": "pass"
+    },
+    "reviewer_note": "Derived directly from normalized inspection progression and follow-up notes."
   },
   {
     "review_id": "label-review:dallas:next-action:0003",
@@ -78,8 +96,8 @@
     "task_type": "recommended_next_action",
     "permit_id": "permit:dallas:res-elec-0003",
     "inspection_id": "inspection:dallas:res-elec-0003:2026-01-24:final",
-    "review_status": "fixture_generated",
-    "label_source": "fixture_sequence",
+    "review_status": "normalized_row_generated",
+    "label_source": "normalized_rows",
     "label_payload": {
       "reference_actions": [
         "complete_remaining_work",
@@ -90,6 +108,11 @@
       "Bedroom AFCI device replacement complete but hallway trim-out not finished.",
       "2026-01-28 correction_followup -> pass: Remaining trim complete and final approval issued."
     ],
-    "reviewer_note": "Fixture-backed action reference derived from the later successful follow-up path."
+    "metadata": {
+      "permit_type_normalized": "electrical_repair",
+      "latest_result_normalized": "partial",
+      "followup_result_normalized": "pass"
+    },
+    "reviewer_note": "Derived directly from normalized inspection progression and follow-up notes."
   }
 ]

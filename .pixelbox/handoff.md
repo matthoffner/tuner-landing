@@ -98,4 +98,8 @@ Use this file to coordinate between editor/runtime lanes.
 - lane: editor
 - status: added a row-backed Dallas fixture-pack writer and sample normalized dataset so fixture sequences are generated from normalized records instead of hand-maintained JSON
 - files: scripts/generate_dallas_fixture_pack.py, generated/normalized/dallas-electrician-sample-v1/projects.json, generated/normalized/dallas-electrician-sample-v1/properties.jsonl, generated/normalized/dallas-electrician-sample-v1/permits.jsonl, generated/normalized/dallas-electrician-sample-v1/inspections.jsonl, generated/normalized/dallas-electrician-sample-v1/contractors.jsonl, generated/fixtures/dallas-electrician-sequences-v1/permit-inspection-sequences.json, generated/fixtures/dallas-electrician-sequences-v1/pattern-slices.json, generated/fixtures/dallas-electrician-sequences-v1/README.md, evals.md, NEXT_TASK.md, .automoat/logs/agent-journal.md, generated/landing.html
-- next: replace fixture-backed `label_reviews.json` generation with row-derived reviewed labels from normalized Dallas permit and inspection rows, then widen the normalized sample toward imported Dallas records
+- next: widen the normalized Dallas sample toward imported records and keep the row-derived review/eval contracts stable
+- lane: editor
+- status: finished the row-derived reviewed-label path so the Dallas eval scaffold now emits `label_reviews.json` directly from normalized permit and inspection rows
+- files: scripts/generate_dallas_label_reviews.py, scripts/generate_dallas_eval_artifacts.py, generated/evals/dallas-electrician-sample-v1/label_reviews.json, generated/evals/dallas-electrician-sample-v1/reports/sample-contract.md, README.md, NEXT_TASK.md, .automoat/logs/agent-journal.md, generated/landing.html
+- next: widen the normalized Dallas sample toward imported records and add more intake variants without changing downstream contracts

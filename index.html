@@ -466,7 +466,7 @@
                 <li>Chosen locality: Dallas, Texas</li>
                 <li>Chosen trade: electricians</li>
                 <li>Chosen workflow: residential permits and inspections</li>
-                <li>Current goal: the Dallas MVP now has a sample normalized row pack and a thin writer that generates fixture sequences from it; next is row-derived <code>label_reviews.json</code> generation from normalized Dallas permit and inspection rows</li>
+                <li>Current goal: the Dallas MVP now emits row-derived <code>label_reviews.json</code> from normalized permit and inspection rows; next is widening the normalized Dallas sample toward imported records without breaking downstream contracts</li>
               </ul>
             </div>
           </div>
@@ -554,6 +554,10 @@
             <div class="timeline">
               <div class="timeline-item">
                 <div class="timeline-meta">Latest Update</div>
+                <div>Finished the row-derived review path with <code>scripts/generate_dallas_label_reviews.py</code>, so reviewed failure labels and next-action references now come directly from normalized Dallas permit and inspection rows.</div>
+              </div>
+              <div class="timeline-item">
+                <div class="timeline-meta">Latest Update</div>
                 <div>Tightened the Dallas eval contract so <code>generated/evals/dallas-electrician-sample-v1/label_reviews.json</code> preserves reviewed failure labels and ranked next-action references as durable artifacts.</div>
               </div>
               <div class="timeline-item">
@@ -637,6 +641,7 @@
               <a class="doc-pill" href="../discovery-artifacts.md">discovery-artifacts.md</a>
               <a class="doc-pill" href="../scripts/generate_dallas_discovery_artifacts.py">discovery writer</a>
               <a class="doc-pill" href="../scripts/generate_dallas_eval_artifacts.py">eval writer</a>
+              <a class="doc-pill" href="../scripts/generate_dallas_label_reviews.py">label review writer</a>
               <a class="doc-pill" href="./intake/dallas-electrician-sample-v1/intake.json">sample intake</a>
               <a class="doc-pill" href="./fixtures/dallas-electrician-sequences-v1/README.md">fixture pack</a>
               <a class="doc-pill" href="./discovery/dallas-electrician-sample-v1/discovery-summary.md">sample discovery run</a>
