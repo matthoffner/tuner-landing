@@ -1,0 +1,41 @@
+{
+  "business_name": "North Oak Residential Electric",
+  "service_area": [
+    "Dallas, Texas"
+  ],
+  "trade": "electrical",
+  "customer_focus": "mixed_residential",
+  "job_types": [
+    "service panel upgrades",
+    "EV charger installs",
+    "residential remodel wiring",
+    "meter base and service repairs"
+  ],
+  "pain_points": [
+    "Failed final inspections create repeat truck rolls and schedule churn.",
+    "Correction notes live in text messages and crew memory instead of a reusable system.",
+    "Permit status checks are manual and inconsistent across office staff."
+  ],
+  "systems_of_record": [
+    "Jobber",
+    "Google Drive permit folders",
+    "dispatcher text threads",
+    "email inbox for inspection notices"
+  ],
+  "available_data_assets": [
+    "Permit spreadsheet exports by job",
+    "Inspection results copied into office notes",
+    "Photos of panel and service corrections",
+    "Field notes from failed inspections"
+  ],
+  "crew_size": 6,
+  "license_context": "Texas licensed electrical contractor working primarily on residential jobs",
+  "target_zip_codes": [
+    "75214",
+    "75218",
+    "75228",
+    "75231"
+  ],
+  "after_hours_or_emergency_work": true,
+  "permit_handling_style": "Office files permits, field crew relays correction details after inspections"
+}

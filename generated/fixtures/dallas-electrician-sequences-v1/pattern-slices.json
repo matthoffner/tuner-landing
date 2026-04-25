@@ -1,0 +1,45 @@
+{
+  "fixture_pack_id": "dallas-electrician-sequences-v1",
+  "pattern_slices": [
+    {
+      "slice_id": "slice:dallas:service-upgrade:75208",
+      "group_by": "zip_code",
+      "filters": {
+        "permit_type_normalized": "electrical_service_upgrade",
+        "zip_code": "75208",
+        "inspection_type_normalized": "service_release"
+      },
+      "support_summary": {
+        "permit_count": 11,
+        "inspection_count": 16,
+        "failed_inspection_count": 6
+      },
+      "reference_pattern": {
+        "pattern_summary": "Service upgrade permits in 75208 show a repeated failure pattern around grounding and panel/service corrections before release approval.",
+        "support_count": 6,
+        "why_it_matters": "This slice can drive Dallas-specific pre-inspection checklists and recommended-next-action guidance for service upgrades."
+      },
+      "task_type": "pattern_extraction"
+    },
+    {
+      "slice_id": "slice:dallas:remodel-final:75214",
+      "group_by": "zip_code",
+      "filters": {
+        "permit_type_normalized": "electrical_remodel",
+        "zip_code": "75214",
+        "inspection_type_normalized": "final"
+      },
+      "support_summary": {
+        "permit_count": 9,
+        "inspection_count": 13,
+        "failed_or_partial_inspection_count": 5
+      },
+      "reference_pattern": {
+        "pattern_summary": "Residential remodel finals in 75214 repeatedly stall on incomplete trim-out rather than rough-in workmanship.",
+        "support_count": 5,
+        "why_it_matters": "This suggests the highest-value intervention is completion readiness before final scheduling, not broad code tutoring."
+      },
+      "task_type": "pattern_extraction"
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+.automoat/runs/
+.automoat/state/last-run.txt
+.automoat/state/loop.lock/
+.automoat/state/loop.lock.stale-*/
+.automoat/logs/loop.log

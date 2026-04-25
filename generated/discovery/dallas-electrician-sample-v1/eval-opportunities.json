@@ -1,0 +1,58 @@
+[
+  {
+    "opportunity_id": "opp:dallas-electrical:next-outcome:01",
+    "task_type": "next_inspection_outcome",
+    "business_question": "Can we predict whether a Dallas residential electrical job is likely to pass or fail the next inspection before we schedule it?",
+    "minimum_required_data": [
+      "normalized permit rows",
+      "ordered prior inspection results",
+      "target next inspection label"
+    ],
+    "label_source": "subsequent inspection result in permit history",
+    "expected_output": "predicted normalized outcome with confidence and short explanation",
+    "business_value": "Reduces avoidable not-ready and failed inspection attempts.",
+    "readiness": "ready_now"
+  },
+  {
+    "opportunity_id": "opp:dallas-electrical:failure-reason:02",
+    "task_type": "failure_reason_classification",
+    "business_question": "Can we normalize failed inspection notes into a short set of repeated issue categories?",
+    "minimum_required_data": [
+      "failed inspection rows",
+      "raw notes or office follow-up notes",
+      "reviewed failure reason labels"
+    ],
+    "label_source": "human-reviewed mapping from notes to schema vocabulary",
+    "expected_output": "one normalized failure reason with supporting evidence",
+    "business_value": "Creates a reusable correction memory instead of relearning the same failures.",
+    "readiness": "needs_review"
+  },
+  {
+    "opportunity_id": "opp:dallas-electrical:next-action:03",
+    "task_type": "recommended_next_action",
+    "business_question": "Can we recommend the most likely action that gets a failed Dallas inspection to pass on the next visit?",
+    "minimum_required_data": [
+      "permits with failed-to-passed inspection sequences",
+      "inspection notes",
+      "reference action list derived from correction path"
+    ],
+    "label_source": "review of what changed between the failed inspection and the next successful outcome",
+    "expected_output": "ranked next actions with rationale",
+    "business_value": "Directly lowers repeat truck rolls and speeds approval.",
+    "readiness": "ready_now"
+  },
+  {
+    "opportunity_id": "opp:dallas-electrical:pattern-extraction:04",
+    "task_type": "pattern_extraction",
+    "business_question": "Which Dallas ZIP codes, permit types, or contractor segments show repeated inspection friction patterns?",
+    "minimum_required_data": [
+      "grouped normalized permit and inspection records",
+      "support counts",
+      "optional rule snippets"
+    ],
+    "label_source": "reviewed slice memo grounded in grouped records",
+    "expected_output": "pattern summary, support count, and why it matters",
+    "business_value": "Provides moat-language evidence for the business-first pitch and targeting.",
+    "readiness": "needs_review"
+  }
+]

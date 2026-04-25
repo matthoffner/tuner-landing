@@ -1,0 +1,25 @@
+{
+  "dataset_id": "dallas-electrician-sample-v1",
+  "generated_by": "scripts/generate_dallas_eval_artifacts.py",
+  "split_strategy": "all permit-sequence tasks in dev, all pattern slices in test",
+  "counts": {
+    "dev": 11,
+    "test": 2
+  },
+  "group_keys": {
+    "dev": [
+      "sequence:dallas:res-elec-0001",
+      "sequence:dallas:res-elec-0002",
+      "sequence:dallas:res-elec-0003"
+    ],
+    "test": [
+      "slice:dallas:service-upgrade:75208",
+      "slice:dallas:remodel-final:75214"
+    ]
+  },
+  "notes": [
+    "This dataset is generated deterministically from the Dallas electrician fixture pack.",
+    "All rows from the same synthetic permit sequence stay in the same split.",
+    "Pattern extraction rows use slice identifiers as the split grouping key."
+  ]
+}

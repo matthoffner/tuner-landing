@@ -1,0 +1,645 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>automoat</title>
+    <style>
+      :root {
+        --bg: #07111f;
+        --bg-soft: #0c1830;
+        --panel: rgba(10, 21, 40, 0.72);
+        --panel-strong: rgba(14, 27, 49, 0.92);
+        --line: rgba(167, 191, 255, 0.14);
+        --text: #ecf3ff;
+        --muted: #98a8c7;
+        --accent: #63e6be;
+        --accent-2: #6ea8ff;
+        --accent-3: #9b8cff;
+        --warm: #ffb86b;
+        --shadow: 0 30px 90px rgba(0, 0, 0, 0.32);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(circle at 15% 20%, rgba(99, 230, 190, 0.16), transparent 24%),
+          radial-gradient(circle at 85% 15%, rgba(110, 168, 255, 0.18), transparent 24%),
+          radial-gradient(circle at 55% 75%, rgba(155, 140, 255, 0.14), transparent 28%),
+          linear-gradient(180deg, #050b16 0%, var(--bg) 48%, #081425 100%);
+      }
+
+      a {
+        color: inherit;
+      }
+
+      main {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 24px 18px 80px;
+      }
+
+      .shell {
+        position: relative;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 28px;
+        background: linear-gradient(180deg, rgba(8, 18, 35, 0.88), rgba(7, 17, 31, 0.92));
+        box-shadow: var(--shadow);
+      }
+
+      .shell::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background:
+          linear-gradient(130deg, rgba(99, 230, 190, 0.06), transparent 28%),
+          linear-gradient(320deg, rgba(110, 168, 255, 0.08), transparent 34%);
+        pointer-events: none;
+      }
+
+      .nav,
+      .hero,
+      .content {
+        position: relative;
+        z-index: 1;
+      }
+
+      .nav {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+        padding: 18px 24px;
+        border-bottom: 1px solid rgba(167, 191, 255, 0.08);
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .brand-mark {
+        width: 12px;
+        height: 12px;
+        border-radius: 999px;
+        background: linear-gradient(135deg, var(--accent), var(--accent-2));
+        box-shadow: 0 0 24px rgba(99, 230, 190, 0.7);
+      }
+
+      .brand-name {
+        font-weight: 700;
+        letter-spacing: -0.03em;
+      }
+
+      .nav-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
+
+      .nav-links a {
+        text-decoration: none;
+      }
+
+      .hero {
+        padding: 52px 24px 28px;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 14px;
+        border: 1px solid rgba(99, 230, 190, 0.16);
+        border-radius: 999px;
+        background: rgba(99, 230, 190, 0.08);
+        color: var(--accent);
+        font-size: 0.84rem;
+        font-weight: 700;
+        letter-spacing: 0.03em;
+      }
+
+      h1,
+      h2,
+      h3 {
+        margin: 0;
+        letter-spacing: -0.04em;
+      }
+
+      h1 {
+        max-width: 920px;
+        margin-top: 18px;
+        font-size: clamp(3rem, 8vw, 6.4rem);
+        line-height: 0.95;
+      }
+
+      .hero-copy {
+        max-width: 720px;
+        margin-top: 22px;
+        color: var(--muted);
+        font-size: 1.08rem;
+        line-height: 1.7;
+      }
+
+      .hero-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 28px;
+      }
+
+      .button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 46px;
+        padding: 0 18px;
+        border-radius: 14px;
+        border: 1px solid transparent;
+        text-decoration: none;
+        font-weight: 700;
+      }
+
+      .button-primary {
+        background: linear-gradient(135deg, var(--accent), #8ffff1);
+        color: #062116;
+      }
+
+      .button-secondary {
+        border-color: var(--line);
+        background: rgba(255, 255, 255, 0.02);
+        color: var(--text);
+      }
+
+      .hero-grid,
+      .grid {
+        display: grid;
+        gap: 16px;
+      }
+
+      .hero-grid {
+        margin-top: 34px;
+        grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.9fr);
+      }
+
+      .content {
+        padding: 0 24px 28px;
+      }
+
+      .section {
+        margin-top: 16px;
+        padding: 22px;
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        background: var(--panel);
+        backdrop-filter: blur(12px);
+      }
+
+      .section-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 10px;
+      }
+
+      .kicker {
+        color: var(--accent-2);
+        font-size: 0.82rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      h2 {
+        font-size: 1.8rem;
+      }
+
+      h3 {
+        font-size: 1.2rem;
+      }
+
+      p {
+        margin: 10px 0 0;
+        color: var(--muted);
+        line-height: 1.65;
+      }
+
+      .hero-card {
+        min-height: 100%;
+      }
+
+      .hero-metrics {
+        display: grid;
+        gap: 12px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        margin-top: 18px;
+      }
+
+      .metric {
+        padding: 14px;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.03);
+      }
+
+      .metric-value {
+        font-size: 1.55rem;
+        font-weight: 700;
+        letter-spacing: -0.04em;
+      }
+
+      .metric-label {
+        margin-top: 6px;
+        color: var(--muted);
+        font-size: 0.92rem;
+      }
+
+      .grid {
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      }
+
+      .card {
+        padding: 18px;
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        background: var(--panel-strong);
+      }
+
+      ul {
+        margin: 12px 0 0;
+        padding-left: 18px;
+        color: var(--muted);
+      }
+
+      li + li {
+        margin-top: 8px;
+      }
+
+      .story-grid {
+        display: grid;
+        gap: 14px;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        margin-top: 16px;
+      }
+
+      .story {
+        padding: 16px;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.025);
+      }
+
+      .story span {
+        display: block;
+        margin-bottom: 8px;
+        color: var(--warm);
+        font-size: 0.82rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      .timeline {
+        margin-top: 16px;
+        display: grid;
+        gap: 12px;
+      }
+
+      .timeline-item {
+        display: grid;
+        gap: 6px;
+        padding: 16px;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.025);
+      }
+
+      .timeline-meta {
+        color: var(--accent-3);
+        font-size: 0.8rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .doc-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 16px;
+      }
+
+      .doc-pill {
+        padding: 10px 12px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.03);
+        color: var(--text);
+        text-decoration: none;
+        font-size: 0.92rem;
+      }
+
+      .muted-note {
+        margin-top: 16px;
+        font-size: 0.92rem;
+      }
+
+      @media (max-width: 920px) {
+        .hero-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 720px) {
+        main {
+          padding: 12px 10px 40px;
+        }
+
+        .shell,
+        .section,
+        .card,
+        .story,
+        .timeline-item,
+        .metric {
+          border-radius: 18px;
+        }
+
+        .nav,
+        .hero,
+        .content {
+          padding-left: 16px;
+          padding-right: 16px;
+        }
+
+        .hero {
+          padding-top: 34px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="shell">
+        <div class="nav">
+          <div class="brand">
+            <div class="brand-mark"></div>
+            <div class="brand-name">automoat</div>
+          </div>
+          <div class="nav-links">
+            <a href="#product">Product</a>
+            <a href="#stories">Use Cases</a>
+            <a href="#build">Build Log</a>
+            <a href="#docs">Docs</a>
+          </div>
+        </div>
+
+        <div class="hero">
+          <div class="eyebrow">Local-first moat discovery, evaluation, and build</div>
+          <h1>Turn messy business data into a defensible AI moat.</h1>
+          <p class="hero-copy">
+            `automoat` helps you discover what is actually proprietary in your business,
+            turn that data into something testable, and prove whether it creates an
+            advantage through research, benchmarks, retrieval, adaptation, and local-first workflows.
+          </p>
+          <div class="hero-actions">
+            <a class="button button-primary" href="#build">View Current Build</a>
+            <a class="button button-secondary" href="#docs">Open Project Docs</a>
+          </div>
+
+          <div class="hero-grid">
+            <div class="section hero-card" id="product">
+              <div class="section-header">
+                <div class="kicker">What It Does</div>
+              </div>
+              <h2>Discover, define, prove, and operationalize a moat.</h2>
+              <p>
+                In the AI age, models get cheaper and more interchangeable. The durable
+                advantage is the proprietary workflow data, decisions, edge cases, and
+                operational context a business can turn into a system.
+              </p>
+              <div class="hero-metrics">
+                <div class="metric">
+                  <div class="metric-value">Business-First</div>
+                  <div class="metric-label">Research the business, map moat ideas, plan what to test.</div>
+                </div>
+                <div class="metric">
+                  <div class="metric-value">Dataset-First</div>
+                  <div class="metric-label">Analyze records directly, generate evals, benchmark approaches.</div>
+                </div>
+                <div class="metric">
+                  <div class="metric-value">Local-First</div>
+                  <div class="metric-label">Useful on a real machine with private data and bounded workflows.</div>
+                </div>
+                <div class="metric">
+                  <div class="metric-value">Artifact-Driven</div>
+                  <div class="metric-label">Outputs plans, moat maps, evals, and recommendations, not just chat.</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="section hero-card">
+              <div class="section-header">
+                <div class="kicker">Current Focus</div>
+              </div>
+              <h2>Dallas electricians MVP</h2>
+              <p>
+                The first proof slice is Dallas residential electrical permits and inspections:
+                a narrow, real-world wedge for showing how local workflow records can become
+                measurable operational advantage.
+              </p>
+              <ul>
+                <li>Chosen locality: Dallas, Texas</li>
+                <li>Chosen trade: electricians</li>
+                <li>Chosen workflow: residential permits and inspections</li>
+                <li>Current goal: the Dallas eval writer now generates sample task rows from fixture sequences; next is a thin local writer for discovery outputs or fixture-pack generation</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="content">
+          <div class="section">
+            <div class="section-header">
+              <div class="kicker">How It Works</div>
+            </div>
+            <div class="grid">
+              <div class="card">
+                <h3>1. Explore</h3>
+                <p>
+                  Start with the business. Research the domain, identify likely moat candidates,
+                  and generate a plan for what data matters.
+                </p>
+              </div>
+              <div class="card">
+                <h3>2. Analyze</h3>
+                <p>
+                  Start with the dataset. Normalize records, identify what is unique, and turn
+                  it into a structured moat hypothesis.
+                </p>
+              </div>
+              <div class="card">
+                <h3>3. Evaluate</h3>
+                <p>
+                  Generate task-specific evals and compare baseline, retrieval-enhanced, and
+                  adapted approaches.
+                </p>
+              </div>
+              <div class="card">
+                <h3>4. Build</h3>
+                <p>
+                  Use the results to choose the right path: retrieval, adaptation, fine-tuning,
+                  or not a moat.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div class="section" id="stories">
+            <div class="section-header">
+              <div class="kicker">Use Cases</div>
+            </div>
+            <h2>Not just one vertical.</h2>
+            <p>
+              The product can start from any business where boring records hide real judgment,
+              process knowledge, or local operational patterns.
+            </p>
+            <div class="story-grid">
+              <div class="story">
+                <span>Insurance</span>
+                Claims manuals, exception memos, and policy interpretation patterns.
+              </div>
+              <div class="story">
+                <span>Legal</span>
+                Memos, rulings, argument style, and internal risk interpretation.
+              </div>
+              <div class="story">
+                <span>Compliance</span>
+                Regulated workflows, quality records, and high-trust internal process memory.
+              </div>
+              <div class="story">
+                <span>Trades</span>
+                Permits, inspections, failures, and local code interpretation.
+              </div>
+              <div class="story">
+                <span>Property Ops</span>
+                Violations, repairs, approvals, and neighborhood-specific patterns.
+              </div>
+              <div class="story">
+                <span>Founder Discovery</span>
+                Weird niche datasets that may hide a product, API, or workflow moat.
+              </div>
+            </div>
+          </div>
+
+          <div class="section" id="build">
+            <div class="section-header">
+              <div class="kicker">Build Log</div>
+            </div>
+            <h2>Current project trajectory.</h2>
+            <div class="timeline">
+              <div class="timeline-item">
+                <div class="timeline-meta">Latest Update</div>
+                <div>Added <code>scripts/generate_dallas_eval_artifacts.py</code> and regenerated the Dallas sample eval scaffold directly from the reusable fixture pack.</div>
+              </div>
+              <div class="timeline-item">
+                <div class="timeline-meta">Now</div>
+                <div>Added a reusable Dallas electrician fixture pack under <code>generated/fixtures/dallas-electrician-sequences-v1/</code> with normalized permit histories and pattern slices that cover all four eval families.</div>
+              </div>
+              <div class="timeline-item">
+                <div class="timeline-meta">Now</div>
+                <div>Scaffolded a concrete Dallas electrician sample eval run under <code>generated/evals/dallas-electrician-sample-v1/</code> with sample task rows, split metadata, and a short dataset-first contract note.</div>
+              </div>
+              <div class="timeline-item">
+                <div class="timeline-meta">Now</div>
+                <div>Scaffolded a concrete Dallas electrician sample discovery run under <code>generated/discovery/dallas-electrician-sample-v1/</code> with business profile, workflow map, moat hypotheses, data-gap plan, eval opportunities, and summary outputs.</div>
+              </div>
+              <div class="timeline-item">
+                <div class="timeline-meta">Now</div>
+                <div>Added the first Dallas electricians discovery artifact contract: business profile, workflow map, moat hypotheses, data gaps, eval opportunities, and summary outputs.</div>
+              </div>
+              <div class="timeline-item">
+                <div class="timeline-meta">Now</div>
+                <div>Added the first Dallas electricians eval contract: task families, splits, baselines, scoring, and stop/go criteria.</div>
+              </div>
+              <div class="timeline-item">
+                <div class="timeline-meta">Page</div>
+                <div>Landing page repositioned around the product, not just the current slice.</div>
+              </div>
+              <div class="timeline-item">
+                <div class="timeline-meta">Loop</div>
+                <div>Added lock-aware loop scaffolding, next-task files, per-run logs, and a human-readable agent journal.</div>
+              </div>
+              <div class="timeline-item">
+                <div class="timeline-meta">Session</div>
+                <div>Added a heartbeat-driven work session runner so one command can keep iterating until the time budget expires.</div>
+              </div>
+              <div class="timeline-item">
+                <div class="timeline-meta">Spec</div>
+                <div>Defined the first Dallas electricians ingestion schema: entities, vocabularies, joins, inclusion rules, and example records.</div>
+              </div>
+              <div class="timeline-item">
+                <div class="timeline-meta">April 25, 2026</div>
+                <div>Added the first implementation spec to make the Dallas electricians wedge executable instead of just conceptual.</div>
+              </div>
+              <div class="timeline-item">
+                <div class="timeline-meta">Current MVP</div>
+                <div>Locked the first implementation wedge to Dallas residential electrical permits and inspections.</div>
+              </div>
+              <div class="timeline-item">
+                <div class="timeline-meta">Product Shape</div>
+                <div>Defined two entry points: business-first discovery and dataset-first build/eval.</div>
+              </div>
+              <div class="timeline-item">
+                <div class="timeline-meta">Direction Shift</div>
+                <div>Shifted away from a generic PDF corpus MVP toward home, permit, and inspection intelligence.</div>
+              </div>
+              <div class="timeline-item">
+                <div class="timeline-meta">Foundation</div>
+                <div>Established the core thesis that `automoat` helps users discover, define, prove, and operationalize a moat from operational data.</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="section" id="docs">
+            <div class="section-header">
+              <div class="kicker">Project Docs</div>
+            </div>
+            <h2>Source documents driving the build.</h2>
+            <div class="doc-list">
+              <a class="doc-pill" href="../vision.md">vision.md</a>
+              <a class="doc-pill" href="../use-cases.md">use-cases.md</a>
+              <a class="doc-pill" href="../mvp.md">mvp.md</a>
+              <a class="doc-pill" href="../schema.md">schema.md</a>
+              <a class="doc-pill" href="../evals.md">evals.md</a>
+              <a class="doc-pill" href="../discovery-artifacts.md">discovery-artifacts.md</a>
+              <a class="doc-pill" href="../scripts/generate_dallas_eval_artifacts.py">eval writer</a>
+              <a class="doc-pill" href="./fixtures/dallas-electrician-sequences-v1/README.md">fixture pack</a>
+              <a class="doc-pill" href="./discovery/dallas-electrician-sample-v1/discovery-summary.md">sample discovery run</a>
+              <a class="doc-pill" href="./evals/dallas-electrician-sample-v1/reports/sample-contract.md">sample eval run</a>
+              <a class="doc-pill" href="../.pixelbox/handoff.md">handoff.md</a>
+            </div>
+            <p class="muted-note">
+              This page is meant to keep evolving during the loop as a hybrid landing page and
+              high-level changelog. It should stay legible even when the underlying docs get dense.
+            </p>
+          </div>
+        </div>
+      </div>
+    </main>
+  </body>
+</html>

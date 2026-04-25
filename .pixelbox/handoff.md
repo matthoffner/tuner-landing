@@ -1,0 +1,89 @@
+# Pixelbox Agent Handoff
+
+Use this file to coordinate between editor/runtime lanes.
+
+## Latest
+- lane: setup
+- status: initialized
+- next: choose editor/runtime owner for current task
+
+- lane: editor
+- status: completed contributor guide update
+- files: AGENTS.md
+- next: repo is still minimal; add scaffold-specific commands once app code exists
+- lane: editor
+- status: retargeted contributor guide to Mojo-first workflow
+- files: AGENTS.md
+- next: install Mojo locally before adding runnable source files or tests
+- lane: editor
+- status: added initial product vision
+- files: vision.md
+- next: review and tighten the product direction, then decide whether to scaffold docs, app structure, or a first prototype
+- lane: editor
+- status: added story-driven use case documentation and linked docs from README
+- files: use-cases.md, README.md
+- next: turn the strongest use case into an MVP spec with a single dataset type, eval loop, and local architecture
+- lane: editor
+- status: added MVP dataset comparison and recommended PMC-first proof of concept
+- files: mvp.md, README.md
+- next: define the exact PMC topic slice, eval tasks, and minimal local architecture for implementation
+- lane: editor
+- status: retargeted MVP toward home and inspection intelligence instead of PMC
+- files: mvp.md, use-cases.md, vision.md
+- next: pick one city dataset and one narrow property workflow for the first implementation slice
+- lane: editor
+- status: locked first implementation slice to Dallas residential electrical permits and inspections
+- files: mvp.md
+- next: define the minimal ingestion schema and eval tasks for Dallas electricians
+- lane: editor
+- status: documented dual entry points for product and connected them to the Dallas MVP
+- files: vision.md, mvp.md, use-cases.md
+- next: define the minimal ingestion schema, eval tasks, and business-first discovery artifacts for Dallas electricians
+- lane: editor
+- status: added generated status page for high-level loop tracking
+- files: generated/landing.html, README.md
+- next: keep generated/landing.html updated as the loop progresses and add loop/task scaffolding when ready
+- lane: editor
+- status: added lock-aware loop scaffolding, current task file, and human-readable agent journal
+- files: LOOP.md, NEXT_TASK.md, scripts/codex-loop.sh, .automoat/logs/agent-journal.md, README.md
+- next: make scripts/codex-loop.sh executable and define the first implementation spec for Dallas electricians
+- lane: editor
+- status: validated loop runner, made it executable, and documented the loop command in README
+- files: scripts/codex-loop.sh, README.md, generated/landing.html, .automoat/logs/agent-journal.md
+- next: create the first Dallas electricians implementation spec and then start bounded loop runs through scripts/codex-loop.sh
+- lane: editor
+- status: added first implementation spec for Dallas electricians and updated loop tracking surfaces
+- files: implementation-spec.md, NEXT_TASK.md, generated/landing.html, .automoat/logs/agent-journal.md
+- next: define `schema.md`, `evals.md`, and `discovery-artifacts.md`, then start bounded loop runs through scripts/codex-loop.sh
+- lane: editor
+- status: added heartbeat-driven work session runner for one-command bounded iteration
+- files: HEARTBEAT.md, scripts/codex-session.sh, LOOP.md, README.md, generated/landing.html, .automoat/logs/agent-journal.md
+- next: make `scripts/codex-session.sh` executable and use it to generate `schema.md` as the first session artifact
+- lane: editor
+- status: defined the Dallas electricians ingestion schema and narrowed the next planning gap to evals and discovery artifacts
+- files: schema.md, generated/landing.html, .automoat/logs/agent-journal.md
+- next: create `evals.md`, then `discovery-artifacts.md`, using the controlled vocabularies and row contracts from `schema.md`
+- lane: editor
+- status: defined the first Dallas electricians eval contract and moved the remaining doc gap to business-first discovery artifacts
+- files: evals.md, generated/landing.html, .automoat/logs/agent-journal.md
+- next: create `discovery-artifacts.md` so business-first discovery outputs are as concrete as the schema and eval artifacts
+- lane: editor
+- status: defined the first Dallas electricians discovery artifact contract and advanced the next step to implementation-facing scaffolding
+- files: discovery-artifacts.md, NEXT_TASK.md, generated/landing.html, .automoat/logs/agent-journal.md
+- next: scaffold sample generated discovery outputs or a thin local writer for the Dallas electricians business-first flow
+- lane: editor
+- status: scaffolded a sample Dallas electrician discovery run with durable generated outputs
+- files: generated/discovery/dallas-electrician-sample-v1/business-profile.json, generated/discovery/dallas-electrician-sample-v1/workflow-map.md, generated/discovery/dallas-electrician-sample-v1/moat-hypotheses.json, generated/discovery/dallas-electrician-sample-v1/data-gap-plan.md, generated/discovery/dallas-electrician-sample-v1/eval-opportunities.json, generated/discovery/dallas-electrician-sample-v1/discovery-summary.md, NEXT_TASK.md, .automoat/logs/agent-journal.md
+- next: add a thin local writer for discovery artifacts or scaffold dataset-first sample eval task rows using the same vocabularies
+- lane: editor
+- status: scaffolded a sample Dallas electrician eval run with durable dataset-first task examples
+- files: generated/evals/dallas-electrician-sample-v1/tasks.jsonl, generated/evals/dallas-electrician-sample-v1/task_splits.json, generated/evals/dallas-electrician-sample-v1/reports/sample-contract.md, NEXT_TASK.md, .automoat/logs/agent-journal.md, generated/landing.html
+- next: add a thin local writer that can emit discovery and eval artifacts from structured intake and normalized rows
+- lane: editor
+- status: added reusable Dallas electrician fixture sequences and pattern slices to tighten eval examples and future writer targets
+- files: generated/fixtures/dallas-electrician-sequences-v1/README.md, generated/fixtures/dallas-electrician-sequences-v1/permit-inspection-sequences.json, generated/fixtures/dallas-electrician-sequences-v1/pattern-slices.json, evals.md, NEXT_TASK.md, .automoat/logs/agent-journal.md, generated/landing.html
+- next: add a thin local writer that can emit eval rows or fixture-pack outputs directly from normalized Dallas permit and inspection rows
+- lane: editor
+- status: added a deterministic Dallas eval writer and regenerated the sample eval scaffold from fixture sequences
+- files: scripts/generate_dallas_eval_artifacts.py, generated/evals/dallas-electrician-sample-v1/tasks.jsonl, generated/evals/dallas-electrician-sample-v1/task_splits.json, generated/evals/dallas-electrician-sample-v1/reports/sample-contract.md, NEXT_TASK.md, README.md, .automoat/logs/agent-journal.md, generated/landing.html
+- next: add a thin local writer for Dallas discovery outputs or generate the fixture pack directly from normalized permit and inspection rows

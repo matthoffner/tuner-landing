@@ -1,0 +1,38 @@
+[
+  {
+    "hypothesis_id": "hyp:dallas-electrical:approval-pattern:01",
+    "title": "Service upgrade jobs have repeat final-inspection risk patterns",
+    "hypothesis_type": "approval-pattern",
+    "business_problem": "Final inspection failures on service upgrades create repeat truck rolls and delayed payments.",
+    "local_signal": "Dallas residential service upgrade permits paired with inspection sequences and result notes.",
+    "evidence_we_expect": "Higher fail rates for service panel and meter-base work, especially when the first follow-up happens within a short window.",
+    "why_generic_models_miss_it": "The failure modes depend on Dallas-local inspection patterns and the company's actual correction history, not generic electrical advice.",
+    "value_if_true": "A job-type-specific readiness checklist could reduce avoidable failed finals and speed cash collection.",
+    "test_plan": "Run next-inspection-outcome and recommended-next-action evals on service-upgrade permits first.",
+    "confidence": "medium"
+  },
+  {
+    "hypothesis_id": "hyp:dallas-electrical:correction-heuristic:02",
+    "title": "Failed inspection notes can be normalized into a reusable correction playbook",
+    "hypothesis_type": "correction-heuristic",
+    "business_problem": "Correction knowledge currently lives in texts and crew memory.",
+    "local_signal": "Inspector notes, field correction messages, and failed-to-passed reinspection sequences.",
+    "evidence_we_expect": "A small set of repeated issue categories such as grounding, panel labeling, scope mismatch, and incomplete work.",
+    "why_generic_models_miss_it": "The exact note style and correction sequence are local and company-specific, especially when notes are short or messy.",
+    "value_if_true": "The business can standardize reinspection prep and shorten time to pass.",
+    "test_plan": "Label a small sample of failed inspections with the schema vocabulary and score failure-reason plus next-action tasks.",
+    "confidence": "high"
+  },
+  {
+    "hypothesis_id": "hyp:dallas-electrical:property-or-neighborhood-pattern:03",
+    "title": "ZIP-level housing stock patterns change the most likely correction path",
+    "hypothesis_type": "property-or-neighborhood-pattern",
+    "business_problem": "Crews lose time when older homes need corrections that were not anticipated in the estimate.",
+    "local_signal": "Permit addresses, ZIP codes, and repeated failure reasons grouped by neighborhood slice.",
+    "evidence_we_expect": "Certain ZIP codes show recurring panel, grounding, or service-equipment correction patterns.",
+    "why_generic_models_miss_it": "Neighborhood-specific housing stock and local inspector behavior are not captured in general model knowledge.",
+    "value_if_true": "Estimating, truck prep, and pre-inspection checklists can be tailored by area.",
+    "test_plan": "Use pattern-extraction tasks on grouped permit and inspection slices by ZIP code and job type.",
+    "confidence": "medium"
+  }
+]

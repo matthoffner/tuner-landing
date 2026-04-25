@@ -1,0 +1,254 @@
+{
+  "fixture_pack_id": "dallas-electrician-sequences-v1",
+  "generated_for": {
+    "locality": "Dallas, Texas",
+    "trade": "electricians",
+    "workflow": "residential electrical permits and inspections"
+  },
+  "sequences": [
+    {
+      "sequence_id": "sequence:dallas:res-elec-0001",
+      "sequence_summary": "Residential remodel with a passing rough-in, failed final due to incomplete work, and successful correction follow-up.",
+      "property": {
+        "property_id": "property:214-main-st-dallas-tx-75214",
+        "normalized_address": "214 MAIN ST DALLAS TX 75214",
+        "street_address": "214 Main St",
+        "city": "Dallas",
+        "state": "TX",
+        "zip_code": "75214",
+        "property_type": "single_family"
+      },
+      "contractor": {
+        "contractor_id": "contractor:dallas:lakewood-electric",
+        "name": "Lakewood Electric",
+        "city": "Dallas",
+        "state": "TX"
+      },
+      "permit": {
+        "permit_id": "permit:dallas:res-elec-0001",
+        "source_record_id": "source:permit:dallas:res-elec-0001",
+        "source_system": "fixture_pack",
+        "source_permit_number": "ELR-2026-0001",
+        "property_id": "property:214-main-st-dallas-tx-75214",
+        "permit_type_raw": "Residential electrical remodel",
+        "permit_type_normalized": "electrical_remodel",
+        "work_class": "residential",
+        "trade": "electrical",
+        "status_raw": "Active",
+        "status_normalized": "active",
+        "file_date": "2026-02-04",
+        "issue_date": "2026-02-06",
+        "work_description": "Kitchen remodel wiring and device replacement.",
+        "contractor_id": "contractor:dallas:lakewood-electric"
+      },
+      "inspections": [
+        {
+          "inspection_id": "inspection:dallas:res-elec-0001:2026-02-12:rough_in",
+          "source_record_id": "source:inspection:dallas:res-elec-0001:rough-in",
+          "permit_id": "permit:dallas:res-elec-0001",
+          "inspection_type_raw": "Rough-in",
+          "inspection_type_normalized": "rough_in",
+          "inspection_date": "2026-02-12",
+          "result_raw": "Pass",
+          "result_normalized": "pass",
+          "notes_raw": "Branch circuits and box fill acceptable."
+        },
+        {
+          "inspection_id": "inspection:dallas:res-elec-0001:2026-02-19:final",
+          "source_record_id": "source:inspection:dallas:res-elec-0001:final-fail",
+          "permit_id": "permit:dallas:res-elec-0001",
+          "inspection_type_raw": "Final",
+          "inspection_type_normalized": "final",
+          "inspection_date": "2026-02-19",
+          "result_raw": "Fail",
+          "result_normalized": "fail",
+          "notes_raw": "GFCI devices missing at kitchen counters and cover plates incomplete.",
+          "failure_reason_normalized": "incomplete_work"
+        },
+        {
+          "inspection_id": "inspection:dallas:res-elec-0001:2026-02-24:correction_followup",
+          "source_record_id": "source:inspection:dallas:res-elec-0001:followup-pass",
+          "permit_id": "permit:dallas:res-elec-0001",
+          "inspection_type_raw": "Correction follow-up",
+          "inspection_type_normalized": "correction_followup",
+          "inspection_date": "2026-02-24",
+          "result_raw": "Pass",
+          "result_normalized": "pass",
+          "notes_raw": "Missing devices installed and trim complete.",
+          "reinspection_flag": true
+        }
+      ],
+      "eval_task_coverage": [
+        "next_inspection_outcome",
+        "recommended_next_action"
+      ],
+      "reference_actions": [
+        "complete_remaining_work",
+        "schedule_reinspection"
+      ]
+    },
+    {
+      "sequence_id": "sequence:dallas:res-elec-0002",
+      "sequence_summary": "Residential service upgrade with a failed service release driven by grounding and panel labeling corrections.",
+      "property": {
+        "property_id": "property:908-elmwood-ave-dallas-tx-75208",
+        "normalized_address": "908 ELMWOOD AVE DALLAS TX 75208",
+        "street_address": "908 Elmwood Ave",
+        "city": "Dallas",
+        "state": "TX",
+        "zip_code": "75208",
+        "property_type": "single_family"
+      },
+      "contractor": {
+        "contractor_id": "contractor:dallas:oak-cliff-electric",
+        "name": "Oak Cliff Electric",
+        "city": "Dallas",
+        "state": "TX"
+      },
+      "permit": {
+        "permit_id": "permit:dallas:res-elec-0002",
+        "source_record_id": "source:permit:dallas:res-elec-0002",
+        "source_system": "fixture_pack",
+        "source_permit_number": "ELS-2026-0002",
+        "property_id": "property:908-elmwood-ave-dallas-tx-75208",
+        "permit_type_raw": "Electrical service upgrade",
+        "permit_type_normalized": "electrical_service_upgrade",
+        "work_class": "residential",
+        "trade": "electrical",
+        "status_raw": "Active",
+        "status_normalized": "active",
+        "file_date": "2026-02-21",
+        "issue_date": "2026-02-23",
+        "work_description": "200A service change with new exterior disconnect and panel work.",
+        "contractor_id": "contractor:dallas:oak-cliff-electric"
+      },
+      "inspections": [
+        {
+          "inspection_id": "inspection:dallas:res-elec-0002:2026-02-27:rough_in",
+          "source_record_id": "source:inspection:dallas:res-elec-0002:rough-in",
+          "permit_id": "permit:dallas:res-elec-0002",
+          "inspection_type_raw": "Rough-in",
+          "inspection_type_normalized": "rough_in",
+          "inspection_date": "2026-02-27",
+          "result_raw": "Pass",
+          "result_normalized": "pass",
+          "notes_raw": "Conduit route and meter riser rough acceptable."
+        },
+        {
+          "inspection_id": "inspection:dallas:res-elec-0002:2026-03-03:service_release",
+          "source_record_id": "source:inspection:dallas:res-elec-0002:service-release-fail",
+          "permit_id": "permit:dallas:res-elec-0002",
+          "inspection_type_raw": "Service release",
+          "inspection_type_normalized": "service_release",
+          "inspection_date": "2026-03-03",
+          "result_raw": "Fail",
+          "result_normalized": "fail",
+          "notes_raw": "Service disconnect not labeled and grounding electrode conductor termination incomplete.",
+          "failure_reason_normalized": "grounding_or_bonding_issue"
+        },
+        {
+          "inspection_id": "inspection:dallas:res-elec-0002:2026-03-06:correction_followup",
+          "source_record_id": "source:inspection:dallas:res-elec-0002:followup-pass",
+          "permit_id": "permit:dallas:res-elec-0002",
+          "inspection_type_raw": "Correction follow-up",
+          "inspection_type_normalized": "correction_followup",
+          "inspection_date": "2026-03-06",
+          "result_raw": "Pass",
+          "result_normalized": "pass",
+          "notes_raw": "Grounding corrected, disconnect labeled, release approved.",
+          "reinspection_flag": true
+        }
+      ],
+      "eval_task_coverage": [
+        "failure_reason_classification",
+        "recommended_next_action",
+        "next_inspection_outcome"
+      ],
+      "reference_actions": [
+        "correct_grounding_or_bonding",
+        "add_labels_or_documentation",
+        "schedule_reinspection"
+      ]
+    },
+    {
+      "sequence_id": "sequence:dallas:res-elec-0003",
+      "sequence_summary": "Residential repair permit with a partial final inspection and a clean reinspection after crew completion.",
+      "property": {
+        "property_id": "property:4418-monticello-ave-dallas-tx-75205",
+        "normalized_address": "4418 MONTICELLO AVE DALLAS TX 75205",
+        "street_address": "4418 Monticello Ave",
+        "city": "Dallas",
+        "state": "TX",
+        "zip_code": "75205",
+        "property_type": "single_family"
+      },
+      "contractor": {
+        "contractor_id": "contractor:dallas:highland-park-electric",
+        "name": "Highland Park Electric",
+        "city": "Dallas",
+        "state": "TX"
+      },
+      "permit": {
+        "permit_id": "permit:dallas:res-elec-0003",
+        "source_record_id": "source:permit:dallas:res-elec-0003",
+        "source_system": "fixture_pack",
+        "source_permit_number": "ELP-2026-0003",
+        "property_id": "property:4418-monticello-ave-dallas-tx-75205",
+        "permit_type_raw": "Electrical repair",
+        "permit_type_normalized": "electrical_repair",
+        "work_class": "residential",
+        "trade": "electrical",
+        "status_raw": "Active",
+        "status_normalized": "active",
+        "file_date": "2026-01-12",
+        "issue_date": "2026-01-13",
+        "work_description": "Repair damaged branch circuits and replace affected devices after water intrusion.",
+        "contractor_id": "contractor:dallas:highland-park-electric"
+      },
+      "inspections": [
+        {
+          "inspection_id": "inspection:dallas:res-elec-0003:2026-01-18:rough_in",
+          "source_record_id": "source:inspection:dallas:res-elec-0003:rough-in",
+          "permit_id": "permit:dallas:res-elec-0003",
+          "inspection_type_raw": "Rough-in",
+          "inspection_type_normalized": "rough_in",
+          "inspection_date": "2026-01-18",
+          "result_raw": "Pass",
+          "result_normalized": "pass",
+          "notes_raw": "Damaged branch wiring replaced and concealed areas approved."
+        },
+        {
+          "inspection_id": "inspection:dallas:res-elec-0003:2026-01-24:final",
+          "source_record_id": "source:inspection:dallas:res-elec-0003:final-partial",
+          "permit_id": "permit:dallas:res-elec-0003",
+          "inspection_type_raw": "Final",
+          "inspection_type_normalized": "final",
+          "inspection_date": "2026-01-24",
+          "result_raw": "Partial",
+          "result_normalized": "partial",
+          "notes_raw": "Bedroom AFCI device replacement complete but hallway trim-out not finished."
+        },
+        {
+          "inspection_id": "inspection:dallas:res-elec-0003:2026-01-28:correction_followup",
+          "source_record_id": "source:inspection:dallas:res-elec-0003:followup-pass",
+          "permit_id": "permit:dallas:res-elec-0003",
+          "inspection_type_raw": "Correction follow-up",
+          "inspection_type_normalized": "correction_followup",
+          "inspection_date": "2026-01-28",
+          "result_raw": "Pass",
+          "result_normalized": "pass",
+          "notes_raw": "Remaining trim complete and final approval issued.",
+          "reinspection_flag": true
+        }
+      ],
+      "eval_task_coverage": [
+        "recommended_next_action",
+        "next_inspection_outcome"
+      ],
+      "reference_actions": [
+        "complete_remaining_work",
+        "schedule_reinspection"
+      ]
+    }
+  ]
+}
