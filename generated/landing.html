@@ -457,9 +457,9 @@
               </div>
               <h2>Real progress, as of April 26, 2026</h2>
               <p>
-                The repo is still in MVP scaffolding mode. The active wedge is intentionally narrow:
+                The repo is still in MVP scaffolding mode. The current wedge is intentionally narrow:
                 Dallas residential electrical permits and inspections for electricians. What exists
-                today is a contract-driven artifact pipeline with cross-sample checks, not a production app.
+                today is an evidence-bearing artifact pipeline with cross-sample checks, not a production app.
               </p>
               <div class="metric-grid">
                 <div class="metric">
@@ -471,7 +471,7 @@
                   <div class="metric-label">Normalized Dallas dataset paths: one synthetic scaffold plus imported CSV samples <code>v1</code> and <code>v2</code></div>
                 </div>
                 <div class="metric">
-                  <div class="metric-value">8/8</div>
+                  <div class="metric-value">9/9</div>
                   <div class="metric-label">Contract checks passing in <code>generated/contracts/dallas-electrician-contract-summary-v1/</code></div>
                 </div>
                 <div class="metric">
@@ -482,8 +482,9 @@
               <ul class="status-list">
                 <li><strong>Scope:</strong> Dallas, Texas; electricians; residential permits and inspections.</li>
                 <li><strong>What works:</strong> deterministic generation of discovery outputs, normalized rows, fixture packs, reviewed labels, eval scaffolds, and a cross-sample contract summary from repo-local inputs.</li>
-                <li><strong>Current gap:</strong> make source lineage and optional <code>rule_documents.jsonl</code> part of the same repeatable imported-sample normalization workflow.</li>
-                <li><strong>Loop note:</strong> the 24-hour runner produced real artifacts overnight, then exposed a failure-propagation bug in the supervisor path; that guard is now being tightened so failed iterations stop the day loop instead of thrashing.</li>
+                <li><strong>Most current proof:</strong> <code>generated/contracts/dallas-electrician-contract-summary-v1/</code> passes <code>9/9</code> checks across one synthetic and two imported Dallas scaffolds.</li>
+                <li><strong>Current gap:</strong> widen the imported Dallas fixture so recurring pattern slices and reviewed next actions have repeated support instead of mostly one-off or thinly repeated examples.</li>
+                <li><strong>Operational note:</strong> the unattended loop has produced real artifacts, but the repo still needs a cleaner fail-closed supervisor path when child sessions break.</li>
               </ul>
             </div>
 
@@ -493,7 +494,7 @@
               </div>
               <h2>What the product is trying to prove</h2>
               <p>
-                The broader idea is not “AI for electricians.” The broader idea is that many businesses
+                The broader idea is not "AI for electricians." The broader idea is that many businesses
                 accumulate repeated judgment calls, local exceptions, and operational memory that never
                 becomes inspectable. <code>automoat</code> is trying to convert that hidden workflow
                 memory into artifacts a team can review, compare, and pressure-test before building a wider system.
@@ -532,7 +533,7 @@
                 normalization runs under <code>generated/normalized/dallas-electrician-import-sample-v1/</code>
                 and <code>generated/normalized/dallas-electrician-import-sample-v2/</code>. The wider
                 <code>v2</code> import currently carries <code>5</code> permits, <code>14</code> inspections,
-                <code>24</code> source-record lineage rows, and explicit coverage for
+                <code>27</code> source-record lineage rows, <code>3</code> rule documents, and explicit coverage for
                 <code>pass</code>, <code>fail</code>, <code>partial</code>, <code>cancelled</code>,
                 <code>not_ready</code>, and <code>unknown</code> inspection outcomes.
               </div>
@@ -559,8 +560,9 @@
                 <span class="artifact-label">Contract Summary</span>
                 <code>generated/contracts/dallas-electrician-contract-summary-v1/</code> now compares
                 the synthetic scaffold to imported <code>v1</code> and <code>v2</code>, confirms
-                <code>8</code> passing contract checks, keeps the four eval task families stable, and
-                makes the intentional widening differences explicit instead of implicit.
+                <code>9</code> passing contract checks, includes optional imported
+                <code>rule_documents.jsonl</code> coverage, keeps the four eval task families stable,
+                and makes the intentional widening differences explicit instead of implicit.
               </div>
             </div>
           </div>
@@ -569,29 +571,29 @@
             <div class="section-header">
               <div class="kicker">Latest Signal</div>
             </div>
-            <h2>Most recent generated artifacts</h2>
+            <h2>Freshest generated evidence</h2>
             <div class="grid">
               <div class="card">
-                <h3>Contract summary is the freshest artifact</h3>
+                <h3>Freshest non-page artifacts</h3>
                 <p>
-                  The most recently generated files are
+                  The freshest generated data artifacts are
                   <code>generated/contracts/dallas-electrician-contract-summary-v1/summary.md</code>
-                  and <code>summary.json</code>. They compare all three current Dallas scaffolds and
-                  confirm that the downstream contract still holds.
+                  and <code>summary.json</code>, written on April 26, 2026. They compare all three
+                  current Dallas scaffolds and confirm that the downstream contract still holds.
                 </p>
               </div>
               <div class="card">
-                <h3>Imported sample v2 is the current data frontier</h3>
+                <h3>Imported sample v2 is still the data frontier</h3>
                 <p>
                   The widest normalized dataset remains <code>dallas-electrician-import-sample-v2</code>:
-                  <code>5</code> permits, <code>14</code> inspections, <code>24</code> source-record
-                  lineage rows, <code>20</code> eval tasks, and coverage for
+                  <code>5</code> permits, <code>14</code> inspections, <code>3</code> rule documents,
+                  <code>27</code> source-record lineage rows, <code>20</code> eval tasks, and coverage for
                   <code>cancelled</code>, <code>fail</code>, <code>not_ready</code>, <code>partial</code>,
                   <code>pass</code>, and <code>unknown</code>.
                 </p>
               </div>
               <div class="card">
-                <h3>Discovery breadth is still intentionally small</h3>
+                <h3>Discovery breadth is intentionally small</h3>
                 <p>
                   Business-first discovery currently has two generated variants:
                   <code>dallas-electrician-sample-v1</code> and
@@ -611,8 +613,28 @@
               <div class="timeline-item">
                 <div class="timeline-meta">2026-04-26</div>
                 <p>
-                  Tightened the unattended loop contract after the day supervisor exposed a failure-propagation bug:
-                  failed child sessions must now stop the day loop cleanly instead of spinning through short broken cycles.
+                  Refreshed <code>generated/landing.html</code> against the actual April 26 artifact set:
+                  the page now leads with the contract summary, keeps the product framing broad, corrects the
+                  imported <code>v2</code> lineage and rule-document counts, and points the next-step language
+                  at the real remaining gap instead of inventing broader progress.
+                </p>
+              </div>
+              <div class="timeline-item">
+                <div class="timeline-meta">2026-04-26</div>
+                <p>
+                  Extended <code>scripts/import_dallas_permit_extracts.py</code> so imported Dallas
+                  samples can optionally normalize <code>rule_documents.csv</code> into
+                  <code>rule_documents.jsonl</code> plus matching source-lineage rows. Added Dallas
+                  electrical rule fixtures to imported <code>v1</code> and <code>v2</code>, then
+                  regenerated the contract summary so the rules path is now checked explicitly.
+                </p>
+              </div>
+              <div class="timeline-item">
+                <div class="timeline-meta">2026-04-26</div>
+                <p>
+                  The unattended loop exposed a failure-propagation bug in the supervisor path:
+                  failed child sessions were breaking inner work but still returning success to the day loop,
+                  so the next runtime hardening step is to make that path fail closed instead of spinning.
                 </p>
               </div>
               <div class="timeline-item">
@@ -620,8 +642,8 @@
                 <p>
                   Added <code>scripts/generate_dallas_contract_summary.py</code> and generated
                   <code>generated/contracts/dallas-electrician-contract-summary-v1/</code>, making the
-                  shared synthetic-versus-imported Dallas contract explicit. The current next gap is now
-                  the repeatable normalization path for source lineage plus optional rule documents.
+                  shared synthetic-versus-imported Dallas contract explicit. That contract is now
+                  broadened by the imported rule-document path; the next gap is stronger repeated pattern support.
                 </p>
               </div>
               <div class="timeline-item">
@@ -727,14 +749,14 @@
                 <h3>Not built</h3>
                 <p>
                   No large imported Dallas record set, no production application workflow, no live model
-                  benchmarking results, no rule-document normalization path yet, and no evidence that
-                  the Dallas wedge produces a durable moat in practice.
+                  benchmarking results, no broad repeated imported-pattern coverage yet, no proven repeat-support
+                  depth behind the pattern slices, and no evidence that the Dallas wedge produces a durable moat in practice.
                 </p>
               </div>
             </div>
             <p class="footer-note">
-              Next best move: carry source lineage plus optional rule documents through the same repeatable
-              Dallas normalization workflow.
+              Next best move: broaden the imported Dallas fixture so repeated pattern slices and reviewed
+              next-action labels have deeper support counts.
             </p>
           </div>
 

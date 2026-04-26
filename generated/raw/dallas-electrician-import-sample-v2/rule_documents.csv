@@ -1,0 +1,4 @@
+title,document_type,effective_date,source_url,text_content
+Dallas residential electrical final checklist,inspection_checklist,2025-01-01,https://example.local/dallas/rules/electrical-final,"Verify GFCI and AFCI protection where required. Confirm panel directory is complete and legible. Ensure final trim is installed and service grounding is complete before requesting final approval."
+Dallas service upgrade release guidance,guidance_page,2025-01-01,https://example.local/dallas/rules/service-release,"Service release inspections require disconnect labeling, grounding electrode completion, and safe clear access to the meter and disconnect area for the inspector."
+Dallas reinspection access note,faq,2025-01-01,https://example.local/dallas/rules/reinspection-access,"Reinspection visits should only be requested when the site is accessible, the responsible contact is reachable, and prior correction items are fully addressed."

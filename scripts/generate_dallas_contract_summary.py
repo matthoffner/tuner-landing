@@ -86,11 +86,13 @@ def collect_dataset_summary(config):
         name: (normalized_dir / name).exists() for name in COMMON_NORMALIZED_FILES
     }
     source_records_present = (normalized_dir / "source_records.jsonl").exists()
+    rule_documents_present = (normalized_dir / "rule_documents.jsonl").exists()
 
     properties = load_jsonl(normalized_dir / "properties.jsonl")
     permits = load_jsonl(normalized_dir / "permits.jsonl")
     inspections = load_jsonl(normalized_dir / "inspections.jsonl")
     contractors = load_jsonl(normalized_dir / "contractors.jsonl")
+    rule_documents = load_jsonl(normalized_dir / "rule_documents.jsonl") if rule_documents_present else []
     source_records = load_jsonl(normalized_dir / "source_records.jsonl") if source_records_present else []
     project = load_json(normalized_dir / "projects.json")
 
@@ -121,11 +123,13 @@ def collect_dataset_summary(config):
         "project_name": project["name"],
         "normalized_files_present": common_files_present,
         "has_source_records": source_records_present,
+        "has_rule_documents": rule_documents_present,
         "counts": {
             "properties": len(properties),
             "permits": len(permits),
             "inspections": len(inspections),
             "contractors": len(contractors),
+            "rule_documents": len(rule_documents),
             "source_records": len(source_records),
             "sequences": len(sequence_payload["sequences"]),
             "pattern_slices": len(pattern_payload["pattern_slices"]),
@@ -166,6 +170,17 @@ def build_checks(dataset_summaries):
             "description": "Imported datasets include source lineage rows while the synthetic scaffold does not require them.",
             "passed": all(
                 summary["has_source_records"] if summary["kind"] == "imported" else not summary["has_source_records"]
+                for summary in dataset_summaries
+            ),
+        }
+    )
+
+    checks.append(
+        {
+            "check_id": "rule-documents-imported-workflow",
+            "description": "Imported datasets include optional rule_documents.jsonl while the synthetic scaffold can stay minimal.",
+            "passed": all(
+                summary["has_rule_documents"] if summary["kind"] == "imported" else not summary["has_rule_documents"]
                 for summary in dataset_summaries
             ),
         }
@@ -242,10 +257,11 @@ def build_summary(dataset_summaries, checks):
         "overall_passed": all(check["passed"] for check in checks),
         "intentional_differences": [
             "Imported scaffolds add source lineage through source_records.jsonl while the synthetic sample stays minimal.",
+            "Imported scaffolds now also add optional Dallas rule-document context through rule_documents.jsonl while the synthetic sample stays minimal.",
             "Normalized row counts, eval task totals, and reviewed label totals grow across imported samples as the raw CSV fixtures widen.",
             "Inspection result vocabulary broadens in imported v2 to include cancelled, not_ready, and unknown without changing downstream task families or split shapes.",
         ],
-        "next_gap": "Bring optional rule_documents.jsonl and source-lineage normalization into the same repeatable imported-sample workflow.",
+        "next_gap": "Broaden the imported Dallas fixture so pattern slices and reviewed labels are supported by more than one or two permit sequences per recurring pattern.",
     }
 
 
@@ -279,7 +295,7 @@ def build_markdown(summary):
                 "",
                 f"- Dataset id: `{dataset['dataset_id']}`",
                 f"- Kind: `{dataset['kind']}`",
-                f"- Normalized counts: `{counts['properties']}` properties, `{counts['permits']}` permits, `{counts['inspections']}` inspections, `{counts['contractors']}` contractors, `{counts['source_records']}` source records",
+                f"- Normalized counts: `{counts['properties']}` properties, `{counts['permits']}` permits, `{counts['inspections']}` inspections, `{counts['contractors']}` contractors, `{counts['rule_documents']}` rule documents, `{counts['source_records']}` source records",
                 f"- Fixture counts: `{counts['sequences']}` sequences, `{counts['pattern_slices']}` pattern slices",
                 f"- Eval counts: `{counts['tasks']}` tasks, `{counts['label_reviews']}` reviewed label rows, `{counts['dev_tasks']}` dev, `{counts['test_tasks']}` test",
                 f"- Inspection result vocabulary: `{', '.join(dataset['inspection_result_vocabulary'])}`",

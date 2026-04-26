@@ -44,8 +44,8 @@ Recent progress:
 
 Updated next best artifacts:
 
-- a normalization pass that brings `source_records.jsonl` and optional `rule_documents.jsonl` into the same repeatable imported-sample workflow
 - a merged or broader imported Dallas fixture that increases pattern-slice support counts beyond single-sequence examples
+- broader imported Dallas sequences that let reviewed labels and pattern slices rest on repeated support instead of one-off examples
 
 Latest bounded improvement completed:
 
@@ -57,6 +57,7 @@ Latest bounded improvement completed:
 - `scripts/generate_dallas_eval_artifacts.py` now accepts input and output arguments, and `generated/fixtures/dallas-electrician-import-sequences-v1/` plus `generated/evals/dallas-electrician-import-sample-v1/` prove the imported sample holds the same downstream Dallas fixture, review, and eval contracts
 - `generated/raw/dallas-electrician-import-sample-v2/` now widens the imported Dallas fixture with `pass`, `fail`, `partial`, `cancelled`, `not_ready`, and `unknown` inspection outcomes, and the generated `normalized`, `fixtures`, and `evals` `-v2` directories prove the importer and downstream contracts hold across the broader result mix
 - `scripts/generate_dallas_contract_summary.py` now emits `generated/contracts/dallas-electrician-contract-summary-v1/summary.json` and `summary.md`, making the shared downstream contract and intentional synthetic-versus-imported differences explicit across all current Dallas scaffolds
+- `scripts/import_dallas_permit_extracts.py` now optionally ingests `rule_documents.csv` into `rule_documents.jsonl` plus source-lineage rows for imported Dallas samples, and the regenerated contract summary proves imported `v1` and `v2` keep that optional rules path without changing downstream eval contracts
 
 ## Constraints
 

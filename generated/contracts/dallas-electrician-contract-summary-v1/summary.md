@@ -6,12 +6,13 @@ This artifact checks that the Dallas electricians MVP keeps one stable downstrea
 
 - Overall passed: `true`
 - Datasets compared: `3`
-- Next gap: Bring optional rule_documents.jsonl and source-lineage normalization into the same repeatable imported-sample workflow.
+- Next gap: Broaden the imported Dallas fixture so pattern slices and reviewed labels are supported by more than one or two permit sequences per recurring pattern.
 
 ## Contract Checks
 
 - `pass` `normalized-common-files-present`: All datasets keep the shared normalized MVP files.
 - `pass` `source-records-optional-shape`: Imported datasets include source lineage rows while the synthetic scaffold does not require them.
+- `pass` `rule-documents-imported-workflow`: Imported datasets include optional rule_documents.jsonl while the synthetic scaffold can stay minimal.
 - `pass` `fixture-sequences-present`: Every scaffold emits at least one permit-inspection sequence for downstream task generation.
 - `pass` `fixture-pattern-slices-present`: Every scaffold emits pattern slices for the pattern-extraction eval family.
 - `pass` `eval-task-families-stable`: Every eval scaffold exposes the same four Dallas task families.
@@ -25,7 +26,7 @@ This artifact checks that the Dallas electricians MVP keeps one stable downstrea
 
 - Dataset id: `dallas-electrician-sample-v1`
 - Kind: `synthetic`
-- Normalized counts: `3` properties, `3` permits, `9` inspections, `3` contractors, `0` source records
+- Normalized counts: `3` properties, `3` permits, `9` inspections, `3` contractors, `0` rule documents, `0` source records
 - Fixture counts: `3` sequences, `3` pattern slices
 - Eval counts: `14` tasks, `5` reviewed label rows, `11` dev, `3` test
 - Inspection result vocabulary: `fail, partial, pass`
@@ -36,7 +37,7 @@ This artifact checks that the Dallas electricians MVP keeps one stable downstrea
 
 - Dataset id: `dallas-electrician-import-sample-v1`
 - Kind: `imported`
-- Normalized counts: `4` properties, `4` permits, `11` inspections, `4` contractors, `19` source records
+- Normalized counts: `4` properties, `4` permits, `11` inspections, `4` contractors, `2` rule documents, `21` source records
 - Fixture counts: `4` sequences, `4` pattern slices
 - Eval counts: `18` tasks, `7` reviewed label rows, `14` dev, `4` test
 - Inspection result vocabulary: `fail, partial, pass`
@@ -47,7 +48,7 @@ This artifact checks that the Dallas electricians MVP keeps one stable downstrea
 
 - Dataset id: `dallas-electrician-import-sample-v2`
 - Kind: `imported`
-- Normalized counts: `5` properties, `5` permits, `14` inspections, `5` contractors, `24` source records
+- Normalized counts: `5` properties, `5` permits, `14` inspections, `5` contractors, `3` rule documents, `27` source records
 - Fixture counts: `5` sequences, `4` pattern slices
 - Eval counts: `20` tasks, `7` reviewed label rows, `16` dev, `4` test
 - Inspection result vocabulary: `cancelled, fail, not_ready, partial, pass, unknown`
@@ -57,5 +58,6 @@ This artifact checks that the Dallas electricians MVP keeps one stable downstrea
 ## Intentional Differences
 
 - Imported scaffolds add source lineage through source_records.jsonl while the synthetic sample stays minimal.
+- Imported scaffolds now also add optional Dallas rule-document context through rule_documents.jsonl while the synthetic sample stays minimal.
 - Normalized row counts, eval task totals, and reviewed label totals grow across imported samples as the raw CSV fixtures widen.
 - Inspection result vocabulary broadens in imported v2 to include cancelled, not_ready, and unknown without changing downstream task families or split shapes.

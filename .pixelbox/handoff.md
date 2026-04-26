@@ -4,6 +4,14 @@ Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
 - lane: editor
+- status: refreshed the landing page against the actual April 26 artifact set so it now centers the 9/9 Dallas contract summary, keeps the product framing broad, fixes imported `v2` counts, and keeps the build log aligned to the real remaining gap
+- files: generated/landing.html, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- next: keep `generated/landing.html` synced as Dallas artifacts change, especially if broader repeated pattern support changes the contract summary or imported sample counts
+- lane: editor
+- status: added optional imported Dallas rule-document normalization, regenerated the imported `v1` and `v2` normalized artifacts, and refreshed the contract summary plus landing page so the repo now treats repeated pattern support as the next real gap
+- files: scripts/import_dallas_permit_extracts.py, generated/raw/dallas-electrician-import-sample-v1/rule_documents.csv, generated/raw/dallas-electrician-import-sample-v2/rule_documents.csv, generated/normalized/dallas-electrician-import-sample-v1/projects.json, generated/normalized/dallas-electrician-import-sample-v1/rule_documents.jsonl, generated/normalized/dallas-electrician-import-sample-v1/source_records.jsonl, generated/normalized/dallas-electrician-import-sample-v2/projects.json, generated/normalized/dallas-electrician-import-sample-v2/rule_documents.jsonl, generated/normalized/dallas-electrician-import-sample-v2/source_records.jsonl, scripts/generate_dallas_contract_summary.py, generated/contracts/dallas-electrician-contract-summary-v1/summary.json, generated/contracts/dallas-electrician-contract-summary-v1/summary.md, NEXT_TASK.md, generated/landing.html, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- next: widen the imported Dallas fixture so recurring pattern slices and recommended-next-action labels are backed by repeated sequences instead of mostly one-off examples
+- lane: editor
 - status: refreshed the landing page again so it now leads with the current contract summary, exact Dallas scaffold counts, and the real remaining normalization gap without stale pre-summary claims
 - files: generated/landing.html, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
 - next: keep the landing page synced as new Dallas normalization artifacts land, especially if `rule_documents.jsonl` or richer source-lineage outputs get added

@@ -4,6 +4,6 @@
   "locality": "Dallas, Texas",
   "trade": "electricians",
   "workflow": "residential electrical permits and inspections",
-  "created_at": "2026-04-26T13:19:09Z",
-  "source_summary": "Imported Dallas residential electrical extract with 4 permits and 11 inspections normalized from CSV fixtures."
+  "created_at": "2026-04-26T14:28:37Z",
+  "source_summary": "Imported Dallas residential electrical extract with 4 permits, 11 inspections, 2 rule documents normalized from CSV fixtures."
 }
