@@ -4,6 +4,14 @@ Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
 - lane: editor
+- status: refreshed the landing page again so it now leads with the current contract summary, exact Dallas scaffold counts, and the real remaining normalization gap without stale pre-summary claims
+- files: generated/landing.html, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- next: keep the landing page synced as new Dallas normalization artifacts land, especially if `rule_documents.jsonl` or richer source-lineage outputs get added
+- lane: editor
+- status: added a Dallas contract-summary generator and emitted a cross-sample artifact proving the current synthetic and imported scaffolds share one stable downstream shape
+- files: scripts/generate_dallas_contract_summary.py, generated/contracts/dallas-electrician-contract-summary-v1/summary.json, generated/contracts/dallas-electrician-contract-summary-v1/summary.md, NEXT_TASK.md, generated/landing.html, .automoat/logs/agent-journal.md
+- next: keep the Dallas normalization workflow moving by adding optional `rule_documents.jsonl` plus a more explicit source-lineage normalization pass for imported samples
+- lane: editor
 - status: refreshed the generated landing page against the real current Dallas MVP artifacts and build log
 - files: generated/landing.html, .automoat/logs/agent-journal.md
 - next: keep the page synced as contract-check and normalization-summary artifacts land, and avoid claiming progress beyond the generated Dallas scaffolds

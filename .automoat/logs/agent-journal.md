@@ -28,6 +28,11 @@ Use short dated entries. Focus on decisions, changes, blockers, and next steps.
 
 ## 2026-04-26
 
+- Re-read `generated/landing.html`, `NEXT_TASK.md`, `.automoat/logs/agent-journal.md`, `.pixelbox/handoff.md`, `README.md`, and the freshest generated artifacts before updating the landing page again.
+- Reworked `generated/landing.html` into a higher-signal product/status page centered on the latest contract summary, exact Dallas scaffold counts, intentionally broad product framing, and the current normalization gap without claiming unbuilt progress.
+- Added `scripts/generate_dallas_contract_summary.py` and generated `generated/contracts/dallas-electrician-contract-summary-v1/summary.json` plus `summary.md` to compare the synthetic Dallas scaffold against imported `v1` and `v2`.
+- Made the contract summary validate stable normalized file presence, stable eval task families, stable label-review fields, and monotonic widening of permits, inspections, tasks, and source-lineage counts across imported samples.
+- Updated `NEXT_TASK.md` and `generated/landing.html` so the repo no longer claims the cross-sample check is missing; the remaining Dallas MVP gap is now the repeatable normalization path for `source_records.jsonl` and optional `rule_documents.jsonl`.
 - Extended `scripts/generate_dallas_discovery_artifacts.py` with batch mode so every intake variant under `generated/intake/` can emit a matching discovery run under `generated/discovery/` without hand-editing output fixtures.
 - Added a second Dallas business-first intake at `generated/intake/dallas-electrician-south-dallas-v1/intake.json` focused on older-home South Dallas and Oak Cliff electrical work.
 - Generated `generated/discovery/dallas-electrician-south-dallas-v1/` to prove the same Dallas discovery contract works across multiple realistic electrician profiles.

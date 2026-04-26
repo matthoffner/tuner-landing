@@ -1,0 +1,259 @@
+{
+  "summary_id": "dallas-electrician-contract-summary-v1",
+  "focus": "Dallas electricians MVP synthetic vs imported scaffold contract comparison",
+  "datasets": [
+    {
+      "dataset_id": "dallas-electrician-sample-v1",
+      "label": "Synthetic sample v1",
+      "kind": "synthetic",
+      "project_name": "Dallas Electrician Sample v1",
+      "normalized_files_present": {
+        "projects.json": true,
+        "properties.jsonl": true,
+        "permits.jsonl": true,
+        "inspections.jsonl": true,
+        "contractors.jsonl": true
+      },
+      "has_source_records": false,
+      "counts": {
+        "properties": 3,
+        "permits": 3,
+        "inspections": 9,
+        "contractors": 3,
+        "source_records": 0,
+        "sequences": 3,
+        "pattern_slices": 3,
+        "tasks": 14,
+        "label_reviews": 5,
+        "dev_tasks": 11,
+        "test_tasks": 3
+      },
+      "inspection_result_vocabulary": [
+        "fail",
+        "partial",
+        "pass"
+      ],
+      "task_types": [
+        "failure_reason_classification",
+        "next_inspection_outcome",
+        "pattern_extraction",
+        "recommended_next_action"
+      ],
+      "task_family_counts": {
+        "next_inspection_outcome": 6,
+        "failure_reason_classification": 2,
+        "recommended_next_action": 3,
+        "pattern_extraction": 3
+      },
+      "sequence_coverage_union": [
+        "failure_reason_classification",
+        "next_inspection_outcome",
+        "recommended_next_action"
+      ],
+      "label_review_fields": [
+        "evidence",
+        "inspection_id",
+        "label_payload",
+        "label_source",
+        "metadata",
+        "permit_id",
+        "review_id",
+        "review_status",
+        "reviewer_note",
+        "task_id",
+        "task_type"
+      ],
+      "paths": {
+        "normalized_dir": "generated/normalized/dallas-electrician-sample-v1",
+        "fixture_dir": "generated/fixtures/dallas-electrician-sequences-v1",
+        "eval_dir": "generated/evals/dallas-electrician-sample-v1"
+      }
+    },
+    {
+      "dataset_id": "dallas-electrician-import-sample-v1",
+      "label": "Imported sample v1",
+      "kind": "imported",
+      "project_name": "Dallas Electrician Import Sample V1",
+      "normalized_files_present": {
+        "projects.json": true,
+        "properties.jsonl": true,
+        "permits.jsonl": true,
+        "inspections.jsonl": true,
+        "contractors.jsonl": true
+      },
+      "has_source_records": true,
+      "counts": {
+        "properties": 4,
+        "permits": 4,
+        "inspections": 11,
+        "contractors": 4,
+        "source_records": 19,
+        "sequences": 4,
+        "pattern_slices": 4,
+        "tasks": 18,
+        "label_reviews": 7,
+        "dev_tasks": 14,
+        "test_tasks": 4
+      },
+      "inspection_result_vocabulary": [
+        "fail",
+        "partial",
+        "pass"
+      ],
+      "task_types": [
+        "failure_reason_classification",
+        "next_inspection_outcome",
+        "pattern_extraction",
+        "recommended_next_action"
+      ],
+      "task_family_counts": {
+        "next_inspection_outcome": 7,
+        "failure_reason_classification": 3,
+        "recommended_next_action": 4,
+        "pattern_extraction": 4
+      },
+      "sequence_coverage_union": [
+        "failure_reason_classification",
+        "next_inspection_outcome",
+        "recommended_next_action"
+      ],
+      "label_review_fields": [
+        "evidence",
+        "inspection_id",
+        "label_payload",
+        "label_source",
+        "metadata",
+        "permit_id",
+        "review_id",
+        "review_status",
+        "reviewer_note",
+        "task_id",
+        "task_type"
+      ],
+      "paths": {
+        "normalized_dir": "generated/normalized/dallas-electrician-import-sample-v1",
+        "fixture_dir": "generated/fixtures/dallas-electrician-import-sequences-v1",
+        "eval_dir": "generated/evals/dallas-electrician-import-sample-v1"
+      }
+    },
+    {
+      "dataset_id": "dallas-electrician-import-sample-v2",
+      "label": "Imported sample v2",
+      "kind": "imported",
+      "project_name": "Dallas Electrician Import Sample V2",
+      "normalized_files_present": {
+        "projects.json": true,
+        "properties.jsonl": true,
+        "permits.jsonl": true,
+        "inspections.jsonl": true,
+        "contractors.jsonl": true
+      },
+      "has_source_records": true,
+      "counts": {
+        "properties": 5,
+        "permits": 5,
+        "inspections": 14,
+        "contractors": 5,
+        "source_records": 24,
+        "sequences": 5,
+        "pattern_slices": 4,
+        "tasks": 20,
+        "label_reviews": 7,
+        "dev_tasks": 16,
+        "test_tasks": 4
+      },
+      "inspection_result_vocabulary": [
+        "cancelled",
+        "fail",
+        "not_ready",
+        "partial",
+        "pass",
+        "unknown"
+      ],
+      "task_types": [
+        "failure_reason_classification",
+        "next_inspection_outcome",
+        "pattern_extraction",
+        "recommended_next_action"
+      ],
+      "task_family_counts": {
+        "next_inspection_outcome": 9,
+        "failure_reason_classification": 2,
+        "recommended_next_action": 5,
+        "pattern_extraction": 4
+      },
+      "sequence_coverage_union": [
+        "failure_reason_classification",
+        "next_inspection_outcome",
+        "recommended_next_action"
+      ],
+      "label_review_fields": [
+        "evidence",
+        "inspection_id",
+        "label_payload",
+        "label_source",
+        "metadata",
+        "permit_id",
+        "review_id",
+        "review_status",
+        "reviewer_note",
+        "task_id",
+        "task_type"
+      ],
+      "paths": {
+        "normalized_dir": "generated/normalized/dallas-electrician-import-sample-v2",
+        "fixture_dir": "generated/fixtures/dallas-electrician-import-sequences-v2",
+        "eval_dir": "generated/evals/dallas-electrician-import-sample-v2"
+      }
+    }
+  ],
+  "checks": [
+    {
+      "check_id": "normalized-common-files-present",
+      "description": "All datasets keep the shared normalized MVP files.",
+      "passed": true
+    },
+    {
+      "check_id": "source-records-optional-shape",
+      "description": "Imported datasets include source lineage rows while the synthetic scaffold does not require them.",
+      "passed": true
+    },
+    {
+      "check_id": "fixture-sequences-present",
+      "description": "Every scaffold emits at least one permit-inspection sequence for downstream task generation.",
+      "passed": true
+    },
+    {
+      "check_id": "fixture-pattern-slices-present",
+      "description": "Every scaffold emits pattern slices for the pattern-extraction eval family.",
+      "passed": true
+    },
+    {
+      "check_id": "eval-task-families-stable",
+      "description": "Every eval scaffold exposes the same four Dallas task families.",
+      "passed": true
+    },
+    {
+      "check_id": "eval-test-split-matches-pattern-slices",
+      "description": "Every eval scaffold keeps pattern extraction isolated in test, with one test row per pattern slice.",
+      "passed": true
+    },
+    {
+      "check_id": "label-review-schema-stable",
+      "description": "Reviewed label rows keep one shared field contract across synthetic and imported scaffolds.",
+      "passed": true
+    },
+    {
+      "check_id": "widening-counts-monotonic",
+      "description": "Imported samples widen the scaffold monotonically for permits, inspections, tasks, and source lineage.",
+      "passed": true
+    }
+  ],
+  "overall_passed": true,
+  "intentional_differences": [
+    "Imported scaffolds add source lineage through source_records.jsonl while the synthetic sample stays minimal.",
+    "Normalized row counts, eval task totals, and reviewed label totals grow across imported samples as the raw CSV fixtures widen.",
+    "Inspection result vocabulary broadens in imported v2 to include cancelled, not_ready, and unknown without changing downstream task families or split shapes."
+  ],
+  "next_gap": "Bring optional rule_documents.jsonl and source-lineage normalization into the same repeatable imported-sample workflow."
+}

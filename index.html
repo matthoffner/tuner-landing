@@ -437,13 +437,13 @@
         </div>
 
         <div class="hero">
-          <div class="eyebrow">Local-first moat discovery and eval scaffolding</div>
-          <h1>Turn narrow workflow memory into something a team can inspect, test, and eventually defend.</h1>
+          <div class="eyebrow">Evidence-first workflow intelligence scaffolding</div>
+          <h1>Make hidden operational judgment legible before pretending there is a finished product.</h1>
           <p class="hero-copy">
-            <code>automoat</code> is a local-first project for turning messy business workflow data
-            into structured artifacts: business-first discovery outputs, normalized records, and
-            eval scaffolds that let a specific workflow claim become inspectable before heavier product
-            or model work.
+            <code>automoat</code> is a local-first project for turning repeated business judgment into
+            inspectable artifacts. The current repo does that through discovery outputs, normalized
+            records, fixture packs, reviewed labels, eval scaffolds, and contract summaries for one
+            deliberately narrow wedge before any broader product claims.
           </p>
           <div class="hero-actions">
             <a class="button button-primary" href="#state">See Current State</a>
@@ -458,8 +458,8 @@
               <h2>Real progress, as of April 26, 2026</h2>
               <p>
                 The repo is still in MVP scaffolding mode. The active wedge is intentionally narrow:
-                Dallas residential electrical permits and inspections. What exists today is a
-                contract-driven artifact pipeline and a truthful paper trail, not a production app.
+                Dallas residential electrical permits and inspections for electricians. What exists
+                today is a contract-driven artifact pipeline with cross-sample checks, not a production app.
               </p>
               <div class="metric-grid">
                 <div class="metric">
@@ -471,18 +471,18 @@
                   <div class="metric-label">Normalized Dallas dataset paths: one synthetic scaffold plus imported CSV samples <code>v1</code> and <code>v2</code></div>
                 </div>
                 <div class="metric">
-                  <div class="metric-value">52</div>
-                  <div class="metric-label">Generated eval tasks across three Dallas scaffolds and four task families</div>
+                  <div class="metric-value">8/8</div>
+                  <div class="metric-label">Contract checks passing in <code>generated/contracts/dallas-electrician-contract-summary-v1/</code></div>
                 </div>
                 <div class="metric">
-                  <div class="metric-value">19</div>
-                  <div class="metric-label">Reviewed label rows derived from normalized permit and inspection records</div>
+                  <div class="metric-value">52 / 19</div>
+                  <div class="metric-label">Generated eval tasks and reviewed label rows across the three Dallas scaffolds</div>
                 </div>
               </div>
               <ul class="status-list">
                 <li><strong>Scope:</strong> Dallas, Texas; electricians; residential permits and inspections.</li>
-                <li><strong>What works:</strong> deterministic generation of discovery outputs, fixture packs, reviewed labels, and eval scaffolds from repo-local inputs.</li>
-                <li><strong>Current gap:</strong> add a repeatable contract check between synthetic and imported scaffolds, and carry source lineage through the same normalization workflow.</li>
+                <li><strong>What works:</strong> deterministic generation of discovery outputs, normalized rows, fixture packs, reviewed labels, eval scaffolds, and a cross-sample contract summary from repo-local inputs.</li>
+                <li><strong>Current gap:</strong> make source lineage and optional <code>rule_documents.jsonl</code> part of the same repeatable imported-sample normalization workflow.</li>
               </ul>
             </div>
 
@@ -492,15 +492,15 @@
               </div>
               <h2>What the product is trying to prove</h2>
               <p>
-                The broader idea is not “AI for electricians.” It is that many businesses accumulate
-                repeated judgment calls, local exceptions, and operational memory that never becomes
-                inspectable. <code>automoat</code> is trying to turn that hidden workflow knowledge
-                into artifacts a team can review, compare, and eventually productize.
+                The broader idea is not “AI for electricians.” The broader idea is that many businesses
+                accumulate repeated judgment calls, local exceptions, and operational memory that never
+                becomes inspectable. <code>automoat</code> is trying to convert that hidden workflow
+                memory into artifacts a team can review, compare, and pressure-test before building a wider system.
               </p>
               <ul>
                 <li>Start from repeated business judgment, not model selection.</li>
                 <li>Use a narrow workflow wedge to prove the artifact contracts before widening the product surface.</li>
-                <li>Generate evidence-bearing discovery, normalization, and eval outputs before claiming product maturity.</li>
+                <li>Generate evidence-bearing discovery, normalization, and eval outputs before claiming product maturity or moat strength.</li>
               </ul>
             </div>
           </div>
@@ -554,6 +554,13 @@
                 <code>generate_dallas_label_reviews.py</code>, and
                 <code>generate_dallas_eval_artifacts.py</code>.
               </div>
+              <div class="artifact-card">
+                <span class="artifact-label">Contract Summary</span>
+                <code>generated/contracts/dallas-electrician-contract-summary-v1/</code> now compares
+                the synthetic scaffold to imported <code>v1</code> and <code>v2</code>, confirms
+                <code>8</code> passing contract checks, keeps the four eval task families stable, and
+                makes the intentional widening differences explicit instead of implicit.
+              </div>
             </div>
           </div>
 
@@ -564,28 +571,31 @@
             <h2>Most recent generated artifacts</h2>
             <div class="grid">
               <div class="card">
-                <h3>Imported sample v2 is the current frontier</h3>
+                <h3>Contract summary is the freshest artifact</h3>
                 <p>
-                  The newest concrete artifact set is <code>dallas-electrician-import-sample-v2</code>:
-                  <code>5</code> normalized permits, <code>14</code> normalized inspections,
-                  <code>20</code> eval tasks, and <code>7</code> reviewed label rows, all produced
-                  without changing the downstream contract shapes.
+                  The most recently generated files are
+                  <code>generated/contracts/dallas-electrician-contract-summary-v1/summary.md</code>
+                  and <code>summary.json</code>. They compare all three current Dallas scaffolds and
+                  confirm that the downstream contract still holds.
                 </p>
               </div>
               <div class="card">
-                <h3>South Dallas discovery variant</h3>
+                <h3>Imported sample v2 is the current data frontier</h3>
                 <p>
-                  The newest business-first output is a second intake and generated discovery run for
-                  older-home electrical work across South Dallas and Oak Cliff. This proves the discovery
-                  contract can hold across more than one electrician profile without hand-editing outputs.
+                  The widest normalized dataset remains <code>dallas-electrician-import-sample-v2</code>:
+                  <code>5</code> permits, <code>14</code> inspections, <code>24</code> source-record
+                  lineage rows, <code>20</code> eval tasks, and coverage for
+                  <code>cancelled</code>, <code>fail</code>, <code>not_ready</code>, <code>partial</code>,
+                  <code>pass</code>, and <code>unknown</code>.
                 </p>
               </div>
               <div class="card">
-                <h3>Current unresolved gap</h3>
+                <h3>Discovery breadth is still intentionally small</h3>
                 <p>
-                  The next useful artifact is not a broader claim. It is a contract-check or normalization
-                  summary that compares synthetic and imported Dallas scaffolds, while keeping source
-                  lineage and optional rule documents in the same repeatable workflow.
+                  Business-first discovery currently has two generated variants:
+                  <code>dallas-electrician-sample-v1</code> and
+                  <code>dallas-electrician-south-dallas-v1</code>. That proves the contract can vary
+                  by profile, but it is still narrow by design.
                 </p>
               </div>
             </div>
@@ -600,10 +610,19 @@
               <div class="timeline-item">
                 <div class="timeline-meta">2026-04-26</div>
                 <p>
+                  Added <code>scripts/generate_dallas_contract_summary.py</code> and generated
+                  <code>generated/contracts/dallas-electrician-contract-summary-v1/</code>, making the
+                  shared synthetic-versus-imported Dallas contract explicit. The current next gap is now
+                  the repeatable normalization path for source lineage plus optional rule documents.
+                </p>
+              </div>
+              <div class="timeline-item">
+                <div class="timeline-meta">2026-04-26</div>
+                <p>
                   Refreshed <code>generated/landing.html</code> again so it reflects the current repo
-                  state after the imported <code>v2</code> scaffold: three normalized dataset paths,
-                  three eval scaffolds, exact task and reviewed-label counts, and the real next gap
-                  around contract checks and source-lineage normalization.
+                  state after the contract summary landed: three normalized dataset paths, two discovery
+                  variants, three eval scaffolds, exact task and reviewed-label counts, and the real
+                  remaining normalization gap instead of stale pre-summary language.
                 </p>
               </div>
               <div class="timeline-item">
@@ -700,14 +719,14 @@
                 <h3>Not built</h3>
                 <p>
                   No large imported Dallas record set, no production application workflow, no live model
-                  benchmarking results, no cross-sample contract checker yet, and no evidence that the
-                  Dallas wedge produces a durable moat in practice.
+                  benchmarking results, no rule-document normalization path yet, and no evidence that
+                  the Dallas wedge produces a durable moat in practice.
                 </p>
               </div>
             </div>
             <p class="footer-note">
-              Next best move: add a normalization or contract-check pass that compares synthetic and imported
-              Dallas scaffolds, and carry source lineage plus optional rule documents through the same repeatable workflow.
+              Next best move: carry source lineage plus optional rule documents through the same repeatable
+              Dallas normalization workflow.
             </p>
           </div>
 
@@ -729,6 +748,8 @@
               <a class="doc-pill" href="./evals/dallas-electrician-sample-v1/reports/sample-contract.md">eval sample report</a>
               <a class="doc-pill" href="./evals/dallas-electrician-import-sample-v1/reports/sample-contract.md">imported eval report</a>
               <a class="doc-pill" href="./evals/dallas-electrician-import-sample-v2/reports/sample-contract.md">wider imported eval report</a>
+              <a class="doc-pill" href="./contracts/dallas-electrician-contract-summary-v1/summary.md">contract summary</a>
+              <a class="doc-pill" href="./contracts/dallas-electrician-contract-summary-v1/summary.json">contract summary json</a>
               <a class="doc-pill" href="./fixtures/dallas-electrician-sequences-v1/README.md">fixture pack readme</a>
               <a class="doc-pill" href="./normalized/dallas-electrician-sample-v1/projects.json">normalized project metadata</a>
               <a class="doc-pill" href="./normalized/dallas-electrician-import-sample-v1/projects.json">imported normalized project metadata</a>
