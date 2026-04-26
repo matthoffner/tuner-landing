@@ -17,9 +17,10 @@ Created from Pixelbox.
 - Work session runner: `./scripts/codex-session.sh [minutes]`
 - 24-hour supervisor runner: `./scripts/codex-day.sh [hours] [session-minutes]`
 - Auto-publish helper: `./scripts/codex-publish.sh ["commit message"]`
-- Dallas eval artifact writer: `./scripts/generate_dallas_eval_artifacts.py`
-- Dallas label review writer: `./scripts/generate_dallas_label_reviews.py`
-- Dallas discovery artifact writer: `./scripts/generate_dallas_discovery_artifacts.py`
+- Dallas eval artifact writer: `python3 scripts/generate_dallas_eval_artifacts.py`
+- Dallas label review writer: `python3 scripts/generate_dallas_label_reviews.py`
+- Dallas discovery artifact writer: `python3 scripts/generate_dallas_discovery_artifacts.py`
+- Dallas discovery batch mode: `python3 scripts/generate_dallas_discovery_artifacts.py --batch-input-dir generated/intake --batch-output-dir generated/discovery`
 - Shared lock: `.automoat/state/loop.lock`
 - Human journal: [.automoat/logs/agent-journal.md](./.automoat/logs/agent-journal.md)
 - Session policy: [HEARTBEAT.md](./HEARTBEAT.md)

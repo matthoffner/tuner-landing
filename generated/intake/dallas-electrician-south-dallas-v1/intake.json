@@ -1,0 +1,280 @@
+{
+  "business_name": "Red Brick Home Electric",
+  "service_area": [
+    "Dallas, Texas"
+  ],
+  "service_area_summary": "South Dallas and Oak Cliff ZIP codes",
+  "trade": "electrical",
+  "customer_focus": "homeowner",
+  "job_types": [
+    "service mast repairs",
+    "older home rewires",
+    "detached garage feeds",
+    "meter socket replacements"
+  ],
+  "pain_points": [
+    "Older housing stock produces recurring grounding and service-equipment corrections that are not captured consistently.",
+    "Office staff cannot reliably tell which older-home jobs need more inspection prep before scheduling.",
+    "Reinspection lessons are trapped in callback texts instead of a reusable readiness checklist."
+  ],
+  "systems_of_record": [
+    "Housecall Pro",
+    "shared drive permit folders",
+    "crew SMS threads",
+    "email notices from the permit portal"
+  ],
+  "available_data_assets": [
+    "Permit export spreadsheets",
+    "Photo folders for service repairs and corrections",
+    "Invoice notes describing callback causes",
+    "Office reinspection scheduling notes"
+  ],
+  "crew_size": 4,
+  "license_context": "Texas licensed electrical contractor focused on residential repair and service work",
+  "target_zip_codes": [
+    "75208",
+    "75211",
+    "75216",
+    "75224"
+  ],
+  "after_hours_or_emergency_work": false,
+  "permit_handling_style": "Estimator scopes work, office files permits, field lead relays failed inspection details back to the office",
+  "workflow_steps": [
+    {
+      "name": "Lead Intake",
+      "owner": "dispatcher",
+      "system": "Housecall Pro + inbound calls",
+      "repeated_judgment": "decide whether an urgent service issue is likely to require a permit and inspection follow-up",
+      "delay_point": "older-home repair calls are sometimes booked before the permit path is understood",
+      "data_produced": "address, symptom description, urgency, probable work type",
+      "data_saved_well": "partially"
+    },
+    {
+      "name": "Scope Walkthrough",
+      "owner": "estimator",
+      "system": "onsite notes, panel photos, Housecall Pro estimate",
+      "repeated_judgment": "decide whether the repair is simple replacement work or a larger service/rewire project",
+      "delay_point": "scope notes vary by estimator, which weakens later pattern analysis",
+      "data_produced": "scope summary, probable permit class, risk notes for older service equipment",
+      "data_saved_well": "partially"
+    },
+    {
+      "name": "Permit Preparation",
+      "owner": "office manager",
+      "system": "Dallas permit portal + shared drive",
+      "repeated_judgment": "prepare the right permit description and supporting attachments for older-home work",
+      "delay_point": "permit folders capture forms but not the rationale behind permit choices",
+      "data_produced": "permit number, filing packet, status checks",
+      "data_saved_well": "yes for files, weakly for decisions"
+    },
+    {
+      "name": "Field Work",
+      "owner": "field lead",
+      "system": "photo app, SMS, invoice notes",
+      "repeated_judgment": "decide whether discovered field conditions change what should be inspected",
+      "delay_point": "unexpected grounding or mast issues are noted in photos but not normalized",
+      "data_produced": "photos, material changes, correction prep notes",
+      "data_saved_well": "weakly"
+    },
+    {
+      "name": "Inspection Scheduling",
+      "owner": "office manager",
+      "system": "portal, phone, email",
+      "repeated_judgment": "choose whether the site is ready or whether more prep is needed for older-home edge cases",
+      "delay_point": "the office lacks a repeatable checklist for common older-home correction patterns",
+      "data_produced": "inspection booking, date, result status",
+      "data_saved_well": "yes for booking, weakly for readiness context"
+    },
+    {
+      "name": "Correction Loop",
+      "owner": "field lead + office manager",
+      "system": "inspector note, callback text, internal call log",
+      "repeated_judgment": "translate short failed inspection notes into the exact correction path for the crew",
+      "delay_point": "the same grounding and service corrections are relearned on repeat jobs",
+      "data_produced": "correction actions, reinspection target, crew follow-up note",
+      "data_saved_well": "poorly"
+    },
+    {
+      "name": "Reinspection And Closeout",
+      "owner": "office manager",
+      "system": "portal timeline, invoice closeout note",
+      "repeated_judgment": "decide whether enough was corrected to avoid another trip",
+      "delay_point": "closeout notes summarize outcomes but do not preserve the winning correction path",
+      "data_produced": "pass/fail result, job closeout note, callback outcome",
+      "data_saved_well": "final status yes, reusable lesson no"
+    }
+  ],
+  "moat_decisions": [
+    "Knowing which older-home service jobs need extra grounding and service-equipment checks before inspection scheduling",
+    "Interpreting short failed inspection notes into a crew-ready correction sequence for older housing stock",
+    "Recognizing ZIP-code-level housing patterns that change likely correction needs before the truck rolls"
+  ],
+  "moat_hypotheses": [
+    {
+      "hypothesis_id": "hyp:dallas-electrical:south-dallas:failure-pattern:01",
+      "title": "Older-home service repairs have repeated grounding and service-equipment failure clusters",
+      "hypothesis_type": "failure-pattern",
+      "business_problem": "Repeat corrections on older-home service work create extra truck rolls and margin loss.",
+      "local_signal": "Dallas residential permit and inspection histories for service repairs in older South Dallas and Oak Cliff housing stock.",
+      "evidence_we_expect": "Failed inspection notes repeatedly mention grounding, mast, meter-socket, or service-equipment issues on similar job types.",
+      "why_generic_models_miss_it": "The pattern depends on local housing stock, Dallas inspection language, and the contractor's actual callback history.",
+      "value_if_true": "The company can build an older-home readiness checklist that prevents avoidable first-pass failures.",
+      "test_plan": "Group failed-to-passed sequences by ZIP code and job type, then compare repeated failure labels and recommended-next-action outcomes.",
+      "confidence": "high"
+    },
+    {
+      "hypothesis_id": "hyp:dallas-electrical:south-dallas:correction-heuristic:02",
+      "title": "Reviewed correction paths can be normalized into a reusable older-home reinspection playbook",
+      "hypothesis_type": "correction-heuristic",
+      "business_problem": "Crews rely on memory to interpret terse failed inspection notes, which creates inconsistent corrections.",
+      "local_signal": "Failed inspection notes, callback texts, and reinspection outcomes for residential service and rewire jobs.",
+      "evidence_we_expect": "The same few correction steps recur before successful reinspections on comparable jobs.",
+      "why_generic_models_miss_it": "The best next action depends on local inspector phrasing and what this business actually changes before passing.",
+      "value_if_true": "A ranked next-action recommender could shorten callback loops and reduce office coordination time.",
+      "test_plan": "Create reviewed label rows that map failed notes to the correction steps that preceded a pass, then score recommended-next-action quality.",
+      "confidence": "high"
+    },
+    {
+      "hypothesis_id": "hyp:dallas-electrical:south-dallas:property-or-neighborhood-pattern:03",
+      "title": "Neighborhood slices can predict which older-home jobs need deeper pre-inspection prep",
+      "hypothesis_type": "property-or-neighborhood-pattern",
+      "business_problem": "Some neighborhoods generate recurring surprises that were not captured at estimate time.",
+      "local_signal": "Permit addresses, ZIP codes, property age proxies, and inspection results for residential electrical jobs.",
+      "evidence_we_expect": "A subset of ZIP codes shows concentrated correction patterns tied to detached garages, older panels, or service-mast work.",
+      "why_generic_models_miss_it": "These are locality-specific housing patterns, not general electrical guidance.",
+      "value_if_true": "Estimating and inspection readiness can be tailored by neighborhood before material or crew time is committed.",
+      "test_plan": "Run pattern extraction over grouped permit and inspection slices by ZIP code, permit subtype, and outcome path.",
+      "confidence": "medium"
+    }
+  ],
+  "data_sources": [
+    {
+      "name": "Failed Inspection And Callback Notes",
+      "source_name": "inspector result notes plus internal callback notes",
+      "why_it_matters": "provides the clearest label source for repeated older-home correction patterns",
+      "availability": "partly exists internally",
+      "collection_difficulty": "medium",
+      "privacy_sensitivity": "medium",
+      "expected_lift_for_eval_quality": "high",
+      "recommended_collection_order": "first"
+    },
+    {
+      "name": "Reinspection Outcome Sequences",
+      "source_name": "permit timelines with failed and subsequent passed inspection rows",
+      "why_it_matters": "anchors recommended-next-action and approval-path supervision",
+      "availability": "partly exists publicly and internally",
+      "collection_difficulty": "medium",
+      "privacy_sensitivity": "low",
+      "expected_lift_for_eval_quality": "high",
+      "recommended_collection_order": "second"
+    },
+    {
+      "name": "Older-Home Photo Evidence",
+      "source_name": "service repair and grounding photos attached to callback jobs",
+      "why_it_matters": "helps explain what changed between failure and pass for ambiguous notes",
+      "availability": "exists internally but fragmented",
+      "collection_difficulty": "high",
+      "privacy_sensitivity": "medium",
+      "expected_lift_for_eval_quality": "medium",
+      "recommended_collection_order": "third"
+    },
+    {
+      "name": "Dallas Electrical Guidance Snippets",
+      "source_name": "public inspection guidance, permit reminders, and code sheets",
+      "why_it_matters": "improves explanation quality and supports retrieval-backed recommendations",
+      "availability": "public",
+      "collection_difficulty": "low",
+      "privacy_sensitivity": "low",
+      "expected_lift_for_eval_quality": "medium",
+      "recommended_collection_order": "fourth"
+    }
+  ],
+  "immediate_recommendation": {
+    "summary": "Start with a reviewed set of 20 to 40 older-home residential failures where the team can reconstruct:",
+    "required_fields": [
+      "permit subtype",
+      "failed inspection note",
+      "older-home condition discovered onsite",
+      "actual correction step taken",
+      "whether the next inspection passed"
+    ],
+    "closing_note": "That sample is enough to test whether older-home correction memory can be turned into a reusable Dallas next-action artifact before broader ingestion work."
+  },
+  "eval_opportunities": [
+    {
+      "opportunity_id": "opp:dallas-electrical:south-dallas:next-outcome:01",
+      "task_type": "next_inspection_outcome",
+      "business_question": "Can we predict whether an older-home Dallas residential electrical job is likely to pass the next inspection before it is scheduled?",
+      "minimum_required_data": [
+        "normalized permit rows",
+        "ordered inspection sequences",
+        "next inspection outcome label"
+      ],
+      "label_source": "subsequent inspection result in permit history",
+      "expected_output": "predicted normalized outcome with confidence and short explanation",
+      "business_value": "Reduces avoidable reinspections on older-home service work.",
+      "readiness": "ready_now"
+    },
+    {
+      "opportunity_id": "opp:dallas-electrical:south-dallas:failure-reason:02",
+      "task_type": "failure_reason_classification",
+      "business_question": "Can we normalize older-home failed inspection notes into a repeatable set of grounding, service-equipment, and documentation issue labels?",
+      "minimum_required_data": [
+        "failed inspection rows",
+        "raw notes",
+        "reviewed failure labels"
+      ],
+      "label_source": "human-reviewed mapping from notes to schema vocabulary",
+      "expected_output": "one normalized failure reason with supporting evidence",
+      "business_value": "Builds a reusable memory for recurring older-home issues.",
+      "readiness": "needs_review"
+    },
+    {
+      "opportunity_id": "opp:dallas-electrical:south-dallas:next-action:03",
+      "task_type": "recommended_next_action",
+      "business_question": "Can we recommend the most likely correction path that gets a failed older-home Dallas inspection to pass on the next visit?",
+      "minimum_required_data": [
+        "failed-to-passed permit sequences",
+        "inspection notes",
+        "reviewed next-action references"
+      ],
+      "label_source": "review of the correction path between a failed inspection and the next pass",
+      "expected_output": "ranked next actions with rationale",
+      "business_value": "Shortens callback loops and improves first reinspection readiness.",
+      "readiness": "ready_now"
+    },
+    {
+      "opportunity_id": "opp:dallas-electrical:south-dallas:pattern-extraction:04",
+      "task_type": "pattern_extraction",
+      "business_question": "Which South Dallas and Oak Cliff ZIP codes show repeat older-home correction patterns by job type?",
+      "minimum_required_data": [
+        "normalized permit rows",
+        "inspection sequences",
+        "grouping keys such as ZIP code and permit subtype"
+      ],
+      "label_source": "aggregate support from grouped permit and inspection histories",
+      "expected_output": "top repeated patterns with support and likely operational implication",
+      "business_value": "Improves estimating and truck prep for locality-specific housing stock.",
+      "readiness": "ready_now"
+    }
+  ],
+  "discovery_summary": {
+    "business_snapshot": "Red Brick Home Electric is a small Dallas residential electrical contractor focused on older-home repair and service work across South Dallas and Oak Cliff. The business already saves enough permit, callback, and photo evidence to test whether repeated correction paths can become a local operational moat.",
+    "likely_moat_candidates": [
+      "Older-home service and grounding correction memory tied to Dallas inspection outcomes",
+      "Neighborhood-specific readiness patterns for South Dallas and Oak Cliff housing stock",
+      "A reusable reinspection playbook built from reviewed failed-to-passed sequences"
+    ],
+    "best_first_eval": "Recommended next action is the strongest first eval because the business already describes repeated callback loops where the exact correction path matters more than generic advice.",
+    "most_important_missing_data": [
+      "Reviewed mappings from terse failed inspection notes to normalized failure labels",
+      "A compact sample of correction steps that preceded successful reinspections",
+      "Structured tags for older-home conditions discovered after the estimate"
+    ],
+    "next_weeks_recommendations": [
+      "Review 20 to 40 older-home failed inspections and record the correction path that led to the next pass.",
+      "Normalize the top repeated grounding, service-equipment, and documentation failure labels into the Dallas eval vocabulary.",
+      "Compare pattern slices by ZIP code and job type to see whether older-home locality effects are strong enough to influence estimating and readiness."
+    ]
+  }
+}

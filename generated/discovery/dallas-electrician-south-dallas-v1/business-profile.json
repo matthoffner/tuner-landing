@@ -1,0 +1,41 @@
+{
+  "business_name": "Red Brick Home Electric",
+  "service_area": [
+    "Dallas, Texas"
+  ],
+  "trade": "electrical",
+  "customer_focus": "homeowner",
+  "job_types": [
+    "service mast repairs",
+    "older home rewires",
+    "detached garage feeds",
+    "meter socket replacements"
+  ],
+  "pain_points": [
+    "Older housing stock produces recurring grounding and service-equipment corrections that are not captured consistently.",
+    "Office staff cannot reliably tell which older-home jobs need more inspection prep before scheduling.",
+    "Reinspection lessons are trapped in callback texts instead of a reusable readiness checklist."
+  ],
+  "systems_of_record": [
+    "Housecall Pro",
+    "shared drive permit folders",
+    "crew SMS threads",
+    "email notices from the permit portal"
+  ],
+  "available_data_assets": [
+    "Permit export spreadsheets",
+    "Photo folders for service repairs and corrections",
+    "Invoice notes describing callback causes",
+    "Office reinspection scheduling notes"
+  ],
+  "crew_size": 4,
+  "license_context": "Texas licensed electrical contractor focused on residential repair and service work",
+  "target_zip_codes": [
+    "75208",
+    "75211",
+    "75216",
+    "75224"
+  ],
+  "after_hours_or_emergency_work": false,
+  "permit_handling_style": "Estimator scopes work, office files permits, field lead relays failed inspection details back to the office"
+}

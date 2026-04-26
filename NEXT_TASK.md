@@ -44,15 +44,16 @@ Recent progress:
 
 Updated next best artifacts:
 
-- a thin local writer that can turn real Dallas business intake variants into multiple generated discovery runs without hand-editing fixtures
 - a sample normalized Dallas dataset directory that can widen from synthetic rows to imported Dallas records without changing downstream contracts
 - a wider normalized Dallas sample that can preserve the same eval and review contracts while moving from synthetic rows toward imported records
+- a thin local writer that can turn imported Dallas permit and inspection extracts into wider normalized sample directories without changing downstream eval contracts
 
 Latest bounded improvement completed:
 
 - `generated/normalized/dallas-electrician-sample-v1/` now provides row-shaped Dallas sample records
 - `scripts/generate_dallas_fixture_pack.py` now emits the Dallas fixture pack deterministically from normalized permit and inspection rows
 - `scripts/generate_dallas_label_reviews.py` now emits reviewed label rows directly from normalized Dallas permit and inspection records, and `scripts/generate_dallas_eval_artifacts.py` now uses that row-derived supervision path
+- `scripts/generate_dallas_discovery_artifacts.py` now supports batch generation across multiple intake variants, and `generated/intake/dallas-electrician-south-dallas-v1/` plus `generated/discovery/dallas-electrician-south-dallas-v1/` exercise the Dallas business-first contract on a second realistic electrician profile
 
 ## Constraints
 

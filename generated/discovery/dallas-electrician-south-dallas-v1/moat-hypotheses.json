@@ -1,0 +1,38 @@
+[
+  {
+    "hypothesis_id": "hyp:dallas-electrical:south-dallas:failure-pattern:01",
+    "title": "Older-home service repairs have repeated grounding and service-equipment failure clusters",
+    "hypothesis_type": "failure-pattern",
+    "business_problem": "Repeat corrections on older-home service work create extra truck rolls and margin loss.",
+    "local_signal": "Dallas residential permit and inspection histories for service repairs in older South Dallas and Oak Cliff housing stock.",
+    "evidence_we_expect": "Failed inspection notes repeatedly mention grounding, mast, meter-socket, or service-equipment issues on similar job types.",
+    "why_generic_models_miss_it": "The pattern depends on local housing stock, Dallas inspection language, and the contractor's actual callback history.",
+    "value_if_true": "The company can build an older-home readiness checklist that prevents avoidable first-pass failures.",
+    "test_plan": "Group failed-to-passed sequences by ZIP code and job type, then compare repeated failure labels and recommended-next-action outcomes.",
+    "confidence": "high"
+  },
+  {
+    "hypothesis_id": "hyp:dallas-electrical:south-dallas:correction-heuristic:02",
+    "title": "Reviewed correction paths can be normalized into a reusable older-home reinspection playbook",
+    "hypothesis_type": "correction-heuristic",
+    "business_problem": "Crews rely on memory to interpret terse failed inspection notes, which creates inconsistent corrections.",
+    "local_signal": "Failed inspection notes, callback texts, and reinspection outcomes for residential service and rewire jobs.",
+    "evidence_we_expect": "The same few correction steps recur before successful reinspections on comparable jobs.",
+    "why_generic_models_miss_it": "The best next action depends on local inspector phrasing and what this business actually changes before passing.",
+    "value_if_true": "A ranked next-action recommender could shorten callback loops and reduce office coordination time.",
+    "test_plan": "Create reviewed label rows that map failed notes to the correction steps that preceded a pass, then score recommended-next-action quality.",
+    "confidence": "high"
+  },
+  {
+    "hypothesis_id": "hyp:dallas-electrical:south-dallas:property-or-neighborhood-pattern:03",
+    "title": "Neighborhood slices can predict which older-home jobs need deeper pre-inspection prep",
+    "hypothesis_type": "property-or-neighborhood-pattern",
+    "business_problem": "Some neighborhoods generate recurring surprises that were not captured at estimate time.",
+    "local_signal": "Permit addresses, ZIP codes, property age proxies, and inspection results for residential electrical jobs.",
+    "evidence_we_expect": "A subset of ZIP codes shows concentrated correction patterns tied to detached garages, older panels, or service-mast work.",
+    "why_generic_models_miss_it": "These are locality-specific housing patterns, not general electrical guidance.",
+    "value_if_true": "Estimating and inspection readiness can be tailored by neighborhood before material or crew time is committed.",
+    "test_plan": "Run pattern extraction over grouped permit and inspection slices by ZIP code, permit subtype, and outcome path.",
+    "confidence": "medium"
+  }
+]

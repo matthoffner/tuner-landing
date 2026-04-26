@@ -25,3 +25,11 @@ Use short dated entries. Focus on decisions, changes, blockers, and next steps.
 - Added `generated/normalized/dallas-electrician-sample-v1/` plus `scripts/generate_dallas_fixture_pack.py` so the Dallas fixture pack is now generated from row-shaped normalized permit, inspection, property, and contractor records instead of hand-maintained JSON.
 - Added `scripts/generate_dallas_label_reviews.py` and finished the handoff from fixture-backed supervision to row-derived reviewed labels, so `label_reviews.json` is now emitted directly from normalized Dallas permit and inspection rows and consumed by the eval scaffold.
 - Added `scripts/codex-day.sh` and `scripts/codex-publish.sh`, plus session/loop upgrades for stale-lock recovery, automatic landing-page sync, automatic publish to `main`, and a dedicated reporter pass during unattended runs.
+
+## 2026-04-26
+
+- Extended `scripts/generate_dallas_discovery_artifacts.py` with batch mode so every intake variant under `generated/intake/` can emit a matching discovery run under `generated/discovery/` without hand-editing output fixtures.
+- Added a second Dallas business-first intake at `generated/intake/dallas-electrician-south-dallas-v1/intake.json` focused on older-home South Dallas and Oak Cliff electrical work.
+- Generated `generated/discovery/dallas-electrician-south-dallas-v1/` to prove the same Dallas discovery contract works across multiple realistic electrician profiles.
+- Narrowed the next implementation gap to widening the normalized Dallas sample toward imported records while preserving the now-stable multi-intake discovery and downstream eval contracts.
+- Rewrote `generated/landing.html` into an evidence-based landing page and changelog that reflects the repo's real state, current Dallas MVP scope, concrete generated artifacts, and explicit unbuilt gaps without inventing progress.

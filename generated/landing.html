@@ -6,18 +6,18 @@
     <title>automoat</title>
     <style>
       :root {
-        --bg: #07111f;
-        --bg-soft: #0c1830;
-        --panel: rgba(10, 21, 40, 0.72);
-        --panel-strong: rgba(14, 27, 49, 0.92);
-        --line: rgba(167, 191, 255, 0.14);
-        --text: #ecf3ff;
-        --muted: #98a8c7;
-        --accent: #63e6be;
-        --accent-2: #6ea8ff;
-        --accent-3: #9b8cff;
-        --warm: #ffb86b;
-        --shadow: 0 30px 90px rgba(0, 0, 0, 0.32);
+        --bg: #f5f1e8;
+        --paper: rgba(255, 252, 246, 0.88);
+        --paper-strong: rgba(255, 252, 246, 0.96);
+        --ink: #1d2430;
+        --muted: #5f6773;
+        --line: rgba(29, 36, 48, 0.12);
+        --accent: #b6542d;
+        --accent-soft: #f0d8c8;
+        --accent-2: #284d68;
+        --good: #2f6b46;
+        --warn: #8c5a16;
+        --shadow: 0 24px 70px rgba(29, 36, 48, 0.12);
       }
 
       * {
@@ -30,13 +30,11 @@
 
       body {
         margin: 0;
-        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        color: var(--text);
+        font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+        color: var(--ink);
         background:
-          radial-gradient(circle at 15% 20%, rgba(99, 230, 190, 0.16), transparent 24%),
-          radial-gradient(circle at 85% 15%, rgba(110, 168, 255, 0.18), transparent 24%),
-          radial-gradient(circle at 55% 75%, rgba(155, 140, 255, 0.14), transparent 28%),
-          linear-gradient(180deg, #050b16 0%, var(--bg) 48%, #081425 100%);
+          radial-gradient(circle at top left, rgba(182, 84, 45, 0.12), transparent 28%),
+          linear-gradient(180deg, #f9f6ef 0%, var(--bg) 100%);
       }
 
       a {
@@ -46,42 +44,33 @@
       main {
         max-width: 1180px;
         margin: 0 auto;
-        padding: 24px 18px 80px;
+        padding: 22px 16px 72px;
       }
 
       .shell {
-        position: relative;
         overflow: hidden;
         border: 1px solid var(--line);
-        border-radius: 28px;
-        background: linear-gradient(180deg, rgba(8, 18, 35, 0.88), rgba(7, 17, 31, 0.92));
+        border-radius: 30px;
+        background: var(--paper);
         box-shadow: var(--shadow);
-      }
-
-      .shell::before {
-        content: "";
-        position: absolute;
-        inset: 0;
-        background:
-          linear-gradient(130deg, rgba(99, 230, 190, 0.06), transparent 28%),
-          linear-gradient(320deg, rgba(110, 168, 255, 0.08), transparent 34%);
-        pointer-events: none;
+        backdrop-filter: blur(14px);
       }
 
       .nav,
       .hero,
       .content {
-        position: relative;
-        z-index: 1;
+        padding-left: 26px;
+        padding-right: 26px;
       }
 
       .nav {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 20px;
-        padding: 18px 24px;
-        border-bottom: 1px solid rgba(167, 191, 255, 0.08);
+        gap: 16px;
+        padding-top: 18px;
+        padding-bottom: 18px;
+        border-bottom: 1px solid var(--line);
       }
 
       .brand {
@@ -91,24 +80,26 @@
       }
 
       .brand-mark {
-        width: 12px;
-        height: 12px;
+        width: 14px;
+        height: 14px;
         border-radius: 999px;
-        background: linear-gradient(135deg, var(--accent), var(--accent-2));
-        box-shadow: 0 0 24px rgba(99, 230, 190, 0.7);
+        background: var(--accent);
+        box-shadow: 0 0 0 7px rgba(182, 84, 45, 0.12);
       }
 
       .brand-name {
+        font-size: 1.02rem;
         font-weight: 700;
-        letter-spacing: -0.03em;
+        letter-spacing: 0.02em;
       }
 
       .nav-links {
         display: flex;
         flex-wrap: wrap;
         gap: 14px;
+        font-family: "Helvetica Neue", Arial, sans-serif;
+        font-size: 0.92rem;
         color: var(--muted);
-        font-size: 0.95rem;
       }
 
       .nav-links a {
@@ -116,50 +107,65 @@
       }
 
       .hero {
-        padding: 52px 24px 28px;
+        padding-top: 44px;
+        padding-bottom: 26px;
       }
 
       .eyebrow {
         display: inline-flex;
         align-items: center;
         gap: 10px;
-        padding: 10px 14px;
-        border: 1px solid rgba(99, 230, 190, 0.16);
+        padding: 8px 12px;
         border-radius: 999px;
-        background: rgba(99, 230, 190, 0.08);
+        background: var(--accent-soft);
         color: var(--accent);
-        font-size: 0.84rem;
+        font-family: "Helvetica Neue", Arial, sans-serif;
+        font-size: 0.78rem;
         font-weight: 700;
-        letter-spacing: 0.03em;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
       }
 
       h1,
       h2,
       h3 {
         margin: 0;
-        letter-spacing: -0.04em;
+        letter-spacing: -0.03em;
       }
 
       h1 {
         max-width: 920px;
         margin-top: 18px;
-        font-size: clamp(3rem, 8vw, 6.4rem);
-        line-height: 0.95;
+        font-size: clamp(3rem, 7vw, 6rem);
+        line-height: 0.96;
+      }
+
+      h2 {
+        font-size: 2rem;
+      }
+
+      h3 {
+        font-size: 1.08rem;
+        font-family: "Helvetica Neue", Arial, sans-serif;
+      }
+
+      p {
+        margin: 12px 0 0;
+        color: var(--muted);
+        line-height: 1.7;
+        font-size: 1.02rem;
       }
 
       .hero-copy {
-        max-width: 720px;
-        margin-top: 22px;
-        color: var(--muted);
-        font-size: 1.08rem;
-        line-height: 1.7;
+        max-width: 760px;
+        font-size: 1.12rem;
       }
 
       .hero-actions {
         display: flex;
         flex-wrap: wrap;
         gap: 12px;
-        margin-top: 28px;
+        margin-top: 26px;
       }
 
       .button {
@@ -171,18 +177,20 @@
         border-radius: 14px;
         border: 1px solid transparent;
         text-decoration: none;
+        font-family: "Helvetica Neue", Arial, sans-serif;
+        font-size: 0.95rem;
         font-weight: 700;
       }
 
       .button-primary {
-        background: linear-gradient(135deg, var(--accent), #8ffff1);
-        color: #062116;
+        background: var(--accent);
+        color: #fff8f3;
       }
 
       .button-secondary {
         border-color: var(--line);
-        background: rgba(255, 255, 255, 0.02);
-        color: var(--text);
+        background: rgba(255, 255, 255, 0.52);
+        color: var(--ink);
       }
 
       .hero-grid,
@@ -192,12 +200,12 @@
       }
 
       .hero-grid {
-        margin-top: 34px;
-        grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.9fr);
+        margin-top: 30px;
+        grid-template-columns: minmax(0, 1.3fr) minmax(320px, 0.95fr);
       }
 
       .content {
-        padding: 0 24px 28px;
+        padding-bottom: 30px;
       }
 
       .section {
@@ -205,8 +213,7 @@
         padding: 22px;
         border: 1px solid var(--line);
         border-radius: 24px;
-        background: var(--panel);
-        backdrop-filter: blur(12px);
+        background: var(--paper-strong);
       }
 
       .section-header {
@@ -219,31 +226,30 @@
 
       .kicker {
         color: var(--accent-2);
-        font-size: 0.82rem;
+        font-family: "Helvetica Neue", Arial, sans-serif;
+        font-size: 0.78rem;
         font-weight: 700;
         letter-spacing: 0.08em;
         text-transform: uppercase;
       }
 
-      h2 {
-        font-size: 1.8rem;
+      .grid {
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
       }
 
-      h3 {
-        font-size: 1.2rem;
+      .card,
+      .timeline-item,
+      .doc-pill {
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.54);
       }
 
-      p {
-        margin: 10px 0 0;
-        color: var(--muted);
-        line-height: 1.65;
+      .card {
+        padding: 18px;
+        border-radius: 18px;
       }
 
-      .hero-card {
-        min-height: 100%;
-      }
-
-      .hero-metrics {
+      .metric-grid {
         display: grid;
         gap: 12px;
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -253,12 +259,13 @@
       .metric {
         padding: 14px;
         border: 1px solid var(--line);
-        border-radius: 18px;
-        background: rgba(255, 255, 255, 0.03);
+        border-radius: 16px;
+        background: rgba(240, 216, 200, 0.24);
       }
 
       .metric-value {
-        font-size: 1.55rem;
+        font-family: "Helvetica Neue", Arial, sans-serif;
+        font-size: 1.45rem;
         font-weight: 700;
         letter-spacing: -0.04em;
       }
@@ -266,22 +273,14 @@
       .metric-label {
         margin-top: 6px;
         color: var(--muted);
-        font-size: 0.92rem;
+        font-family: "Helvetica Neue", Arial, sans-serif;
+        font-size: 0.9rem;
+        line-height: 1.5;
       }
 
-      .grid {
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-      }
-
-      .card {
-        padding: 18px;
-        border: 1px solid var(--line);
-        border-radius: 20px;
-        background: var(--panel-strong);
-      }
-
+      .status-list,
       ul {
-        margin: 12px 0 0;
+        margin: 14px 0 0;
         padding-left: 18px;
         color: var(--muted);
       }
@@ -290,51 +289,73 @@
         margin-top: 8px;
       }
 
-      .story-grid {
+      .status-list strong,
+      .timeline-item strong,
+      .artifact-label {
+        color: var(--ink);
+      }
+
+      .artifact-grid,
+      .truth-grid {
         display: grid;
         gap: 14px;
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
         margin-top: 16px;
       }
 
-      .story {
-        padding: 16px;
+      .artifact-card {
+        padding: 18px;
         border: 1px solid var(--line);
         border-radius: 18px;
-        background: rgba(255, 255, 255, 0.025);
+        background: rgba(255, 255, 255, 0.6);
       }
 
-      .story span {
+      .artifact-label {
         display: block;
         margin-bottom: 8px;
-        color: var(--warm);
-        font-size: 0.82rem;
+        font-family: "Helvetica Neue", Arial, sans-serif;
+        font-size: 0.78rem;
         font-weight: 700;
-        text-transform: uppercase;
         letter-spacing: 0.08em;
+        text-transform: uppercase;
       }
 
       .timeline {
-        margin-top: 16px;
         display: grid;
         gap: 12px;
+        margin-top: 16px;
       }
 
       .timeline-item {
-        display: grid;
-        gap: 6px;
         padding: 16px;
-        border: 1px solid var(--line);
         border-radius: 18px;
-        background: rgba(255, 255, 255, 0.025);
       }
 
       .timeline-meta {
-        color: var(--accent-3);
-        font-size: 0.8rem;
+        color: var(--accent);
+        font-family: "Helvetica Neue", Arial, sans-serif;
+        font-size: 0.78rem;
         font-weight: 700;
         letter-spacing: 0.08em;
         text-transform: uppercase;
+      }
+
+      .truth {
+        padding: 18px;
+        border-radius: 18px;
+        border: 1px solid var(--line);
+      }
+
+      .truth.good {
+        background: rgba(47, 107, 70, 0.08);
+      }
+
+      .truth.warn {
+        background: rgba(140, 90, 22, 0.08);
+      }
+
+      .truth h3 {
+        color: var(--ink);
       }
 
       .doc-list {
@@ -345,18 +366,24 @@
       }
 
       .doc-pill {
+        display: inline-flex;
+        align-items: center;
         padding: 10px 12px;
-        border: 1px solid var(--line);
         border-radius: 999px;
-        background: rgba(255, 255, 255, 0.03);
-        color: var(--text);
         text-decoration: none;
+        font-family: "Helvetica Neue", Arial, sans-serif;
         font-size: 0.92rem;
       }
 
-      .muted-note {
-        margin-top: 16px;
-        font-size: 0.92rem;
+      .footer-note {
+        margin-top: 14px;
+        font-family: "Helvetica Neue", Arial, sans-serif;
+        font-size: 0.9rem;
+      }
+
+      code {
+        font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+        font-size: 0.92em;
       }
 
       @media (max-width: 920px) {
@@ -367,16 +394,7 @@
 
       @media (max-width: 720px) {
         main {
-          padding: 12px 10px 40px;
-        }
-
-        .shell,
-        .section,
-        .card,
-        .story,
-        .timeline-item,
-        .metric {
-          border-radius: 18px;
+          padding: 10px 10px 40px;
         }
 
         .nav,
@@ -386,8 +404,18 @@
           padding-right: 16px;
         }
 
-        .hero {
-          padding-top: 34px;
+        .shell,
+        .section,
+        .card,
+        .artifact-card,
+        .timeline-item,
+        .truth,
+        .metric {
+          border-radius: 18px;
+        }
+
+        .metric-grid {
+          grid-template-columns: 1fr;
         }
       }
     </style>
@@ -401,264 +429,253 @@
             <div class="brand-name">automoat</div>
           </div>
           <div class="nav-links">
-            <a href="#product">Product</a>
-            <a href="#stories">Use Cases</a>
-            <a href="#build">Build Log</a>
+            <a href="#state">Current State</a>
+            <a href="#artifacts">Artifacts</a>
+            <a href="#changelog">Changelog</a>
             <a href="#docs">Docs</a>
           </div>
         </div>
 
         <div class="hero">
-          <div class="eyebrow">Local-first moat discovery, evaluation, and build</div>
-          <h1>Turn messy business data into a defensible AI moat.</h1>
+          <div class="eyebrow">Local-first moat discovery and eval scaffolding</div>
+          <h1>Find the operational memory a business can actually turn into a moat.</h1>
           <p class="hero-copy">
-            `automoat` helps you discover what is actually proprietary in your business,
-            turn that data into something testable, and prove whether it creates an
-            advantage through research, benchmarks, retrieval, adaptation, and local-first workflows.
+            <code>automoat</code> is a local-first project for turning messy business workflow data
+            into structured artifacts: business-first discovery outputs, normalized records, and
+            eval scaffolds that can test whether a narrow workflow contains reusable, defensible judgment.
           </p>
           <div class="hero-actions">
-            <a class="button button-primary" href="#build">View Current Build</a>
-            <a class="button button-secondary" href="#docs">Open Project Docs</a>
+            <a class="button button-primary" href="#state">See Current State</a>
+            <a class="button button-secondary" href="#docs">Open Source Docs</a>
           </div>
 
           <div class="hero-grid">
-            <div class="section hero-card" id="product">
+            <div class="section" id="state">
               <div class="section-header">
-                <div class="kicker">What It Does</div>
+                <div class="kicker">Current State</div>
               </div>
-              <h2>Discover, define, prove, and operationalize a moat.</h2>
+              <h2>Real progress, as of April 26, 2026</h2>
               <p>
-                In the AI age, models get cheaper and more interchangeable. The durable
-                advantage is the proprietary workflow data, decisions, edge cases, and
-                operational context a business can turn into a system.
+                The repo is still in MVP scaffolding mode. The active wedge is narrow on purpose:
+                Dallas residential electrical permits and inspections. The useful thing built so far
+                is a contract-driven artifact pipeline, not a production app or live ingestion system.
               </p>
-              <div class="hero-metrics">
+              <div class="metric-grid">
                 <div class="metric">
-                  <div class="metric-value">Business-First</div>
-                  <div class="metric-label">Research the business, map moat ideas, plan what to test.</div>
+                  <div class="metric-value">2</div>
+                  <div class="metric-label">Dallas intake variants with matching generated discovery runs</div>
                 </div>
                 <div class="metric">
-                  <div class="metric-value">Dataset-First</div>
-                  <div class="metric-label">Analyze records directly, generate evals, benchmark approaches.</div>
+                  <div class="metric-value">1</div>
+                  <div class="metric-label">Normalized Dallas sample dataset driving downstream fixture and eval generation</div>
                 </div>
                 <div class="metric">
-                  <div class="metric-value">Local-First</div>
-                  <div class="metric-label">Useful on a real machine with private data and bounded workflows.</div>
+                  <div class="metric-value">14</div>
+                  <div class="metric-label">Generated eval tasks across four task families</div>
                 </div>
                 <div class="metric">
-                  <div class="metric-value">Artifact-Driven</div>
-                  <div class="metric-label">Outputs plans, moat maps, evals, and recommendations, not just chat.</div>
+                  <div class="metric-value">5</div>
+                  <div class="metric-label">Reviewed label rows derived from normalized permit and inspection records</div>
                 </div>
               </div>
+              <ul class="status-list">
+                <li><strong>Scope:</strong> Dallas, Texas; electricians; residential permits and inspections.</li>
+                <li><strong>What works:</strong> deterministic generation of discovery outputs, fixture packs, reviewed labels, and eval scaffolds from repo-local inputs.</li>
+                <li><strong>Current gap:</strong> widen the normalized Dallas sample toward imported records without changing the downstream contracts.</li>
+              </ul>
             </div>
 
-            <div class="section hero-card">
+            <div class="section">
               <div class="section-header">
-                <div class="kicker">Current Focus</div>
+                <div class="kicker">Broad Framing</div>
               </div>
-              <h2>Dallas electricians MVP</h2>
+              <h2>What the product is trying to prove</h2>
               <p>
-                The first proof slice is Dallas residential electrical permits and inspections:
-                a narrow, real-world wedge for showing how local workflow records can become
-                measurable operational advantage.
+                The broader idea is not “AI for electricians.” It is that many businesses have
+                local workflow memory, repeated edge cases, and decision patterns that generic models
+                do not capture well. <code>automoat</code> is trying to make that claim testable.
               </p>
               <ul>
-                <li>Chosen locality: Dallas, Texas</li>
-                <li>Chosen trade: electricians</li>
-                <li>Chosen workflow: residential permits and inspections</li>
-                <li>Current goal: the loop can now auto-report to the landing page, sync deploy state, and push to <code>main</code>; next is widening the normalized Dallas sample toward imported records without breaking downstream contracts</li>
+                <li>Start from business pain and repeated judgment, not model choice.</li>
+                <li>Normalize the narrowest workflow that might contain a real operational edge.</li>
+                <li>Generate artifacts that make the edge inspectable before heavier product work.</li>
               </ul>
             </div>
           </div>
         </div>
 
         <div class="content">
+          <div class="section" id="artifacts">
+            <div class="section-header">
+              <div class="kicker">Artifact Inventory</div>
+            </div>
+            <h2>What exists on disk today</h2>
+            <p>
+              The generated folder now shows both sides of the current MVP: business-first discovery
+              outputs and dataset-first eval scaffolding.
+            </p>
+            <div class="artifact-grid">
+              <div class="artifact-card">
+                <span class="artifact-label">Discovery Runs</span>
+                Two generated Dallas business profiles exist:
+                <code>dallas-electrician-sample-v1</code> and <code>dallas-electrician-south-dallas-v1</code>.
+                Each includes a business profile, workflow map, moat hypotheses, data-gap plan,
+                eval opportunities, and a short operator summary.
+              </div>
+              <div class="artifact-card">
+                <span class="artifact-label">Normalized Sample</span>
+                One Dallas sample dataset exists under
+                <code>generated/normalized/dallas-electrician-sample-v1/</code> with
+                <code>3</code> permits, <code>9</code> inspections, <code>3</code> properties,
+                and <code>3</code> contractor rows plus project metadata.
+              </div>
+              <div class="artifact-card">
+                <span class="artifact-label">Eval Scaffold</span>
+                One generated eval sample exists with <code>14</code> tasks across
+                <code>next_inspection_outcome</code>, <code>failure_reason_classification</code>,
+                <code>recommended_next_action</code>, and <code>pattern_extraction</code>.
+              </div>
+              <div class="artifact-card">
+                <span class="artifact-label">Deterministic Writers</span>
+                The repo has thin local writers for discovery generation, fixture-pack generation,
+                row-derived label reviews, and eval generation. Current scripts are
+                <code>generate_dallas_discovery_artifacts.py</code>,
+                <code>generate_dallas_fixture_pack.py</code>,
+                <code>generate_dallas_label_reviews.py</code>, and
+                <code>generate_dallas_eval_artifacts.py</code>.
+              </div>
+            </div>
+          </div>
+
           <div class="section">
             <div class="section-header">
-              <div class="kicker">How It Works</div>
+              <div class="kicker">Latest Signal</div>
             </div>
+            <h2>Most recent generated artifacts</h2>
             <div class="grid">
               <div class="card">
-                <h3>1. Explore</h3>
+                <h3>South Dallas discovery variant</h3>
                 <p>
-                  Start with the business. Research the domain, identify likely moat candidates,
-                  and generate a plan for what data matters.
+                  The newest business-first output is a second intake and generated discovery run for
+                  older-home electrical work across South Dallas and Oak Cliff. This proves the discovery
+                  contract can hold across more than one electrician profile without hand-editing outputs.
                 </p>
               </div>
               <div class="card">
-                <h3>2. Analyze</h3>
+                <h3>Row-derived reviewed labels</h3>
                 <p>
-                  Start with the dataset. Normalize records, identify what is unique, and turn
-                  it into a structured moat hypothesis.
+                  <code>label_reviews.json</code> is no longer just fixture-backed. It is now derived
+                  from normalized permit and inspection rows, which is the key bridge toward imported data.
                 </p>
               </div>
               <div class="card">
-                <h3>3. Evaluate</h3>
+                <h3>Contract stability</h3>
                 <p>
-                  Generate task-specific evals and compare baseline, retrieval-enhanced, and
-                  adapted approaches.
-                </p>
-              </div>
-              <div class="card">
-                <h3>4. Build</h3>
-                <p>
-                  Use the results to choose the right path: retrieval, adaptation, fine-tuning,
-                  or not a moat.
+                  The current project value is that the discovery, fixture, review, and eval contracts
+                  are now explicit enough to widen the sample inputs without rewriting the rest of the system.
                 </p>
               </div>
             </div>
           </div>
 
-          <div class="section" id="stories">
+          <div class="section" id="changelog">
             <div class="section-header">
-              <div class="kicker">Use Cases</div>
+              <div class="kicker">Build Changelog</div>
             </div>
-            <h2>Not just one vertical.</h2>
-            <p>
-              The product can start from any business where boring records hide real judgment,
-              process knowledge, or local operational patterns.
-            </p>
-            <div class="story-grid">
-              <div class="story">
-                <span>Insurance</span>
-                Claims manuals, exception memos, and policy interpretation patterns.
-              </div>
-              <div class="story">
-                <span>Legal</span>
-                Memos, rulings, argument style, and internal risk interpretation.
-              </div>
-              <div class="story">
-                <span>Compliance</span>
-                Regulated workflows, quality records, and high-trust internal process memory.
-              </div>
-              <div class="story">
-                <span>Trades</span>
-                Permits, inspections, failures, and local code interpretation.
-              </div>
-              <div class="story">
-                <span>Property Ops</span>
-                Violations, repairs, approvals, and neighborhood-specific patterns.
-              </div>
-              <div class="story">
-                <span>Founder Discovery</span>
-                Weird niche datasets that may hide a product, API, or workflow moat.
-              </div>
-            </div>
-          </div>
-
-          <div class="section" id="build">
-            <div class="section-header">
-              <div class="kicker">Build Log</div>
-            </div>
-            <h2>Current project trajectory.</h2>
+            <h2>Current build log</h2>
             <div class="timeline">
               <div class="timeline-item">
-                <div class="timeline-meta">Latest Update</div>
-                <div>Added a 24-hour supervisor run with automatic publish, stale-lock recovery, and a reporter pass that keeps the landing page aligned with real repo progress.</div>
+                <div class="timeline-meta">2026-04-26</div>
+                <p>
+                  Added batch discovery generation in <code>scripts/generate_dallas_discovery_artifacts.py</code>,
+                  created <code>generated/intake/dallas-electrician-south-dallas-v1/intake.json</code>,
+                  and generated a second Dallas discovery run focused on older-home South Dallas and Oak Cliff work.
+                </p>
               </div>
               <div class="timeline-item">
-                <div class="timeline-meta">Latest Update</div>
-                <div>Finished the row-derived review path with <code>scripts/generate_dallas_label_reviews.py</code>, so reviewed failure labels and next-action references now come directly from normalized Dallas permit and inspection rows.</div>
+                <div class="timeline-meta">2026-04-25</div>
+                <p>
+                  Finished the row-backed path for reviewed supervision by adding
+                  <code>scripts/generate_dallas_label_reviews.py</code> and wiring
+                  <code>scripts/generate_dallas_eval_artifacts.py</code> to emit
+                  <code>generated/evals/dallas-electrician-sample-v1/label_reviews.json</code>
+                  directly from normalized rows.
+                </p>
               </div>
               <div class="timeline-item">
-                <div class="timeline-meta">Latest Update</div>
-                <div>Tightened the Dallas eval contract so <code>generated/evals/dallas-electrician-sample-v1/label_reviews.json</code> preserves reviewed failure labels and ranked next-action references as durable artifacts.</div>
+                <div class="timeline-meta">2026-04-25</div>
+                <p>
+                  Added <code>generated/normalized/dallas-electrician-sample-v1/</code> plus
+                  <code>scripts/generate_dallas_fixture_pack.py</code>, so the reusable Dallas
+                  fixture pack is generated from row-shaped permit and inspection records instead of
+                  hand-maintained JSON sequences.
+                </p>
               </div>
               <div class="timeline-item">
-                <div class="timeline-meta">Latest Update</div>
-                <div>Added <code>scripts/generate_dallas_discovery_artifacts.py</code> plus a structured intake fixture, and regenerated the Dallas sample discovery scaffold deterministically from business-first input.</div>
+                <div class="timeline-meta">2026-04-25</div>
+                <p>
+                  Added deterministic discovery and eval writers, along with the first generated
+                  discovery and eval sample directories, so the repo could produce its key MVP
+                  artifacts from structured inputs rather than prose alone.
+                </p>
               </div>
               <div class="timeline-item">
-                <div class="timeline-meta">Update</div>
-                <div>Added <code>scripts/generate_dallas_eval_artifacts.py</code> and regenerated the Dallas sample eval scaffold directly from the reusable fixture pack.</div>
-              </div>
-              <div class="timeline-item">
-                <div class="timeline-meta">Now</div>
-                <div>Added a reusable Dallas electrician fixture pack under <code>generated/fixtures/dallas-electrician-sequences-v1/</code> with normalized permit histories and pattern slices that cover all four eval families.</div>
-              </div>
-              <div class="timeline-item">
-                <div class="timeline-meta">Now</div>
-                <div>Scaffolded a concrete Dallas electrician sample eval run under <code>generated/evals/dallas-electrician-sample-v1/</code> with sample task rows, split metadata, and a short dataset-first contract note.</div>
-              </div>
-              <div class="timeline-item">
-                <div class="timeline-meta">Now</div>
-                <div>Scaffolded a concrete Dallas electrician sample discovery run under <code>generated/discovery/dallas-electrician-sample-v1/</code> with business profile, workflow map, moat hypotheses, data-gap plan, eval opportunities, and summary outputs.</div>
-              </div>
-              <div class="timeline-item">
-                <div class="timeline-meta">Now</div>
-                <div>Added the first Dallas electricians discovery artifact contract: business profile, workflow map, moat hypotheses, data gaps, eval opportunities, and summary outputs.</div>
-              </div>
-              <div class="timeline-item">
-                <div class="timeline-meta">Now</div>
-                <div>Added the first Dallas electricians eval contract: task families, splits, baselines, scoring, and stop/go criteria.</div>
-              </div>
-              <div class="timeline-item">
-                <div class="timeline-meta">Page</div>
-                <div>Landing page repositioned around the product, not just the current slice.</div>
-              </div>
-              <div class="timeline-item">
-                <div class="timeline-meta">Loop</div>
-                <div>Added lock-aware loop scaffolding, next-task files, per-run logs, and a human-readable agent journal.</div>
-              </div>
-              <div class="timeline-item">
-                <div class="timeline-meta">Session</div>
-                <div>Added a heartbeat-driven work session runner so one command can keep iterating until the time budget expires.</div>
-              </div>
-              <div class="timeline-item">
-                <div class="timeline-meta">Spec</div>
-                <div>Defined the first Dallas electricians ingestion schema: entities, vocabularies, joins, inclusion rules, and example records.</div>
-              </div>
-              <div class="timeline-item">
-                <div class="timeline-meta">April 25, 2026</div>
-                <div>Added the first implementation spec to make the Dallas electricians wedge executable instead of just conceptual.</div>
-              </div>
-              <div class="timeline-item">
-                <div class="timeline-meta">Current MVP</div>
-                <div>Locked the first implementation wedge to Dallas residential electrical permits and inspections.</div>
-              </div>
-              <div class="timeline-item">
-                <div class="timeline-meta">Product Shape</div>
-                <div>Defined two entry points: business-first discovery and dataset-first build/eval.</div>
-              </div>
-              <div class="timeline-item">
-                <div class="timeline-meta">Direction Shift</div>
-                <div>Shifted away from a generic PDF corpus MVP toward home, permit, and inspection intelligence.</div>
-              </div>
-              <div class="timeline-item">
-                <div class="timeline-meta">Foundation</div>
-                <div>Established the core thesis that `automoat` helps users discover, define, prove, and operationalize a moat from operational data.</div>
+                <div class="timeline-meta">2026-04-25</div>
+                <p>
+                  Locked the first implementation wedge to Dallas residential electrical permits
+                  and inspections and wrote the supporting spec, schema, eval, and discovery contract docs.
+                </p>
               </div>
             </div>
+          </div>
+
+          <div class="section">
+            <div class="section-header">
+              <div class="kicker">Truth In Advertising</div>
+            </div>
+            <h2>What is not built yet</h2>
+            <div class="truth-grid">
+              <div class="truth good">
+                <h3>Built</h3>
+                <p>
+                  Narrow scope selection, artifact contracts, deterministic writers, two discovery variants,
+                  one normalized Dallas sample, one eval scaffold, and a shared unattended loop for keeping
+                  the generated status surfaces current.
+                </p>
+              </div>
+              <div class="truth warn">
+                <h3>Not built</h3>
+                <p>
+                  No imported real Dallas record pipeline, no production application workflow, no live model
+                  benchmarking results, and no evidence yet that the Dallas wedge produces a durable moat in practice.
+                </p>
+              </div>
+            </div>
+            <p class="footer-note">
+              Next best move: import a wider Dallas permit and inspection sample into the normalized row contracts
+              while keeping the discovery, label-review, fixture-pack, and eval outputs stable.
+            </p>
           </div>
 
           <div class="section" id="docs">
             <div class="section-header">
-              <div class="kicker">Project Docs</div>
+              <div class="kicker">Docs And Files</div>
             </div>
-            <h2>Source documents driving the build.</h2>
+            <h2>Primary sources behind this page</h2>
             <div class="doc-list">
-              <a class="doc-pill" href="../vision.md">vision.md</a>
-              <a class="doc-pill" href="../use-cases.md">use-cases.md</a>
-              <a class="doc-pill" href="../mvp.md">mvp.md</a>
+              <a class="doc-pill" href="../README.md">README.md</a>
+              <a class="doc-pill" href="../NEXT_TASK.md">NEXT_TASK.md</a>
+              <a class="doc-pill" href="../.automoat/logs/agent-journal.md">agent journal</a>
+              <a class="doc-pill" href="../implementation-spec.md">implementation-spec.md</a>
               <a class="doc-pill" href="../schema.md">schema.md</a>
               <a class="doc-pill" href="../evals.md">evals.md</a>
               <a class="doc-pill" href="../discovery-artifacts.md">discovery-artifacts.md</a>
-              <a class="doc-pill" href="../scripts/generate_dallas_discovery_artifacts.py">discovery writer</a>
-              <a class="doc-pill" href="../scripts/generate_dallas_eval_artifacts.py">eval writer</a>
-              <a class="doc-pill" href="../scripts/generate_dallas_label_reviews.py">label review writer</a>
-              <a class="doc-pill" href="../scripts/codex-day.sh">24h supervisor</a>
-              <a class="doc-pill" href="../scripts/codex-publish.sh">publish helper</a>
-              <a class="doc-pill" href="./intake/dallas-electrician-sample-v1/intake.json">sample intake</a>
-              <a class="doc-pill" href="./fixtures/dallas-electrician-sequences-v1/README.md">fixture pack</a>
-              <a class="doc-pill" href="./discovery/dallas-electrician-sample-v1/discovery-summary.md">sample discovery run</a>
-              <a class="doc-pill" href="./evals/dallas-electrician-sample-v1/reports/sample-contract.md">sample eval run</a>
-              <a class="doc-pill" href="./evals/dallas-electrician-sample-v1/label_reviews.json">label reviews</a>
-              <a class="doc-pill" href="../.pixelbox/handoff.md">handoff.md</a>
+              <a class="doc-pill" href="./discovery/dallas-electrician-sample-v1/discovery-summary.md">sample discovery summary</a>
+              <a class="doc-pill" href="./discovery/dallas-electrician-south-dallas-v1/discovery-summary.md">south dallas discovery summary</a>
+              <a class="doc-pill" href="./evals/dallas-electrician-sample-v1/reports/sample-contract.md">eval sample report</a>
+              <a class="doc-pill" href="./fixtures/dallas-electrician-sequences-v1/README.md">fixture pack readme</a>
+              <a class="doc-pill" href="./normalized/dallas-electrician-sample-v1/projects.json">normalized project metadata</a>
             </div>
-            <p class="muted-note">
-              This page is meant to keep evolving during the loop as a hybrid landing page and
-              high-level changelog. It should stay legible even when the underlying docs get dense.
-            </p>
           </div>
         </div>
       </div>

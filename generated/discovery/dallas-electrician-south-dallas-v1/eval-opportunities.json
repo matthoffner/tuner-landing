@@ -1,0 +1,58 @@
+[
+  {
+    "opportunity_id": "opp:dallas-electrical:south-dallas:next-outcome:01",
+    "task_type": "next_inspection_outcome",
+    "business_question": "Can we predict whether an older-home Dallas residential electrical job is likely to pass the next inspection before it is scheduled?",
+    "minimum_required_data": [
+      "normalized permit rows",
+      "ordered inspection sequences",
+      "next inspection outcome label"
+    ],
+    "label_source": "subsequent inspection result in permit history",
+    "expected_output": "predicted normalized outcome with confidence and short explanation",
+    "business_value": "Reduces avoidable reinspections on older-home service work.",
+    "readiness": "ready_now"
+  },
+  {
+    "opportunity_id": "opp:dallas-electrical:south-dallas:failure-reason:02",
+    "task_type": "failure_reason_classification",
+    "business_question": "Can we normalize older-home failed inspection notes into a repeatable set of grounding, service-equipment, and documentation issue labels?",
+    "minimum_required_data": [
+      "failed inspection rows",
+      "raw notes",
+      "reviewed failure labels"
+    ],
+    "label_source": "human-reviewed mapping from notes to schema vocabulary",
+    "expected_output": "one normalized failure reason with supporting evidence",
+    "business_value": "Builds a reusable memory for recurring older-home issues.",
+    "readiness": "needs_review"
+  },
+  {
+    "opportunity_id": "opp:dallas-electrical:south-dallas:next-action:03",
+    "task_type": "recommended_next_action",
+    "business_question": "Can we recommend the most likely correction path that gets a failed older-home Dallas inspection to pass on the next visit?",
+    "minimum_required_data": [
+      "failed-to-passed permit sequences",
+      "inspection notes",
+      "reviewed next-action references"
+    ],
+    "label_source": "review of the correction path between a failed inspection and the next pass",
+    "expected_output": "ranked next actions with rationale",
+    "business_value": "Shortens callback loops and improves first reinspection readiness.",
+    "readiness": "ready_now"
+  },
+  {
+    "opportunity_id": "opp:dallas-electrical:south-dallas:pattern-extraction:04",
+    "task_type": "pattern_extraction",
+    "business_question": "Which South Dallas and Oak Cliff ZIP codes show repeat older-home correction patterns by job type?",
+    "minimum_required_data": [
+      "normalized permit rows",
+      "inspection sequences",
+      "grouping keys such as ZIP code and permit subtype"
+    ],
+    "label_source": "aggregate support from grouped permit and inspection histories",
+    "expected_output": "top repeated patterns with support and likely operational implication",
+    "business_value": "Improves estimating and truck prep for locality-specific housing stock.",
+    "readiness": "ready_now"
+  }
+]

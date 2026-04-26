@@ -8,6 +8,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_INPUT = ROOT / "generated" / "intake" / "dallas-electrician-sample-v1" / "intake.json"
 DEFAULT_OUTPUT = ROOT / "generated" / "discovery" / "dallas-electrician-sample-v1"
+DEFAULT_BATCH_INPUT_DIR = ROOT / "generated" / "intake"
+DEFAULT_BATCH_OUTPUT_DIR = ROOT / "generated" / "discovery"
 
 
 def load_json(path: Path):
@@ -181,21 +183,49 @@ def parse_args():
     )
     parser.add_argument("--input", type=Path, default=DEFAULT_INPUT)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
+    parser.add_argument(
+        "--batch-input-dir",
+        type=Path,
+        help="Generate discovery artifacts for every child intake directory containing intake.json.",
+    )
+    parser.add_argument(
+        "--batch-output-dir",
+        type=Path,
+        default=DEFAULT_BATCH_OUTPUT_DIR,
+        help="Root output directory for batch generation.",
+    )
     return parser.parse_args()
+
+
+def generate_artifacts(input_path: Path, output_path: Path):
+    intake = load_json(input_path)
+
+    output_path.mkdir(parents=True, exist_ok=True)
+
+    write_json(output_path / "business-profile.json", build_business_profile(intake))
+    write_json(output_path / "moat-hypotheses.json", intake["moat_hypotheses"])
+    write_json(output_path / "eval-opportunities.json", intake["eval_opportunities"])
+    (output_path / "workflow-map.md").write_text(build_workflow_map(intake))
+    (output_path / "data-gap-plan.md").write_text(build_data_gap_plan(intake))
+    (output_path / "discovery-summary.md").write_text(build_discovery_summary(intake))
+
+
+def generate_batch(input_dir: Path, output_dir: Path):
+    intake_paths = sorted(input_dir.glob("*/intake.json"))
+    if not intake_paths:
+        raise SystemExit(f"No intake files found under {input_dir}")
+
+    for intake_path in intake_paths:
+        generate_artifacts(intake_path, output_dir / intake_path.parent.name)
 
 
 def main():
     args = parse_args()
-    intake = load_json(args.input)
+    if args.batch_input_dir:
+        generate_batch(args.batch_input_dir, args.batch_output_dir)
+        return
 
-    args.output.mkdir(parents=True, exist_ok=True)
-
-    write_json(args.output / "business-profile.json", build_business_profile(intake))
-    write_json(args.output / "moat-hypotheses.json", intake["moat_hypotheses"])
-    write_json(args.output / "eval-opportunities.json", intake["eval_opportunities"])
-    (args.output / "workflow-map.md").write_text(build_workflow_map(intake))
-    (args.output / "data-gap-plan.md").write_text(build_data_gap_plan(intake))
-    (args.output / "discovery-summary.md").write_text(build_discovery_summary(intake))
+    generate_artifacts(args.input, args.output)
 
 
 if __name__ == "__main__":
