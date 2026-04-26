@@ -1,0 +1,484 @@
+{
+  "fixture_pack_id": "dallas-electrician-sequences-v1",
+  "generated_for": {
+    "locality": "Dallas, Texas",
+    "trade": "electricians",
+    "workflow": "residential electrical permits and inspections"
+  },
+  "generated_by": "scripts/generate_dallas_fixture_pack.py",
+  "source_dataset_dir": "generated/normalized/dallas-electrician-import-sample-v2",
+  "sequences": [
+    {
+      "sequence_id": "sequence:dallas:elm-2026-0205",
+      "sequence_summary": "Residential electrical remodel permit with a cancelled, unknown, pass inspection path.",
+      "property": {
+        "address_confidence": "high",
+        "city": "Dallas",
+        "normalized_address": "1828 NOMAS ST DALLAS TX 75212",
+        "property_id": "property:1828-nomas-st-dallas-tx-75212",
+        "property_type": "single_family",
+        "state": "TX",
+        "street_address": "1828 Nomas St",
+        "zip_code": "75212"
+      },
+      "permit": {
+        "contractor_id": "contractor:dallas:trinity-grove-electric",
+        "declared_valuation": 9100,
+        "file_date": "2026-04-07",
+        "final_date": null,
+        "is_residential_inferred": false,
+        "issue_date": "2026-04-08",
+        "permit_id": "permit:dallas:elm-2026-0205",
+        "permit_type_normalized": "electrical_remodel",
+        "permit_type_raw": "Residential electrical remodel",
+        "property_id": "property:1828-nomas-st-dallas-tx-75212",
+        "source_permit_number": "ELM-2026-0205",
+        "source_record_id": "source:permit:elm-2026-0205",
+        "source_system": "permit_csv_extract",
+        "source_url": "https://example.local/dallas/permits/ELM-2026-0205",
+        "status_normalized": "issued",
+        "status_raw": "Issued",
+        "trade": "electrical",
+        "work_class": "residential",
+        "work_description": "Bedroom addition circuits and receptacle relocation in west Dallas bungalow."
+      },
+      "inspections": [
+        {
+          "inspection_date": "2026-04-12",
+          "inspection_id": "inspection:dallas:elm-2026-0205:2026-04-12:final",
+          "inspection_type_normalized": "final",
+          "inspection_type_raw": "Final",
+          "inspector_name": "Inspector West",
+          "notes_raw": "Inspector unable to enter site after locked gate and no contact on file.",
+          "permit_id": "permit:dallas:elm-2026-0205",
+          "reinspection_flag": false,
+          "result_normalized": "cancelled",
+          "result_raw": "Cancelled",
+          "source_record_id": "source:inspection:elm-2026-0205:2026-04-12:final",
+          "source_url": "https://example.local/dallas/inspections/ELM-2026-0205/1"
+        },
+        {
+          "inspection_date": "2026-04-18",
+          "inspection_id": "inspection:dallas:elm-2026-0205:2026-04-18:final",
+          "inspection_type_normalized": "final",
+          "inspection_type_raw": "Final",
+          "inspector_name": "Inspector West",
+          "notes_raw": "Rescheduled final shows work substantially complete and awaiting recorded disposition.",
+          "permit_id": "permit:dallas:elm-2026-0205",
+          "reinspection_flag": true,
+          "result_normalized": "unknown",
+          "result_raw": "Pending",
+          "source_record_id": "source:inspection:elm-2026-0205:2026-04-18:final",
+          "source_url": "https://example.local/dallas/inspections/ELM-2026-0205/2"
+        },
+        {
+          "inspection_date": "2026-04-21",
+          "inspection_id": "inspection:dallas:elm-2026-0205:2026-04-21:correction_followup",
+          "inspection_type_normalized": "correction_followup",
+          "inspection_type_raw": "Correction follow-up",
+          "inspector_name": "Inspector West",
+          "notes_raw": "Recorded final approval after contractor confirmed outlet spacing and access.",
+          "permit_id": "permit:dallas:elm-2026-0205",
+          "reinspection_flag": true,
+          "result_normalized": "pass",
+          "result_raw": "Pass",
+          "source_record_id": "source:inspection:elm-2026-0205:2026-04-21:correction_followup",
+          "source_url": "https://example.local/dallas/inspections/ELM-2026-0205/3"
+        }
+      ],
+      "eval_task_coverage": [
+        "next_inspection_outcome"
+      ],
+      "reference_actions": [],
+      "contractor": {
+        "city": "Dallas",
+        "contractor_id": "contractor:dallas:trinity-grove-electric",
+        "license_type": "electrical_contractor",
+        "name": "Trinity Grove Electric",
+        "registration_status": "registered",
+        "source_record_id": "source:contractor:reg-5105",
+        "state": "TX"
+      }
+    },
+    {
+      "sequence_id": "sequence:dallas:eln-2026-0204",
+      "sequence_summary": "New residential electrical permit with a fail, partial, pass inspection path and grounding and bonding corrections.",
+      "property": {
+        "address_confidence": "high",
+        "city": "Dallas",
+        "normalized_address": "7347 LA VISTA DR DALLAS TX 75214",
+        "property_id": "property:7347-la-vista-dr-dallas-tx-75214",
+        "property_type": "duplex",
+        "state": "TX",
+        "street_address": "7347 La Vista Dr",
+        "zip_code": "75214"
+      },
+      "permit": {
+        "contractor_id": "contractor:dallas:white-rock-electric",
+        "declared_valuation": 25400,
+        "file_date": "2026-04-03",
+        "final_date": null,
+        "is_residential_inferred": false,
+        "issue_date": "2026-04-05",
+        "permit_id": "permit:dallas:eln-2026-0204",
+        "permit_type_normalized": "electrical_new",
+        "permit_type_raw": "New electrical install",
+        "property_id": "property:7347-la-vista-dr-dallas-tx-75214",
+        "source_permit_number": "ELN-2026-0204",
+        "source_record_id": "source:permit:eln-2026-0204",
+        "source_system": "permit_csv_extract",
+        "source_url": "https://example.local/dallas/permits/ELN-2026-0204",
+        "status_normalized": "active",
+        "status_raw": "Active",
+        "trade": "electrical",
+        "work_class": "residential",
+        "work_description": "Detached dwelling unit wiring with new subpanel feeder and final trim."
+      },
+      "inspections": [
+        {
+          "failure_reason_normalized": "grounding_or_bonding_issue",
+          "inspection_date": "2026-04-11",
+          "inspection_id": "inspection:dallas:eln-2026-0204:2026-04-11:rough_in",
+          "inspection_type_normalized": "rough_in",
+          "inspection_type_raw": "Rough-in",
+          "inspector_name": "Inspector Thomas",
+          "notes_raw": "Subpanel grounding incomplete and panel schedule missing at detached unit.",
+          "permit_id": "permit:dallas:eln-2026-0204",
+          "reinspection_flag": false,
+          "result_normalized": "fail",
+          "result_raw": "Fail",
+          "source_record_id": "source:inspection:eln-2026-0204:2026-04-11:rough_in",
+          "source_url": "https://example.local/dallas/inspections/ELN-2026-0204/1"
+        },
+        {
+          "failure_reason_normalized": "grounding_or_bonding_issue",
+          "inspection_date": "2026-04-16",
+          "inspection_id": "inspection:dallas:eln-2026-0204:2026-04-16:correction_followup",
+          "inspection_type_normalized": "correction_followup",
+          "inspection_type_raw": "Correction follow-up",
+          "inspector_name": "Inspector Thomas",
+          "notes_raw": "Grounding corrected but final trim and breaker labeling still incomplete.",
+          "permit_id": "permit:dallas:eln-2026-0204",
+          "reinspection_flag": true,
+          "result_normalized": "partial",
+          "result_raw": "Partial",
+          "source_record_id": "source:inspection:eln-2026-0204:2026-04-16:correction_followup",
+          "source_url": "https://example.local/dallas/inspections/ELN-2026-0204/2"
+        },
+        {
+          "inspection_date": "2026-04-20",
+          "inspection_id": "inspection:dallas:eln-2026-0204:2026-04-20:final",
+          "inspection_type_normalized": "final",
+          "inspection_type_raw": "Final",
+          "inspector_name": "Inspector Thomas",
+          "notes_raw": "Trim complete and panel labeling verified for approval.",
+          "permit_id": "permit:dallas:eln-2026-0204",
+          "reinspection_flag": true,
+          "result_normalized": "pass",
+          "result_raw": "Pass",
+          "source_record_id": "source:inspection:eln-2026-0204:2026-04-20:final",
+          "source_url": "https://example.local/dallas/inspections/ELN-2026-0204/3"
+        }
+      ],
+      "eval_task_coverage": [
+        "next_inspection_outcome",
+        "failure_reason_classification",
+        "recommended_next_action"
+      ],
+      "reference_actions": [
+        "correct_grounding_or_bonding",
+        "add_labels_or_documentation",
+        "ensure_site_access",
+        "schedule_reinspection"
+      ],
+      "contractor": {
+        "city": "Dallas",
+        "contractor_id": "contractor:dallas:white-rock-electric",
+        "license_type": "electrical_contractor",
+        "name": "White Rock Electric",
+        "registration_status": "registered",
+        "source_record_id": "source:contractor:reg-5104",
+        "state": "TX"
+      }
+    },
+    {
+      "sequence_id": "sequence:dallas:elp-2026-0203",
+      "sequence_summary": "Residential electrical repair permit with a partial, pass inspection path and incomplete work before final approval.",
+      "property": {
+        "address_confidence": "high",
+        "city": "Dallas",
+        "normalized_address": "2234 S MARSALIS AVE DALLAS TX 75216",
+        "property_id": "property:2234-s-marsalis-ave-dallas-tx-75216",
+        "property_type": "single_family",
+        "state": "TX",
+        "street_address": "2234 S Marsalis Ave",
+        "zip_code": "75216"
+      },
+      "permit": {
+        "contractor_id": "contractor:dallas:cedars-south-electric",
+        "declared_valuation": 6800,
+        "file_date": "2026-03-12",
+        "final_date": "2026-03-22",
+        "is_residential_inferred": false,
+        "issue_date": "2026-03-13",
+        "permit_id": "permit:dallas:elp-2026-0203",
+        "permit_type_normalized": "electrical_repair",
+        "permit_type_raw": "Electrical repair",
+        "property_id": "property:2234-s-marsalis-ave-dallas-tx-75216",
+        "source_permit_number": "ELP-2026-0203",
+        "source_record_id": "source:permit:elp-2026-0203",
+        "source_system": "permit_csv_extract",
+        "source_url": "https://example.local/dallas/permits/ELP-2026-0203",
+        "status_normalized": "finaled",
+        "status_raw": "Finaled",
+        "trade": "electrical",
+        "work_class": "residential",
+        "work_description": "Repair storm-damaged branch circuits and replace affected devices."
+      },
+      "inspections": [
+        {
+          "failure_reason_normalized": "incomplete_work",
+          "inspection_date": "2026-03-17",
+          "inspection_id": "inspection:dallas:elp-2026-0203:2026-03-17:rough_in",
+          "inspection_type_normalized": "rough_in",
+          "inspection_type_raw": "Rough-in",
+          "inspector_name": "Inspector Patel",
+          "notes_raw": "Most damaged wiring repaired but hallway trim incomplete before closeout.",
+          "permit_id": "permit:dallas:elp-2026-0203",
+          "reinspection_flag": false,
+          "result_normalized": "partial",
+          "result_raw": "Partial",
+          "source_record_id": "source:inspection:elp-2026-0203:2026-03-17:rough_in",
+          "source_url": "https://example.local/dallas/inspections/ELP-2026-0203/1"
+        },
+        {
+          "inspection_date": "2026-03-22",
+          "inspection_id": "inspection:dallas:elp-2026-0203:2026-03-22:correction_followup",
+          "inspection_type_normalized": "correction_followup",
+          "inspection_type_raw": "Correction follow-up",
+          "inspector_name": "Inspector Patel",
+          "notes_raw": "Remaining trim complete and branch repairs accepted.",
+          "permit_id": "permit:dallas:elp-2026-0203",
+          "reinspection_flag": true,
+          "result_normalized": "pass",
+          "result_raw": "Pass",
+          "source_record_id": "source:inspection:elp-2026-0203:2026-03-22:correction_followup",
+          "source_url": "https://example.local/dallas/inspections/ELP-2026-0203/2"
+        }
+      ],
+      "eval_task_coverage": [
+        "next_inspection_outcome",
+        "recommended_next_action"
+      ],
+      "reference_actions": [
+        "complete_remaining_work",
+        "schedule_reinspection"
+      ],
+      "contractor": {
+        "city": "Dallas",
+        "contractor_id": "contractor:dallas:cedars-south-electric",
+        "license_type": "electrical_contractor",
+        "name": "Cedars South Electric",
+        "registration_status": "registered",
+        "source_record_id": "source:contractor:reg-5103",
+        "state": "TX"
+      }
+    },
+    {
+      "sequence_id": "sequence:dallas:elr-2026-0201",
+      "sequence_summary": "Residential electrical remodel permit with a pass, fail, pass inspection path and wiring and device corrections.",
+      "property": {
+        "address_confidence": "high",
+        "city": "Dallas",
+        "normalized_address": "412 N WINNETKA AVE DALLAS TX 75208",
+        "property_id": "property:412-n-winnetka-ave-dallas-tx-75208",
+        "property_type": "single_family",
+        "state": "TX",
+        "street_address": "412 N Winnetka Ave",
+        "zip_code": "75208"
+      },
+      "permit": {
+        "contractor_id": "contractor:dallas:bishop-arts-electric",
+        "declared_valuation": 19800,
+        "file_date": "2026-03-28",
+        "final_date": null,
+        "is_residential_inferred": false,
+        "issue_date": "2026-03-30",
+        "permit_id": "permit:dallas:elr-2026-0201",
+        "permit_type_normalized": "electrical_remodel",
+        "permit_type_raw": "Residential electrical remodel",
+        "property_id": "property:412-n-winnetka-ave-dallas-tx-75208",
+        "source_permit_number": "ELR-2026-0201",
+        "source_record_id": "source:permit:elr-2026-0201",
+        "source_system": "permit_csv_extract",
+        "source_url": "https://example.local/dallas/permits/ELR-2026-0201",
+        "status_normalized": "active",
+        "status_raw": "Active",
+        "trade": "electrical",
+        "work_class": "residential",
+        "work_description": "Panel refresh and kitchen branch circuit remodel for older bungalow."
+      },
+      "inspections": [
+        {
+          "inspection_date": "2026-04-04",
+          "inspection_id": "inspection:dallas:elr-2026-0201:2026-04-04:rough_in",
+          "inspection_type_normalized": "rough_in",
+          "inspection_type_raw": "Rough-in",
+          "inspector_name": "Inspector Ruiz",
+          "notes_raw": "Branch circuit routing and box fill acceptable for remodel scope.",
+          "permit_id": "permit:dallas:elr-2026-0201",
+          "reinspection_flag": false,
+          "result_normalized": "pass",
+          "result_raw": "Pass",
+          "source_record_id": "source:inspection:elr-2026-0201:2026-04-04:rough_in",
+          "source_url": "https://example.local/dallas/inspections/ELR-2026-0201/1"
+        },
+        {
+          "failure_reason_normalized": "wiring_or_device_issue",
+          "inspection_date": "2026-04-09",
+          "inspection_id": "inspection:dallas:elr-2026-0201:2026-04-09:final",
+          "inspection_type_normalized": "final",
+          "inspection_type_raw": "Final",
+          "inspector_name": "Inspector Ruiz",
+          "notes_raw": "Kitchen GFCI protection missing and device trim incomplete at backsplash wall.",
+          "permit_id": "permit:dallas:elr-2026-0201",
+          "reinspection_flag": false,
+          "result_normalized": "fail",
+          "result_raw": "Fail",
+          "source_record_id": "source:inspection:elr-2026-0201:2026-04-09:final",
+          "source_url": "https://example.local/dallas/inspections/ELR-2026-0201/2"
+        },
+        {
+          "inspection_date": "2026-04-12",
+          "inspection_id": "inspection:dallas:elr-2026-0201:2026-04-12:correction_followup",
+          "inspection_type_normalized": "correction_followup",
+          "inspection_type_raw": "Correction follow-up",
+          "inspector_name": "Inspector Ruiz",
+          "notes_raw": "GFCI added and final trim completed for approval.",
+          "permit_id": "permit:dallas:elr-2026-0201",
+          "reinspection_flag": true,
+          "result_normalized": "pass",
+          "result_raw": "Pass",
+          "source_record_id": "source:inspection:elr-2026-0201:2026-04-12:correction_followup",
+          "source_url": "https://example.local/dallas/inspections/ELR-2026-0201/3"
+        }
+      ],
+      "eval_task_coverage": [
+        "next_inspection_outcome",
+        "failure_reason_classification",
+        "recommended_next_action"
+      ],
+      "reference_actions": [
+        "correct_wiring_or_devices",
+        "schedule_reinspection"
+      ],
+      "contractor": {
+        "city": "Dallas",
+        "contractor_id": "contractor:dallas:bishop-arts-electric",
+        "license_type": "electrical_contractor",
+        "name": "Bishop Arts Electric",
+        "registration_status": "registered",
+        "source_record_id": "source:contractor:reg-5101",
+        "state": "TX"
+      }
+    },
+    {
+      "sequence_id": "sequence:dallas:els-2026-0202",
+      "sequence_summary": "Residential electrical service upgrade permit with a pass, not_ready, pass inspection path and panel and service corrections.",
+      "property": {
+        "address_confidence": "high",
+        "city": "Dallas",
+        "normalized_address": "9915 FERGUSON RD DALLAS TX 75228",
+        "property_id": "property:9915-ferguson-rd-dallas-tx-75228",
+        "property_type": "single_family",
+        "state": "TX",
+        "street_address": "9915 Ferguson Rd",
+        "zip_code": "75228"
+      },
+      "permit": {
+        "contractor_id": "contractor:dallas:casa-view-electric",
+        "declared_valuation": 16400,
+        "file_date": "2026-04-01",
+        "final_date": null,
+        "is_residential_inferred": false,
+        "issue_date": "2026-04-02",
+        "permit_id": "permit:dallas:els-2026-0202",
+        "permit_type_normalized": "electrical_service_upgrade",
+        "permit_type_raw": "Electrical service upgrade",
+        "property_id": "property:9915-ferguson-rd-dallas-tx-75228",
+        "source_permit_number": "ELS-2026-0202",
+        "source_record_id": "source:permit:els-2026-0202",
+        "source_system": "permit_csv_extract",
+        "source_url": "https://example.local/dallas/permits/ELS-2026-0202",
+        "status_normalized": "active",
+        "status_raw": "Active",
+        "trade": "electrical",
+        "work_class": "residential",
+        "work_description": "200A service upgrade with meter socket relocation and exterior disconnect."
+      },
+      "inspections": [
+        {
+          "inspection_date": "2026-04-08",
+          "inspection_id": "inspection:dallas:els-2026-0202:2026-04-08:rough_in",
+          "inspection_type_normalized": "rough_in",
+          "inspection_type_raw": "Rough-in",
+          "inspector_name": "Inspector Khan",
+          "notes_raw": "Riser route and grounding path acceptable before service release.",
+          "permit_id": "permit:dallas:els-2026-0202",
+          "reinspection_flag": false,
+          "result_normalized": "pass",
+          "result_raw": "Pass",
+          "source_record_id": "source:inspection:els-2026-0202:2026-04-08:rough_in",
+          "source_url": "https://example.local/dallas/inspections/ELS-2026-0202/1"
+        },
+        {
+          "failure_reason_normalized": "panel_or_service_issue",
+          "inspection_date": "2026-04-10",
+          "inspection_id": "inspection:dallas:els-2026-0202:2026-04-10:service_release",
+          "inspection_type_normalized": "service_release",
+          "inspection_type_raw": "Service release",
+          "inspector_name": "Inspector Khan",
+          "notes_raw": "Disconnect area blocked and homeowner unable to provide clear meter access for release inspection.",
+          "permit_id": "permit:dallas:els-2026-0202",
+          "reinspection_flag": false,
+          "result_normalized": "not_ready",
+          "result_raw": "Not Ready",
+          "source_record_id": "source:inspection:els-2026-0202:2026-04-10:service_release",
+          "source_url": "https://example.local/dallas/inspections/ELS-2026-0202/2"
+        },
+        {
+          "inspection_date": "2026-04-15",
+          "inspection_id": "inspection:dallas:els-2026-0202:2026-04-15:correction_followup",
+          "inspection_type_normalized": "correction_followup",
+          "inspection_type_raw": "Correction follow-up",
+          "inspector_name": "Inspector Khan",
+          "notes_raw": "Site access cleared and release approved after scheduling return visit.",
+          "permit_id": "permit:dallas:els-2026-0202",
+          "reinspection_flag": true,
+          "result_normalized": "pass",
+          "result_raw": "Pass",
+          "source_record_id": "source:inspection:els-2026-0202:2026-04-15:correction_followup",
+          "source_url": "https://example.local/dallas/inspections/ELS-2026-0202/3"
+        }
+      ],
+      "eval_task_coverage": [
+        "next_inspection_outcome",
+        "recommended_next_action"
+      ],
+      "reference_actions": [
+        "correct_panel_or_service",
+        "ensure_site_access",
+        "schedule_reinspection"
+      ],
+      "contractor": {
+        "city": "Dallas",
+        "contractor_id": "contractor:dallas:casa-view-electric",
+        "license_type": "electrical_contractor",
+        "name": "Casa View Electric",
+        "registration_status": "registered",
+        "source_record_id": "source:contractor:reg-5102",
+        "state": "TX"
+      }
+    }
+  ]
+}

@@ -467,22 +467,22 @@
                   <div class="metric-label">Dallas intake variants with matching generated discovery runs</div>
                 </div>
                 <div class="metric">
-                  <div class="metric-value">2</div>
-                  <div class="metric-label">Normalized Dallas dataset paths: one synthetic scaffold and one imported CSV sample</div>
+                  <div class="metric-value">3</div>
+                  <div class="metric-label">Normalized Dallas dataset paths: one synthetic scaffold plus imported CSV samples <code>v1</code> and <code>v2</code></div>
                 </div>
                 <div class="metric">
-                  <div class="metric-value">32</div>
-                  <div class="metric-label">Generated eval tasks across two Dallas scaffolds and four task families</div>
+                  <div class="metric-value">52</div>
+                  <div class="metric-label">Generated eval tasks across three Dallas scaffolds and four task families</div>
                 </div>
                 <div class="metric">
-                  <div class="metric-value">12</div>
+                  <div class="metric-value">19</div>
                   <div class="metric-label">Reviewed label rows derived from normalized permit and inspection records</div>
                 </div>
               </div>
               <ul class="status-list">
                 <li><strong>Scope:</strong> Dallas, Texas; electricians; residential permits and inspections.</li>
                 <li><strong>What works:</strong> deterministic generation of discovery outputs, fixture packs, reviewed labels, and eval scaffolds from repo-local inputs.</li>
-                <li><strong>Current gap:</strong> widen the imported Dallas extract path beyond one small CSV sample while keeping downstream contracts unchanged.</li>
+                <li><strong>Current gap:</strong> add a repeatable contract check between synthetic and imported scaffolds, and carry source lineage through the same normalization workflow.</li>
               </ul>
             </div>
 
@@ -492,15 +492,15 @@
               </div>
               <h2>What the product is trying to prove</h2>
               <p>
-                The broader idea is not “AI for electricians.” It is that many businesses have
-                repeated edge cases, local workflow memory, and decision patterns that are valuable
-                but poorly captured. <code>automoat</code> is trying to make that claim testable with
-                artifacts first.
+                The broader idea is not “AI for electricians.” It is that many businesses accumulate
+                repeated judgment calls, local exceptions, and operational memory that never becomes
+                inspectable. <code>automoat</code> is trying to turn that hidden workflow knowledge
+                into artifacts a team can review, compare, and eventually productize.
               </p>
               <ul>
                 <li>Start from repeated business judgment, not model selection.</li>
-                <li>Normalize the narrowest workflow that might contain a real operational edge.</li>
-                <li>Generate evidence-bearing artifacts before building a broader application surface.</li>
+                <li>Use a narrow workflow wedge to prove the artifact contracts before widening the product surface.</li>
+                <li>Generate evidence-bearing discovery, normalization, and eval outputs before claiming product maturity.</li>
               </ul>
             </div>
           </div>
@@ -526,17 +526,21 @@
               </div>
               <div class="artifact-card">
                 <span class="artifact-label">Normalized Sample</span>
-                Two Dallas normalized datasets now exist: a synthetic scaffold under
-                <code>generated/normalized/dallas-electrician-sample-v1/</code> and an imported-sample
-                CSV normalization run under <code>generated/normalized/dallas-electrician-import-sample-v1/</code>
-                with <code>4</code> permits, <code>11</code> inspections, <code>4</code> contractor rows,
-                and <code>19</code> source-record lineage rows.
+                Three Dallas normalized datasets now exist: a synthetic scaffold under
+                <code>generated/normalized/dallas-electrician-sample-v1/</code> plus imported CSV
+                normalization runs under <code>generated/normalized/dallas-electrician-import-sample-v1/</code>
+                and <code>generated/normalized/dallas-electrician-import-sample-v2/</code>. The wider
+                <code>v2</code> import currently carries <code>5</code> permits, <code>14</code> inspections,
+                <code>24</code> source-record lineage rows, and explicit coverage for
+                <code>pass</code>, <code>fail</code>, <code>partial</code>, <code>cancelled</code>,
+                <code>not_ready</code>, and <code>unknown</code> inspection outcomes.
               </div>
               <div class="artifact-card">
                 <span class="artifact-label">Eval Scaffold</span>
-                Two generated eval samples now exist. The synthetic scaffold has <code>14</code>
-                tasks and <code>5</code> reviewed label rows. The imported-sample scaffold has
-                <code>18</code> tasks and <code>7</code> reviewed label rows across
+                Three generated eval samples now exist. The synthetic scaffold has <code>14</code>
+                tasks and <code>5</code> reviewed label rows. The imported <code>v1</code> scaffold has
+                <code>18</code> tasks and <code>7</code> reviewed label rows, while imported <code>v2</code>
+                expands to <code>20</code> tasks and <code>7</code> reviewed label rows across
                 <code>next_inspection_outcome</code>, <code>failure_reason_classification</code>,
                 <code>recommended_next_action</code>, and <code>pattern_extraction</code>.
               </div>
@@ -560,11 +564,12 @@
             <h2>Most recent generated artifacts</h2>
             <div class="grid">
               <div class="card">
-                <h3>Imported Dallas sample path</h3>
+                <h3>Imported sample v2 is the current frontier</h3>
                 <p>
-                  Raw Dallas permit, inspection, and contractor CSV fixtures now normalize into a second
-                  dataset directory and regenerate the same fixture-pack, reviewed-label, and eval shapes.
-                  That is the current proof that imported rows can enter the system without forcing contract changes downstream.
+                  The newest concrete artifact set is <code>dallas-electrician-import-sample-v2</code>:
+                  <code>5</code> normalized permits, <code>14</code> normalized inspections,
+                  <code>20</code> eval tasks, and <code>7</code> reviewed label rows, all produced
+                  without changing the downstream contract shapes.
                 </p>
               </div>
               <div class="card">
@@ -576,10 +581,11 @@
                 </p>
               </div>
               <div class="card">
-                <h3>Contract stability</h3>
+                <h3>Current unresolved gap</h3>
                 <p>
-                  The current project value is that the discovery, fixture, review, and eval contracts
-                  are explicit enough to widen sample inputs without rewriting the rest of the system.
+                  The next useful artifact is not a broader claim. It is a contract-check or normalization
+                  summary that compares synthetic and imported Dallas scaffolds, while keeping source
+                  lineage and optional rule documents in the same repeatable workflow.
                 </p>
               </div>
             </div>
@@ -591,6 +597,26 @@
             </div>
             <h2>Current build log</h2>
             <div class="timeline">
+              <div class="timeline-item">
+                <div class="timeline-meta">2026-04-26</div>
+                <p>
+                  Refreshed <code>generated/landing.html</code> again so it reflects the current repo
+                  state after the imported <code>v2</code> scaffold: three normalized dataset paths,
+                  three eval scaffolds, exact task and reviewed-label counts, and the real next gap
+                  around contract checks and source-lineage normalization.
+                </p>
+              </div>
+              <div class="timeline-item">
+                <div class="timeline-meta">2026-04-26</div>
+                <p>
+                  Added <code>generated/raw/dallas-electrician-import-sample-v2/</code> and generated
+                  <code>normalized</code>, <code>fixtures</code>, and <code>evals</code> <code>-v2</code>
+                  artifacts from it, widening the Dallas importer coverage to include
+                  <code>pass</code>, <code>fail</code>, <code>partial</code>, <code>cancelled</code>,
+                  <code>not_ready</code>, and <code>unknown</code> inspection outcomes while keeping the
+                  downstream contracts stable.
+                </p>
+              </div>
               <div class="timeline-item">
                 <div class="timeline-meta">2026-04-26</div>
                 <p>
@@ -666,22 +692,22 @@
                 <h3>Built</h3>
                 <p>
                   Narrow scope selection, artifact contracts, deterministic writers, two discovery variants,
-                  two normalized Dallas dataset paths, two eval scaffolds, and a shared unattended loop for
-                  keeping generated status surfaces current.
+                  three normalized Dallas dataset paths, three eval scaffolds, and a shared unattended loop
+                  for keeping generated status surfaces current.
                 </p>
               </div>
               <div class="truth warn">
                 <h3>Not built</h3>
                 <p>
                   No large imported Dallas record set, no production application workflow, no live model
-                  benchmarking results, and no evidence yet that the Dallas wedge produces a durable moat
-                  in practice.
+                  benchmarking results, no cross-sample contract checker yet, and no evidence that the
+                  Dallas wedge produces a durable moat in practice.
                 </p>
               </div>
             </div>
             <p class="footer-note">
-              Next best move: widen the imported Dallas extract sample and add more realistic record
-              diversity while keeping the discovery, label-review, fixture-pack, and eval outputs stable.
+              Next best move: add a normalization or contract-check pass that compares synthetic and imported
+              Dallas scaffolds, and carry source lineage plus optional rule documents through the same repeatable workflow.
             </p>
           </div>
 
@@ -702,9 +728,11 @@
               <a class="doc-pill" href="./discovery/dallas-electrician-south-dallas-v1/discovery-summary.md">south dallas discovery summary</a>
               <a class="doc-pill" href="./evals/dallas-electrician-sample-v1/reports/sample-contract.md">eval sample report</a>
               <a class="doc-pill" href="./evals/dallas-electrician-import-sample-v1/reports/sample-contract.md">imported eval report</a>
+              <a class="doc-pill" href="./evals/dallas-electrician-import-sample-v2/reports/sample-contract.md">wider imported eval report</a>
               <a class="doc-pill" href="./fixtures/dallas-electrician-sequences-v1/README.md">fixture pack readme</a>
               <a class="doc-pill" href="./normalized/dallas-electrician-sample-v1/projects.json">normalized project metadata</a>
               <a class="doc-pill" href="./normalized/dallas-electrician-import-sample-v1/projects.json">imported normalized project metadata</a>
+              <a class="doc-pill" href="./normalized/dallas-electrician-import-sample-v2/projects.json">wider imported normalized project metadata</a>
             </div>
           </div>
         </div>

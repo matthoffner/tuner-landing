@@ -1,0 +1,170 @@
+[
+  {
+    "review_id": "label-review:dallas:failure-reason:0001",
+    "task_id": "eval:dallas:failure-reason:0001",
+    "task_type": "failure_reason_classification",
+    "permit_id": "permit:dallas:eln-2026-0204",
+    "inspection_id": "inspection:dallas:eln-2026-0204:2026-04-11:rough_in",
+    "review_status": "normalized_row_generated",
+    "label_source": "normalized_rows",
+    "label_payload": {
+      "failure_reason_normalized": "grounding_or_bonding_issue"
+    },
+    "evidence": [
+      "Subpanel grounding incomplete and panel schedule missing at detached unit."
+    ],
+    "metadata": {
+      "permit_type_normalized": "electrical_new",
+      "inspection_type_normalized": "rough_in"
+    },
+    "reviewer_note": "Derived directly from normalized failed inspection rows and preserved notes."
+  },
+  {
+    "review_id": "label-review:dallas:next-action:0001",
+    "task_id": "eval:dallas:next-action:0001",
+    "task_type": "recommended_next_action",
+    "permit_id": "permit:dallas:eln-2026-0204",
+    "inspection_id": "inspection:dallas:eln-2026-0204:2026-04-11:rough_in",
+    "review_status": "normalized_row_generated",
+    "label_source": "normalized_rows",
+    "label_payload": {
+      "reference_actions": [
+        "correct_grounding_or_bonding",
+        "add_labels_or_documentation",
+        "ensure_site_access"
+      ]
+    },
+    "evidence": [
+      "Subpanel grounding incomplete and panel schedule missing at detached unit.",
+      "2026-04-16 correction_followup -> partial: Grounding corrected but final trim and breaker labeling still incomplete."
+    ],
+    "metadata": {
+      "permit_type_normalized": "electrical_new",
+      "latest_result_normalized": "fail",
+      "followup_result_normalized": "partial"
+    },
+    "reviewer_note": "Derived directly from normalized inspection progression and follow-up notes."
+  },
+  {
+    "review_id": "label-review:dallas:next-action:0002",
+    "task_id": "eval:dallas:next-action:0002",
+    "task_type": "recommended_next_action",
+    "permit_id": "permit:dallas:eln-2026-0204",
+    "inspection_id": "inspection:dallas:eln-2026-0204:2026-04-16:correction_followup",
+    "review_status": "normalized_row_generated",
+    "label_source": "normalized_rows",
+    "label_payload": {
+      "reference_actions": [
+        "correct_grounding_or_bonding",
+        "add_labels_or_documentation",
+        "schedule_reinspection"
+      ]
+    },
+    "evidence": [
+      "Grounding corrected but final trim and breaker labeling still incomplete.",
+      "2026-04-20 final -> pass: Trim complete and panel labeling verified for approval."
+    ],
+    "metadata": {
+      "permit_type_normalized": "electrical_new",
+      "latest_result_normalized": "partial",
+      "followup_result_normalized": "pass"
+    },
+    "reviewer_note": "Derived directly from normalized inspection progression and follow-up notes."
+  },
+  {
+    "review_id": "label-review:dallas:next-action:0003",
+    "task_id": "eval:dallas:next-action:0003",
+    "task_type": "recommended_next_action",
+    "permit_id": "permit:dallas:elp-2026-0203",
+    "inspection_id": "inspection:dallas:elp-2026-0203:2026-03-17:rough_in",
+    "review_status": "normalized_row_generated",
+    "label_source": "normalized_rows",
+    "label_payload": {
+      "reference_actions": [
+        "complete_remaining_work",
+        "schedule_reinspection"
+      ]
+    },
+    "evidence": [
+      "Most damaged wiring repaired but hallway trim incomplete before closeout.",
+      "2026-03-22 correction_followup -> pass: Remaining trim complete and branch repairs accepted."
+    ],
+    "metadata": {
+      "permit_type_normalized": "electrical_repair",
+      "latest_result_normalized": "partial",
+      "followup_result_normalized": "pass"
+    },
+    "reviewer_note": "Derived directly from normalized inspection progression and follow-up notes."
+  },
+  {
+    "review_id": "label-review:dallas:failure-reason:0002",
+    "task_id": "eval:dallas:failure-reason:0002",
+    "task_type": "failure_reason_classification",
+    "permit_id": "permit:dallas:elr-2026-0201",
+    "inspection_id": "inspection:dallas:elr-2026-0201:2026-04-09:final",
+    "review_status": "normalized_row_generated",
+    "label_source": "normalized_rows",
+    "label_payload": {
+      "failure_reason_normalized": "wiring_or_device_issue"
+    },
+    "evidence": [
+      "Kitchen GFCI protection missing and device trim incomplete at backsplash wall."
+    ],
+    "metadata": {
+      "permit_type_normalized": "electrical_remodel",
+      "inspection_type_normalized": "final"
+    },
+    "reviewer_note": "Derived directly from normalized failed inspection rows and preserved notes."
+  },
+  {
+    "review_id": "label-review:dallas:next-action:0004",
+    "task_id": "eval:dallas:next-action:0004",
+    "task_type": "recommended_next_action",
+    "permit_id": "permit:dallas:elr-2026-0201",
+    "inspection_id": "inspection:dallas:elr-2026-0201:2026-04-09:final",
+    "review_status": "normalized_row_generated",
+    "label_source": "normalized_rows",
+    "label_payload": {
+      "reference_actions": [
+        "correct_wiring_or_devices",
+        "schedule_reinspection"
+      ]
+    },
+    "evidence": [
+      "Kitchen GFCI protection missing and device trim incomplete at backsplash wall.",
+      "2026-04-12 correction_followup -> pass: GFCI added and final trim completed for approval."
+    ],
+    "metadata": {
+      "permit_type_normalized": "electrical_remodel",
+      "latest_result_normalized": "fail",
+      "followup_result_normalized": "pass"
+    },
+    "reviewer_note": "Derived directly from normalized inspection progression and follow-up notes."
+  },
+  {
+    "review_id": "label-review:dallas:next-action:0005",
+    "task_id": "eval:dallas:next-action:0005",
+    "task_type": "recommended_next_action",
+    "permit_id": "permit:dallas:els-2026-0202",
+    "inspection_id": "inspection:dallas:els-2026-0202:2026-04-10:service_release",
+    "review_status": "normalized_row_generated",
+    "label_source": "normalized_rows",
+    "label_payload": {
+      "reference_actions": [
+        "correct_panel_or_service",
+        "ensure_site_access",
+        "schedule_reinspection"
+      ]
+    },
+    "evidence": [
+      "Disconnect area blocked and homeowner unable to provide clear meter access for release inspection.",
+      "2026-04-15 correction_followup -> pass: Site access cleared and release approved after scheduling return visit."
+    ],
+    "metadata": {
+      "permit_type_normalized": "electrical_service_upgrade",
+      "latest_result_normalized": "not_ready",
+      "followup_result_normalized": "pass"
+    },
+    "reviewer_note": "Derived directly from normalized inspection progression and follow-up notes."
+  }
+]

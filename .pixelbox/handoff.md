@@ -3,6 +3,14 @@
 Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
+- lane: editor
+- status: refreshed the generated landing page against the real current Dallas MVP artifacts and build log
+- files: generated/landing.html, .automoat/logs/agent-journal.md
+- next: keep the page synced as contract-check and normalization-summary artifacts land, and avoid claiming progress beyond the generated Dallas scaffolds
+- lane: editor
+- status: widened the Dallas imported fixture to a second CSV-backed variant with broader inspection result diversity
+- files: generated/raw/dallas-electrician-import-sample-v2/permits.csv, generated/raw/dallas-electrician-import-sample-v2/inspections.csv, generated/raw/dallas-electrician-import-sample-v2/contractors.csv, generated/normalized/dallas-electrician-import-sample-v2/projects.json, generated/normalized/dallas-electrician-import-sample-v2/properties.jsonl, generated/normalized/dallas-electrician-import-sample-v2/permits.jsonl, generated/normalized/dallas-electrician-import-sample-v2/inspections.jsonl, generated/normalized/dallas-electrician-import-sample-v2/contractors.jsonl, generated/normalized/dallas-electrician-import-sample-v2/source_records.jsonl, generated/fixtures/dallas-electrician-import-sequences-v2/permit-inspection-sequences.json, generated/fixtures/dallas-electrician-import-sequences-v2/pattern-slices.json, generated/evals/dallas-electrician-import-sample-v2/tasks.jsonl, generated/evals/dallas-electrician-import-sample-v2/task_splits.json, generated/evals/dallas-electrician-import-sample-v2/label_reviews.json, generated/evals/dallas-electrician-import-sample-v2/reports/sample-contract.md, NEXT_TASK.md, generated/landing.html, .automoat/logs/agent-journal.md
+- next: add a contract-check or normalization-summary artifact that compares synthetic and imported Dallas scaffolds while preserving the current downstream shapes
 - lane: setup
 - status: initialized
 - next: choose editor/runtime owner for current task

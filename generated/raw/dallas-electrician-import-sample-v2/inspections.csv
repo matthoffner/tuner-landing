@@ -1,0 +1,16 @@
+permit_number,inspection_date,inspection_type,result,notes,inspector_name,reinspection_flag,source_url
+ELR-2026-0201,2026-04-04,Rough-in,Pass,Branch circuit routing and box fill acceptable for remodel scope.,Inspector Ruiz,false,https://example.local/dallas/inspections/ELR-2026-0201/1
+ELR-2026-0201,2026-04-09,Final,Fail,Kitchen GFCI protection missing and device trim incomplete at backsplash wall.,Inspector Ruiz,false,https://example.local/dallas/inspections/ELR-2026-0201/2
+ELR-2026-0201,2026-04-12,Correction follow-up,Pass,GFCI added and final trim completed for approval.,Inspector Ruiz,true,https://example.local/dallas/inspections/ELR-2026-0201/3
+ELS-2026-0202,2026-04-08,Rough-in,Pass,Riser route and grounding path acceptable before service release.,Inspector Khan,false,https://example.local/dallas/inspections/ELS-2026-0202/1
+ELS-2026-0202,2026-04-10,Service release,Not Ready,Disconnect area blocked and homeowner unable to provide clear meter access for release inspection.,Inspector Khan,false,https://example.local/dallas/inspections/ELS-2026-0202/2
+ELS-2026-0202,2026-04-15,Correction follow-up,Pass,Site access cleared and release approved after scheduling return visit.,Inspector Khan,true,https://example.local/dallas/inspections/ELS-2026-0202/3
+ELP-2026-0203,2026-03-17,Rough-in,Partial,Most damaged wiring repaired but hallway trim incomplete before closeout.,Inspector Patel,false,https://example.local/dallas/inspections/ELP-2026-0203/1
+ELP-2026-0203,2026-03-22,Correction follow-up,Pass,Remaining trim complete and branch repairs accepted.,Inspector Patel,true,https://example.local/dallas/inspections/ELP-2026-0203/2
+ELN-2026-0204,2026-04-11,Rough-in,Fail,Subpanel grounding incomplete and panel schedule missing at detached unit.,Inspector Thomas,false,https://example.local/dallas/inspections/ELN-2026-0204/1
+ELN-2026-0204,2026-04-16,Correction follow-up,Partial,Grounding corrected but final trim and breaker labeling still incomplete.,Inspector Thomas,true,https://example.local/dallas/inspections/ELN-2026-0204/2
+ELN-2026-0204,2026-04-20,Final,Pass,Trim complete and panel labeling verified for approval.,Inspector Thomas,true,https://example.local/dallas/inspections/ELN-2026-0204/3
+ELM-2026-0205,2026-04-12,Final,Cancelled,Inspector unable to enter site after locked gate and no contact on file.,Inspector West,false,https://example.local/dallas/inspections/ELM-2026-0205/1
+ELM-2026-0205,2026-04-18,Final,Pending,Rescheduled final shows work substantially complete and awaiting recorded disposition.,Inspector West,true,https://example.local/dallas/inspections/ELM-2026-0205/2
+ELM-2026-0205,2026-04-21,Correction follow-up,Pass,Recorded final approval after contractor confirmed outlet spacing and access.,Inspector West,true,https://example.local/dallas/inspections/ELM-2026-0205/3
+PLM-2026-0206,2026-04-11,Final,Pass,Plumbing final approved.,Inspector Green,false,https://example.local/dallas/inspections/PLM-2026-0206/1

@@ -44,9 +44,9 @@ Recent progress:
 
 Updated next best artifacts:
 
-- a second or wider raw Dallas extract variant that exercises the importer with more inspection result diversity
 - a normalization pass that brings `source_records.jsonl` and optional `rule_documents.jsonl` into the same repeatable imported-sample workflow
 - a contract check or summary artifact that compares the synthetic and imported Dallas eval scaffolds without changing downstream shapes
+- a merged or broader imported Dallas fixture that increases pattern-slice support counts beyond single-sequence examples
 
 Latest bounded improvement completed:
 
@@ -56,6 +56,7 @@ Latest bounded improvement completed:
 - `scripts/generate_dallas_discovery_artifacts.py` now supports batch generation across multiple intake variants, and `generated/intake/dallas-electrician-south-dallas-v1/` plus `generated/discovery/dallas-electrician-south-dallas-v1/` exercise the Dallas business-first contract on a second realistic electrician profile
 - `scripts/import_dallas_permit_extracts.py` now turns raw Dallas permit, inspection, and contractor CSV extracts into `projects.json`, `properties.jsonl`, `permits.jsonl`, `inspections.jsonl`, `contractors.jsonl`, and `source_records.jsonl` under `generated/normalized/dallas-electrician-import-sample-v1/`
 - `scripts/generate_dallas_eval_artifacts.py` now accepts input and output arguments, and `generated/fixtures/dallas-electrician-import-sequences-v1/` plus `generated/evals/dallas-electrician-import-sample-v1/` prove the imported sample holds the same downstream Dallas fixture, review, and eval contracts
+- `generated/raw/dallas-electrician-import-sample-v2/` now widens the imported Dallas fixture with `pass`, `fail`, `partial`, `cancelled`, `not_ready`, and `unknown` inspection outcomes, and the generated `normalized`, `fixtures`, and `evals` `-v2` directories prove the importer and downstream contracts hold across the broader result mix
 
 ## Constraints
 
