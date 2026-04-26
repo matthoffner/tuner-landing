@@ -483,6 +483,7 @@
                 <li><strong>Scope:</strong> Dallas, Texas; electricians; residential permits and inspections.</li>
                 <li><strong>What works:</strong> deterministic generation of discovery outputs, normalized rows, fixture packs, reviewed labels, eval scaffolds, and a cross-sample contract summary from repo-local inputs.</li>
                 <li><strong>Current gap:</strong> make source lineage and optional <code>rule_documents.jsonl</code> part of the same repeatable imported-sample normalization workflow.</li>
+                <li><strong>Loop note:</strong> the 24-hour runner produced real artifacts overnight, then exposed a failure-propagation bug in the supervisor path; that guard is now being tightened so failed iterations stop the day loop instead of thrashing.</li>
               </ul>
             </div>
 
@@ -607,6 +608,13 @@
             </div>
             <h2>Current build log</h2>
             <div class="timeline">
+              <div class="timeline-item">
+                <div class="timeline-meta">2026-04-26</div>
+                <p>
+                  Tightened the unattended loop contract after the day supervisor exposed a failure-propagation bug:
+                  failed child sessions must now stop the day loop cleanly instead of spinning through short broken cycles.
+                </p>
+              </div>
               <div class="timeline-item">
                 <div class="timeline-meta">2026-04-26</div>
                 <p>

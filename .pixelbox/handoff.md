@@ -124,6 +124,10 @@ Use this file to coordinate between editor/runtime lanes.
 - files: scripts/codex-loop.sh, scripts/codex-session.sh, scripts/codex-day.sh, scripts/codex-publish.sh, LOOP.md, HEARTBEAT.md, README.md, .automoat/logs/agent-journal.md, generated/landing.html
 - next: start the 24-hour supervisor or continue widening the normalized Dallas sample under the new auto-publish loop
 - lane: editor
+- status: identified and patched a failure-propagation bug in the 24-hour loop so failed child sessions now stop the supervisor instead of spinning through broken short cycles
+- files: scripts/codex-session.sh, .automoat/logs/agent-journal.md, generated/landing.html
+- next: restart the day supervisor cleanly and confirm it either makes progress or fails closed on the next real error
+- lane: editor
 - status: added batch Dallas discovery generation plus a second South Dallas intake variant and matching generated discovery run
 - files: scripts/generate_dallas_discovery_artifacts.py, generated/intake/dallas-electrician-south-dallas-v1/intake.json, generated/discovery/dallas-electrician-south-dallas-v1/business-profile.json, generated/discovery/dallas-electrician-south-dallas-v1/workflow-map.md, generated/discovery/dallas-electrician-south-dallas-v1/moat-hypotheses.json, generated/discovery/dallas-electrician-south-dallas-v1/data-gap-plan.md, generated/discovery/dallas-electrician-south-dallas-v1/eval-opportunities.json, generated/discovery/dallas-electrician-south-dallas-v1/discovery-summary.md, README.md, NEXT_TASK.md, .automoat/logs/agent-journal.md, generated/landing.html
 - next: widen the normalized Dallas sample toward imported permit and inspection records without changing the discovery, review, or eval contracts

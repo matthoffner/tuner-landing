@@ -93,6 +93,7 @@ cp "$LOCK_DIR/meta.txt" "$SESSION_META"
 } >> "$LOOP_LOG"
 
 ITERATION=0
+SESSION_STATUS=0
 
 while [[ "$(date +%s)" -lt "$END_EPOCH" ]]; do
   ITERATION="$((ITERATION + 1))"
@@ -161,6 +162,7 @@ while [[ "$(date +%s)" -lt "$END_EPOCH" ]]; do
   } > "$LAST_RUN_FILE"
 
   if [[ "$STATUS" -ne 0 ]]; then
+    SESSION_STATUS="$STATUS"
     echo "iteration $ITERATION failed with status $STATUS" | tee -a "$SESSION_LOG"
     break
   fi
@@ -181,3 +183,5 @@ SESSION_END_STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 {
   printf '[%s] SESSION END iterations=%s dir=%s\n' "$SESSION_END_STAMP" "$ITERATION" "$SESSION_DIR"
 } >> "$LOOP_LOG"
+
+exit "$SESSION_STATUS"
