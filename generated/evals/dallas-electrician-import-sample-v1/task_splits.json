@@ -1,0 +1,28 @@
+{
+  "dataset_id": "dallas-electrician-import-sample-v1",
+  "generated_by": "scripts/generate_dallas_eval_artifacts.py",
+  "split_strategy": "all permit-sequence tasks in dev, all pattern slices in test",
+  "counts": {
+    "dev": 14,
+    "test": 4
+  },
+  "group_keys": {
+    "dev": [
+      "sequence:dallas:eln-2026-0104",
+      "sequence:dallas:elp-2026-0103",
+      "sequence:dallas:elr-2026-0101",
+      "sequence:dallas:els-2026-0102"
+    ],
+    "test": [
+      "slice:dallas:service-upgrade:service-release:75211",
+      "slice:dallas:new:rough-in:75214",
+      "slice:dallas:remodel:final:75214",
+      "slice:dallas:repair:final:75217"
+    ]
+  },
+  "notes": [
+    "This dataset is generated deterministically from generated/fixtures/dallas-electrician-import-sequences-v1.",
+    "All rows from the same synthetic permit sequence stay in the same split.",
+    "Pattern extraction rows use slice identifiers as the split grouping key."
+  ]
+}

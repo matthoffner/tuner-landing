@@ -44,9 +44,9 @@ Recent progress:
 
 Updated next best artifacts:
 
-- a sample normalized Dallas dataset directory that can widen from synthetic rows to imported Dallas records without changing downstream contracts
-- a wider normalized Dallas sample that can preserve the same eval and review contracts while moving from synthetic rows toward imported records
-- a thin local writer that can turn imported Dallas permit and inspection extracts into wider normalized sample directories without changing downstream eval contracts
+- a second or wider raw Dallas extract variant that exercises the importer with more inspection result diversity
+- a normalization pass that brings `source_records.jsonl` and optional `rule_documents.jsonl` into the same repeatable imported-sample workflow
+- a contract check or summary artifact that compares the synthetic and imported Dallas eval scaffolds without changing downstream shapes
 
 Latest bounded improvement completed:
 
@@ -54,6 +54,8 @@ Latest bounded improvement completed:
 - `scripts/generate_dallas_fixture_pack.py` now emits the Dallas fixture pack deterministically from normalized permit and inspection rows
 - `scripts/generate_dallas_label_reviews.py` now emits reviewed label rows directly from normalized Dallas permit and inspection records, and `scripts/generate_dallas_eval_artifacts.py` now uses that row-derived supervision path
 - `scripts/generate_dallas_discovery_artifacts.py` now supports batch generation across multiple intake variants, and `generated/intake/dallas-electrician-south-dallas-v1/` plus `generated/discovery/dallas-electrician-south-dallas-v1/` exercise the Dallas business-first contract on a second realistic electrician profile
+- `scripts/import_dallas_permit_extracts.py` now turns raw Dallas permit, inspection, and contractor CSV extracts into `projects.json`, `properties.jsonl`, `permits.jsonl`, `inspections.jsonl`, `contractors.jsonl`, and `source_records.jsonl` under `generated/normalized/dallas-electrician-import-sample-v1/`
+- `scripts/generate_dallas_eval_artifacts.py` now accepts input and output arguments, and `generated/fixtures/dallas-electrician-import-sequences-v1/` plus `generated/evals/dallas-electrician-import-sample-v1/` prove the imported sample holds the same downstream Dallas fixture, review, and eval contracts
 
 ## Constraints
 

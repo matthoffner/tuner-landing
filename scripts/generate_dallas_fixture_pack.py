@@ -82,6 +82,14 @@ def write_json(path: Path, payload):
         handle.write("\n")
 
 
+def display_path(path: Path):
+    resolved = path.resolve()
+    try:
+        return str(resolved.relative_to(ROOT))
+    except ValueError:
+        return str(path)
+
+
 def build_reference_actions(inspections):
     actions = []
     for index, inspection in enumerate(inspections[:-1]):
@@ -304,7 +312,7 @@ def main():
                 "workflow": "residential electrical permits and inspections",
             },
             "generated_by": "scripts/generate_dallas_fixture_pack.py",
-            "source_dataset_dir": str(args.input_dir.relative_to(ROOT)),
+            "source_dataset_dir": display_path(args.input_dir),
             "sequences": sequences,
         },
     )
@@ -313,7 +321,7 @@ def main():
         {
             "fixture_pack_id": "dallas-electrician-sequences-v1",
             "generated_by": "scripts/generate_dallas_fixture_pack.py",
-            "source_dataset_dir": str(args.input_dir.relative_to(ROOT)),
+            "source_dataset_dir": display_path(args.input_dir),
             "pattern_slices": pattern_slices,
         },
     )

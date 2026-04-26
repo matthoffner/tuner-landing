@@ -1,0 +1,87 @@
+{
+  "fixture_pack_id": "dallas-electrician-sequences-v1",
+  "generated_by": "scripts/generate_dallas_fixture_pack.py",
+  "source_dataset_dir": "generated/normalized/dallas-electrician-import-sample-v1",
+  "pattern_slices": [
+    {
+      "slice_id": "slice:dallas:service-upgrade:service-release:75211",
+      "group_by": "zip_code",
+      "filters": {
+        "permit_type_normalized": "electrical_service_upgrade",
+        "zip_code": "75211",
+        "inspection_type_normalized": "service_release"
+      },
+      "support_summary": {
+        "permit_count": 1,
+        "inspection_count": 1,
+        "failed_inspection_count": 1
+      },
+      "reference_pattern": {
+        "pattern_summary": "Electrical service upgrade inspections in 75211 show a repeated pattern around grounding and bonding corrections.",
+        "support_count": 1,
+        "why_it_matters": "This slice can drive Dallas-specific service release prep and next-action guidance for electricians working similar jobs."
+      },
+      "task_type": "pattern_extraction"
+    },
+    {
+      "slice_id": "slice:dallas:new:rough-in:75214",
+      "group_by": "zip_code",
+      "filters": {
+        "permit_type_normalized": "electrical_new",
+        "zip_code": "75214",
+        "inspection_type_normalized": "rough_in"
+      },
+      "support_summary": {
+        "permit_count": 1,
+        "inspection_count": 1,
+        "failed_inspection_count": 1
+      },
+      "reference_pattern": {
+        "pattern_summary": "Electrical new inspections in 75214 show a repeated pattern around panel and service corrections.",
+        "support_count": 1,
+        "why_it_matters": "This slice can drive Dallas-specific rough in prep and next-action guidance for electricians working similar jobs."
+      },
+      "task_type": "pattern_extraction"
+    },
+    {
+      "slice_id": "slice:dallas:remodel:final:75214",
+      "group_by": "zip_code",
+      "filters": {
+        "permit_type_normalized": "electrical_remodel",
+        "zip_code": "75214",
+        "inspection_type_normalized": "final"
+      },
+      "support_summary": {
+        "permit_count": 1,
+        "inspection_count": 1,
+        "failed_inspection_count": 1
+      },
+      "reference_pattern": {
+        "pattern_summary": "Electrical remodel inspections in 75214 show a repeated pattern around wiring and device corrections.",
+        "support_count": 1,
+        "why_it_matters": "This slice can drive Dallas-specific final prep and next-action guidance for electricians working similar jobs."
+      },
+      "task_type": "pattern_extraction"
+    },
+    {
+      "slice_id": "slice:dallas:repair:final:75217",
+      "group_by": "zip_code",
+      "filters": {
+        "permit_type_normalized": "electrical_repair",
+        "zip_code": "75217",
+        "inspection_type_normalized": "final"
+      },
+      "support_summary": {
+        "permit_count": 1,
+        "inspection_count": 1,
+        "failed_or_partial_inspection_count": 1
+      },
+      "reference_pattern": {
+        "pattern_summary": "Electrical repair inspections in 75217 show a repeated pattern around wiring and device corrections.",
+        "support_count": 1,
+        "why_it_matters": "This slice can drive Dallas-specific final prep and next-action guidance for electricians working similar jobs."
+      },
+      "task_type": "pattern_extraction"
+    }
+  ]
+}

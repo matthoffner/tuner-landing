@@ -1,0 +1,13 @@
+permit_number,inspection_date,inspection_type,result,notes,inspector_name,reinspection_flag,source_url
+ELR-2026-0101,2026-03-12,Rough-in,Pass,Branch circuits routed cleanly and box fill acceptable.,Inspector Ruiz,false,https://example.local/dallas/inspections/ELR-2026-0101/1
+ELR-2026-0101,2026-03-19,Final,Fail,GFCI device missing at wet bar and final trim incomplete.,Inspector Ruiz,false,https://example.local/dallas/inspections/ELR-2026-0101/2
+ELR-2026-0101,2026-03-24,Correction follow-up,Pass,Missing device installed and trim complete.,Inspector Ruiz,true,https://example.local/dallas/inspections/ELR-2026-0101/3
+ELS-2026-0102,2026-03-15,Rough-in,Pass,Conduit route and riser path acceptable.,Inspector Khan,false,https://example.local/dallas/inspections/ELS-2026-0102/1
+ELS-2026-0102,2026-03-18,Service release,Fail,Grounding electrode conductor incomplete and disconnect labeling missing.,Inspector Khan,false,https://example.local/dallas/inspections/ELS-2026-0102/2
+ELS-2026-0102,2026-03-21,Correction follow-up,Pass,Grounding corrected and disconnect labeled for release approval.,Inspector Khan,true,https://example.local/dallas/inspections/ELS-2026-0102/3
+ELP-2026-0103,2026-02-20,Rough-in,Pass,Damaged branch wiring replaced and concealed work approved.,Inspector Patel,false,https://example.local/dallas/inspections/ELP-2026-0103/1
+ELP-2026-0103,2026-02-24,Final,Partial,Hallway trim incomplete but AFCI replacements acceptable.,Inspector Patel,false,https://example.local/dallas/inspections/ELP-2026-0103/2
+ELP-2026-0103,2026-02-27,Correction follow-up,Pass,Remaining trim complete and final approval issued.,Inspector Patel,true,https://example.local/dallas/inspections/ELP-2026-0103/3
+ELN-2026-0104,2026-03-20,Rough-in,Fail,Panel schedule missing and garage receptacle wiring not secured.,Inspector Thomas,false,https://example.local/dallas/inspections/ELN-2026-0104/1
+ELN-2026-0104,2026-03-25,Correction follow-up,Pass,Panel labeling added and wiring secured for approval.,Inspector Thomas,true,https://example.local/dallas/inspections/ELN-2026-0104/2
+PLM-2026-0200,2026-03-14,Final,Pass,Plumbing final approved.,Inspector West,false,https://example.local/dallas/inspections/PLM-2026-0200/1

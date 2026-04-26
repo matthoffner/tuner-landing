@@ -1,0 +1,165 @@
+[
+  {
+    "review_id": "label-review:dallas:failure-reason:0001",
+    "task_id": "eval:dallas:failure-reason:0001",
+    "task_type": "failure_reason_classification",
+    "permit_id": "permit:dallas:eln-2026-0104",
+    "inspection_id": "inspection:dallas:eln-2026-0104:2026-03-20:rough_in",
+    "review_status": "normalized_row_generated",
+    "label_source": "normalized_rows",
+    "label_payload": {
+      "failure_reason_normalized": "panel_or_service_issue"
+    },
+    "evidence": [
+      "Panel schedule missing and garage receptacle wiring not secured."
+    ],
+    "metadata": {
+      "permit_type_normalized": "electrical_new",
+      "inspection_type_normalized": "rough_in"
+    },
+    "reviewer_note": "Derived directly from normalized failed inspection rows and preserved notes."
+  },
+  {
+    "review_id": "label-review:dallas:next-action:0001",
+    "task_id": "eval:dallas:next-action:0001",
+    "task_type": "recommended_next_action",
+    "permit_id": "permit:dallas:eln-2026-0104",
+    "inspection_id": "inspection:dallas:eln-2026-0104:2026-03-20:rough_in",
+    "review_status": "normalized_row_generated",
+    "label_source": "normalized_rows",
+    "label_payload": {
+      "reference_actions": [
+        "correct_panel_or_service",
+        "add_labels_or_documentation",
+        "ensure_site_access",
+        "schedule_reinspection"
+      ]
+    },
+    "evidence": [
+      "Panel schedule missing and garage receptacle wiring not secured.",
+      "2026-03-25 correction_followup -> pass: Panel labeling added and wiring secured for approval."
+    ],
+    "metadata": {
+      "permit_type_normalized": "electrical_new",
+      "latest_result_normalized": "fail",
+      "followup_result_normalized": "pass"
+    },
+    "reviewer_note": "Derived directly from normalized inspection progression and follow-up notes."
+  },
+  {
+    "review_id": "label-review:dallas:next-action:0002",
+    "task_id": "eval:dallas:next-action:0002",
+    "task_type": "recommended_next_action",
+    "permit_id": "permit:dallas:elp-2026-0103",
+    "inspection_id": "inspection:dallas:elp-2026-0103:2026-02-24:final",
+    "review_status": "normalized_row_generated",
+    "label_source": "normalized_rows",
+    "label_payload": {
+      "reference_actions": [
+        "correct_wiring_or_devices",
+        "schedule_reinspection"
+      ]
+    },
+    "evidence": [
+      "Hallway trim incomplete but AFCI replacements acceptable.",
+      "2026-02-27 correction_followup -> pass: Remaining trim complete and final approval issued."
+    ],
+    "metadata": {
+      "permit_type_normalized": "electrical_repair",
+      "latest_result_normalized": "partial",
+      "followup_result_normalized": "pass"
+    },
+    "reviewer_note": "Derived directly from normalized inspection progression and follow-up notes."
+  },
+  {
+    "review_id": "label-review:dallas:failure-reason:0002",
+    "task_id": "eval:dallas:failure-reason:0002",
+    "task_type": "failure_reason_classification",
+    "permit_id": "permit:dallas:elr-2026-0101",
+    "inspection_id": "inspection:dallas:elr-2026-0101:2026-03-19:final",
+    "review_status": "normalized_row_generated",
+    "label_source": "normalized_rows",
+    "label_payload": {
+      "failure_reason_normalized": "wiring_or_device_issue"
+    },
+    "evidence": [
+      "GFCI device missing at wet bar and final trim incomplete."
+    ],
+    "metadata": {
+      "permit_type_normalized": "electrical_remodel",
+      "inspection_type_normalized": "final"
+    },
+    "reviewer_note": "Derived directly from normalized failed inspection rows and preserved notes."
+  },
+  {
+    "review_id": "label-review:dallas:next-action:0003",
+    "task_id": "eval:dallas:next-action:0003",
+    "task_type": "recommended_next_action",
+    "permit_id": "permit:dallas:elr-2026-0101",
+    "inspection_id": "inspection:dallas:elr-2026-0101:2026-03-19:final",
+    "review_status": "normalized_row_generated",
+    "label_source": "normalized_rows",
+    "label_payload": {
+      "reference_actions": [
+        "correct_wiring_or_devices",
+        "schedule_reinspection"
+      ]
+    },
+    "evidence": [
+      "GFCI device missing at wet bar and final trim incomplete.",
+      "2026-03-24 correction_followup -> pass: Missing device installed and trim complete."
+    ],
+    "metadata": {
+      "permit_type_normalized": "electrical_remodel",
+      "latest_result_normalized": "fail",
+      "followup_result_normalized": "pass"
+    },
+    "reviewer_note": "Derived directly from normalized inspection progression and follow-up notes."
+  },
+  {
+    "review_id": "label-review:dallas:failure-reason:0003",
+    "task_id": "eval:dallas:failure-reason:0003",
+    "task_type": "failure_reason_classification",
+    "permit_id": "permit:dallas:els-2026-0102",
+    "inspection_id": "inspection:dallas:els-2026-0102:2026-03-18:service_release",
+    "review_status": "normalized_row_generated",
+    "label_source": "normalized_rows",
+    "label_payload": {
+      "failure_reason_normalized": "grounding_or_bonding_issue"
+    },
+    "evidence": [
+      "Grounding electrode conductor incomplete and disconnect labeling missing."
+    ],
+    "metadata": {
+      "permit_type_normalized": "electrical_service_upgrade",
+      "inspection_type_normalized": "service_release"
+    },
+    "reviewer_note": "Derived directly from normalized failed inspection rows and preserved notes."
+  },
+  {
+    "review_id": "label-review:dallas:next-action:0004",
+    "task_id": "eval:dallas:next-action:0004",
+    "task_type": "recommended_next_action",
+    "permit_id": "permit:dallas:els-2026-0102",
+    "inspection_id": "inspection:dallas:els-2026-0102:2026-03-18:service_release",
+    "review_status": "normalized_row_generated",
+    "label_source": "normalized_rows",
+    "label_payload": {
+      "reference_actions": [
+        "correct_grounding_or_bonding",
+        "add_labels_or_documentation",
+        "schedule_reinspection"
+      ]
+    },
+    "evidence": [
+      "Grounding electrode conductor incomplete and disconnect labeling missing.",
+      "2026-03-21 correction_followup -> pass: Grounding corrected and disconnect labeled for release approval."
+    ],
+    "metadata": {
+      "permit_type_normalized": "electrical_service_upgrade",
+      "latest_result_normalized": "fail",
+      "followup_result_normalized": "pass"
+    },
+    "reviewer_note": "Derived directly from normalized inspection progression and follow-up notes."
+  }
+]
