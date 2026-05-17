@@ -28,7 +28,10 @@
         "tasks": 14,
         "label_reviews": 5,
         "dev_tasks": 11,
-        "test_tasks": 3
+        "test_tasks": 3,
+        "repeated_pattern_slices": 0,
+        "max_pattern_permit_support": 1,
+        "repeated_next_action_groups": 1
       },
       "inspection_result_vocabulary": [
         "fail",
@@ -65,6 +68,12 @@
         "task_id",
         "task_type"
       ],
+      "repeated_next_action_groups": {
+        "complete_remaining_work|schedule_reinspection": [
+          "permit:dallas:res-elec-0001",
+          "permit:dallas:res-elec-0003"
+        ]
+      },
       "paths": {
         "normalized_dir": "generated/normalized/dallas-electrician-sample-v1",
         "fixture_dir": "generated/fixtures/dallas-electrician-sequences-v1",
@@ -97,7 +106,10 @@
         "tasks": 18,
         "label_reviews": 7,
         "dev_tasks": 14,
-        "test_tasks": 4
+        "test_tasks": 4,
+        "repeated_pattern_slices": 0,
+        "max_pattern_permit_support": 1,
+        "repeated_next_action_groups": 1
       },
       "inspection_result_vocabulary": [
         "fail",
@@ -134,6 +146,12 @@
         "task_id",
         "task_type"
       ],
+      "repeated_next_action_groups": {
+        "correct_wiring_or_devices|schedule_reinspection": [
+          "permit:dallas:elp-2026-0103",
+          "permit:dallas:elr-2026-0101"
+        ]
+      },
       "paths": {
         "normalized_dir": "generated/normalized/dallas-electrician-import-sample-v1",
         "fixture_dir": "generated/fixtures/dallas-electrician-import-sequences-v1",
@@ -155,18 +173,21 @@
       "has_source_records": true,
       "has_rule_documents": true,
       "counts": {
-        "properties": 5,
-        "permits": 5,
-        "inspections": 14,
+        "properties": 13,
+        "permits": 13,
+        "inspections": 38,
         "contractors": 5,
         "rule_documents": 3,
-        "source_records": 27,
-        "sequences": 5,
-        "pattern_slices": 4,
-        "tasks": 20,
-        "label_reviews": 7,
-        "dev_tasks": 16,
-        "test_tasks": 4
+        "source_records": 59,
+        "sequences": 13,
+        "pattern_slices": 5,
+        "tasks": 49,
+        "label_reviews": 19,
+        "dev_tasks": 44,
+        "test_tasks": 5,
+        "repeated_pattern_slices": 5,
+        "max_pattern_permit_support": 2,
+        "repeated_next_action_groups": 5
       },
       "inspection_result_vocabulary": [
         "cancelled",
@@ -183,10 +204,10 @@
         "recommended_next_action"
       ],
       "task_family_counts": {
-        "next_inspection_outcome": 9,
-        "failure_reason_classification": 2,
-        "recommended_next_action": 5,
-        "pattern_extraction": 4
+        "next_inspection_outcome": 25,
+        "failure_reason_classification": 6,
+        "recommended_next_action": 13,
+        "pattern_extraction": 5
       },
       "sequence_coverage_union": [
         "failure_reason_classification",
@@ -206,6 +227,30 @@
         "task_id",
         "task_type"
       ],
+      "repeated_next_action_groups": {
+        "ensure_site_access|schedule_reinspection": [
+          "permit:dallas:elm-2026-0211",
+          "permit:dallas:els-2026-0202",
+          "permit:dallas:els-2026-0210"
+        ],
+        "correct_grounding_or_bonding|add_labels_or_documentation": [
+          "permit:dallas:eln-2026-0204",
+          "permit:dallas:eln-2026-0208"
+        ],
+        "correct_grounding_or_bonding|add_labels_or_documentation|schedule_reinspection": [
+          "permit:dallas:eln-2026-0204",
+          "permit:dallas:eln-2026-0208"
+        ],
+        "correct_wiring_or_devices|schedule_reinspection": [
+          "permit:dallas:elp-2026-0209",
+          "permit:dallas:elr-2026-0201",
+          "permit:dallas:elr-2026-0207"
+        ],
+        "correct_panel_or_service|add_labels_or_documentation|schedule_reinspection": [
+          "permit:dallas:els-2026-0213",
+          "permit:dallas:els-2026-0214"
+        ]
+      },
       "paths": {
         "normalized_dir": "generated/normalized/dallas-electrician-import-sample-v2",
         "fixture_dir": "generated/fixtures/dallas-electrician-import-sequences-v2",
@@ -255,6 +300,11 @@
       "passed": true
     },
     {
+      "check_id": "latest-import-repeats-pattern-support",
+      "description": "The latest imported sample moves recurring pattern slices beyond one-off support.",
+      "passed": true
+    },
+    {
       "check_id": "widening-counts-monotonic",
       "description": "Imported samples widen the scaffold monotonically for permits, inspections, tasks, and source lineage.",
       "passed": true
@@ -267,5 +317,5 @@
     "Normalized row counts, eval task totals, and reviewed label totals grow across imported samples as the raw CSV fixtures widen.",
     "Inspection result vocabulary broadens in imported v2 to include cancelled, not_ready, and unknown without changing downstream task families or split shapes."
   ],
-  "next_gap": "Broaden the imported Dallas fixture so pattern slices and reviewed labels are supported by more than one or two permit sequences per recurring pattern."
+  "next_gap": "Keep the edge-case coverage report current and promote the most important repeated-support expectations into contract checks before widening the imported fixture again."
 }

@@ -146,12 +146,19 @@ def infer_failure_reason(notes: str):
         return "missing_permit_or_scope_mismatch"
     if "ground" in lowered or "bond" in lowered:
         return "grounding_or_bonding_issue"
+    if (
+        "access" in lowered
+        or "locked gate" in lowered
+        or "unable to enter" in lowered
+        or "entry" in lowered
+        or "blocked" in lowered
+        or "homeowner unavailable" in lowered
+    ):
+        return "access_or_scheduling_issue"
     if "panel" in lowered or "disconnect" in lowered or "service" in lowered:
         return "panel_or_service_issue"
     if "label" in lowered or "document" in lowered:
         return "labeling_or_documentation_issue"
-    if "access" in lowered or "schedule" in lowered:
-        return "access_or_scheduling_issue"
     if "wire" in lowered or "device" in lowered or "gfci" in lowered or "afci" in lowered:
         return "wiring_or_device_issue"
     if "trim" in lowered or "incomplete" in lowered or "missing" in lowered:

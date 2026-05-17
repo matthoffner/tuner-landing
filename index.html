@@ -455,7 +455,7 @@
               <div class="section-header">
                 <div class="kicker">Current State</div>
               </div>
-              <h2>Real progress, as of April 26, 2026</h2>
+              <h2>Real progress, as of May 17, 2026</h2>
               <p>
                 The repo is still in MVP scaffolding mode. The current wedge is intentionally narrow:
                 Dallas residential electrical permits and inspections for electricians. What exists
@@ -471,19 +471,19 @@
                   <div class="metric-label">Normalized Dallas dataset paths: one synthetic scaffold plus imported CSV samples <code>v1</code> and <code>v2</code></div>
                 </div>
                 <div class="metric">
-                  <div class="metric-value">9/9</div>
-                  <div class="metric-label">Contract checks passing in <code>generated/contracts/dallas-electrician-contract-summary-v1/</code></div>
-                </div>
-                <div class="metric">
-                  <div class="metric-value">52 / 19</div>
-                  <div class="metric-label">Generated eval tasks and reviewed label rows across the three Dallas scaffolds</div>
-                </div>
+                <div class="metric-value">10/10</div>
+                <div class="metric-label">Contract checks passing in <code>generated/contracts/dallas-electrician-contract-summary-v1/</code></div>
+              </div>
+              <div class="metric">
+                <div class="metric-value">81 / 31</div>
+                <div class="metric-label">Generated eval tasks and reviewed label rows across the three Dallas scaffolds</div>
+              </div>
               </div>
               <ul class="status-list">
                 <li><strong>Scope:</strong> Dallas, Texas; electricians; residential permits and inspections.</li>
                 <li><strong>What works:</strong> deterministic generation of discovery outputs, normalized rows, fixture packs, reviewed labels, eval scaffolds, and a cross-sample contract summary from repo-local inputs.</li>
-                <li><strong>Most current proof:</strong> <code>generated/contracts/dallas-electrician-contract-summary-v1/</code> passes <code>9/9</code> checks across one synthetic and two imported Dallas scaffolds.</li>
-                <li><strong>Current gap:</strong> widen the imported Dallas fixture so recurring pattern slices and reviewed next actions have repeated support instead of mostly one-off or thinly repeated examples.</li>
+                <li><strong>Most current proof:</strong> <code>generated/contracts/dallas-electrician-contract-summary-v1/</code> passes <code>10/10</code> checks across one synthetic and two imported Dallas scaffolds.</li>
+                <li><strong>Current gap:</strong> repeated support now covers remodel, new-install, repair, service-release, access-blocked, cancelled, unknown, and panel-service examples; the next gap is promoting the most important coverage thresholds into contract checks.</li>
                 <li><strong>Operational note:</strong> the unattended loop has produced real artifacts, but the repo still needs a cleaner fail-closed supervisor path when child sessions break.</li>
               </ul>
             </div>
@@ -532,8 +532,8 @@
                 <code>generated/normalized/dallas-electrician-sample-v1/</code> plus imported CSV
                 normalization runs under <code>generated/normalized/dallas-electrician-import-sample-v1/</code>
                 and <code>generated/normalized/dallas-electrician-import-sample-v2/</code>. The wider
-                <code>v2</code> import currently carries <code>5</code> permits, <code>14</code> inspections,
-                <code>27</code> source-record lineage rows, <code>3</code> rule documents, and explicit coverage for
+                <code>v2</code> import currently carries <code>13</code> permits, <code>38</code> inspections,
+                <code>59</code> source-record lineage rows, <code>3</code> rule documents, and explicit coverage for
                 <code>pass</code>, <code>fail</code>, <code>partial</code>, <code>cancelled</code>,
                 <code>not_ready</code>, and <code>unknown</code> inspection outcomes.
               </div>
@@ -542,7 +542,7 @@
                 Three generated eval samples now exist. The synthetic scaffold has <code>14</code>
                 tasks and <code>5</code> reviewed label rows. The imported <code>v1</code> scaffold has
                 <code>18</code> tasks and <code>7</code> reviewed label rows, while imported <code>v2</code>
-                expands to <code>20</code> tasks and <code>7</code> reviewed label rows across
+                expands to <code>49</code> tasks and <code>19</code> reviewed label rows across
                 <code>next_inspection_outcome</code>, <code>failure_reason_classification</code>,
                 <code>recommended_next_action</code>, and <code>pattern_extraction</code>.
               </div>
@@ -560,9 +560,17 @@
                 <span class="artifact-label">Contract Summary</span>
                 <code>generated/contracts/dallas-electrician-contract-summary-v1/</code> now compares
                 the synthetic scaffold to imported <code>v1</code> and <code>v2</code>, confirms
-                <code>9</code> passing contract checks, includes optional imported
+                <code>10</code> passing contract checks, includes optional imported
                 <code>rule_documents.jsonl</code> coverage, keeps the four eval task families stable,
-                and makes the intentional widening differences explicit instead of implicit.
+                and now reports repeated pattern-slice plus next-action support explicitly instead of leaving it implicit.
+              </div>
+              <div class="artifact-card">
+                <span class="artifact-label">Edge-Case Coverage</span>
+                <code>generated/coverage/dallas-electrician-edge-case-coverage-v1/</code> now makes
+                repeated support visible across result states, failure reasons, pattern slices, and
+                next-action groups. Imported <code>v2</code> has repeated support for <code>6/6</code>
+                result states, <code>4/5</code> failure reasons, <code>5/5</code> pattern slices, and
+                <code>5/6</code> next-action groups.
               </div>
             </div>
           </div>
@@ -578,7 +586,7 @@
                 <p>
                   The freshest generated data artifacts are
                   <code>generated/contracts/dallas-electrician-contract-summary-v1/summary.md</code>
-                  and <code>summary.json</code>, written on April 26, 2026. They compare all three
+                  and <code>summary.json</code>, written on May 17, 2026. They compare all three
                   current Dallas scaffolds and confirm that the downstream contract still holds.
                 </p>
               </div>
@@ -586,8 +594,8 @@
                 <h3>Imported sample v2 is still the data frontier</h3>
                 <p>
                   The widest normalized dataset remains <code>dallas-electrician-import-sample-v2</code>:
-                  <code>5</code> permits, <code>14</code> inspections, <code>3</code> rule documents,
-                  <code>27</code> source-record lineage rows, <code>20</code> eval tasks, and coverage for
+                  <code>13</code> permits, <code>38</code> inspections, <code>3</code> rule documents,
+                  <code>59</code> source-record lineage rows, <code>49</code> eval tasks, and coverage for
                   <code>cancelled</code>, <code>fail</code>, <code>not_ready</code>, <code>partial</code>,
                   <code>pass</code>, and <code>unknown</code>.
                 </p>
@@ -601,6 +609,15 @@
                   by profile, but it is still narrow by design.
                 </p>
               </div>
+              <div class="card">
+                <h3>Coverage now names the thin spots</h3>
+                <p>
+                  The edge-case coverage report shows only two thin latest-import supports:
+                  <code>incomplete_work</code> and
+                  <code>complete_remaining_work|schedule_reinspection</code>. The next contract step is
+                  promoting the most important coverage expectations into checks.
+                </p>
+              </div>
             </div>
           </div>
 
@@ -610,6 +627,50 @@
             </div>
             <h2>Current build log</h2>
             <div class="timeline">
+              <div class="timeline-item">
+                <div class="timeline-meta">2026-05-17</div>
+                <p>
+                  Added <code>scripts/generate_dallas_edge_case_coverage.py</code> and generated
+                  <code>generated/coverage/dallas-electrician-edge-case-coverage-v1/</code>. The report
+                  makes repeated support visible across result states, failure reasons, pattern slices,
+                  and next-action groups; latest imported <code>v2</code> now shows repeated support for
+                  <code>6/6</code> result states, <code>4/5</code> failure reasons,
+                  <code>5/5</code> pattern slices, and <code>5/6</code> next-action groups.
+                </p>
+              </div>
+              <div class="timeline-item">
+                <div class="timeline-meta">2026-05-17</div>
+                <p>
+                  Widened imported <code>v2</code> with three more Dallas electrician permit sequences:
+                  a repeated cancelled/unknown remodel-final path and two repeated service-release failures
+                  around panel and disconnect corrections. Regenerated the normalized, fixture, eval, and
+                  contract-summary artifacts. Imported <code>v2</code> now carries <code>13</code> permits,
+                  <code>38</code> inspections, <code>49</code> eval tasks, <code>19</code> reviewed label rows,
+                  <code>5</code> repeated pattern slices, and <code>5</code> repeated next-action groups while
+                  the shared contract remains <code>10/10</code>.
+                </p>
+              </div>
+              <div class="timeline-item">
+                <div class="timeline-meta">2026-05-10</div>
+                <p>
+                  Widened imported <code>v2</code> again with one repeated service-release sequence and one
+                  repeated access-blocked final sequence, tightened the importer and next-action hinting so
+                  access labels no longer come from accidental <code>panel schedule</code> matches, and
+                  regenerated the normalized, fixture, eval, and contract-summary artifacts. Imported
+                  <code>v2</code> now carries <code>10</code> permits, <code>28</code> inspections,
+                  <code>37</code> eval tasks, <code>15</code> reviewed label rows, and a real repeated
+                  <code>ensure_site_access|schedule_reinspection</code> next-action group.
+                </p>
+              </div>
+              <div class="timeline-item">
+                <div class="timeline-meta">2026-04-26</div>
+                <p>
+                  Widened imported <code>v2</code> with three more Dallas electrician permit sequences,
+                  regenerated the normalized, fixture, eval, and contract-summary artifacts, and pushed
+                  recurring remodel, new-install, and repair pattern slices to <code>2</code>-permit support
+                  each. The shared contract now passes <code>10/10</code> checks and makes repeated support explicit.
+                </p>
+              </div>
               <div class="timeline-item">
                 <div class="timeline-meta">2026-04-26</div>
                 <p>
@@ -643,7 +704,7 @@
                   Added <code>scripts/generate_dallas_contract_summary.py</code> and generated
                   <code>generated/contracts/dallas-electrician-contract-summary-v1/</code>, making the
                   shared synthetic-versus-imported Dallas contract explicit. That contract is now
-                  broadened by the imported rule-document path; the next gap is stronger repeated pattern support.
+                  broadened by the imported rule-document path; the next gap is now repeated support for the remaining service-release and access-heavy edge cases.
                 </p>
               </div>
               <div class="timeline-item">
@@ -749,14 +810,14 @@
                 <h3>Not built</h3>
                 <p>
                   No large imported Dallas record set, no production application workflow, no live model
-                  benchmarking results, no broad repeated imported-pattern coverage yet, no proven repeat-support
-                  depth behind the pattern slices, and no evidence that the Dallas wedge produces a durable moat in practice.
+                  benchmarking results, no coverage thresholds promoted into contract checks yet, and no
+                  evidence that the Dallas wedge produces a durable moat in practice.
                 </p>
               </div>
             </div>
             <p class="footer-note">
-              Next best move: broaden the imported Dallas fixture so repeated pattern slices and reviewed
-              next-action labels have deeper support counts.
+              Next best move: promote the most important edge-case coverage expectations into contract
+              checks, then widen the remaining thin incomplete-work support if needed.
             </p>
           </div>
 
@@ -780,6 +841,8 @@
               <a class="doc-pill" href="./evals/dallas-electrician-import-sample-v2/reports/sample-contract.md">wider imported eval report</a>
               <a class="doc-pill" href="./contracts/dallas-electrician-contract-summary-v1/summary.md">contract summary</a>
               <a class="doc-pill" href="./contracts/dallas-electrician-contract-summary-v1/summary.json">contract summary json</a>
+              <a class="doc-pill" href="./coverage/dallas-electrician-edge-case-coverage-v1/coverage.md">edge-case coverage</a>
+              <a class="doc-pill" href="./coverage/dallas-electrician-edge-case-coverage-v1/coverage.json">edge-case coverage json</a>
               <a class="doc-pill" href="./fixtures/dallas-electrician-sequences-v1/README.md">fixture pack readme</a>
               <a class="doc-pill" href="./normalized/dallas-electrician-sample-v1/projects.json">normalized project metadata</a>
               <a class="doc-pill" href="./normalized/dallas-electrician-import-sample-v1/projects.json">imported normalized project metadata</a>

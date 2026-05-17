@@ -28,6 +28,10 @@ Use short dated entries. Focus on decisions, changes, blockers, and next steps.
 
 ## 2026-04-26
 
+- Widened `generated/raw/dallas-electrician-import-sample-v2/` with three more Dallas electrician permit sequences so the imported fixture now repeats the existing `75208` remodel-final, `75214` new-install rough-in/correction-followup, and `75216` repair rough-in slices instead of leaving them as one-off examples.
+- Regenerated `generated/normalized/dallas-electrician-import-sample-v2/`, `generated/fixtures/dallas-electrician-import-sequences-v2/`, and `generated/evals/dallas-electrician-import-sample-v2/`; imported `v2` now carries `8` permits, `22` inspections, `31` eval tasks, `13` reviewed label rows, and `38` source-lineage rows.
+- Extended `scripts/generate_dallas_contract_summary.py` to report repeated pattern-slice and repeated next-action support directly, then regenerated `generated/contracts/dallas-electrician-contract-summary-v1/`; the summary now passes `10/10` checks and shows imported `v2` with `4` repeated pattern slices and `3` repeated next-action groups.
+- Refreshed `NEXT_TASK.md` and `generated/landing.html` so the repo now points at the narrower remaining gap: repeated imported support for service-release and access-related edge cases rather than generic pattern-repeat scarcity.
 - Re-read `generated/landing.html`, `NEXT_TASK.md`, `.automoat/logs/agent-journal.md`, `.pixelbox/handoff.md`, `README.md`, and the freshest generated artifacts before updating the landing page again.
 - Refreshed `generated/landing.html` so it now acts as a higher-signal status page and changelog for the real current repo state: broad framing intact, contract summary centered, stale counts removed, imported `v2` corrected to `27` source records and `3` rule documents, and the remaining gap kept focused on repeat support for recurring patterns.
 - Extended `scripts/import_dallas_permit_extracts.py` so imported Dallas samples can optionally ingest `rule_documents.csv`, emitting `rule_documents.jsonl` plus matching `rule_document` source-lineage rows in `source_records.jsonl`.
@@ -52,3 +56,20 @@ Use short dated entries. Focus on decisions, changes, blockers, and next steps.
 - Updated `NEXT_TASK.md` and `generated/landing.html` so the repo now points at the next real gap: cross-sample contract checks and a repeatable normalization path for source lineage plus optional rule documents.
 - Refreshed `generated/landing.html` once more against the current repo artifacts so the page now reports three normalized dataset paths, three eval scaffolds, `52` total generated tasks, `19` reviewed label rows, and the imported `v2` sample as the latest concrete build signal.
 - The 24-hour supervisor produced those artifacts, then exposed a bug in `scripts/codex-session.sh`: failed iterations were breaking the inner loop but still returning `0`, which let `scripts/codex-day.sh` spin through broken short cycles instead of stopping cleanly.
+
+## 2026-05-10
+
+- Widened `generated/raw/dallas-electrician-import-sample-v2/` with one more Dallas service-upgrade sequence and one more access-blocked remodel-final sequence so imported `v2` now repeats service-release and access-heavy next-action paths instead of leaving them as one-offs.
+- Tightened `scripts/import_dallas_permit_extracts.py`, `scripts/generate_dallas_fixture_pack.py`, and `scripts/generate_dallas_label_reviews.py` so access-related labels no longer come from accidental `panel schedule` matches and access-blocked service-release rows normalize consistently.
+- Regenerated `generated/normalized/dallas-electrician-import-sample-v2/`, `generated/fixtures/dallas-electrician-import-sequences-v2/`, `generated/evals/dallas-electrician-import-sample-v2/`, and `generated/contracts/dallas-electrician-contract-summary-v1/`; imported `v2` now carries `10` permits, `28` inspections, `37` eval tasks, `15` reviewed label rows, `46` source-lineage rows, and `4` repeated next-action groups while the contract stays at `10/10`.
+- Refreshed `NEXT_TASK.md` and `generated/landing.html` so the repo now points at the narrower remaining gap: repeated cancelled, unknown, and panel-service examples rather than missing service-release or access support.
+
+## 2026-05-17
+
+- Widened `generated/raw/dallas-electrician-import-sample-v2/` with three more Dallas electrician permit sequences: one repeated cancelled/unknown remodel-final path and two repeated panel/service release failures.
+- Regenerated `generated/normalized/dallas-electrician-import-sample-v2/`, `generated/fixtures/dallas-electrician-import-sequences-v2/`, `generated/evals/dallas-electrician-import-sample-v2/`, and `generated/contracts/dallas-electrician-contract-summary-v1/`; imported `v2` now carries `13` permits, `38` inspections, `49` eval tasks, `19` reviewed label rows, and `59` source-lineage rows.
+- Confirmed the shared contract remains at `10/10`; imported `v2` now reports `5` repeated pattern slices and `5` repeated next-action groups, including repeated `correct_panel_or_service|add_labels_or_documentation|schedule_reinspection` support.
+- Refreshed `NEXT_TASK.md` and `generated/landing.html` so the next real artifact is an explicit edge-case coverage report rather than more hidden fixture widening.
+- Added `scripts/generate_dallas_edge_case_coverage.py` and generated `generated/coverage/dallas-electrician-edge-case-coverage-v1/coverage.json` plus `coverage.md`.
+- The coverage report shows imported `v2` has repeated support for `6/6` result states, `4/5` failure reasons, `5/5` pattern slices, and `5/6` next-action groups; the remaining thin support is `incomplete_work` and `complete_remaining_work|schedule_reinspection`.
+- Updated `README.md`, `NEXT_TASK.md`, `generated/landing.html`, and `index.html` so the next real step is promoting coverage expectations into contract checks rather than adding another hidden fixture expansion.

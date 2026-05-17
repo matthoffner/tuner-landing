@@ -29,7 +29,6 @@ NOTE_ACTION_HINTS = [
     ("permit", "verify_scope_and_permit"),
     ("scope", "verify_scope_and_permit"),
     ("access", "ensure_site_access"),
-    ("schedule", "ensure_site_access"),
 ]
 
 

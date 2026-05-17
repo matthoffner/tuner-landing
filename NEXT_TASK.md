@@ -44,8 +44,8 @@ Recent progress:
 
 Updated next best artifacts:
 
-- a merged or broader imported Dallas fixture that increases pattern-slice support counts beyond single-sequence examples
-- broader imported Dallas sequences that let reviewed labels and pattern slices rest on repeated support instead of one-off examples
+- promote the most important edge-case coverage expectations into the contract summary checks
+- widen only the remaining thin latest-import labels: `incomplete_work` and `complete_remaining_work|schedule_reinspection`
 
 Latest bounded improvement completed:
 
@@ -58,6 +58,17 @@ Latest bounded improvement completed:
 - `generated/raw/dallas-electrician-import-sample-v2/` now widens the imported Dallas fixture with `pass`, `fail`, `partial`, `cancelled`, `not_ready`, and `unknown` inspection outcomes, and the generated `normalized`, `fixtures`, and `evals` `-v2` directories prove the importer and downstream contracts hold across the broader result mix
 - `scripts/generate_dallas_contract_summary.py` now emits `generated/contracts/dallas-electrician-contract-summary-v1/summary.json` and `summary.md`, making the shared downstream contract and intentional synthetic-versus-imported differences explicit across all current Dallas scaffolds
 - `scripts/import_dallas_permit_extracts.py` now optionally ingests `rule_documents.csv` into `rule_documents.jsonl` plus source-lineage rows for imported Dallas samples, and the regenerated contract summary proves imported `v1` and `v2` keep that optional rules path without changing downstream eval contracts
+- `generated/raw/dallas-electrician-import-sample-v2/` now includes three additional CSV-backed Dallas electrician permits that repeat the existing `75208` remodel-final, `75214` new-install rough-in/correction-followup, and `75216` repair rough-in slices
+- regenerated imported `v2` artifacts now widen to `8` permits, `22` inspections, `31` eval tasks, `13` reviewed label rows, and `38` source-lineage rows while keeping the same downstream task families and split contract
+- `scripts/generate_dallas_contract_summary.py` now reports repeated-pattern and repeated-next-action support directly, and the refreshed contract summary passes `10/10` checks with imported `v2` carrying `4` repeated pattern slices at `2` permits of support each
+- `generated/raw/dallas-electrician-import-sample-v2/` now includes two more CSV-backed Dallas electrician permits that repeat service-release and access-blocked sequences, while `scripts/import_dallas_permit_extracts.py` now prioritizes real access-blocked notes over generic service wording
+- regenerated imported `v2` artifacts now widen to `10` permits, `28` inspections, `37` eval tasks, `15` reviewed label rows, and `46` source-lineage rows while keeping the same downstream task families and split contract
+- `scripts/generate_dallas_fixture_pack.py`, `scripts/generate_dallas_label_reviews.py`, and the refreshed contract summary now show a real repeated `ensure_site_access|schedule_reinspection` next-action group backed by one remodel-final and two service-release sequences instead of accidental `panel schedule` matches
+- `generated/raw/dallas-electrician-import-sample-v2/` now includes three more CSV-backed Dallas electrician permits that repeat cancelled and unknown outcome paths plus panel/service release failures
+- regenerated imported `v2` artifacts now widen to `13` permits, `38` inspections, `49` eval tasks, `19` reviewed label rows, and `59` source-lineage rows while keeping the same downstream task families and split contract
+- the refreshed contract summary stays at `10/10` checks and now shows `5` repeated pattern slices plus `5` repeated next-action groups, including `correct_panel_or_service|add_labels_or_documentation|schedule_reinspection`
+- `scripts/generate_dallas_edge_case_coverage.py` now emits `generated/coverage/dallas-electrician-edge-case-coverage-v1/coverage.json` and `coverage.md`, making repeated support visible across result states, failure reasons, pattern slices, and next-action groups
+- the edge-case coverage report shows imported `v2` has repeated support for `6/6` result states, `4/5` failure reasons, `5/5` pattern slices, and `5/6` next-action groups; the remaining thin support is `incomplete_work` and `complete_remaining_work|schedule_reinspection`
 
 ## Constraints
 

@@ -1,0 +1,607 @@
+{
+  "coverage_report_id": "dallas-electrician-edge-case-coverage-v1",
+  "focus": "Dallas electrician edge-case support across result states, failure reasons, pattern slices, and next-action groups.",
+  "generated_by": "scripts/generate_dallas_edge_case_coverage.py",
+  "summary": {
+    "latest_dataset_id": "dallas-electrician-import-sample-v2",
+    "repeated_support_threshold": 2,
+    "latest_repeated_counts": {
+      "result_states": 6,
+      "failure_reasons": 4,
+      "pattern_slices": 5,
+      "next_action_groups": 5
+    },
+    "latest_thin_counts": {
+      "result_states": 0,
+      "failure_reasons": 1,
+      "pattern_slices": 0,
+      "next_action_groups": 1
+    },
+    "recommended_next_step": "Use this coverage report to choose the next imported fixture widening target, then promote the most important repeated-support expectations into contract checks."
+  },
+  "datasets": [
+    {
+      "dataset_id": "dallas-electrician-sample-v1",
+      "label": "Synthetic sample v1",
+      "paths": {
+        "normalized_dir": "generated/normalized/dallas-electrician-sample-v1",
+        "fixture_dir": "generated/fixtures/dallas-electrician-sequences-v1",
+        "eval_dir": "generated/evals/dallas-electrician-sample-v1"
+      },
+      "counts": {
+        "result_states": 3,
+        "repeated_result_states": 2,
+        "failure_reasons": 2,
+        "repeated_failure_reasons": 1,
+        "pattern_slices": 3,
+        "repeated_pattern_slices": 0,
+        "next_action_groups": 2,
+        "repeated_next_action_groups": 1
+      },
+      "result_states": [
+        {
+          "value": "fail",
+          "row_count": 2,
+          "permit_count": 2,
+          "permit_ids": [
+            "permit:dallas:res-elec-0001",
+            "permit:dallas:res-elec-0002"
+          ],
+          "repeated": true
+        },
+        {
+          "value": "partial",
+          "row_count": 1,
+          "permit_count": 1,
+          "permit_ids": [
+            "permit:dallas:res-elec-0003"
+          ],
+          "repeated": false
+        },
+        {
+          "value": "pass",
+          "row_count": 6,
+          "permit_count": 3,
+          "permit_ids": [
+            "permit:dallas:res-elec-0001",
+            "permit:dallas:res-elec-0002",
+            "permit:dallas:res-elec-0003"
+          ],
+          "repeated": true
+        }
+      ],
+      "failure_reasons": [
+        {
+          "value": "grounding_or_bonding_issue",
+          "row_count": 1,
+          "permit_count": 1,
+          "permit_ids": [
+            "permit:dallas:res-elec-0002"
+          ],
+          "repeated": false
+        },
+        {
+          "value": "incomplete_work",
+          "row_count": 2,
+          "permit_count": 2,
+          "permit_ids": [
+            "permit:dallas:res-elec-0001",
+            "permit:dallas:res-elec-0003"
+          ],
+          "repeated": true
+        }
+      ],
+      "pattern_slices": [
+        {
+          "slice_id": "slice:dallas:remodel:final:75214",
+          "filters": {
+            "permit_type_normalized": "electrical_remodel",
+            "zip_code": "75214",
+            "inspection_type_normalized": "final"
+          },
+          "permit_count": 1,
+          "inspection_count": 1,
+          "failed_inspection_count": 1,
+          "failed_or_partial_inspection_count": 0,
+          "repeated": false
+        },
+        {
+          "slice_id": "slice:dallas:repair:final:75205",
+          "filters": {
+            "permit_type_normalized": "electrical_repair",
+            "zip_code": "75205",
+            "inspection_type_normalized": "final"
+          },
+          "permit_count": 1,
+          "inspection_count": 1,
+          "failed_inspection_count": 0,
+          "failed_or_partial_inspection_count": 1,
+          "repeated": false
+        },
+        {
+          "slice_id": "slice:dallas:service-upgrade:service-release:75208",
+          "filters": {
+            "permit_type_normalized": "electrical_service_upgrade",
+            "zip_code": "75208",
+            "inspection_type_normalized": "service_release"
+          },
+          "permit_count": 1,
+          "inspection_count": 1,
+          "failed_inspection_count": 1,
+          "failed_or_partial_inspection_count": 0,
+          "repeated": false
+        }
+      ],
+      "next_action_groups": [
+        {
+          "value": "complete_remaining_work|schedule_reinspection",
+          "row_count": 2,
+          "permit_count": 2,
+          "permit_ids": [
+            "permit:dallas:res-elec-0001",
+            "permit:dallas:res-elec-0003"
+          ],
+          "repeated": true
+        },
+        {
+          "value": "correct_grounding_or_bonding|add_labels_or_documentation|schedule_reinspection",
+          "row_count": 1,
+          "permit_count": 1,
+          "permit_ids": [
+            "permit:dallas:res-elec-0002"
+          ],
+          "repeated": false
+        }
+      ]
+    },
+    {
+      "dataset_id": "dallas-electrician-import-sample-v1",
+      "label": "Imported sample v1",
+      "paths": {
+        "normalized_dir": "generated/normalized/dallas-electrician-import-sample-v1",
+        "fixture_dir": "generated/fixtures/dallas-electrician-import-sequences-v1",
+        "eval_dir": "generated/evals/dallas-electrician-import-sample-v1"
+      },
+      "counts": {
+        "result_states": 3,
+        "repeated_result_states": 2,
+        "failure_reasons": 3,
+        "repeated_failure_reasons": 1,
+        "pattern_slices": 4,
+        "repeated_pattern_slices": 0,
+        "next_action_groups": 3,
+        "repeated_next_action_groups": 1
+      },
+      "result_states": [
+        {
+          "value": "fail",
+          "row_count": 3,
+          "permit_count": 3,
+          "permit_ids": [
+            "permit:dallas:eln-2026-0104",
+            "permit:dallas:elr-2026-0101",
+            "permit:dallas:els-2026-0102"
+          ],
+          "repeated": true
+        },
+        {
+          "value": "partial",
+          "row_count": 1,
+          "permit_count": 1,
+          "permit_ids": [
+            "permit:dallas:elp-2026-0103"
+          ],
+          "repeated": false
+        },
+        {
+          "value": "pass",
+          "row_count": 7,
+          "permit_count": 4,
+          "permit_ids": [
+            "permit:dallas:eln-2026-0104",
+            "permit:dallas:elp-2026-0103",
+            "permit:dallas:elr-2026-0101",
+            "permit:dallas:els-2026-0102"
+          ],
+          "repeated": true
+        }
+      ],
+      "failure_reasons": [
+        {
+          "value": "grounding_or_bonding_issue",
+          "row_count": 1,
+          "permit_count": 1,
+          "permit_ids": [
+            "permit:dallas:els-2026-0102"
+          ],
+          "repeated": false
+        },
+        {
+          "value": "panel_or_service_issue",
+          "row_count": 1,
+          "permit_count": 1,
+          "permit_ids": [
+            "permit:dallas:eln-2026-0104"
+          ],
+          "repeated": false
+        },
+        {
+          "value": "wiring_or_device_issue",
+          "row_count": 2,
+          "permit_count": 2,
+          "permit_ids": [
+            "permit:dallas:elp-2026-0103",
+            "permit:dallas:elr-2026-0101"
+          ],
+          "repeated": true
+        }
+      ],
+      "pattern_slices": [
+        {
+          "slice_id": "slice:dallas:new:rough-in:75214",
+          "filters": {
+            "permit_type_normalized": "electrical_new",
+            "zip_code": "75214",
+            "inspection_type_normalized": "rough_in"
+          },
+          "permit_count": 1,
+          "inspection_count": 1,
+          "failed_inspection_count": 1,
+          "failed_or_partial_inspection_count": 0,
+          "repeated": false
+        },
+        {
+          "slice_id": "slice:dallas:remodel:final:75214",
+          "filters": {
+            "permit_type_normalized": "electrical_remodel",
+            "zip_code": "75214",
+            "inspection_type_normalized": "final"
+          },
+          "permit_count": 1,
+          "inspection_count": 1,
+          "failed_inspection_count": 1,
+          "failed_or_partial_inspection_count": 0,
+          "repeated": false
+        },
+        {
+          "slice_id": "slice:dallas:repair:final:75217",
+          "filters": {
+            "permit_type_normalized": "electrical_repair",
+            "zip_code": "75217",
+            "inspection_type_normalized": "final"
+          },
+          "permit_count": 1,
+          "inspection_count": 1,
+          "failed_inspection_count": 0,
+          "failed_or_partial_inspection_count": 1,
+          "repeated": false
+        },
+        {
+          "slice_id": "slice:dallas:service-upgrade:service-release:75211",
+          "filters": {
+            "permit_type_normalized": "electrical_service_upgrade",
+            "zip_code": "75211",
+            "inspection_type_normalized": "service_release"
+          },
+          "permit_count": 1,
+          "inspection_count": 1,
+          "failed_inspection_count": 1,
+          "failed_or_partial_inspection_count": 0,
+          "repeated": false
+        }
+      ],
+      "next_action_groups": [
+        {
+          "value": "correct_grounding_or_bonding|add_labels_or_documentation|schedule_reinspection",
+          "row_count": 1,
+          "permit_count": 1,
+          "permit_ids": [
+            "permit:dallas:els-2026-0102"
+          ],
+          "repeated": false
+        },
+        {
+          "value": "correct_panel_or_service|add_labels_or_documentation|ensure_site_access|schedule_reinspection",
+          "row_count": 1,
+          "permit_count": 1,
+          "permit_ids": [
+            "permit:dallas:eln-2026-0104"
+          ],
+          "repeated": false
+        },
+        {
+          "value": "correct_wiring_or_devices|schedule_reinspection",
+          "row_count": 2,
+          "permit_count": 2,
+          "permit_ids": [
+            "permit:dallas:elp-2026-0103",
+            "permit:dallas:elr-2026-0101"
+          ],
+          "repeated": true
+        }
+      ]
+    },
+    {
+      "dataset_id": "dallas-electrician-import-sample-v2",
+      "label": "Imported sample v2",
+      "paths": {
+        "normalized_dir": "generated/normalized/dallas-electrician-import-sample-v2",
+        "fixture_dir": "generated/fixtures/dallas-electrician-import-sequences-v2",
+        "eval_dir": "generated/evals/dallas-electrician-import-sample-v2"
+      },
+      "counts": {
+        "result_states": 6,
+        "repeated_result_states": 6,
+        "failure_reasons": 5,
+        "repeated_failure_reasons": 4,
+        "pattern_slices": 5,
+        "repeated_pattern_slices": 5,
+        "next_action_groups": 6,
+        "repeated_next_action_groups": 5
+      },
+      "result_states": [
+        {
+          "value": "cancelled",
+          "row_count": 2,
+          "permit_count": 2,
+          "permit_ids": [
+            "permit:dallas:elm-2026-0205",
+            "permit:dallas:elm-2026-0212"
+          ],
+          "repeated": true
+        },
+        {
+          "value": "fail",
+          "row_count": 6,
+          "permit_count": 6,
+          "permit_ids": [
+            "permit:dallas:eln-2026-0204",
+            "permit:dallas:eln-2026-0208",
+            "permit:dallas:elr-2026-0201",
+            "permit:dallas:elr-2026-0207",
+            "permit:dallas:els-2026-0213",
+            "permit:dallas:els-2026-0214"
+          ],
+          "repeated": true
+        },
+        {
+          "value": "not_ready",
+          "row_count": 3,
+          "permit_count": 3,
+          "permit_ids": [
+            "permit:dallas:elm-2026-0211",
+            "permit:dallas:els-2026-0202",
+            "permit:dallas:els-2026-0210"
+          ],
+          "repeated": true
+        },
+        {
+          "value": "partial",
+          "row_count": 4,
+          "permit_count": 4,
+          "permit_ids": [
+            "permit:dallas:eln-2026-0204",
+            "permit:dallas:eln-2026-0208",
+            "permit:dallas:elp-2026-0203",
+            "permit:dallas:elp-2026-0209"
+          ],
+          "repeated": true
+        },
+        {
+          "value": "pass",
+          "row_count": 21,
+          "permit_count": 13,
+          "permit_ids": [
+            "permit:dallas:elm-2026-0205",
+            "permit:dallas:elm-2026-0211",
+            "permit:dallas:elm-2026-0212",
+            "permit:dallas:eln-2026-0204",
+            "permit:dallas:eln-2026-0208",
+            "permit:dallas:elp-2026-0203",
+            "permit:dallas:elp-2026-0209",
+            "permit:dallas:elr-2026-0201",
+            "permit:dallas:elr-2026-0207",
+            "permit:dallas:els-2026-0202",
+            "permit:dallas:els-2026-0210",
+            "permit:dallas:els-2026-0213",
+            "permit:dallas:els-2026-0214"
+          ],
+          "repeated": true
+        },
+        {
+          "value": "unknown",
+          "row_count": 2,
+          "permit_count": 2,
+          "permit_ids": [
+            "permit:dallas:elm-2026-0205",
+            "permit:dallas:elm-2026-0212"
+          ],
+          "repeated": true
+        }
+      ],
+      "failure_reasons": [
+        {
+          "value": "access_or_scheduling_issue",
+          "row_count": 3,
+          "permit_count": 3,
+          "permit_ids": [
+            "permit:dallas:elm-2026-0211",
+            "permit:dallas:els-2026-0202",
+            "permit:dallas:els-2026-0210"
+          ],
+          "repeated": true
+        },
+        {
+          "value": "grounding_or_bonding_issue",
+          "row_count": 4,
+          "permit_count": 2,
+          "permit_ids": [
+            "permit:dallas:eln-2026-0204",
+            "permit:dallas:eln-2026-0208"
+          ],
+          "repeated": true
+        },
+        {
+          "value": "incomplete_work",
+          "row_count": 1,
+          "permit_count": 1,
+          "permit_ids": [
+            "permit:dallas:elp-2026-0203"
+          ],
+          "repeated": false
+        },
+        {
+          "value": "panel_or_service_issue",
+          "row_count": 2,
+          "permit_count": 2,
+          "permit_ids": [
+            "permit:dallas:els-2026-0213",
+            "permit:dallas:els-2026-0214"
+          ],
+          "repeated": true
+        },
+        {
+          "value": "wiring_or_device_issue",
+          "row_count": 3,
+          "permit_count": 3,
+          "permit_ids": [
+            "permit:dallas:elp-2026-0209",
+            "permit:dallas:elr-2026-0201",
+            "permit:dallas:elr-2026-0207"
+          ],
+          "repeated": true
+        }
+      ],
+      "pattern_slices": [
+        {
+          "slice_id": "slice:dallas:new:correction-followup:75214",
+          "filters": {
+            "permit_type_normalized": "electrical_new",
+            "zip_code": "75214",
+            "inspection_type_normalized": "correction_followup"
+          },
+          "permit_count": 2,
+          "inspection_count": 2,
+          "failed_inspection_count": 0,
+          "failed_or_partial_inspection_count": 2,
+          "repeated": true
+        },
+        {
+          "slice_id": "slice:dallas:new:rough-in:75214",
+          "filters": {
+            "permit_type_normalized": "electrical_new",
+            "zip_code": "75214",
+            "inspection_type_normalized": "rough_in"
+          },
+          "permit_count": 2,
+          "inspection_count": 2,
+          "failed_inspection_count": 2,
+          "failed_or_partial_inspection_count": 0,
+          "repeated": true
+        },
+        {
+          "slice_id": "slice:dallas:remodel:final:75208",
+          "filters": {
+            "permit_type_normalized": "electrical_remodel",
+            "zip_code": "75208",
+            "inspection_type_normalized": "final"
+          },
+          "permit_count": 2,
+          "inspection_count": 2,
+          "failed_inspection_count": 2,
+          "failed_or_partial_inspection_count": 0,
+          "repeated": true
+        },
+        {
+          "slice_id": "slice:dallas:repair:rough-in:75216",
+          "filters": {
+            "permit_type_normalized": "electrical_repair",
+            "zip_code": "75216",
+            "inspection_type_normalized": "rough_in"
+          },
+          "permit_count": 2,
+          "inspection_count": 2,
+          "failed_inspection_count": 0,
+          "failed_or_partial_inspection_count": 2,
+          "repeated": true
+        },
+        {
+          "slice_id": "slice:dallas:service-upgrade:service-release:75228",
+          "filters": {
+            "permit_type_normalized": "electrical_service_upgrade",
+            "zip_code": "75228",
+            "inspection_type_normalized": "service_release"
+          },
+          "permit_count": 2,
+          "inspection_count": 2,
+          "failed_inspection_count": 2,
+          "failed_or_partial_inspection_count": 0,
+          "repeated": true
+        }
+      ],
+      "next_action_groups": [
+        {
+          "value": "complete_remaining_work|schedule_reinspection",
+          "row_count": 1,
+          "permit_count": 1,
+          "permit_ids": [
+            "permit:dallas:elp-2026-0203"
+          ],
+          "repeated": false
+        },
+        {
+          "value": "correct_grounding_or_bonding|add_labels_or_documentation",
+          "row_count": 2,
+          "permit_count": 2,
+          "permit_ids": [
+            "permit:dallas:eln-2026-0204",
+            "permit:dallas:eln-2026-0208"
+          ],
+          "repeated": true
+        },
+        {
+          "value": "correct_grounding_or_bonding|add_labels_or_documentation|schedule_reinspection",
+          "row_count": 2,
+          "permit_count": 2,
+          "permit_ids": [
+            "permit:dallas:eln-2026-0204",
+            "permit:dallas:eln-2026-0208"
+          ],
+          "repeated": true
+        },
+        {
+          "value": "correct_panel_or_service|add_labels_or_documentation|schedule_reinspection",
+          "row_count": 2,
+          "permit_count": 2,
+          "permit_ids": [
+            "permit:dallas:els-2026-0213",
+            "permit:dallas:els-2026-0214"
+          ],
+          "repeated": true
+        },
+        {
+          "value": "correct_wiring_or_devices|schedule_reinspection",
+          "row_count": 3,
+          "permit_count": 3,
+          "permit_ids": [
+            "permit:dallas:elp-2026-0209",
+            "permit:dallas:elr-2026-0201",
+            "permit:dallas:elr-2026-0207"
+          ],
+          "repeated": true
+        },
+        {
+          "value": "ensure_site_access|schedule_reinspection",
+          "row_count": 3,
+          "permit_count": 3,
+          "permit_ids": [
+            "permit:dallas:elm-2026-0211",
+            "permit:dallas:els-2026-0202",
+            "permit:dallas:els-2026-0210"
+          ],
+          "repeated": true
+        }
+      ]
+    }
+  ]
+}

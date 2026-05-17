@@ -3,22 +3,31 @@
   "generated_by": "scripts/generate_dallas_eval_artifacts.py",
   "split_strategy": "all permit-sequence tasks in dev, all pattern slices in test",
   "counts": {
-    "dev": 16,
-    "test": 4
+    "dev": 44,
+    "test": 5
   },
   "group_keys": {
     "dev": [
       "sequence:dallas:elm-2026-0205",
+      "sequence:dallas:elm-2026-0211",
+      "sequence:dallas:elm-2026-0212",
       "sequence:dallas:eln-2026-0204",
+      "sequence:dallas:eln-2026-0208",
       "sequence:dallas:elp-2026-0203",
+      "sequence:dallas:elp-2026-0209",
       "sequence:dallas:elr-2026-0201",
-      "sequence:dallas:els-2026-0202"
+      "sequence:dallas:elr-2026-0207",
+      "sequence:dallas:els-2026-0202",
+      "sequence:dallas:els-2026-0210",
+      "sequence:dallas:els-2026-0213",
+      "sequence:dallas:els-2026-0214"
     ],
     "test": [
       "slice:dallas:remodel:final:75208",
       "slice:dallas:new:correction-followup:75214",
       "slice:dallas:new:rough-in:75214",
-      "slice:dallas:repair:rough-in:75216"
+      "slice:dallas:repair:rough-in:75216",
+      "slice:dallas:service-upgrade:service-release:75228"
     ]
   },
   "notes": [

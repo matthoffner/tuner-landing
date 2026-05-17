@@ -8,6 +8,7 @@ Created from Pixelbox.
 - [Use Cases](./use-cases.md)
 - [MVP](./mvp.md)
 - [Generated Status Page](./generated/landing.html)
+- [Dallas Edge-Case Coverage](./generated/coverage/dallas-electrician-edge-case-coverage-v1/coverage.md)
 - [Loop Instructions](./LOOP.md)
 - [Next Task](./NEXT_TASK.md)
 
@@ -22,6 +23,7 @@ Created from Pixelbox.
 - Dallas discovery artifact writer: `python3 scripts/generate_dallas_discovery_artifacts.py`
 - Dallas discovery batch mode: `python3 scripts/generate_dallas_discovery_artifacts.py --batch-input-dir generated/intake --batch-output-dir generated/discovery`
 - Dallas extract importer: `python3 scripts/import_dallas_permit_extracts.py`
+- Dallas edge-case coverage writer: `python3 scripts/generate_dallas_edge_case_coverage.py`
 - Imported-sample fixture pack: `python3 scripts/generate_dallas_fixture_pack.py --input-dir generated/normalized/dallas-electrician-import-sample-v1 --output-dir generated/fixtures/dallas-electrician-import-sequences-v1`
 - Imported-sample eval scaffold: `python3 scripts/generate_dallas_eval_artifacts.py --fixture-dir generated/fixtures/dallas-electrician-import-sequences-v1 --normalized-dir generated/normalized/dallas-electrician-import-sample-v1 --output-dir generated/evals/dallas-electrician-import-sample-v1 --dataset-id dallas-electrician-import-sample-v1`
 - Shared lock: `.automoat/state/loop.lock`
