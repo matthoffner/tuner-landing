@@ -10,7 +10,7 @@ This artifact makes edge-case support explicit across the Dallas electrician sca
 - Failure reasons with repeated support: `4` of `5`
 - Pattern slices with repeated support: `5` of `5`
 - Next-action groups with repeated support: `5` of `6`
-- Recommended next step: Use this coverage report to choose the next imported fixture widening target, then promote the most important repeated-support expectations into contract checks.
+- Recommended next step: Widen only the remaining thin incomplete-work support if that label family needs stronger supervision; otherwise keep this report current as the imported fixture grows.
 
 ## Synthetic sample v1
 

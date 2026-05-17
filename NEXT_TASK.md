@@ -44,8 +44,8 @@ Recent progress:
 
 Updated next best artifacts:
 
-- promote the most important edge-case coverage expectations into the contract summary checks
-- widen only the remaining thin latest-import labels: `incomplete_work` and `complete_remaining_work|schedule_reinspection`
+- decide whether the remaining thin latest-import labels, `incomplete_work` and `complete_remaining_work|schedule_reinspection`, need another repeated sequence before real data import
+- if fixture support is sufficient, wire the browser-readable workflow into a tiny local app/server route instead of keeping it as generated static HTML
 
 Latest bounded improvement completed:
 
@@ -69,6 +69,8 @@ Latest bounded improvement completed:
 - the refreshed contract summary stays at `10/10` checks and now shows `5` repeated pattern slices plus `5` repeated next-action groups, including `correct_panel_or_service|add_labels_or_documentation|schedule_reinspection`
 - `scripts/generate_dallas_edge_case_coverage.py` now emits `generated/coverage/dallas-electrician-edge-case-coverage-v1/coverage.json` and `coverage.md`, making repeated support visible across result states, failure reasons, pattern slices, and next-action groups
 - the edge-case coverage report shows imported `v2` has repeated support for `6/6` result states, `4/5` failure reasons, `5/5` pattern slices, and `5/6` next-action groups; the remaining thin support is `incomplete_work` and `complete_remaining_work|schedule_reinspection`
+- `scripts/generate_dallas_contract_summary.py` now promotes the most important edge-case coverage expectations into contract checks, and `generated/contracts/dallas-electrician-contract-summary-v1/` passes `13/13`
+- `scripts/generate_dallas_inspection_workflow.py` now emits `generated/workflows/dallas-inspection-workflow-v1/action-queue.json`, `action-queue.md`, and `index.html`, turning reviewed inspection labels into a concrete browser-readable operator queue with `13` items, priority levels, addresses, contractors, recommended actions, and observed follow-ups
 
 ## Constraints
 

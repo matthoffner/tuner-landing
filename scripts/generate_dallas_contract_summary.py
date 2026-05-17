@@ -49,6 +49,27 @@ EXPECTED_TASK_TYPES = [
     "recommended_next_action",
 ]
 
+REPEATED_SUPPORT_THRESHOLD = 2
+
+EXPECTED_REPEATED_RESULT_STATES = {
+    "cancelled",
+    "fail",
+    "not_ready",
+    "partial",
+    "pass",
+    "unknown",
+}
+
+MIN_REPEATED_FAILURE_REASONS = 4
+
+EXPECTED_REPEATED_NEXT_ACTION_GROUPS = {
+    "correct_grounding_or_bonding|add_labels_or_documentation",
+    "correct_grounding_or_bonding|add_labels_or_documentation|schedule_reinspection",
+    "correct_panel_or_service|add_labels_or_documentation|schedule_reinspection",
+    "correct_wiring_or_devices|schedule_reinspection",
+    "ensure_site_access|schedule_reinspection",
+}
+
 
 def load_json(path: Path):
     with path.open() as handle:
@@ -75,6 +96,21 @@ def write_json(path: Path, payload):
 def write_text(path: Path, text: str):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text)
+
+
+def repeated_support_groups(rows, key_fn):
+    support = {}
+    for row in rows:
+        key = key_fn(row)
+        if not key:
+            continue
+        support.setdefault(key, set()).add(row["permit_id"])
+
+    return {
+        key: sorted(permit_ids)
+        for key, permit_ids in support.items()
+        if len(permit_ids) >= REPEATED_SUPPORT_THRESHOLD
+    }
 
 
 def collect_dataset_summary(config):
@@ -104,24 +140,30 @@ def collect_dataset_summary(config):
     repeated_pattern_slices = [
         pattern_slice
         for pattern_slice in pattern_payload["pattern_slices"]
-        if pattern_slice.get("support_summary", {}).get("permit_count", 0) >= 2
+        if pattern_slice.get("support_summary", {}).get("permit_count", 0) >= REPEATED_SUPPORT_THRESHOLD
     ]
 
-    next_action_support = {}
-    for review in label_reviews:
-        if review.get("task_type") != "recommended_next_action":
-            continue
-        actions = tuple(review.get("label_payload", {}).get("reference_actions", []))
-        if not actions:
-            continue
-        support = next_action_support.setdefault(actions, set())
-        support.add(review["permit_id"])
-
-    repeated_next_action_groups = {
-        "|".join(actions): sorted(permit_ids)
-        for actions, permit_ids in next_action_support.items()
-        if len(permit_ids) >= 2
-    }
+    repeated_result_states = repeated_support_groups(
+        inspections,
+        lambda row: row.get("result_normalized") or "unknown",
+    )
+    repeated_failure_reasons = repeated_support_groups(
+        inspections,
+        lambda row: row.get("failure_reason_normalized"),
+    )
+    repeated_next_action_groups = repeated_support_groups(
+        [
+            {
+                "permit_id": review["permit_id"],
+                "action_group": "|".join(
+                    review.get("label_payload", {}).get("reference_actions", [])
+                ),
+            }
+            for review in label_reviews
+            if review.get("task_type") == "recommended_next_action"
+        ],
+        lambda row: row.get("action_group"),
+    )
 
     task_counts = {}
     for task in tasks:
@@ -158,6 +200,16 @@ def collect_dataset_summary(config):
             "label_reviews": len(label_reviews),
             "dev_tasks": split_manifest["counts"]["dev"],
             "test_tasks": split_manifest["counts"]["test"],
+            "result_states": len(result_vocab),
+            "repeated_result_states": len(repeated_result_states),
+            "failure_reasons": len(
+                {
+                    row.get("failure_reason_normalized")
+                    for row in inspections
+                    if row.get("failure_reason_normalized")
+                }
+            ),
+            "repeated_failure_reasons": len(repeated_failure_reasons),
             "repeated_pattern_slices": len(repeated_pattern_slices),
             "max_pattern_permit_support": max(
                 (
@@ -173,6 +225,8 @@ def collect_dataset_summary(config):
         "task_family_counts": task_counts,
         "sequence_coverage_union": sequence_coverage_union,
         "label_review_fields": sorted(label_reviews[0].keys()) if label_reviews else [],
+        "repeated_result_states": repeated_result_states,
+        "repeated_failure_reasons": repeated_failure_reasons,
         "repeated_next_action_groups": repeated_next_action_groups,
         "paths": {
             "normalized_dir": str(normalized_dir.relative_to(ROOT)),
@@ -272,6 +326,35 @@ def build_checks(dataset_summaries):
         }
     )
 
+    latest_imported = imported_summaries[-1] if imported_summaries else None
+    checks.append(
+        {
+            "check_id": "latest-import-repeats-result-state-support",
+            "description": "The latest imported sample has repeated permit support for every current inspection result state.",
+            "passed": bool(latest_imported)
+            and set(latest_imported["repeated_result_states"]) >= EXPECTED_REPEATED_RESULT_STATES,
+        }
+    )
+
+    checks.append(
+        {
+            "check_id": "latest-import-repeats-core-failure-reasons",
+            "description": "The latest imported sample has repeated support for the main normalized failure reasons while known thin labels stay visible in coverage.",
+            "passed": bool(latest_imported)
+            and latest_imported["counts"]["repeated_failure_reasons"] >= MIN_REPEATED_FAILURE_REASONS,
+        }
+    )
+
+    checks.append(
+        {
+            "check_id": "latest-import-repeats-next-action-support",
+            "description": "The latest imported sample has repeated support for the key reviewed next-action groups.",
+            "passed": bool(latest_imported)
+            and set(latest_imported["repeated_next_action_groups"])
+            >= EXPECTED_REPEATED_NEXT_ACTION_GROUPS,
+        }
+    )
+
     widening_pairs = zip(dataset_summaries, dataset_summaries[1:])
     checks.append(
         {
@@ -297,8 +380,8 @@ def build_summary(dataset_summaries, checks):
     )
     if latest_imported and latest_imported["counts"]["repeated_pattern_slices"] >= 3:
         next_gap = (
-            "Keep the edge-case coverage report current and promote the most important repeated-support "
-            "expectations into contract checks before widening the imported fixture again."
+            "Keep the edge-case coverage report current and widen only the remaining thin incomplete-work "
+            "support if that label family needs stronger supervision."
         )
     else:
         next_gap = (
@@ -355,6 +438,7 @@ def build_markdown(summary):
                 f"- Normalized counts: `{counts['properties']}` properties, `{counts['permits']}` permits, `{counts['inspections']}` inspections, `{counts['contractors']}` contractors, `{counts['rule_documents']}` rule documents, `{counts['source_records']}` source records",
                 f"- Fixture counts: `{counts['sequences']}` sequences, `{counts['pattern_slices']}` pattern slices, `{counts['repeated_pattern_slices']}` repeated slices, max permit support `{counts['max_pattern_permit_support']}`",
                 f"- Eval counts: `{counts['tasks']}` tasks, `{counts['label_reviews']}` reviewed label rows, `{counts['repeated_next_action_groups']}` repeated next-action groups, `{counts['dev_tasks']}` dev, `{counts['test_tasks']}` test",
+                f"- Edge-case counts: `{counts['repeated_result_states']}` repeated result states of `{counts['result_states']}`, `{counts['repeated_failure_reasons']}` repeated failure reasons of `{counts['failure_reasons']}`",
                 f"- Inspection result vocabulary: `{', '.join(dataset['inspection_result_vocabulary'])}`",
                 f"- Task families: `{', '.join(dataset['task_types'])}`",
                 f"- Paths: `{dataset['paths']['normalized_dir']}`, `{dataset['paths']['fixture_dir']}`, `{dataset['paths']['eval_dir']}`",

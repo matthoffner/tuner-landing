@@ -197,8 +197,8 @@ def build_overall_summary(datasets):
         "latest_repeated_counts": repeated_sections,
         "latest_thin_counts": thin_sections,
         "recommended_next_step": (
-            "Use this coverage report to choose the next imported fixture widening target, then promote "
-            "the most important repeated-support expectations into contract checks."
+            "Widen only the remaining thin incomplete-work support if that label family needs stronger "
+            "supervision; otherwise keep this report current as the imported fixture grows."
         ),
     }
 

@@ -29,6 +29,10 @@
         "label_reviews": 5,
         "dev_tasks": 11,
         "test_tasks": 3,
+        "result_states": 3,
+        "repeated_result_states": 2,
+        "failure_reasons": 2,
+        "repeated_failure_reasons": 1,
         "repeated_pattern_slices": 0,
         "max_pattern_permit_support": 1,
         "repeated_next_action_groups": 1
@@ -68,6 +72,23 @@
         "task_id",
         "task_type"
       ],
+      "repeated_result_states": {
+        "pass": [
+          "permit:dallas:res-elec-0001",
+          "permit:dallas:res-elec-0002",
+          "permit:dallas:res-elec-0003"
+        ],
+        "fail": [
+          "permit:dallas:res-elec-0001",
+          "permit:dallas:res-elec-0002"
+        ]
+      },
+      "repeated_failure_reasons": {
+        "incomplete_work": [
+          "permit:dallas:res-elec-0001",
+          "permit:dallas:res-elec-0003"
+        ]
+      },
       "repeated_next_action_groups": {
         "complete_remaining_work|schedule_reinspection": [
           "permit:dallas:res-elec-0001",
@@ -107,6 +128,10 @@
         "label_reviews": 7,
         "dev_tasks": 14,
         "test_tasks": 4,
+        "result_states": 3,
+        "repeated_result_states": 2,
+        "failure_reasons": 3,
+        "repeated_failure_reasons": 1,
         "repeated_pattern_slices": 0,
         "max_pattern_permit_support": 1,
         "repeated_next_action_groups": 1
@@ -146,6 +171,25 @@
         "task_id",
         "task_type"
       ],
+      "repeated_result_states": {
+        "fail": [
+          "permit:dallas:eln-2026-0104",
+          "permit:dallas:elr-2026-0101",
+          "permit:dallas:els-2026-0102"
+        ],
+        "pass": [
+          "permit:dallas:eln-2026-0104",
+          "permit:dallas:elp-2026-0103",
+          "permit:dallas:elr-2026-0101",
+          "permit:dallas:els-2026-0102"
+        ]
+      },
+      "repeated_failure_reasons": {
+        "wiring_or_device_issue": [
+          "permit:dallas:elp-2026-0103",
+          "permit:dallas:elr-2026-0101"
+        ]
+      },
       "repeated_next_action_groups": {
         "correct_wiring_or_devices|schedule_reinspection": [
           "permit:dallas:elp-2026-0103",
@@ -185,6 +229,10 @@
         "label_reviews": 19,
         "dev_tasks": 44,
         "test_tasks": 5,
+        "result_states": 6,
+        "repeated_result_states": 6,
+        "failure_reasons": 5,
+        "repeated_failure_reasons": 4,
         "repeated_pattern_slices": 5,
         "max_pattern_permit_support": 2,
         "repeated_next_action_groups": 5
@@ -227,6 +275,70 @@
         "task_id",
         "task_type"
       ],
+      "repeated_result_states": {
+        "cancelled": [
+          "permit:dallas:elm-2026-0205",
+          "permit:dallas:elm-2026-0212"
+        ],
+        "unknown": [
+          "permit:dallas:elm-2026-0205",
+          "permit:dallas:elm-2026-0212"
+        ],
+        "pass": [
+          "permit:dallas:elm-2026-0205",
+          "permit:dallas:elm-2026-0211",
+          "permit:dallas:elm-2026-0212",
+          "permit:dallas:eln-2026-0204",
+          "permit:dallas:eln-2026-0208",
+          "permit:dallas:elp-2026-0203",
+          "permit:dallas:elp-2026-0209",
+          "permit:dallas:elr-2026-0201",
+          "permit:dallas:elr-2026-0207",
+          "permit:dallas:els-2026-0202",
+          "permit:dallas:els-2026-0210",
+          "permit:dallas:els-2026-0213",
+          "permit:dallas:els-2026-0214"
+        ],
+        "not_ready": [
+          "permit:dallas:elm-2026-0211",
+          "permit:dallas:els-2026-0202",
+          "permit:dallas:els-2026-0210"
+        ],
+        "fail": [
+          "permit:dallas:eln-2026-0204",
+          "permit:dallas:eln-2026-0208",
+          "permit:dallas:elr-2026-0201",
+          "permit:dallas:elr-2026-0207",
+          "permit:dallas:els-2026-0213",
+          "permit:dallas:els-2026-0214"
+        ],
+        "partial": [
+          "permit:dallas:eln-2026-0204",
+          "permit:dallas:eln-2026-0208",
+          "permit:dallas:elp-2026-0203",
+          "permit:dallas:elp-2026-0209"
+        ]
+      },
+      "repeated_failure_reasons": {
+        "access_or_scheduling_issue": [
+          "permit:dallas:elm-2026-0211",
+          "permit:dallas:els-2026-0202",
+          "permit:dallas:els-2026-0210"
+        ],
+        "grounding_or_bonding_issue": [
+          "permit:dallas:eln-2026-0204",
+          "permit:dallas:eln-2026-0208"
+        ],
+        "wiring_or_device_issue": [
+          "permit:dallas:elp-2026-0209",
+          "permit:dallas:elr-2026-0201",
+          "permit:dallas:elr-2026-0207"
+        ],
+        "panel_or_service_issue": [
+          "permit:dallas:els-2026-0213",
+          "permit:dallas:els-2026-0214"
+        ]
+      },
       "repeated_next_action_groups": {
         "ensure_site_access|schedule_reinspection": [
           "permit:dallas:elm-2026-0211",
@@ -305,6 +417,21 @@
       "passed": true
     },
     {
+      "check_id": "latest-import-repeats-result-state-support",
+      "description": "The latest imported sample has repeated permit support for every current inspection result state.",
+      "passed": true
+    },
+    {
+      "check_id": "latest-import-repeats-core-failure-reasons",
+      "description": "The latest imported sample has repeated support for the main normalized failure reasons while known thin labels stay visible in coverage.",
+      "passed": true
+    },
+    {
+      "check_id": "latest-import-repeats-next-action-support",
+      "description": "The latest imported sample has repeated support for the key reviewed next-action groups.",
+      "passed": true
+    },
+    {
       "check_id": "widening-counts-monotonic",
       "description": "Imported samples widen the scaffold monotonically for permits, inspections, tasks, and source lineage.",
       "passed": true
@@ -317,5 +444,5 @@
     "Normalized row counts, eval task totals, and reviewed label totals grow across imported samples as the raw CSV fixtures widen.",
     "Inspection result vocabulary broadens in imported v2 to include cancelled, not_ready, and unknown without changing downstream task families or split shapes."
   ],
-  "next_gap": "Keep the edge-case coverage report current and promote the most important repeated-support expectations into contract checks before widening the imported fixture again."
+  "next_gap": "Keep the edge-case coverage report current and widen only the remaining thin incomplete-work support if that label family needs stronger supervision."
 }

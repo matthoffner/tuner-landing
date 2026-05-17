@@ -6,7 +6,7 @@ This artifact checks that the Dallas electricians MVP keeps one stable downstrea
 
 - Overall passed: `true`
 - Datasets compared: `3`
-- Next gap: Keep the edge-case coverage report current and promote the most important repeated-support expectations into contract checks before widening the imported fixture again.
+- Next gap: Keep the edge-case coverage report current and widen only the remaining thin incomplete-work support if that label family needs stronger supervision.
 
 ## Contract Checks
 
@@ -19,6 +19,9 @@ This artifact checks that the Dallas electricians MVP keeps one stable downstrea
 - `pass` `eval-test-split-matches-pattern-slices`: Every eval scaffold keeps pattern extraction isolated in test, with one test row per pattern slice.
 - `pass` `label-review-schema-stable`: Reviewed label rows keep one shared field contract across synthetic and imported scaffolds.
 - `pass` `latest-import-repeats-pattern-support`: The latest imported sample moves recurring pattern slices beyond one-off support.
+- `pass` `latest-import-repeats-result-state-support`: The latest imported sample has repeated permit support for every current inspection result state.
+- `pass` `latest-import-repeats-core-failure-reasons`: The latest imported sample has repeated support for the main normalized failure reasons while known thin labels stay visible in coverage.
+- `pass` `latest-import-repeats-next-action-support`: The latest imported sample has repeated support for the key reviewed next-action groups.
 - `pass` `widening-counts-monotonic`: Imported samples widen the scaffold monotonically for permits, inspections, tasks, and source lineage.
 
 ## Dataset Matrix
@@ -30,6 +33,7 @@ This artifact checks that the Dallas electricians MVP keeps one stable downstrea
 - Normalized counts: `3` properties, `3` permits, `9` inspections, `3` contractors, `0` rule documents, `0` source records
 - Fixture counts: `3` sequences, `3` pattern slices, `0` repeated slices, max permit support `1`
 - Eval counts: `14` tasks, `5` reviewed label rows, `1` repeated next-action groups, `11` dev, `3` test
+- Edge-case counts: `2` repeated result states of `3`, `1` repeated failure reasons of `2`
 - Inspection result vocabulary: `fail, partial, pass`
 - Task families: `failure_reason_classification, next_inspection_outcome, pattern_extraction, recommended_next_action`
 - Paths: `generated/normalized/dallas-electrician-sample-v1`, `generated/fixtures/dallas-electrician-sequences-v1`, `generated/evals/dallas-electrician-sample-v1`
@@ -41,6 +45,7 @@ This artifact checks that the Dallas electricians MVP keeps one stable downstrea
 - Normalized counts: `4` properties, `4` permits, `11` inspections, `4` contractors, `2` rule documents, `21` source records
 - Fixture counts: `4` sequences, `4` pattern slices, `0` repeated slices, max permit support `1`
 - Eval counts: `18` tasks, `7` reviewed label rows, `1` repeated next-action groups, `14` dev, `4` test
+- Edge-case counts: `2` repeated result states of `3`, `1` repeated failure reasons of `3`
 - Inspection result vocabulary: `fail, partial, pass`
 - Task families: `failure_reason_classification, next_inspection_outcome, pattern_extraction, recommended_next_action`
 - Paths: `generated/normalized/dallas-electrician-import-sample-v1`, `generated/fixtures/dallas-electrician-import-sequences-v1`, `generated/evals/dallas-electrician-import-sample-v1`
@@ -52,6 +57,7 @@ This artifact checks that the Dallas electricians MVP keeps one stable downstrea
 - Normalized counts: `13` properties, `13` permits, `38` inspections, `5` contractors, `3` rule documents, `59` source records
 - Fixture counts: `13` sequences, `5` pattern slices, `5` repeated slices, max permit support `2`
 - Eval counts: `49` tasks, `19` reviewed label rows, `5` repeated next-action groups, `44` dev, `5` test
+- Edge-case counts: `6` repeated result states of `6`, `4` repeated failure reasons of `5`
 - Inspection result vocabulary: `cancelled, fail, not_ready, partial, pass, unknown`
 - Task families: `failure_reason_classification, next_inspection_outcome, pattern_extraction, recommended_next_action`
 - Paths: `generated/normalized/dallas-electrician-import-sample-v2`, `generated/fixtures/dallas-electrician-import-sequences-v2`, `generated/evals/dallas-electrician-import-sample-v2`

@@ -17,7 +17,7 @@
       "pattern_slices": 0,
       "next_action_groups": 1
     },
-    "recommended_next_step": "Use this coverage report to choose the next imported fixture widening target, then promote the most important repeated-support expectations into contract checks."
+    "recommended_next_step": "Widen only the remaining thin incomplete-work support if that label family needs stronger supervision; otherwise keep this report current as the imported fixture grows."
   },
   "datasets": [
     {

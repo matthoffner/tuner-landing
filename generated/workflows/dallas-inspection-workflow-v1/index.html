@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Dallas Inspection Workflow</title>
+    <style>
+      :root {
+        --ink: #18201c;
+        --muted: #627067;
+        --line: #d8dfd9;
+        --paper: #fbfcf8;
+        --panel: #ffffff;
+        --high: #b42318;
+        --medium: #8a5a00;
+        --accent: #1f6f5b;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--paper);
+        color: var(--ink);
+        font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+      main {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 32px 20px 56px;
+      }
+      header {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 24px;
+        align-items: end;
+        border-bottom: 1px solid var(--line);
+        padding-bottom: 20px;
+        margin-bottom: 24px;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: clamp(30px, 5vw, 56px);
+        line-height: 1;
+      }
+      header p {
+        margin: 0;
+        max-width: 760px;
+        color: var(--muted);
+        font-size: 16px;
+        line-height: 1.5;
+      }
+      .summary {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(120px, 1fr));
+        gap: 10px;
+        min-width: min(420px, 100%);
+      }
+      .metric {
+        border: 1px solid var(--line);
+        background: var(--panel);
+        padding: 14px;
+      }
+      .metric strong {
+        display: block;
+        font-size: 24px;
+      }
+      .metric span {
+        color: var(--muted);
+        font-size: 12px;
+        text-transform: uppercase;
+      }
+      .queue {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 14px;
+      }
+      .queue-item {
+        border: 1px solid var(--line);
+        border-left: 5px solid var(--accent);
+        background: var(--panel);
+        padding: 16px;
+      }
+      .priority-high { border-left-color: var(--high); }
+      .priority-medium { border-left-color: var(--medium); }
+      .queue-topline {
+        display: flex;
+        justify-content: space-between;
+        gap: 14px;
+        align-items: flex-start;
+      }
+      h2 {
+        margin: 0 0 4px;
+        font-size: 19px;
+      }
+      .queue-topline p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.35;
+      }
+      .priority {
+        border: 1px solid var(--line);
+        padding: 4px 8px;
+        font-size: 12px;
+        text-transform: uppercase;
+        white-space: nowrap;
+      }
+      dl {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 8px;
+        margin: 16px 0;
+      }
+      dl div {
+        display: grid;
+        grid-template-columns: 86px minmax(0, 1fr);
+        gap: 10px;
+      }
+      dt {
+        color: var(--muted);
+        font-size: 12px;
+        text-transform: uppercase;
+      }
+      dd {
+        margin: 0;
+        font-size: 14px;
+      }
+      h3 {
+        margin: 0 0 8px;
+        font-size: 13px;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      ul {
+        margin: 0;
+        padding-left: 18px;
+      }
+      li { margin: 4px 0; }
+      .evidence {
+        margin: 14px 0 0;
+        padding-top: 12px;
+        border-top: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.45;
+      }
+      @media (max-width: 760px) {
+        header { grid-template-columns: 1fr; }
+        .summary { grid-template-columns: repeat(3, 1fr); }
+      }
+      @media (max-width: 520px) {
+        main { padding: 22px 14px 40px; }
+        .summary { grid-template-columns: 1fr; }
+        dl div { grid-template-columns: 1fr; gap: 2px; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div>
+          <h1>Dallas Inspection Workflow</h1>
+          <p>Generated from imported Dallas electrician permit and inspection rows. Each item shows the inspection event that needs operational follow-up, the recommended actions, and the observed next inspection outcome in the fixture.</p>
+        </div>
+        <div class="summary" aria-label="Queue summary">
+          <div class="metric"><strong>13</strong><span>items</span></div>
+          <div class="metric"><strong>6</strong><span>high priority</span></div>
+          <div class="metric"><strong>7</strong><span>medium priority</span></div>
+        </div>
+      </header>
+      <section class="queue" aria-label="Inspection action queue">
+        
+            <article class="queue-item priority-high">
+              <div class="queue-topline">
+                <div>
+                  <h2>ELR-2026-0201</h2>
+                  <p>412 N WINNETKA AVE DALLAS TX 75208</p>
+                </div>
+                <span class="priority">high</span>
+              </div>
+              <dl>
+                <div><dt>Contractor</dt><dd>Bishop Arts Electric</dd></div>
+                <div><dt>Trigger</dt><dd>2026-04-09 final -> fail</dd></div>
+                <div><dt>Reason</dt><dd>wiring_or_device_issue</dd></div>
+                <div><dt>Follow-up</dt><dd>2026-04-12 correction_followup -> pass</dd></div>
+              </dl>
+              <div class="actions">
+                <h3>Recommended Actions</h3>
+                <ul><li>Correct wiring or devices</li><li>Schedule reinspection</li></ul>
+              </div>
+              <p class="evidence">Kitchen GFCI protection missing and device trim incomplete at backsplash wall.</p>
+            </article>
+            
+            <article class="queue-item priority-high">
+              <div class="queue-topline">
+                <div>
+                  <h2>ELN-2026-0208</h2>
+                  <p>7315 LA VISTA DR DALLAS TX 75214</p>
+                </div>
+                <span class="priority">high</span>
+              </div>
+              <dl>
+                <div><dt>Contractor</dt><dd>White Rock Electric</dd></div>
+                <div><dt>Trigger</dt><dd>2026-04-10 rough_in -> fail</dd></div>
+                <div><dt>Reason</dt><dd>grounding_or_bonding_issue</dd></div>
+                <div><dt>Follow-up</dt><dd>2026-04-17 correction_followup -> partial</dd></div>
+              </dl>
+              <div class="actions">
+                <h3>Recommended Actions</h3>
+                <ul><li>Correct grounding or bonding</li><li>Add missing labels or documentation</li></ul>
+              </div>
+              <p class="evidence">Grounding electrode connection incomplete and detached unit panel schedule not posted.</p>
+            </article>
+            
+            <article class="queue-item priority-high">
+              <div class="queue-topline">
+                <div>
+                  <h2>ELN-2026-0204</h2>
+                  <p>7347 LA VISTA DR DALLAS TX 75214</p>
+                </div>
+                <span class="priority">high</span>
+              </div>
+              <dl>
+                <div><dt>Contractor</dt><dd>White Rock Electric</dd></div>
+                <div><dt>Trigger</dt><dd>2026-04-11 rough_in -> fail</dd></div>
+                <div><dt>Reason</dt><dd>grounding_or_bonding_issue</dd></div>
+                <div><dt>Follow-up</dt><dd>2026-04-16 correction_followup -> partial</dd></div>
+              </dl>
+              <div class="actions">
+                <h3>Recommended Actions</h3>
+                <ul><li>Correct grounding or bonding</li><li>Add missing labels or documentation</li></ul>
+              </div>
+              <p class="evidence">Subpanel grounding incomplete and panel schedule missing at detached unit.</p>
+            </article>
+            
+            <article class="queue-item priority-high">
+              <div class="queue-topline">
+                <div>
+                  <h2>ELR-2026-0207</h2>
+                  <p>527 N CLINTON AVE DALLAS TX 75208</p>
+                </div>
+                <span class="priority">high</span>
+              </div>
+              <dl>
+                <div><dt>Contractor</dt><dd>Bishop Arts Electric</dd></div>
+                <div><dt>Trigger</dt><dd>2026-04-13 final -> fail</dd></div>
+                <div><dt>Reason</dt><dd>wiring_or_device_issue</dd></div>
+                <div><dt>Follow-up</dt><dd>2026-04-16 correction_followup -> pass</dd></div>
+              </dl>
+              <div class="actions">
+                <h3>Recommended Actions</h3>
+                <ul><li>Correct wiring or devices</li><li>Schedule reinspection</li></ul>
+              </div>
+              <p class="evidence">Required kitchen GFCI protection missing and two counter receptacle devices not trimmed out.</p>
+            </article>
+            
+            <article class="queue-item priority-high">
+              <div class="queue-topline">
+                <div>
+                  <h2>ELS-2026-0213</h2>
+                  <p>10018 FERGUSON RD DALLAS TX 75228</p>
+                </div>
+                <span class="priority">high</span>
+              </div>
+              <dl>
+                <div><dt>Contractor</dt><dd>Casa View Electric</dd></div>
+                <div><dt>Trigger</dt><dd>2026-04-18 service_release -> fail</dd></div>
+                <div><dt>Reason</dt><dd>panel_or_service_issue</dd></div>
+                <div><dt>Follow-up</dt><dd>2026-04-23 correction_followup -> pass</dd></div>
+              </dl>
+              <div class="actions">
+                <h3>Recommended Actions</h3>
+                <ul><li>Correct panel or service issue</li><li>Add missing labels or documentation</li><li>Schedule reinspection</li></ul>
+              </div>
+              <p class="evidence">Exterior disconnect not labeled and service panel deadfront missing before utility release.</p>
+            </article>
+            
+            <article class="queue-item priority-high">
+              <div class="queue-topline">
+                <div>
+                  <h2>ELS-2026-0214</h2>
+                  <p>10034 FERGUSON RD DALLAS TX 75228</p>
+                </div>
+                <span class="priority">high</span>
+              </div>
+              <dl>
+                <div><dt>Contractor</dt><dd>Casa View Electric</dd></div>
+                <div><dt>Trigger</dt><dd>2026-04-20 service_release -> fail</dd></div>
+                <div><dt>Reason</dt><dd>panel_or_service_issue</dd></div>
+                <div><dt>Follow-up</dt><dd>2026-04-25 correction_followup -> pass</dd></div>
+              </dl>
+              <div class="actions">
+                <h3>Recommended Actions</h3>
+                <ul><li>Correct panel or service issue</li><li>Add missing labels or documentation</li><li>Schedule reinspection</li></ul>
+              </div>
+              <p class="evidence">Service panel deadfront incomplete and exterior disconnect labeling missing at release inspection.</p>
+            </article>
+            
+            <article class="queue-item priority-medium">
+              <div class="queue-topline">
+                <div>
+                  <h2>ELP-2026-0203</h2>
+                  <p>2234 S MARSALIS AVE DALLAS TX 75216</p>
+                </div>
+                <span class="priority">medium</span>
+              </div>
+              <dl>
+                <div><dt>Contractor</dt><dd>Cedars South Electric</dd></div>
+                <div><dt>Trigger</dt><dd>2026-03-17 rough_in -> partial</dd></div>
+                <div><dt>Reason</dt><dd>incomplete_work</dd></div>
+                <div><dt>Follow-up</dt><dd>2026-03-22 correction_followup -> pass</dd></div>
+              </dl>
+              <div class="actions">
+                <h3>Recommended Actions</h3>
+                <ul><li>Complete remaining work</li><li>Schedule reinspection</li></ul>
+              </div>
+              <p class="evidence">Most damaged wiring repaired but hallway trim incomplete before closeout.</p>
+            </article>
+            
+            <article class="queue-item priority-medium">
+              <div class="queue-topline">
+                <div>
+                  <h2>ELP-2026-0209</h2>
+                  <p>2615 S EWING AVE DALLAS TX 75216</p>
+                </div>
+                <span class="priority">medium</span>
+              </div>
+              <dl>
+                <div><dt>Contractor</dt><dd>Cedars South Electric</dd></div>
+                <div><dt>Trigger</dt><dd>2026-04-09 rough_in -> partial</dd></div>
+                <div><dt>Reason</dt><dd>wiring_or_device_issue</dd></div>
+                <div><dt>Follow-up</dt><dd>2026-04-15 correction_followup -> pass</dd></div>
+              </dl>
+              <div class="actions">
+                <h3>Recommended Actions</h3>
+                <ul><li>Correct wiring or devices</li><li>Schedule reinspection</li></ul>
+              </div>
+              <p class="evidence">Bedroom branch wiring repaired but trim-out incomplete and one switch device still missing.</p>
+            </article>
+            
+            <article class="queue-item priority-medium">
+              <div class="queue-topline">
+                <div>
+                  <h2>ELS-2026-0202</h2>
+                  <p>9915 FERGUSON RD DALLAS TX 75228</p>
+                </div>
+                <span class="priority">medium</span>
+              </div>
+              <dl>
+                <div><dt>Contractor</dt><dd>Casa View Electric</dd></div>
+                <div><dt>Trigger</dt><dd>2026-04-10 service_release -> not_ready</dd></div>
+                <div><dt>Reason</dt><dd>access_or_scheduling_issue</dd></div>
+                <div><dt>Follow-up</dt><dd>2026-04-15 correction_followup -> pass</dd></div>
+              </dl>
+              <div class="actions">
+                <h3>Recommended Actions</h3>
+                <ul><li>Ensure site access</li><li>Schedule reinspection</li></ul>
+              </div>
+              <p class="evidence">Disconnect area blocked and homeowner unable to provide clear meter access for release inspection.</p>
+            </article>
+            
+            <article class="queue-item priority-medium">
+              <div class="queue-topline">
+                <div>
+                  <h2>ELM-2026-0211</h2>
+                  <p>1836 NOMAS ST DALLAS TX 75212</p>
+                </div>
+                <span class="priority">medium</span>
+              </div>
+              <dl>
+                <div><dt>Contractor</dt><dd>Trinity Grove Electric</dd></div>
+                <div><dt>Trigger</dt><dd>2026-04-14 final -> not_ready</dd></div>
+                <div><dt>Reason</dt><dd>access_or_scheduling_issue</dd></div>
+                <div><dt>Follow-up</dt><dd>2026-04-19 correction_followup -> pass</dd></div>
+              </dl>
+              <div class="actions">
+                <h3>Recommended Actions</h3>
+                <ul><li>Ensure site access</li><li>Schedule reinspection</li></ul>
+              </div>
+              <p class="evidence">Locked side gate prevented access to the rear addition devices and no adult was on site for entry.</p>
+            </article>
+            
+            <article class="queue-item priority-medium">
+              <div class="queue-topline">
+                <div>
+                  <h2>ELS-2026-0210</h2>
+                  <p>10002 FERGUSON RD DALLAS TX 75228</p>
+                </div>
+                <span class="priority">medium</span>
+              </div>
+              <dl>
+                <div><dt>Contractor</dt><dd>Casa View Electric</dd></div>
+                <div><dt>Trigger</dt><dd>2026-04-14 service_release -> not_ready</dd></div>
+                <div><dt>Reason</dt><dd>access_or_scheduling_issue</dd></div>
+                <div><dt>Follow-up</dt><dd>2026-04-18 correction_followup -> pass</dd></div>
+              </dl>
+              <div class="actions">
+                <h3>Recommended Actions</h3>
+                <ul><li>Ensure site access</li><li>Schedule reinspection</li></ul>
+              </div>
+              <p class="evidence">Meter socket access blocked by fencing and homeowner unavailable for the utility release appointment.</p>
+            </article>
+            
+            <article class="queue-item priority-medium">
+              <div class="queue-topline">
+                <div>
+                  <h2>ELN-2026-0204</h2>
+                  <p>7347 LA VISTA DR DALLAS TX 75214</p>
+                </div>
+                <span class="priority">medium</span>
+              </div>
+              <dl>
+                <div><dt>Contractor</dt><dd>White Rock Electric</dd></div>
+                <div><dt>Trigger</dt><dd>2026-04-16 correction_followup -> partial</dd></div>
+                <div><dt>Reason</dt><dd>grounding_or_bonding_issue</dd></div>
+                <div><dt>Follow-up</dt><dd>2026-04-20 final -> pass</dd></div>
+              </dl>
+              <div class="actions">
+                <h3>Recommended Actions</h3>
+                <ul><li>Correct grounding or bonding</li><li>Add missing labels or documentation</li><li>Schedule reinspection</li></ul>
+              </div>
+              <p class="evidence">Grounding corrected but final trim and breaker labeling still incomplete.</p>
+            </article>
+            
+            <article class="queue-item priority-medium">
+              <div class="queue-topline">
+                <div>
+                  <h2>ELN-2026-0208</h2>
+                  <p>7315 LA VISTA DR DALLAS TX 75214</p>
+                </div>
+                <span class="priority">medium</span>
+              </div>
+              <dl>
+                <div><dt>Contractor</dt><dd>White Rock Electric</dd></div>
+                <div><dt>Trigger</dt><dd>2026-04-17 correction_followup -> partial</dd></div>
+                <div><dt>Reason</dt><dd>grounding_or_bonding_issue</dd></div>
+                <div><dt>Follow-up</dt><dd>2026-04-21 final -> pass</dd></div>
+              </dl>
+              <div class="actions">
+                <h3>Recommended Actions</h3>
+                <ul><li>Correct grounding or bonding</li><li>Add missing labels or documentation</li><li>Schedule reinspection</li></ul>
+              </div>
+              <p class="evidence">Grounding corrected but final trim and breaker labeling still incomplete at garage apartment panel.</p>
+            </article>
+            
+      </section>
+    </main>
+  </body>
+</html>

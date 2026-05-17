@@ -4,6 +4,14 @@ Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
 - lane: editor
+- status: added the first product-shaped Dallas inspection workflow artifact, a generated 13-item action queue with JSON, Markdown, and static HTML outputs built from normalized imported v2 rows and reviewed next-action labels
+- files: scripts/generate_dallas_inspection_workflow.py, generated/workflows/dallas-inspection-workflow-v1/action-queue.json, generated/workflows/dallas-inspection-workflow-v1/action-queue.md, generated/workflows/dallas-inspection-workflow-v1/index.html, README.md, NEXT_TASK.md, generated/landing.html, index.html, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- next: either wire the browser-readable workflow into a tiny local app route or decide whether the remaining thin incomplete-work label needs another repeated sequence
+- lane: editor
+- status: promoted the main edge-case coverage expectations into the Dallas contract summary; the generated contract now passes 13/13 checks and enforces repeated result-state, core failure-reason, pattern-slice, and key next-action support
+- files: scripts/generate_dallas_contract_summary.py, scripts/generate_dallas_edge_case_coverage.py, generated/contracts/dallas-electrician-contract-summary-v1/summary.json, generated/contracts/dallas-electrician-contract-summary-v1/summary.md, generated/coverage/dallas-electrician-edge-case-coverage-v1/coverage.json, generated/coverage/dallas-electrician-edge-case-coverage-v1/coverage.md, NEXT_TASK.md, generated/landing.html, index.html, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- next: decide whether to widen the remaining thin incomplete-work support or start turning the Dallas artifact scaffold into a small runnable local inspection workflow
+- lane: editor
 - status: added a deterministic Dallas edge-case coverage writer and generated a coverage artifact that makes repeated result-state, failure-reason, pattern-slice, and next-action support visible across all current scaffolds
 - files: scripts/generate_dallas_edge_case_coverage.py, generated/coverage/dallas-electrician-edge-case-coverage-v1/coverage.json, generated/coverage/dallas-electrician-edge-case-coverage-v1/coverage.md, scripts/generate_dallas_contract_summary.py, generated/contracts/dallas-electrician-contract-summary-v1/summary.json, generated/contracts/dallas-electrician-contract-summary-v1/summary.md, README.md, NEXT_TASK.md, generated/landing.html, index.html, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
 - next: promote the most important edge-case coverage expectations into contract-summary checks, then decide whether to widen the remaining thin incomplete-work support

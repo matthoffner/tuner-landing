@@ -471,7 +471,7 @@
                   <div class="metric-label">Normalized Dallas dataset paths: one synthetic scaffold plus imported CSV samples <code>v1</code> and <code>v2</code></div>
                 </div>
                 <div class="metric">
-                <div class="metric-value">10/10</div>
+                <div class="metric-value">13/13</div>
                 <div class="metric-label">Contract checks passing in <code>generated/contracts/dallas-electrician-contract-summary-v1/</code></div>
               </div>
               <div class="metric">
@@ -481,9 +481,9 @@
               </div>
               <ul class="status-list">
                 <li><strong>Scope:</strong> Dallas, Texas; electricians; residential permits and inspections.</li>
-                <li><strong>What works:</strong> deterministic generation of discovery outputs, normalized rows, fixture packs, reviewed labels, eval scaffolds, and a cross-sample contract summary from repo-local inputs.</li>
-                <li><strong>Most current proof:</strong> <code>generated/contracts/dallas-electrician-contract-summary-v1/</code> passes <code>10/10</code> checks across one synthetic and two imported Dallas scaffolds.</li>
-                <li><strong>Current gap:</strong> repeated support now covers remodel, new-install, repair, service-release, access-blocked, cancelled, unknown, and panel-service examples; the next gap is promoting the most important coverage thresholds into contract checks.</li>
+                <li><strong>What works:</strong> deterministic generation of discovery outputs, normalized rows, fixture packs, reviewed labels, eval scaffolds, contract checks, edge-case coverage, and a generated inspection action queue from repo-local inputs.</li>
+                <li><strong>Most current proof:</strong> <code>generated/contracts/dallas-electrician-contract-summary-v1/</code> passes <code>13/13</code> checks across one synthetic and two imported Dallas scaffolds.</li>
+                <li><strong>Current gap:</strong> the action queue is still a generated artifact, not a browser workflow or production app; the only visible thin latest-import support is <code>incomplete_work</code> and <code>complete_remaining_work|schedule_reinspection</code>.</li>
                 <li><strong>Operational note:</strong> the unattended loop has produced real artifacts, but the repo still needs a cleaner fail-closed supervisor path when child sessions break.</li>
               </ul>
             </div>
@@ -560,9 +560,9 @@
                 <span class="artifact-label">Contract Summary</span>
                 <code>generated/contracts/dallas-electrician-contract-summary-v1/</code> now compares
                 the synthetic scaffold to imported <code>v1</code> and <code>v2</code>, confirms
-                <code>10</code> passing contract checks, includes optional imported
+                <code>13</code> passing contract checks, includes optional imported
                 <code>rule_documents.jsonl</code> coverage, keeps the four eval task families stable,
-                and now reports repeated pattern-slice plus next-action support explicitly instead of leaving it implicit.
+                and now checks repeated result-state, failure-reason, pattern-slice, and next-action support explicitly.
               </div>
               <div class="artifact-card">
                 <span class="artifact-label">Edge-Case Coverage</span>
@@ -571,6 +571,13 @@
                 next-action groups. Imported <code>v2</code> has repeated support for <code>6/6</code>
                 result states, <code>4/5</code> failure reasons, <code>5/5</code> pattern slices, and
                 <code>5/6</code> next-action groups.
+              </div>
+              <div class="artifact-card">
+                <span class="artifact-label">Inspection Workflow</span>
+                <code>generated/workflows/dallas-inspection-workflow-v1/</code> turns reviewed labels into
+                a concrete browser-readable action queue. The current queue has <code>13</code> items, including
+                <code>6</code> high-priority failed inspections and <code>7</code> medium-priority partial
+                or not-ready inspections.
               </div>
             </div>
           </div>
@@ -588,6 +595,14 @@
                   <code>generated/contracts/dallas-electrician-contract-summary-v1/summary.md</code>
                   and <code>summary.json</code>, written on May 17, 2026. They compare all three
                   current Dallas scaffolds and confirm that the downstream contract still holds.
+                </p>
+              </div>
+              <div class="card">
+                <h3>Coverage thresholds are now enforced</h3>
+                <p>
+                  The contract summary now promotes the most important coverage expectations into
+                  checks: repeated current result states, repeated core failure reasons, repeated pattern
+                  slices, and repeated key next-action groups.
                 </p>
               </div>
               <div class="card">
@@ -618,6 +633,14 @@
                   promoting the most important coverage expectations into checks.
                 </p>
               </div>
+              <div class="card">
+                <h3>There is now a product-shaped output</h3>
+                <p>
+                  <code>generated/workflows/dallas-inspection-workflow-v1/index.html</code>
+                  shows the first operator-facing workflow: permit, address, contractor, inspection
+                  failure context, recommended actions, and observed follow-up.
+                </p>
+              </div>
             </div>
           </div>
 
@@ -627,6 +650,26 @@
             </div>
             <h2>Current build log</h2>
             <div class="timeline">
+              <div class="timeline-item">
+                <div class="timeline-meta">2026-05-17</div>
+                <p>
+                  Added <code>scripts/generate_dallas_inspection_workflow.py</code> and generated
+                  <code>generated/workflows/dallas-inspection-workflow-v1/</code>. The workflow turns
+                  reviewed Dallas inspection labels into a <code>13</code>-item action queue with
+                  priority, address, contractor, trigger inspection, recommended actions, and observed
+                  follow-up fields, plus a static <code>index.html</code> page that can be opened locally.
+                </p>
+              </div>
+              <div class="timeline-item">
+                <div class="timeline-meta">2026-05-17</div>
+                <p>
+                  Promoted the main edge-case coverage expectations into
+                  <code>scripts/generate_dallas_contract_summary.py</code>. The generated contract summary
+                  now passes <code>13/13</code> checks, including repeated current result-state support,
+                  repeated core failure-reason support, and repeated key next-action support for the latest
+                  imported Dallas scaffold.
+                </p>
+              </div>
               <div class="timeline-item">
                 <div class="timeline-meta">2026-05-17</div>
                 <p>
@@ -810,14 +853,14 @@
                 <h3>Not built</h3>
                 <p>
                   No large imported Dallas record set, no production application workflow, no live model
-                  benchmarking results, no coverage thresholds promoted into contract checks yet, and no
-                  evidence that the Dallas wedge produces a durable moat in practice.
+                  benchmarking results, no dynamic local app route or production application yet, and no evidence
+                  that the Dallas wedge produces a durable moat in practice.
                 </p>
               </div>
             </div>
             <p class="footer-note">
-              Next best move: promote the most important edge-case coverage expectations into contract
-              checks, then widen the remaining thin incomplete-work support if needed.
+              Next best move: either wire the browser-readable workflow into a tiny local app route or decide
+              whether the remaining thin incomplete-work label needs more support.
             </p>
           </div>
 
@@ -843,6 +886,9 @@
               <a class="doc-pill" href="./contracts/dallas-electrician-contract-summary-v1/summary.json">contract summary json</a>
               <a class="doc-pill" href="./coverage/dallas-electrician-edge-case-coverage-v1/coverage.md">edge-case coverage</a>
               <a class="doc-pill" href="./coverage/dallas-electrician-edge-case-coverage-v1/coverage.json">edge-case coverage json</a>
+              <a class="doc-pill" href="./workflows/dallas-inspection-workflow-v1/index.html">inspection workflow page</a>
+              <a class="doc-pill" href="./workflows/dallas-inspection-workflow-v1/action-queue.md">inspection workflow queue</a>
+              <a class="doc-pill" href="./workflows/dallas-inspection-workflow-v1/action-queue.json">inspection workflow queue json</a>
               <a class="doc-pill" href="./fixtures/dallas-electrician-sequences-v1/README.md">fixture pack readme</a>
               <a class="doc-pill" href="./normalized/dallas-electrician-sample-v1/projects.json">normalized project metadata</a>
               <a class="doc-pill" href="./normalized/dallas-electrician-import-sample-v1/projects.json">imported normalized project metadata</a>
