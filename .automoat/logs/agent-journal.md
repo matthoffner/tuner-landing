@@ -84,3 +84,5 @@ Use short dated entries. Focus on decisions, changes, blockers, and next steps.
 - Copied the Autom oat SVG mark from the matthoffner site repo into local static assets and generated assets so both `index.html` and `generated/landing.html` can resolve it.
 - Refreshed the landing page header and hero to use the logo instead of the old dot mark, then tightened mobile layout with compact navigation pills, full-width calls to action, single-column content grids, better text wrapping for long code paths, and smaller mobile hero type.
 - Synced `generated/landing.html` back to root `index.html` and verified the local static page plus logo asset served successfully from `http://127.0.0.1:4173/`.
+- Recolored the Autom oat SVG away from the source site's teal/neon palette and into the landing page's ink, terracotta, cream, and clay colors.
+- Rewrote the top-level landing message around a tangible moat candidate: local inspection failure memory, reviewed next-action labels, reusable eval contracts, and a workflow feedback loop from accepted, rejected, or edited recommendations.

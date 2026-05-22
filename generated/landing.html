@@ -319,11 +319,50 @@
       }
 
       .artifact-grid,
+      .moat-grid,
       .truth-grid {
         display: grid;
         gap: 14px;
         grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
         margin-top: 16px;
+      }
+
+      .moat-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .moat-card {
+        display: grid;
+        grid-template-columns: 34px minmax(0, 1fr);
+        gap: 12px;
+        padding: 14px;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.56);
+      }
+
+      .moat-index {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 34px;
+        height: 34px;
+        border-radius: 999px;
+        background: var(--accent);
+        color: #fff8f3;
+        font-family: "Helvetica Neue", Arial, sans-serif;
+        font-weight: 700;
+      }
+
+      .moat-card strong {
+        display: block;
+        font-family: "Helvetica Neue", Arial, sans-serif;
+      }
+
+      .moat-card p {
+        margin-top: 4px;
+        font-size: 0.95rem;
+        line-height: 1.55;
       }
 
       .artifact-card {
@@ -545,8 +584,20 @@
 
         .grid,
         .artifact-grid,
+        .moat-grid,
         .truth-grid {
           grid-template-columns: minmax(0, 1fr);
+        }
+
+        .moat-card {
+          grid-template-columns: 30px minmax(0, 1fr);
+          gap: 10px;
+          padding: 12px;
+        }
+
+        .moat-index {
+          width: 30px;
+          height: 30px;
         }
 
         .metric-grid {
@@ -608,6 +659,7 @@
           </a>
           <div class="nav-links">
             <a href="#state">Current State</a>
+            <a href="#moat">Moat</a>
             <a href="#artifacts">Artifacts</a>
             <a href="#changelog">Changelog</a>
             <a href="#docs">Docs</a>
@@ -619,12 +671,13 @@
             <img class="hero-logo" src="assets/automoat-icon.svg" alt="" aria-hidden="true" />
             <div class="eyebrow">Evidence-first workflow intelligence scaffolding</div>
           </div>
-          <h1>Make hidden operational judgment legible before pretending there is a finished product.</h1>
+          <h1>Turn local inspection failures into a workflow playbook contractors can reuse.</h1>
           <p class="hero-copy">
-            <code>automoat</code> is a local-first project for turning repeated business judgment into
-            inspectable artifacts. The current repo does that through discovery outputs, normalized
-            records, fixture packs, reviewed labels, eval scaffolds, and contract summaries for one
-            deliberately narrow wedge before any broader product claims.
+            <code>automoat</code> is a local-first project for turning messy permit and inspection history
+            into a concrete workflow memory: what failed, why it failed, what operators did next, and
+            whether the next inspection improved. The possible moat is not a generic chatbot; it is the
+            compounding library of local edge cases, reviewed next actions, and eval contracts that make
+            each new workflow cheaper to understand.
           </p>
           <div class="hero-actions">
             <a class="button button-primary" href="#state">See Current State</a>
@@ -669,22 +722,47 @@
               </ul>
             </div>
 
-            <div class="section">
+            <div class="section" id="moat">
               <div class="section-header">
-                <div class="kicker">Broad Framing</div>
+                <div class="kicker">Moat Candidate</div>
               </div>
-              <h2>What the product is trying to prove</h2>
+              <h2>What could become defensible</h2>
               <p>
-                The broader idea is not "AI for electricians." The broader idea is that many businesses
-                accumulate repeated judgment calls, local exceptions, and operational memory that never
-                becomes inspectable. <code>automoat</code> is trying to convert that hidden workflow
-                memory into artifacts a team can review, compare, and pressure-test before building a wider system.
+                The moat would come from capturing local operational judgment that is hard to scrape,
+                annoying to label, and only valuable after it is tied to outcomes. For the Dallas wedge,
+                that means turning permit records, inspection comments, rule snippets, and operator
+                follow-up into a repeatable action system.
               </p>
-              <ul>
-                <li>Start from repeated business judgment, not model selection.</li>
-                <li>Use a narrow workflow wedge to prove the artifact contracts before widening the product surface.</li>
-                <li>Generate evidence-bearing discovery, normalization, and eval outputs before claiming product maturity or moat strength.</li>
-              </ul>
+              <div class="moat-grid">
+                <div class="moat-card">
+                  <span class="moat-index">1</span>
+                  <div>
+                    <strong>Local failure memory</strong>
+                    <p>Repeated inspection outcomes reveal patterns like access blocked, panel labeling, service release, incomplete work, and when a reinspection is actually worth scheduling.</p>
+                  </div>
+                </div>
+                <div class="moat-card">
+                  <span class="moat-index">2</span>
+                  <div>
+                    <strong>Reviewed next-action labels</strong>
+                    <p>Once operators correct recommendations, those corrections become proprietary labels that public permit portals and generic models do not have.</p>
+                  </div>
+                </div>
+                <div class="moat-card">
+                  <span class="moat-index">3</span>
+                  <div>
+                    <strong>Reusable eval contracts</strong>
+                    <p>Every new trade or city has to pass the same checks for normalized records, edge-case coverage, outcome prediction, failure reasons, and next actions.</p>
+                  </div>
+                </div>
+                <div class="moat-card">
+                  <span class="moat-index">4</span>
+                  <div>
+                    <strong>Workflow feedback loop</strong>
+                    <p>If the action queue saves a crew from failed reinspections, each accepted, rejected, or edited recommendation makes the local playbook sharper.</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>

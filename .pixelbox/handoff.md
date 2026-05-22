@@ -4,6 +4,10 @@ Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
 - lane: editor
+- status: recolored the Autom oat logo asset to the landing page's ink/terracotta/cream palette and made the landing page's moat explanation concrete with a dedicated moat candidate section covering local failure memory, reviewed next-action labels, reusable eval contracts, and workflow feedback loops
+- files: assets/automoat-icon.svg, generated/assets/automoat-icon.svg, generated/landing.html, index.html, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- next: if continuing product work, turn the generated inspection action queue into a small local route and capture operator edits as the first real feedback-loop artifact
+- lane: editor
 - status: refreshed the static landing page for mobile by adding the Autom oat logo asset from the matthoffner site repo, replacing the dot mark with logo lockups, tightening mobile navigation, collapsing dense grids, and syncing the generated page to the root index
 - files: assets/automoat-icon.svg, generated/assets/automoat-icon.svg, generated/landing.html, index.html, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
 - next: if continuing UI work, use the same static server at `http://127.0.0.1:4173/` or wire the browser-readable workflow into a tiny local app route

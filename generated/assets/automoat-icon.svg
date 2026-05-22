@@ -1,33 +1,33 @@
 <svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="auto-bg" x1="140" y1="120" x2="888" y2="924" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#123A33"/>
-      <stop offset="0.5" stop-color="#0C1E25"/>
-      <stop offset="1" stop-color="#081019"/>
+      <stop stop-color="#3A3030"/>
+      <stop offset="0.5" stop-color="#1D2430"/>
+      <stop offset="1" stop-color="#101722"/>
     </linearGradient>
     <radialGradient id="auto-glow-a" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(286 238) rotate(42) scale(604 538)">
-      <stop stop-color="#63E6BE" stop-opacity="0.52"/>
-      <stop offset="1" stop-color="#63E6BE" stop-opacity="0"/>
+      <stop stop-color="#B6542D" stop-opacity="0.58"/>
+      <stop offset="1" stop-color="#B6542D" stop-opacity="0"/>
     </radialGradient>
     <radialGradient id="auto-glow-b" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(752 794) rotate(-136) scale(446 402)">
-      <stop stop-color="#8AF7FF" stop-opacity="0.26"/>
-      <stop offset="1" stop-color="#8AF7FF" stop-opacity="0"/>
+      <stop stop-color="#F0D8C8" stop-opacity="0.32"/>
+      <stop offset="1" stop-color="#F0D8C8" stop-opacity="0"/>
     </radialGradient>
     <linearGradient id="auto-frame" x1="304" y1="270" x2="726" y2="754" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#ECFFF7"/>
-      <stop offset="0.48" stop-color="#8AF7D3"/>
-      <stop offset="1" stop-color="#73CEFF"/>
+      <stop stop-color="#FFF8F3"/>
+      <stop offset="0.48" stop-color="#F0D8C8"/>
+      <stop offset="1" stop-color="#B6542D"/>
     </linearGradient>
     <linearGradient id="auto-fill" x1="382" y1="360" x2="654" y2="714" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#F7FBFF"/>
-      <stop offset="1" stop-color="#B0FBED"/>
+      <stop stop-color="#FFF8F3"/>
+      <stop offset="1" stop-color="#E9C9B2"/>
     </linearGradient>
     <filter id="auto-shadow" x="180" y="180" width="664" height="664" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
       <feFlood flood-opacity="0" result="BackgroundImageFix"/>
       <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
       <feOffset dy="28"/>
       <feGaussianBlur stdDeviation="28"/>
-      <feColorMatrix type="matrix" values="0 0 0 0 0.0117647 0 0 0 0 0.0470588 0 0 0 0 0.113725 0 0 0 0.28 0"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 0.113725 0 0 0 0 0.141176 0 0 0 0 0.188235 0 0 0 0.28 0"/>
       <feBlend mode="normal" in2="BackgroundImageFix" result="drop"/>
       <feBlend mode="normal" in="SourceGraphic" in2="drop" result="shape"/>
     </filter>
@@ -36,12 +36,12 @@
   <rect x="72" y="72" width="880" height="880" rx="224" fill="url(#auto-glow-a)"/>
   <rect x="72" y="72" width="880" height="880" rx="224" fill="url(#auto-glow-b)"/>
   <g opacity="0.2">
-    <path d="M212 330H812" stroke="#8EF8E0" stroke-width="2"/>
-    <path d="M212 512H812" stroke="#8EF8E0" stroke-width="2"/>
-    <path d="M212 694H812" stroke="#8EF8E0" stroke-width="2"/>
-    <path d="M330 212V812" stroke="#8EF8E0" stroke-width="2"/>
-    <path d="M512 212V812" stroke="#8EF8E0" stroke-width="2"/>
-    <path d="M694 212V812" stroke="#8EF8E0" stroke-width="2"/>
+    <path d="M212 330H812" stroke="#F0D8C8" stroke-width="2"/>
+    <path d="M212 512H812" stroke="#F0D8C8" stroke-width="2"/>
+    <path d="M212 694H812" stroke="#F0D8C8" stroke-width="2"/>
+    <path d="M330 212V812" stroke="#F0D8C8" stroke-width="2"/>
+    <path d="M512 212V812" stroke="#F0D8C8" stroke-width="2"/>
+    <path d="M694 212V812" stroke="#F0D8C8" stroke-width="2"/>
   </g>
   <g filter="url(#auto-shadow)">
     <rect x="238" y="238" width="548" height="548" rx="156" fill="rgba(255,255,255,0.02)"/>
@@ -52,8 +52,8 @@
     <path d="M330 478H694V654C694 668.36 682.36 680 668 680H356C341.64 680 330 668.36 330 654V478Z" stroke="url(#auto-frame)" stroke-width="20"/>
     <path d="M366 744C396 698 438 676 480 676C524 676 558 698 590 698C628 698 656 676 682 640" stroke="url(#auto-frame)" stroke-width="32" stroke-linecap="round"/>
     <path d="M328 724C364 680 416 652 472 652C534 652 562 676 612 676C652 676 684 658 712 626" stroke="url(#auto-frame)" stroke-width="22" stroke-linecap="round" opacity="0.72"/>
-    <path d="M398 526H626" stroke="#0D2530" stroke-width="22" stroke-linecap="round" opacity="0.22"/>
-    <path d="M398 586H626" stroke="#0D2530" stroke-width="22" stroke-linecap="round" opacity="0.18"/>
+    <path d="M398 526H626" stroke="#1D2430" stroke-width="22" stroke-linecap="round" opacity="0.22"/>
+    <path d="M398 586H626" stroke="#1D2430" stroke-width="22" stroke-linecap="round" opacity="0.18"/>
     <path d="M396 366V428" stroke="url(#auto-frame)" stroke-width="20" stroke-linecap="round"/>
     <path d="M512 304V428" stroke="url(#auto-frame)" stroke-width="20" stroke-linecap="round"/>
     <path d="M628 366V428" stroke="url(#auto-frame)" stroke-width="20" stroke-linecap="round"/>
