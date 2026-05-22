@@ -40,6 +40,10 @@ Created from Pixelbox.
 - Session policy: [HEARTBEAT.md](./HEARTBEAT.md)
 - Day/session runs now auto-sync `generated/landing.html` to `index.html`, auto-publish to `main`, and archive stale locks before continuing.
 
+## Cockpit Architecture
+
+The eventual app shell can be React Server Components instead of an iframe. Use RSC for the initial cockpit snapshot from `/api/status` and whitelisted artifacts, then use a small client component with `EventSource('/events')` for the live terminal/log stream. Keep mutation endpoints local-only; remote bridges should stay read-only.
+
 ## Deploy
 
 - Vercel should rebuild from pushes to `main`.

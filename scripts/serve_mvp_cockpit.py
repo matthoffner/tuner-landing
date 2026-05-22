@@ -381,11 +381,18 @@ class CockpitHandler(BaseHTTPRequestHandler):
     def log_message(self, format: str, *args: object) -> None:
         sys.stderr.write("%s - - [%s] %s\n" % (self.address_string(), self.log_date_time_string(), format % args))
 
+    def send_cors_headers(self) -> None:
+        if int(SERVER_CONFIG.get("read_only", 0)):
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.send_header("Access-Control-Allow-Headers", "ngrok-skip-browser-warning, content-type")
+            self.send_header("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS")
+
     def send_bytes(self, body: bytes, content_type: str, status: HTTPStatus = HTTPStatus.OK) -> None:
         self.send_response(status)
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
+        self.send_cors_headers()
         self.end_headers()
         self.wfile.write(body)
 
@@ -421,12 +428,14 @@ class CockpitHandler(BaseHTTPRequestHandler):
             self.send_response(HTTPStatus.OK)
             self.send_header("Content-Type", "text/html; charset=utf-8")
             self.send_header("Cache-Control", "no-store")
+            self.send_cors_headers()
             self.end_headers()
             return
         if path == "/api/status":
             self.send_response(HTTPStatus.OK)
             self.send_header("Content-Type", "application/json; charset=utf-8")
             self.send_header("Cache-Control", "no-store")
+            self.send_cors_headers()
             self.end_headers()
             return
         file_path = safe_file_path(self.path)
@@ -435,10 +444,18 @@ class CockpitHandler(BaseHTTPRequestHandler):
             self.send_header("Content-Type", mimetypes.guess_type(file_path.name)[0] or "application/octet-stream")
             self.send_header("Content-Length", str(file_path.stat().st_size))
             self.send_header("Cache-Control", "no-store")
+            self.send_cors_headers()
             self.end_headers()
             return
         self.send_response(HTTPStatus.NOT_FOUND)
         self.send_header("Content-Type", "text/plain; charset=utf-8")
+        self.send_cors_headers()
+        self.end_headers()
+
+    def do_OPTIONS(self) -> None:
+        self.send_response(HTTPStatus.NO_CONTENT)
+        self.send_header("Cache-Control", "no-store")
+        self.send_cors_headers()
         self.end_headers()
 
     def do_POST(self) -> None:
