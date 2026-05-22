@@ -100,3 +100,5 @@ Use short dated entries. Focus on decisions, changes, blockers, and next steps.
 - Moved a live cockpit panel into the above-fold hero area so the Vercel landing page shows the running Codex loop immediately instead of burying it below the product sections.
 - Added Vercel serverless proxy handlers at `api/cockpit-status.js` and `api/cockpit-log.js`, with `AUTOMOAT_BRIDGE_URL` support and the current ngrok URL as a fallback.
 - Updated the landing-page cockpit script to refresh every cockpit panel, prefer same-origin Vercel proxy endpoints, and fall back to direct read-only bridge fetches when running as a plain static page.
+- Restored the bridge after the previous ngrok endpoint went offline: restarted `scripts/serve_mvp_cockpit.py --auto-start --interval 6 --port 4174`, restarted `scripts/bridge_mvp_cockpit.py`, and updated the landing page plus Vercel API fallbacks to `https://7597-140-186-106-90.ngrok-free.app`.
+- Tightened the Vercel proxy handlers so stale upstream bridge URLs return explicit `502` bridge errors instead of passing ngrok's offline HTML through as cockpit JSON/text.

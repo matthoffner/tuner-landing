@@ -1,4 +1,4 @@
-const DEFAULT_BRIDGE_URL = "https://0626-140-186-106-90.ngrok-free.app";
+const DEFAULT_BRIDGE_URL = "https://7597-140-186-106-90.ngrok-free.app";
 
 function bridgeUrl() {
   return (process.env.AUTOMOAT_BRIDGE_URL || DEFAULT_BRIDGE_URL).replace(/\/$/, "");
@@ -30,6 +30,10 @@ module.exports = async function handler(request, response) {
       headers: { "ngrok-skip-browser-warning": "1" },
     });
     const body = await upstream.text();
+    if (!upstream.ok) {
+      response.status(502).send(`cockpit_bridge_bad_status: ${upstream.status}\n`);
+      return;
+    }
     response.status(upstream.status).send(body);
   } catch (error) {
     response.status(502).send(`cockpit_bridge_unreachable: ${error.message}\n`);
