@@ -4,6 +4,10 @@ Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
 - lane: editor
+- status: fixed the bridge again after the tool-session processes died; restarted the cockpit and bridge as detached OS-session processes parented to PID 1, confirmed the fresh bridge at `https://5694-140-186-106-90.ngrok-free.app`, and updated Vercel fallbacks to the new URL
+- files: .gitignore, api/cockpit-status.js, api/cockpit-log.js, generated/landing.html, index.html, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- next: create a stable tunnel or a small restart/sync command so the bridge URL updates automatically instead of requiring code commits when free ngrok rotates
+- lane: editor
 - status: restored the remote cockpit after the previous ngrok URL went stale; restarted the local MVP cockpit and read-only bridge, confirmed the fresh bridge at `https://7597-140-186-106-90.ngrok-free.app`, and updated the Vercel landing/proxy fallbacks to use it
 - files: api/cockpit-status.js, api/cockpit-log.js, generated/landing.html, index.html, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
 - next: stop hard-coding free ngrok URLs; use a stable tunnel domain or automate updating Vercel's `AUTOMOAT_BRIDGE_URL` whenever `scripts/bridge_mvp_cockpit.py` rotates the bridge

@@ -1,4 +1,4 @@
-const DEFAULT_BRIDGE_URL = "https://7597-140-186-106-90.ngrok-free.app";
+const DEFAULT_BRIDGE_URL = "https://5694-140-186-106-90.ngrok-free.app";
 
 function bridgeUrl() {
   return (process.env.AUTOMOAT_BRIDGE_URL || DEFAULT_BRIDGE_URL).replace(/\/$/, "");

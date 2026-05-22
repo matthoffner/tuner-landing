@@ -5,9 +5,13 @@
 .automoat/state/mvp-loop-status.json
 .automoat/state/mvp-bridge.pid
 .automoat/state/mvp-bridge-status.json
+.automoat/state/mvp-bridge-runner.pid
+.automoat/state/mvp-cockpit-server.pid
 .automoat/state/loop.lock/
 .automoat/state/loop.lock.stale-*/
 .automoat/logs/loop.log
 .automoat/logs/mvp-loop.log
 .automoat/logs/mvp-bridge.log
+.automoat/logs/mvp-bridge-runner.log
+.automoat/logs/mvp-cockpit-server.log
 __pycache__/

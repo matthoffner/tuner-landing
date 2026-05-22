@@ -102,3 +102,5 @@ Use short dated entries. Focus on decisions, changes, blockers, and next steps.
 - Updated the landing-page cockpit script to refresh every cockpit panel, prefer same-origin Vercel proxy endpoints, and fall back to direct read-only bridge fetches when running as a plain static page.
 - Restored the bridge after the previous ngrok endpoint went offline: restarted `scripts/serve_mvp_cockpit.py --auto-start --interval 6 --port 4174`, restarted `scripts/bridge_mvp_cockpit.py`, and updated the landing page plus Vercel API fallbacks to `https://7597-140-186-106-90.ngrok-free.app`.
 - Tightened the Vercel proxy handlers so stale upstream bridge URLs return explicit `502` bridge errors instead of passing ngrok's offline HTML through as cockpit JSON/text.
+- Fixed the repeated bridge failure by restarting the cockpit and bridge as detached OS-session processes instead of foreground tool sessions; the new processes are parented to PID 1 and should survive after this Codex turn ends.
+- Updated the Vercel cockpit bridge fallback to `https://5694-140-186-106-90.ngrok-free.app` and ignored the detached-process pid/log files under `.automoat/`.
