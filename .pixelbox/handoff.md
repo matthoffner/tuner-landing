@@ -4,6 +4,10 @@ Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
 - lane: editor
+- status: added the first real local MVP cockpit runtime: `scripts/run_mvp_loop.py` regenerates and verifies the Dallas contract, coverage, and action queue in a loop, while `scripts/serve_mvp_cockpit.py` starts that loop and streams its log/status in a browser
+- files: scripts/run_mvp_loop.py, scripts/serve_mvp_cockpit.py, README.md, generated/landing.html, index.html, .gitignore, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- next: keep the cockpit running at `http://127.0.0.1:4174/` while building operator-correction capture into the action queue
+- lane: editor
 - status: added an Agent Cockpit product section to the landing page that frames the app as a visible terminal/log tunnel into a bounded Codex loop, with loop runner, live terminal stream, artifact feed, and moat-memory surfaces tied to existing handoff, journal, and action-queue artifacts
 - files: generated/landing.html, index.html, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
 - next: build a real local cockpit route that streams a PTY or loop log, shows current git diff/check status, and records operator corrections as moat memory

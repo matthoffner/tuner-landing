@@ -1,7 +1,10 @@
 .vercel
 .automoat/runs/
 .automoat/state/last-run.txt
+.automoat/state/mvp-loop.pid
+.automoat/state/mvp-loop-status.json
 .automoat/state/loop.lock/
 .automoat/state/loop.lock.stale-*/
 .automoat/logs/loop.log
+.automoat/logs/mvp-loop.log
 __pycache__/

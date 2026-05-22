@@ -23,6 +23,8 @@ Created from Pixelbox.
 - Work session runner: `./scripts/codex-session.sh [minutes]`
 - 24-hour supervisor runner: `./scripts/codex-day.sh [hours] [session-minutes]`
 - Auto-publish helper: `./scripts/codex-publish.sh ["commit message"]`
+- MVP loop runner: `python3 scripts/run_mvp_loop.py --iterations 3 --interval 5`
+- MVP cockpit server: `python3 scripts/serve_mvp_cockpit.py --auto-start --port 4174`
 - Dallas eval artifact writer: `python3 scripts/generate_dallas_eval_artifacts.py`
 - Dallas label review writer: `python3 scripts/generate_dallas_label_reviews.py`
 - Dallas discovery artifact writer: `python3 scripts/generate_dallas_discovery_artifacts.py`

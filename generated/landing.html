@@ -899,10 +899,11 @@
             </div>
             <h2>A terminal tunnel to a Codex loop is the product surface</h2>
             <p>
-              The app can expose a live Codex session running in bounded loops: read handoff, inspect
-              data, generate artifacts, run checks, commit, push, and write the next handoff. The user
-              does not just see a dashboard after the fact; they see the moat being built, corrected,
-              and verified in real time.
+              The app now has a real local cockpit path: run
+              <code>python3 scripts/serve_mvp_cockpit.py --auto-start --port 4174</code> to start a
+              loop process, stream its terminal-style log, and watch the Dallas MVP regenerate contracts,
+              coverage, and the action queue. The user does not just see a dashboard after the fact;
+              they see the moat loop running and verifying itself.
             </p>
             <div class="cockpit-layout">
               <div class="terminal-panel" aria-label="Example Codex loop terminal stream">
@@ -912,6 +913,7 @@
                 </div>
                 <div class="terminal-body">
                   <span class="terminal-line">$ automoat loop --goal "create data moat from repeated workflow"</span>
+                  <span class="terminal-line dim">$ python3 scripts/serve_mvp_cockpit.py --auto-start --port 4174</span>
                   <span class="terminal-line dim">read .pixelbox/handoff.md</span>
                   <span class="terminal-line dim">inspect generated records, labels, evals, and action queue</span>
                   <span class="terminal-line">derive next artifact: operator correction capture</span>
