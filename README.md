@@ -25,6 +25,7 @@ Created from Pixelbox.
 - Auto-publish helper: `./scripts/codex-publish.sh ["commit message"]`
 - MVP loop runner: `python3 scripts/run_mvp_loop.py --iterations 3 --interval 5`
 - MVP cockpit server: `python3 scripts/serve_mvp_cockpit.py --auto-start --port 4174`
+- Read-only remote bridge: `python3 scripts/bridge_mvp_cockpit.py`
 - Dallas eval artifact writer: `python3 scripts/generate_dallas_eval_artifacts.py`
 - Dallas label review writer: `python3 scripts/generate_dallas_label_reviews.py`
 - Dallas discovery artifact writer: `python3 scripts/generate_dallas_discovery_artifacts.py`

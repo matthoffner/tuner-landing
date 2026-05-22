@@ -7,6 +7,7 @@ import argparse
 import html
 import json
 import mimetypes
+import os
 import subprocess
 import sys
 import threading
@@ -25,6 +26,7 @@ PID_FILE = ROOT / ".automoat" / "state" / "mvp-loop.pid"
 LOOP_PROCESS: subprocess.Popen[str] | None = None
 LOOP_LOCK = threading.Lock()
 SERVER_CONFIG: dict[str, float | int] = {"iterations": 0, "interval": 8.0}
+SERVER_CONFIG["read_only"] = 0
 
 
 def tail_lines(path: Path, limit: int = 160) -> list[str]:
@@ -45,6 +47,14 @@ def read_status() -> dict[str, object]:
     with LOOP_LOCK:
         running = LOOP_PROCESS is not None and LOOP_PROCESS.poll() is None
         pid = LOOP_PROCESS.pid if running and LOOP_PROCESS is not None else None
+    if not running and PID_FILE.exists():
+        try:
+            pid_candidate = int(PID_FILE.read_text(encoding="utf-8").strip())
+            os.kill(pid_candidate, 0)
+            running = True
+            pid = pid_candidate
+        except (ValueError, OSError):
+            pid = None
     status["loop_running"] = running
     status["loop_pid"] = pid
     return status
@@ -95,6 +105,22 @@ def safe_file_path(raw_path: str) -> Path | None:
     except ValueError:
         return None
     if candidate.is_file():
+        if int(SERVER_CONFIG.get("read_only", 0)):
+            relative = candidate.relative_to(ROOT).as_posix()
+            allowed_exact = {
+                ".automoat/logs/mvp-loop.log",
+                ".automoat/state/mvp-loop-status.json",
+                "assets/automoat-icon.svg",
+                "generated/landing.html",
+                "index.html",
+            }
+            allowed_prefixes = (
+                "generated/contracts/dallas-electrician-contract-summary-v1/",
+                "generated/coverage/dallas-electrician-edge-case-coverage-v1/",
+                "generated/workflows/dallas-inspection-workflow-v1/",
+            )
+            if relative not in allowed_exact and not relative.startswith(allowed_prefixes):
+                return None
         return candidate
     return None
 
@@ -102,6 +128,25 @@ def safe_file_path(raw_path: str) -> Path | None:
 def cockpit_html() -> str:
     status = read_status()
     current_status = html.escape(str(status.get("status", "waiting")))
+    read_only = bool(int(SERVER_CONFIG.get("read_only", 0)))
+    badge = "Read-Only Remote Bridge" if read_only else "Real MVP Loop"
+    title = (
+        "Remote view of the local Autom oat loop."
+        if read_only
+        else "Watch Autom oat build the permit-data moat loop."
+    )
+    explainer = (
+        "This bridge exposes only the live loop status, log stream, and whitelisted MVP artifacts. "
+        "Start/stop controls stay on the local cockpit."
+        if read_only
+        else "This page starts a real local process that regenerates the Dallas MVP contract, "
+        "coverage, and action queue, then streams the loop log as it runs."
+    )
+    controls = (
+        '<a class="button secondary" href="/">Refresh bridge</a>'
+        if read_only
+        else '<button id="start">Start loop</button><button id="stop" class="secondary">Stop loop</button>'
+    )
     return f"""<!doctype html>
 <html lang="en">
   <head>
@@ -254,17 +299,13 @@ def cockpit_html() -> str:
       <div class="shell">
         <header>
           <div>
-            <div class="badge">Real MVP Loop</div>
-            <h1>Watch Autom oat build the permit-data moat loop.</h1>
-            <p>
-              This page starts a real local process that regenerates the Dallas MVP contract,
-              coverage, and action queue, then streams the loop log as it runs.
-            </p>
+            <div class="badge">{badge}</div>
+            <h1>{title}</h1>
+            <p>{explainer}</p>
           </div>
           <div class="controls">
-            <button id="start">Start loop</button>
-            <button id="stop" class="secondary">Stop loop</button>
-            <a class="button secondary" href="/">Landing</a>
+            {controls}
+            <a class="button secondary" href="/generated/landing.html">Landing</a>
           </div>
         </header>
         <section class="grid">
@@ -314,8 +355,10 @@ def cockpit_html() -> str:
         queue.textContent = status.artifacts?.workflow?.queue_items || "...";
       }}
 
-      document.getElementById("start").addEventListener("click", () => post("/api/start"));
-      document.getElementById("stop").addEventListener("click", () => post("/api/stop"));
+      const startButton = document.getElementById("start");
+      const stopButton = document.getElementById("stop");
+      if (startButton) startButton.addEventListener("click", () => post("/api/start"));
+      if (stopButton) stopButton.addEventListener("click", () => post("/api/stop"));
 
       const events = new EventSource("/events");
       events.onmessage = (event) => {{
@@ -399,6 +442,9 @@ class CockpitHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_POST(self) -> None:
+        if int(SERVER_CONFIG.get("read_only", 0)):
+            self.send_text("read-only bridge\n", status=HTTPStatus.FORBIDDEN)
+            return
         path = urlparse(self.path).path
         if path == "/api/start":
             _started, message = start_loop()
@@ -459,6 +505,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--auto-start", action="store_true")
     parser.add_argument("--iterations", type=int, default=0)
     parser.add_argument("--interval", type=float, default=8.0)
+    parser.add_argument("--read-only", action="store_true")
     return parser.parse_args()
 
 
@@ -466,6 +513,7 @@ def main() -> int:
     args = parse_args()
     SERVER_CONFIG["iterations"] = args.iterations
     SERVER_CONFIG["interval"] = args.interval
+    SERVER_CONFIG["read_only"] = 1 if args.read_only else 0
     if args.auto_start:
         started, message = start_loop()
         print(message, flush=True)

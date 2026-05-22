@@ -21,6 +21,7 @@ RUNS_DIR = ROOT / ".automoat" / "runs"
 STATE_DIR = ROOT / ".automoat" / "state"
 DEFAULT_LOG_FILE = LOG_DIR / "mvp-loop.log"
 STATUS_FILE = STATE_DIR / "mvp-loop-status.json"
+PID_FILE = STATE_DIR / "mvp-loop.pid"
 
 CONTRACT_PATH = ROOT / "generated/contracts/dallas-electrician-contract-summary-v1/summary.json"
 COVERAGE_PATH = ROOT / "generated/coverage/dallas-electrician-edge-case-coverage-v1/coverage.json"
@@ -247,7 +248,9 @@ def main() -> int:
     run_dir = RUNS_DIR / run_id
     run_dir.mkdir(parents=True, exist_ok=True)
     event_file = run_dir / "events.jsonl"
-    emit(args.log_file, f"mvp loop start run_id={run_id} pid={os.getpid()}")
+    pid = os.getpid()
+    PID_FILE.write_text(str(pid) + "\n", encoding="utf-8")
+    emit(args.log_file, f"mvp loop start run_id={run_id} pid={pid}")
     iteration = 0
     final_status = 0
     while not STOP_REQUESTED:
@@ -274,6 +277,11 @@ def main() -> int:
         while not STOP_REQUESTED and time.monotonic() < sleep_until:
             time.sleep(0.2)
     emit(args.log_file, f"mvp loop stop run_id={run_id} iterations={iteration} status={final_status}")
+    try:
+        if PID_FILE.exists() and PID_FILE.read_text(encoding="utf-8").strip() == str(pid):
+            PID_FILE.unlink()
+    except OSError:
+        pass
     return final_status
 
 

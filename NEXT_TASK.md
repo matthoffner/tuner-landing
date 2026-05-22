@@ -45,6 +45,7 @@ Recent progress:
 Updated next best artifacts:
 
 - keep the real MVP cockpit running with `python3 scripts/serve_mvp_cockpit.py --auto-start --port 4174`
+- expose the running cockpit to remote observers with `python3 scripts/bridge_mvp_cockpit.py` and share the read-only URL from `.automoat/state/mvp-bridge-status.json`
 - add operator-correction capture to the browser-readable action queue so accepted/rejected/edited recommendations become the first moat-memory artifact
 - decide whether the remaining thin latest-import labels, `incomplete_work` and `complete_remaining_work|schedule_reinspection`, need another repeated sequence before real data import
 
@@ -73,6 +74,7 @@ Latest bounded improvement completed:
 - `scripts/generate_dallas_contract_summary.py` now promotes the most important edge-case coverage expectations into contract checks, and `generated/contracts/dallas-electrician-contract-summary-v1/` passes `13/13`
 - `scripts/generate_dallas_inspection_workflow.py` now emits `generated/workflows/dallas-inspection-workflow-v1/action-queue.json`, `action-queue.md`, and `index.html`, turning reviewed inspection labels into a concrete browser-readable operator queue with `13` items, priority levels, addresses, contractors, recommended actions, and observed follow-ups
 - `scripts/run_mvp_loop.py` and `scripts/serve_mvp_cockpit.py` now provide a real local cockpit loop: the server starts a loop process, streams `.automoat/logs/mvp-loop.log`, exposes `.automoat/state/mvp-loop-status.json`, and repeatedly regenerates/verifies the Dallas contract, coverage, and action queue
+- `scripts/bridge_mvp_cockpit.py` now opens a read-only ngrok bridge to a whitelisted cockpit viewer so remote observers can see the local loop without controlling it
 
 ## Constraints
 
