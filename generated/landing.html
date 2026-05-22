@@ -671,13 +671,12 @@
             <img class="hero-logo" src="assets/automoat-icon.svg" alt="" aria-hidden="true" />
             <div class="eyebrow">Evidence-first workflow intelligence scaffolding</div>
           </div>
-          <h1>Turn local inspection failures into a workflow playbook contractors can reuse.</h1>
+          <h1>Create a data moat automatically from the work a business already repeats.</h1>
           <p class="hero-copy">
-            <code>automoat</code> is a local-first project for turning messy permit and inspection history
-            into a concrete workflow memory: what failed, why it failed, what operators did next, and
-            whether the next inspection improved. The possible moat is not a generic chatbot; it is the
-            compounding library of local edge cases, reviewed next actions, and eval contracts that make
-            each new workflow cheaper to understand.
+            <code>automoat</code> is broader than permits. It is a local-first system for finding recurring
+            operational work, capturing the records, decisions, corrections, and outcomes it produces, and
+            turning that stream into a structured dataset a company can reuse. Permit and inspection data is
+            just the first MVP wedge because it is concrete, local, messy, and easy to evaluate.
           </p>
           <div class="hero-actions">
             <a class="button button-primary" href="#state">See Current State</a>
@@ -689,11 +688,12 @@
               <div class="section-header">
                 <div class="kicker">Current State</div>
               </div>
-              <h2>Real progress, as of May 17, 2026</h2>
+              <h2>Broad product, permit-data MVP as of May 17, 2026</h2>
               <p>
-                The repo is still in MVP scaffolding mode. The current wedge is intentionally narrow:
-                Dallas residential electrical permits and inspections for electricians. What exists
-                today is an evidence-bearing artifact pipeline with cross-sample checks, not a production app.
+                The product vision is automatic data-moat creation for repeated business workflows.
+                The current repo is still in MVP scaffolding mode, so the proof wedge is intentionally
+                narrow: Dallas residential permit and inspection records. What exists today is an
+                evidence-bearing artifact pipeline with cross-sample checks, not a production app.
               </p>
               <div class="metric-grid">
                 <div class="metric">
@@ -714,7 +714,7 @@
               </div>
               </div>
               <ul class="status-list">
-                <li><strong>Scope:</strong> Dallas, Texas; electricians; residential permits and inspections.</li>
+                <li><strong>MVP wedge:</strong> Dallas, Texas permit and inspection data, currently narrowed to residential electrical records.</li>
                 <li><strong>What works:</strong> deterministic generation of discovery outputs, normalized rows, fixture packs, reviewed labels, eval scaffolds, contract checks, edge-case coverage, and a generated inspection action queue from repo-local inputs.</li>
                 <li><strong>Most current proof:</strong> <code>generated/contracts/dallas-electrician-contract-summary-v1/</code> passes <code>13/13</code> checks across one synthetic and two imported Dallas scaffolds.</li>
                 <li><strong>Current gap:</strong> the action queue is still a generated artifact, not a browser workflow or production app; the only visible thin latest-import support is <code>incomplete_work</code> and <code>complete_remaining_work|schedule_reinspection</code>.</li>
@@ -728,38 +728,38 @@
               </div>
               <h2>What could become defensible</h2>
               <p>
-                The moat would come from capturing local operational judgment that is hard to scrape,
-                annoying to label, and only valuable after it is tied to outcomes. For the Dallas wedge,
-                that means turning permit records, inspection comments, rule snippets, and operator
-                follow-up into a repeatable action system.
+                The moat is the automatic capture of proprietary operating context: the messy records,
+                human decisions, corrections, edge cases, and outcomes that accumulate while work gets
+                done. The permit MVP is just one place to prove the loop before applying it to other
+                recurring business workflows.
               </p>
               <div class="moat-grid">
                 <div class="moat-card">
                   <span class="moat-index">1</span>
                   <div>
-                    <strong>Local failure memory</strong>
-                    <p>Repeated inspection outcomes reveal patterns like access blocked, panel labeling, service release, incomplete work, and when a reinspection is actually worth scheduling.</p>
+                    <strong>Workflow-to-dataset capture</strong>
+                    <p>Automoat should watch repeated work turn into structured records: inputs, decisions, approvals, exceptions, follow-ups, and outcomes.</p>
                   </div>
                 </div>
                 <div class="moat-card">
                   <span class="moat-index">2</span>
                   <div>
-                    <strong>Reviewed next-action labels</strong>
-                    <p>Once operators correct recommendations, those corrections become proprietary labels that public permit portals and generic models do not have.</p>
+                    <strong>Human correction memory</strong>
+                    <p>Every accepted, rejected, or edited recommendation becomes a label that generic models and public datasets do not have.</p>
                   </div>
                 </div>
                 <div class="moat-card">
                   <span class="moat-index">3</span>
                   <div>
                     <strong>Reusable eval contracts</strong>
-                    <p>Every new trade or city has to pass the same checks for normalized records, edge-case coverage, outcome prediction, failure reasons, and next actions.</p>
+                    <p>Each new domain should prove the same thing: the captured data improves predictions, routing, recommendations, or automation compared with a generic baseline.</p>
                   </div>
                 </div>
                 <div class="moat-card">
                   <span class="moat-index">4</span>
                   <div>
-                    <strong>Workflow feedback loop</strong>
-                    <p>If the action queue saves a crew from failed reinspections, each accepted, rejected, or edited recommendation makes the local playbook sharper.</p>
+                    <strong>Compounding operational memory</strong>
+                    <p>The more workflows run through the system, the more proprietary examples, edge cases, and outcome-linked playbooks the business owns.</p>
                   </div>
                 </div>
               </div>
@@ -1103,23 +1103,23 @@
               <div class="truth good">
                 <h3>Built</h3>
                 <p>
-                  Narrow scope selection, artifact contracts, deterministic writers, two discovery variants,
-                  three normalized Dallas dataset paths, three eval scaffolds, and a shared unattended loop
-                  for keeping generated status surfaces current.
+                  Broad product framing, a narrow permit-data proof wedge, artifact contracts,
+                  deterministic writers, two discovery variants, three normalized Dallas dataset paths,
+                  three eval scaffolds, and a shared unattended loop for keeping generated status surfaces current.
                 </p>
               </div>
               <div class="truth warn">
                 <h3>Not built</h3>
                 <p>
-                  No large imported Dallas record set, no production application workflow, no live model
-                  benchmarking results, no dynamic local app route or production application yet, and no evidence
-                  that the Dallas wedge produces a durable moat in practice.
+                  No automatic end-to-end moat builder yet, no production workflow runner, no live
+                  baseline-versus-moat benchmarking, no dynamic local app route, and no evidence yet
+                  that the permit-data wedge generalizes into a durable data moat.
                 </p>
               </div>
             </div>
             <p class="footer-note">
-              Next best move: either wire the browser-readable workflow into a tiny local app route or decide
-              whether the remaining thin incomplete-work label needs more support.
+              Next best move: wire the permit-data action queue into a tiny local route and capture
+              operator edits as the first automatic moat-building feedback loop.
             </p>
           </div>
 

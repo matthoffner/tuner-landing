@@ -4,6 +4,10 @@ Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
 - lane: editor
+- status: broadened the landing page back to the original automoat vision: automatic data-moat creation from repeated business workflows, with permit and inspection records framed as the first MVP proof wedge rather than the whole product
+- files: generated/landing.html, index.html, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- next: wire the permit-data action queue into a tiny local route and capture operator edits as the first automatic moat-building feedback loop
+- lane: editor
 - status: recolored the Autom oat logo asset to the landing page's ink/terracotta/cream palette and made the landing page's moat explanation concrete with a dedicated moat candidate section covering local failure memory, reviewed next-action labels, reusable eval contracts, and workflow feedback loops
 - files: assets/automoat-icon.svg, generated/assets/automoat-icon.svg, generated/landing.html, index.html, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
 - next: if continuing product work, turn the generated inspection action queue into a small local route and capture operator edits as the first real feedback-loop artifact

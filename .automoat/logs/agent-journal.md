@@ -86,3 +86,4 @@ Use short dated entries. Focus on decisions, changes, blockers, and next steps.
 - Synced `generated/landing.html` back to root `index.html` and verified the local static page plus logo asset served successfully from `http://127.0.0.1:4173/`.
 - Recolored the Autom oat SVG away from the source site's teal/neon palette and into the landing page's ink, terracotta, cream, and clay colors.
 - Rewrote the top-level landing message around a tangible moat candidate: local inspection failure memory, reviewed next-action labels, reusable eval contracts, and a workflow feedback loop from accepted, rejected, or edited recommendations.
+- Corrected the landing page back toward the broader product thesis: `automoat` creates data moats automatically from repeated business workflows, while permit and inspection data remains only the first concrete MVP proof wedge.
