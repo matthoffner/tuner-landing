@@ -4,6 +4,10 @@ Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
 - lane: editor
+- status: refreshed the static landing page for mobile by adding the Autom oat logo asset from the matthoffner site repo, replacing the dot mark with logo lockups, tightening mobile navigation, collapsing dense grids, and syncing the generated page to the root index
+- files: assets/automoat-icon.svg, generated/assets/automoat-icon.svg, generated/landing.html, index.html, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- next: if continuing UI work, use the same static server at `http://127.0.0.1:4173/` or wire the browser-readable workflow into a tiny local app route
+- lane: editor
 - status: added the first product-shaped Dallas inspection workflow artifact, a generated 13-item action queue with JSON, Markdown, and static HTML outputs built from normalized imported v2 rows and reviewed next-action labels
 - files: scripts/generate_dallas_inspection_workflow.py, generated/workflows/dallas-inspection-workflow-v1/action-queue.json, generated/workflows/dallas-inspection-workflow-v1/action-queue.md, generated/workflows/dallas-inspection-workflow-v1/index.html, README.md, NEXT_TASK.md, generated/landing.html, index.html, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
 - next: either wire the browser-readable workflow into a tiny local app route or decide whether the remaining thin incomplete-work label needs another repeated sequence

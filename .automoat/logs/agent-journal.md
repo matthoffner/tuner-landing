@@ -78,3 +78,9 @@ Use short dated entries. Focus on decisions, changes, blockers, and next steps.
 - Added `scripts/generate_dallas_inspection_workflow.py` and generated `generated/workflows/dallas-inspection-workflow-v1/action-queue.json` plus `action-queue.md`.
 - The generated inspection workflow queue has `13` action items with priority, address, contractor, trigger inspection, recommended actions, and observed follow-up fields; this is the first product-shaped output beyond reports and contract summaries.
 - Extended the workflow writer to emit `generated/workflows/dallas-inspection-workflow-v1/index.html`, a static browser-readable queue page with the same `13` action items.
+
+## 2026-05-21
+
+- Copied the Autom oat SVG mark from the matthoffner site repo into local static assets and generated assets so both `index.html` and `generated/landing.html` can resolve it.
+- Refreshed the landing page header and hero to use the logo instead of the old dot mark, then tightened mobile layout with compact navigation pills, full-width calls to action, single-column content grids, better text wrapping for long code paths, and smaller mobile hero type.
+- Synced `generated/landing.html` back to root `index.html` and verified the local static page plus logo asset served successfully from `http://127.0.0.1:4173/`.
