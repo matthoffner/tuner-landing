@@ -487,6 +487,14 @@
         box-shadow: 0 18px 48px rgba(29, 36, 48, 0.08);
       }
 
+      .bridge-panel-featured {
+        margin-top: 24px;
+        border-color: rgba(182, 84, 45, 0.28);
+        background:
+          linear-gradient(135deg, rgba(255, 252, 246, 0.94), rgba(240, 216, 200, 0.52)),
+          var(--paper-strong);
+      }
+
       .bridge-header {
         display: flex;
         align-items: flex-start;
@@ -564,6 +572,10 @@
         font-family: "SFMono-Regular", Menlo, Consolas, monospace;
         font-size: 0.78rem;
         line-height: 1.55;
+      }
+
+      .bridge-panel-featured .bridge-log {
+        max-height: 220px;
       }
 
       .artifact-card {
@@ -917,8 +929,45 @@
             just the first MVP wedge because it is concrete, local, messy, and easy to evaluate.
           </p>
           <div class="hero-actions">
-            <a class="button button-primary" href="#state">See Current State</a>
-            <a class="button button-secondary" href="#docs">Open Source Docs</a>
+            <a class="button button-primary" href="#cockpit">Watch Cockpit</a>
+            <a class="button button-secondary" href="https://0626-140-186-106-90.ngrok-free.app" target="_blank" rel="noreferrer">Open Live Bridge</a>
+          </div>
+
+          <div class="bridge-panel bridge-panel-featured" data-bridge-url="https://0626-140-186-106-90.ngrok-free.app">
+            <div class="bridge-header">
+              <div>
+                <div class="kicker">Live Vercel Cockpit</div>
+                <h3>Codex loop running from the local machine</h3>
+                <p>
+                  This deployed page reads the live MVP loop through Vercel proxy endpoints first, then falls
+                  back to the read-only bridge. It should show the actual loop, not a screenshot or iframe.
+                </p>
+              </div>
+              <a class="bridge-url" href="https://0626-140-186-106-90.ngrok-free.app" target="_blank" rel="noreferrer">open bridge</a>
+            </div>
+            <div class="bridge-metrics" aria-live="polite">
+              <div class="bridge-metric">
+                <strong data-bridge-status>loading</strong>
+                <span>status</span>
+              </div>
+              <div class="bridge-metric">
+                <strong data-bridge-iteration>...</strong>
+                <span>iteration</span>
+              </div>
+              <div class="bridge-metric">
+                <strong data-bridge-running>...</strong>
+                <span>loop</span>
+              </div>
+              <div class="bridge-metric">
+                <strong data-bridge-contract>...</strong>
+                <span>contract checks</span>
+              </div>
+              <div class="bridge-metric">
+                <strong data-bridge-queue>...</strong>
+                <span>queue items</span>
+              </div>
+            </div>
+            <pre class="bridge-log" data-bridge-log>connecting to Vercel cockpit proxy...</pre>
           </div>
 
           <div class="hero-grid">
@@ -926,7 +975,7 @@
               <div class="section-header">
                 <div class="kicker">Current State</div>
               </div>
-              <h2>Broad product, permit-data MVP as of May 17, 2026</h2>
+              <h2>Broad product, permit-data MVP as of May 22, 2026</h2>
               <p>
                 The product vision is automatic data-moat creation for repeated business workflows.
                 The current repo is still in MVP scaffolding mode, so the proof wedge is intentionally
@@ -1490,27 +1539,41 @@
     </main>
     <script>
       (() => {
-        const panel = document.querySelector("[data-bridge-url]");
-        if (!panel) return;
+        const panels = Array.from(document.querySelectorAll("[data-bridge-url]"));
+        if (!panels.length) return;
 
-        const base = panel.getAttribute("data-bridge-url").replace(/\/$/, "");
         const headers = { "ngrok-skip-browser-warning": "1" };
-        const fields = {
-          status: panel.querySelector("[data-bridge-status]"),
-          iteration: panel.querySelector("[data-bridge-iteration]"),
-          running: panel.querySelector("[data-bridge-running]"),
-          contract: panel.querySelector("[data-bridge-contract]"),
-          queue: panel.querySelector("[data-bridge-queue]"),
-          log: panel.querySelector("[data-bridge-log]"),
-        };
 
-        async function refreshBridge() {
-          try {
-            const statusResponse = await fetch(`${base}/api/status`, { headers, cache: "no-store" });
-            if (!statusResponse.ok) {
-              throw new Error(`status ${statusResponse.status}`);
+        async function fetchFirst(urls, options = {}) {
+          let lastError;
+          for (const url of urls) {
+            try {
+              const response = await fetch(url, { ...options, cache: "no-store" });
+              if (response.ok) return response;
+              lastError = new Error(`${url} returned ${response.status}`);
+            } catch (error) {
+              lastError = error;
             }
+          }
+          throw lastError || new Error("no cockpit endpoint responded");
+        }
 
+        async function refreshPanel(panel) {
+          const base = panel.getAttribute("data-bridge-url").replace(/\/$/, "");
+          const fields = {
+            status: panel.querySelector("[data-bridge-status]"),
+            iteration: panel.querySelector("[data-bridge-iteration]"),
+            running: panel.querySelector("[data-bridge-running]"),
+            contract: panel.querySelector("[data-bridge-contract]"),
+            queue: panel.querySelector("[data-bridge-queue]"),
+            log: panel.querySelector("[data-bridge-log]"),
+          };
+
+          try {
+            const statusResponse = await fetchFirst([
+              "/api/cockpit-status",
+              `${base}/api/status`,
+            ], { headers });
             const status = await statusResponse.json();
             const contract = status.artifacts && status.artifacts.contract;
             const workflow = status.artifacts && status.artifacts.workflow;
@@ -1520,16 +1583,21 @@
             fields.contract.textContent = contract ? `${contract.passed_checks}/${contract.total_checks}` : "...";
             fields.queue.textContent = workflow && workflow.queue_items !== undefined ? workflow.queue_items : "...";
 
-            const logResponse = await fetch(`${base}/.automoat/logs/mvp-loop.log`, { headers, cache: "no-store" });
-            if (logResponse.ok) {
-              const text = await logResponse.text();
-              fields.log.textContent = text.split("\n").slice(-34).join("\n").trim() || "waiting for loop output...";
-              fields.log.scrollTop = fields.log.scrollHeight;
-            }
+            const logResponse = await fetchFirst([
+              "/api/cockpit-log",
+              `${base}/.automoat/logs/mvp-loop.log`,
+            ], { headers });
+            const text = await logResponse.text();
+            fields.log.textContent = text.split("\n").slice(-34).join("\n").trim() || "waiting for loop output...";
+            fields.log.scrollTop = fields.log.scrollHeight;
           } catch (error) {
             fields.status.textContent = "bridge error";
             fields.log.textContent = `Could not reach bridge: ${error.message}`;
           }
+        }
+
+        function refreshBridge() {
+          panels.forEach((panel) => refreshPanel(panel));
         }
 
         refreshBridge();

@@ -4,6 +4,10 @@ Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
 - lane: editor
+- status: moved the live cockpit into the Vercel-visible hero area and added same-origin Vercel proxy handlers at `/api/cockpit-status` and `/api/cockpit-log`, with the landing page falling back to the read-only ngrok bridge if the proxy is unavailable
+- files: api/cockpit-status.js, api/cockpit-log.js, generated/landing.html, index.html, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- next: replace the hard-coded fallback bridge URL with a persistent tunnel/domain or a deploy-time `AUTOMOAT_BRIDGE_URL` update so Vercel does not go stale when ngrok rotates
+- lane: editor
 - status: restarted the live MVP loop/cockpit and ngrok bridge, then embedded the fresh read-only bridge directly into the landing page as an inline data panel instead of an iframe; the page now polls `/api/status` and the loop log from `https://0626-140-186-106-90.ngrok-free.app`
 - files: generated/landing.html, index.html, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
 - next: replace the hard-coded transient ngrok URL with a small generated bridge-config artifact or app-side runtime config so landing deployments do not need a manual page edit when the tunnel rotates

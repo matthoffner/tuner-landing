@@ -97,3 +97,6 @@ Use short dated entries. Focus on decisions, changes, blockers, and next steps.
 - Embedded the fresh bridge URL directly into `generated/landing.html` and `index.html` as a non-iframe live panel under Agent Cockpit.
 - The landing page now polls the bridge for `/api/status` and `.automoat/logs/mvp-loop.log`, rendering status, iteration, loop state, contract checks, queue count, and a terminal-style log tail inline.
 - Verified the bridge URL `https://0626-140-186-106-90.ngrok-free.app` returns CORS preflight headers, live JSON status, and log output from the landing-page origin.
+- Moved a live cockpit panel into the above-fold hero area so the Vercel landing page shows the running Codex loop immediately instead of burying it below the product sections.
+- Added Vercel serverless proxy handlers at `api/cockpit-status.js` and `api/cockpit-log.js`, with `AUTOMOAT_BRIDGE_URL` support and the current ngrok URL as a fallback.
+- Updated the landing-page cockpit script to refresh every cockpit panel, prefer same-origin Vercel proxy endpoints, and fall back to direct read-only bridge fetches when running as a plain static page.
