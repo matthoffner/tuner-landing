@@ -365,6 +365,119 @@
         line-height: 1.55;
       }
 
+      .cockpit-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1.08fr) minmax(280px, 0.92fr);
+        gap: 16px;
+        margin-top: 18px;
+      }
+
+      .terminal-panel {
+        overflow: hidden;
+        border: 1px solid rgba(29, 36, 48, 0.18);
+        border-radius: 22px;
+        background: #151b24;
+        box-shadow: 0 18px 48px rgba(29, 36, 48, 0.14);
+      }
+
+      .terminal-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 12px 14px;
+        border-bottom: 1px solid rgba(255, 248, 243, 0.1);
+        color: #f8eee6;
+        font-family: "Helvetica Neue", Arial, sans-serif;
+        font-size: 0.82rem;
+      }
+
+      .terminal-dots {
+        display: inline-flex;
+        gap: 6px;
+      }
+
+      .terminal-dots span {
+        width: 9px;
+        height: 9px;
+        border-radius: 999px;
+        background: var(--accent);
+      }
+
+      .terminal-dots span:nth-child(2) {
+        background: #e9c9b2;
+      }
+
+      .terminal-dots span:nth-child(3) {
+        background: #7d8b79;
+      }
+
+      .terminal-body {
+        padding: 16px;
+        color: #fff8f3;
+        font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+        font-size: 0.86rem;
+        line-height: 1.7;
+      }
+
+      .terminal-line {
+        display: block;
+        overflow-wrap: anywhere;
+      }
+
+      .terminal-line.dim {
+        color: rgba(255, 248, 243, 0.62);
+      }
+
+      .terminal-line.good {
+        color: #f0d8c8;
+      }
+
+      .cockpit-list {
+        display: grid;
+        gap: 12px;
+      }
+
+      .cockpit-step {
+        padding: 14px;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.56);
+        min-width: 0;
+      }
+
+      .cockpit-step strong {
+        display: block;
+        font-family: "Helvetica Neue", Arial, sans-serif;
+      }
+
+      .cockpit-step p {
+        margin-top: 4px;
+        font-size: 0.95rem;
+        line-height: 1.55;
+      }
+
+      .status-strip {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 16px;
+      }
+
+      .status-pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 8px 10px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: rgba(240, 216, 200, 0.28);
+        color: var(--accent-2);
+        text-decoration: none;
+        font-family: "Helvetica Neue", Arial, sans-serif;
+        font-size: 0.82rem;
+        font-weight: 700;
+      }
+
       .artifact-card {
         padding: 18px;
         border: 1px solid var(--line);
@@ -480,6 +593,8 @@
         .section,
         .card,
         .artifact-card,
+        .cockpit-step,
+        .terminal-panel,
         .timeline-item,
         .truth,
         .metric {
@@ -600,6 +715,14 @@
           height: 30px;
         }
 
+        .cockpit-layout {
+          grid-template-columns: 1fr;
+        }
+
+        .terminal-body {
+          font-size: 0.78rem;
+        }
+
         .metric-grid {
           grid-template-columns: 1fr;
         }
@@ -641,6 +764,7 @@
 
         .card,
         .artifact-card,
+        .cockpit-step,
         .timeline-item,
         .truth,
         .metric {
@@ -660,6 +784,7 @@
           <div class="nav-links">
             <a href="#state">Current State</a>
             <a href="#moat">Moat</a>
+            <a href="#cockpit">Cockpit</a>
             <a href="#artifacts">Artifacts</a>
             <a href="#changelog">Changelog</a>
             <a href="#docs">Docs</a>
@@ -768,6 +893,59 @@
         </div>
 
         <div class="content">
+          <div class="section" id="cockpit">
+            <div class="section-header">
+              <div class="kicker">Agent Cockpit</div>
+            </div>
+            <h2>A terminal tunnel to a Codex loop is the product surface</h2>
+            <p>
+              The app can expose a live Codex session running in bounded loops: read handoff, inspect
+              data, generate artifacts, run checks, commit, push, and write the next handoff. The user
+              does not just see a dashboard after the fact; they see the moat being built, corrected,
+              and verified in real time.
+            </p>
+            <div class="cockpit-layout">
+              <div class="terminal-panel" aria-label="Example Codex loop terminal stream">
+                <div class="terminal-bar">
+                  <span>codex-loop tunnel</span>
+                  <span class="terminal-dots" aria-hidden="true"><span></span><span></span><span></span></span>
+                </div>
+                <div class="terminal-body">
+                  <span class="terminal-line">$ automoat loop --goal "create data moat from repeated workflow"</span>
+                  <span class="terminal-line dim">read .pixelbox/handoff.md</span>
+                  <span class="terminal-line dim">inspect generated records, labels, evals, and action queue</span>
+                  <span class="terminal-line">derive next artifact: operator correction capture</span>
+                  <span class="terminal-line good">verify contract checks: 13/13 passing</span>
+                  <span class="terminal-line">write journal, update handoff, sync landing page</span>
+                  <span class="terminal-line good">commit and push to main</span>
+                </div>
+              </div>
+              <div class="cockpit-list">
+                <div class="cockpit-step">
+                  <strong>Loop runner</strong>
+                  <p>Codex works in explicit iterations with a goal, changed files, checks, commit, push, and next step.</p>
+                </div>
+                <div class="cockpit-step">
+                  <strong>Live terminal stream</strong>
+                  <p>The cockpit shows the PTY/log stream so operators can see the agent working instead of trusting a black box.</p>
+                </div>
+                <div class="cockpit-step">
+                  <strong>Artifact feed</strong>
+                  <p>Diffs, generated datasets, eval reports, screenshots, decisions, and handoffs become structured product state.</p>
+                </div>
+                <div class="cockpit-step">
+                  <strong>Moat memory</strong>
+                  <p>Every prompt, correction, approval, failed check, and accepted recommendation becomes future training and eval material.</p>
+                </div>
+              </div>
+            </div>
+            <div class="status-strip">
+              <a class="status-pill" href="/.pixelbox/handoff.md">handoff stream</a>
+              <a class="status-pill" href="/.automoat/logs/agent-journal.md">agent journal</a>
+              <a class="status-pill" href="/generated/workflows/dallas-inspection-workflow-v1/index.html">current action queue</a>
+            </div>
+          </div>
+
           <div class="section" id="artifacts">
             <div class="section-header">
               <div class="kicker">Artifact Inventory</div>

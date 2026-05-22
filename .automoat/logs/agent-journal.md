@@ -87,3 +87,4 @@ Use short dated entries. Focus on decisions, changes, blockers, and next steps.
 - Recolored the Autom oat SVG away from the source site's teal/neon palette and into the landing page's ink, terracotta, cream, and clay colors.
 - Rewrote the top-level landing message around a tangible moat candidate: local inspection failure memory, reviewed next-action labels, reusable eval contracts, and a workflow feedback loop from accepted, rejected, or edited recommendations.
 - Corrected the landing page back toward the broader product thesis: `automoat` creates data moats automatically from repeated business workflows, while permit and inspection data remains only the first concrete MVP proof wedge.
+- Added an Agent Cockpit section to the landing page that frames the product surface as a terminal/log tunnel into a bounded Codex loop, with loop runner, live terminal stream, artifact feed, and moat-memory concepts tied to existing repo artifacts.

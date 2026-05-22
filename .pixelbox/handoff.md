@@ -4,6 +4,10 @@ Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
 - lane: editor
+- status: added an Agent Cockpit product section to the landing page that frames the app as a visible terminal/log tunnel into a bounded Codex loop, with loop runner, live terminal stream, artifact feed, and moat-memory surfaces tied to existing handoff, journal, and action-queue artifacts
+- files: generated/landing.html, index.html, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- next: build a real local cockpit route that streams a PTY or loop log, shows current git diff/check status, and records operator corrections as moat memory
+- lane: editor
 - status: broadened the landing page back to the original automoat vision: automatic data-moat creation from repeated business workflows, with permit and inspection records framed as the first MVP proof wedge rather than the whole product
 - files: generated/landing.html, index.html, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
 - next: wire the permit-data action queue into a tiny local route and capture operator edits as the first automatic moat-building feedback loop
