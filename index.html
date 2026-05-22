@@ -478,6 +478,94 @@
         font-weight: 700;
       }
 
+      .bridge-panel {
+        margin-top: 18px;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 22px;
+        background: rgba(255, 255, 255, 0.64);
+        box-shadow: 0 18px 48px rgba(29, 36, 48, 0.08);
+      }
+
+      .bridge-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 14px;
+        padding: 16px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .bridge-header h3 {
+        margin: 4px 0 0;
+        color: var(--ink);
+        font-size: 1.35rem;
+      }
+
+      .bridge-header p {
+        margin-top: 6px;
+        font-size: 0.95rem;
+      }
+
+      .bridge-url {
+        flex: 0 0 auto;
+        color: var(--accent);
+        font-family: "Helvetica Neue", Arial, sans-serif;
+        font-size: 0.86rem;
+        font-weight: 700;
+        overflow-wrap: anywhere;
+        text-decoration: none;
+      }
+
+      .bridge-url:hover {
+        text-decoration: underline;
+      }
+
+      .bridge-metrics {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 10px;
+        padding: 16px;
+      }
+
+      .bridge-metric {
+        min-width: 0;
+        padding: 12px;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: rgba(240, 216, 200, 0.24);
+      }
+
+      .bridge-metric strong {
+        display: block;
+        color: var(--ink);
+        font-family: "Helvetica Neue", Arial, sans-serif;
+        font-size: 1.05rem;
+        overflow-wrap: anywhere;
+      }
+
+      .bridge-metric span {
+        display: block;
+        margin-top: 4px;
+        color: var(--muted);
+        font-family: "Helvetica Neue", Arial, sans-serif;
+        font-size: 0.78rem;
+      }
+
+      .bridge-log {
+        max-height: 320px;
+        margin: 0 16px 16px;
+        overflow: auto;
+        border-radius: 18px;
+        background: #151b24;
+        color: #fff8f3;
+        padding: 14px;
+        white-space: pre-wrap;
+        font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+        font-size: 0.78rem;
+        line-height: 1.55;
+      }
+
       .artifact-card {
         padding: 18px;
         border: 1px solid var(--line);
@@ -595,6 +683,7 @@
         .artifact-card,
         .cockpit-step,
         .terminal-panel,
+        .bridge-panel,
         .timeline-item,
         .truth,
         .metric {
@@ -723,6 +812,18 @@
           font-size: 0.78rem;
         }
 
+        .bridge-header {
+          flex-direction: column;
+        }
+
+        .bridge-url {
+          flex: 1 1 auto;
+        }
+
+        .bridge-metrics {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
         .metric-grid {
           grid-template-columns: 1fr;
         }
@@ -765,10 +866,22 @@
         .card,
         .artifact-card,
         .cockpit-step,
+        .bridge-header,
+        .bridge-metric,
         .timeline-item,
         .truth,
         .metric {
           padding: 14px;
+        }
+
+        .bridge-metrics {
+          grid-template-columns: 1fr;
+          padding: 14px;
+        }
+
+        .bridge-log {
+          margin-right: 14px;
+          margin-left: 14px;
         }
       }
     </style>
@@ -947,6 +1060,42 @@
               <a class="status-pill" href="/.pixelbox/handoff.md">handoff stream</a>
               <a class="status-pill" href="/.automoat/logs/agent-journal.md">agent journal</a>
               <a class="status-pill" href="/generated/workflows/dallas-inspection-workflow-v1/index.html">current action queue</a>
+            </div>
+            <div class="bridge-panel" data-bridge-url="https://0626-140-186-106-90.ngrok-free.app">
+              <div class="bridge-header">
+                <div>
+                  <div class="kicker">Live Remote Bridge</div>
+                  <h3>Embedded read-only loop feed</h3>
+                  <p>
+                    This panel fetches the local Codex loop through the read-only bridge as data, not as an
+                    iframe, so the landing page can render status, contract checks, queue state, and logs inline.
+                  </p>
+                </div>
+                <a class="bridge-url" href="https://0626-140-186-106-90.ngrok-free.app" target="_blank" rel="noreferrer">open bridge</a>
+              </div>
+              <div class="bridge-metrics" aria-live="polite">
+                <div class="bridge-metric">
+                  <strong data-bridge-status>loading</strong>
+                  <span>status</span>
+                </div>
+                <div class="bridge-metric">
+                  <strong data-bridge-iteration>...</strong>
+                  <span>iteration</span>
+                </div>
+                <div class="bridge-metric">
+                  <strong data-bridge-running>...</strong>
+                  <span>loop</span>
+                </div>
+                <div class="bridge-metric">
+                  <strong data-bridge-contract>...</strong>
+                  <span>contract checks</span>
+                </div>
+                <div class="bridge-metric">
+                  <strong data-bridge-queue>...</strong>
+                  <span>queue items</span>
+                </div>
+              </div>
+              <pre class="bridge-log" data-bridge-log>connecting to remote loop...</pre>
             </div>
           </div>
 
@@ -1339,5 +1488,53 @@
         </div>
       </div>
     </main>
+    <script>
+      (() => {
+        const panel = document.querySelector("[data-bridge-url]");
+        if (!panel) return;
+
+        const base = panel.getAttribute("data-bridge-url").replace(/\/$/, "");
+        const headers = { "ngrok-skip-browser-warning": "1" };
+        const fields = {
+          status: panel.querySelector("[data-bridge-status]"),
+          iteration: panel.querySelector("[data-bridge-iteration]"),
+          running: panel.querySelector("[data-bridge-running]"),
+          contract: panel.querySelector("[data-bridge-contract]"),
+          queue: panel.querySelector("[data-bridge-queue]"),
+          log: panel.querySelector("[data-bridge-log]"),
+        };
+
+        async function refreshBridge() {
+          try {
+            const statusResponse = await fetch(`${base}/api/status`, { headers, cache: "no-store" });
+            if (!statusResponse.ok) {
+              throw new Error(`status ${statusResponse.status}`);
+            }
+
+            const status = await statusResponse.json();
+            const contract = status.artifacts && status.artifacts.contract;
+            const workflow = status.artifacts && status.artifacts.workflow;
+            fields.status.textContent = status.status || "unknown";
+            fields.iteration.textContent = status.iteration || "0";
+            fields.running.textContent = status.loop_running ? "running" : "stopped";
+            fields.contract.textContent = contract ? `${contract.passed_checks}/${contract.total_checks}` : "...";
+            fields.queue.textContent = workflow && workflow.queue_items !== undefined ? workflow.queue_items : "...";
+
+            const logResponse = await fetch(`${base}/.automoat/logs/mvp-loop.log`, { headers, cache: "no-store" });
+            if (logResponse.ok) {
+              const text = await logResponse.text();
+              fields.log.textContent = text.split("\n").slice(-34).join("\n").trim() || "waiting for loop output...";
+              fields.log.scrollTop = fields.log.scrollHeight;
+            }
+          } catch (error) {
+            fields.status.textContent = "bridge error";
+            fields.log.textContent = `Could not reach bridge: ${error.message}`;
+          }
+        }
+
+        refreshBridge();
+        window.setInterval(refreshBridge, 3000);
+      })();
+    </script>
   </body>
 </html>

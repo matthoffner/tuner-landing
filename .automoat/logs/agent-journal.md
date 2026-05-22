@@ -90,3 +90,10 @@ Use short dated entries. Focus on decisions, changes, blockers, and next steps.
 - Added an Agent Cockpit section to the landing page that frames the product surface as a terminal/log tunnel into a bounded Codex loop, with loop runner, live terminal stream, artifact feed, and moat-memory concepts tied to existing repo artifacts.
 - Added a real local MVP cockpit runtime: `scripts/run_mvp_loop.py` runs a visible loop that regenerates and verifies the Dallas contract, coverage, and action queue, while `scripts/serve_mvp_cockpit.py` starts the loop and streams log/status output in a browser.
 - Added a read-only remote bridge path: `scripts/serve_mvp_cockpit.py --read-only` limits exposed routes to live status, loop logs, and whitelisted MVP artifacts, while `scripts/bridge_mvp_cockpit.py` opens an ngrok tunnel for remote observers.
+
+## 2026-05-22
+
+- Restarted the live MVP loop/cockpit and read-only ngrok bridge after the previous tunnel went offline.
+- Embedded the fresh bridge URL directly into `generated/landing.html` and `index.html` as a non-iframe live panel under Agent Cockpit.
+- The landing page now polls the bridge for `/api/status` and `.automoat/logs/mvp-loop.log`, rendering status, iteration, loop state, contract checks, queue count, and a terminal-style log tail inline.
+- Verified the bridge URL `https://0626-140-186-106-90.ngrok-free.app` returns CORS preflight headers, live JSON status, and log output from the landing-page origin.

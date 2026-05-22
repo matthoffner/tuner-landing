@@ -4,6 +4,10 @@ Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
 - lane: editor
+- status: restarted the live MVP loop/cockpit and ngrok bridge, then embedded the fresh read-only bridge directly into the landing page as an inline data panel instead of an iframe; the page now polls `/api/status` and the loop log from `https://0626-140-186-106-90.ngrok-free.app`
+- files: generated/landing.html, index.html, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- next: replace the hard-coded transient ngrok URL with a small generated bridge-config artifact or app-side runtime config so landing deployments do not need a manual page edit when the tunnel rotates
+- lane: editor
 - status: added a safe remote bridge path for the live MVP cockpit: `scripts/serve_mvp_cockpit.py --read-only` exposes only whitelisted status/log/artifact routes, and `scripts/bridge_mvp_cockpit.py` launches a read-only viewer plus ngrok tunnel so remote observers can watch the local loop without start/stop controls
 - files: scripts/bridge_mvp_cockpit.py, scripts/serve_mvp_cockpit.py, scripts/run_mvp_loop.py, README.md, generated/landing.html, index.html, .gitignore, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
 - next: share the generated bridge URL from `.automoat/state/mvp-bridge-status.json`, then add operator-correction capture to the action queue
