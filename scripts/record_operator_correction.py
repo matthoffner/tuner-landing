@@ -246,7 +246,12 @@ def read_only_command(
     return shlex.join(args)
 
 
-def ledger_validation(queue_path: Path, ledger_path: Path, require_complete: bool = False) -> dict[str, Any]:
+def ledger_validation(
+    queue_path: Path,
+    ledger_path: Path,
+    require_complete: bool = False,
+    output_format: str = "json",
+) -> dict[str, Any]:
     payload = read_json(queue_path)
     queue = payload.get("queue")
     if not isinstance(queue, list):
@@ -417,7 +422,7 @@ def ledger_validation(queue_path: Path, ledger_path: Path, require_complete: boo
         "status": "pass" if issue_count == 0 else "fail",
         "issues": issues,
         "next_missing_command": (
-            read_only_command("--next-missing", queue_path, ledger_path, output_format="text")
+            read_only_command("--next-missing", queue_path, ledger_path, output_format=output_format)
             if missing_queue_item_ids
             else None
         ),
@@ -1139,7 +1144,7 @@ def operator_correction_smoke_check(
     output_format: str = "json",
 ) -> dict[str, Any]:
     progress = correction_progress(queue_path, ledger_path, output_format=output_format)
-    validation = ledger_validation(queue_path, ledger_path)
+    validation = ledger_validation(queue_path, ledger_path, output_format=output_format)
     next_missing = next_missing_correction(queue_path, ledger_path, output_format=output_format)
     checks: list[dict[str, Any]] = []
     expected_format_label = output_format_label(output_format)
@@ -1177,12 +1182,36 @@ def operator_correction_smoke_check(
             isinstance(queue_item_id, str) and bool(queue_item_id),
             str(queue_item_id or "no next missing item"),
         )
+        validation_next_missing_command = validation.get("next_missing_command")
+        validation_output_format = command_arg_value(validation_next_missing_command, "--format")
+        validation_command_passed = isinstance(validation_next_missing_command, str) and (
+            validation_output_format == "text" if output_format == "text" else validation_output_format is None
+        )
+        add_smoke_check(
+            checks,
+            "validation_next_missing_command",
+            validation_command_passed,
+            (
+                f"ledger validation next-missing command keeps {expected_format_label}"
+                if validation_command_passed
+                else (
+                    "ledger validation next-missing command changed output mode: "
+                    f"{validation_next_missing_command}"
+                )
+            ),
+        )
     else:
         add_smoke_check(
             checks,
             "next_missing_item",
             item is None,
             "all current queue items have captured corrections",
+        )
+        add_smoke_check(
+            checks,
+            "validation_next_missing_command",
+            validation.get("next_missing_command") is None,
+            "no next-missing command needed when every queue item is captured",
         )
 
     dry_run_events: list[dict[str, Any]] = []
@@ -1499,7 +1528,12 @@ def main() -> int:
             print(json.dumps(progress, indent=2, sort_keys=True))
         return 0
     if args.validate_ledger:
-        validation = ledger_validation(args.queue_path, args.ledger_path, args.require_complete)
+        validation = ledger_validation(
+            args.queue_path,
+            args.ledger_path,
+            args.require_complete,
+            output_format=args.format,
+        )
         if args.format == "text":
             print(format_ledger_validation_text(validation))
         else:

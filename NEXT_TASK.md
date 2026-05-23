@@ -107,6 +107,7 @@ Latest bounded improvement completed:
 - `scripts/record_operator_correction.py --smoke-check --format text` now verifies text-mode generated dry-run and append commands keep `--format text`, so operator work orders continue producing readable confirmations instead of silently falling back to JSON
 - `scripts/record_operator_correction.py --smoke-check --format text` now verifies note-bearing append shortcut and fixed-item command groups keep `--operator-note`, stale-capture guards, text output, and queue identity guards before capture
 - `scripts/record_operator_correction.py --smoke-check` now honors the requested output format, so the default JSON smoke check verifies generated commands stay machine-readable while `--format text` still verifies text-mode command preservation
+- `scripts/record_operator_correction.py --validate-ledger` now preserves the requested output format in its printed next-missing command, and the smoke check verifies JSON validation stays machine-readable while text validation stays operator-readable
 
 ## Constraints
 
