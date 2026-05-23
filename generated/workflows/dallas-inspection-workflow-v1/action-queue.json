@@ -5,32 +5,32 @@
   "source_eval_dir": "generated/evals/dallas-electrician-import-sample-v2",
   "workflow_type": "reviewed-inspection-action-queue",
   "summary": {
-    "queue_items": 72,
+    "queue_items": 73,
     "priority_counts": {
       "high": 6,
-      "medium": 66
+      "medium": 67
     },
     "trigger_result_counts": {
       "fail": 6,
       "not_ready": 4,
-      "partial": 62
+      "partial": 63
     },
     "recommended_action_counts": {
       "add_labels_or_documentation": 6,
-      "complete_remaining_work": 47,
+      "complete_remaining_work": 48,
       "correct_grounding_or_bonding": 4,
       "correct_panel_or_service": 2,
       "correct_wiring_or_devices": 12,
       "ensure_site_access": 7,
-      "schedule_reinspection": 70
+      "schedule_reinspection": 71
     }
   },
   "operator_correction_summary": {
     "ledger_path": "generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl",
-    "total_events": 72,
-    "queue_items_with_corrections": 72,
+    "total_events": 73,
+    "queue_items_with_corrections": 73,
     "decision_counts": {
-      "accepted": 69,
+      "accepted": 70,
       "edited": 3
     },
     "invalid_lines": 0,
@@ -686,12 +686,21 @@
           "complete_remaining_work",
           "schedule_reinspection"
         ]
+      },
+      "workflow-item:dallas:next-action:0073": {
+        "correction_id": "operator-correction:20260523T234012000000Z:0073",
+        "captured_at": "2026-05-23T23:40:12Z",
+        "decision": "accepted",
+        "corrected_actions": [
+          "complete_remaining_work",
+          "schedule_reinspection"
+        ]
       }
     }
   },
   "operator_correction_patterns": {
     "source": "latest accepted operator correction per current queue item",
-    "accepted_latest_corrections": 69,
+    "accepted_latest_corrections": 70,
     "accepted_pattern_count": 6,
     "patterns": [
       {
@@ -703,7 +712,7 @@
           "Complete remaining work",
           "Schedule reinspection"
         ],
-        "queue_item_count": 47,
+        "queue_item_count": 48,
         "queue_item_ids": [
           "workflow-item:dallas:next-action:0006",
           "workflow-item:dallas:next-action:0014",
@@ -751,7 +760,8 @@
           "workflow-item:dallas:next-action:0069",
           "workflow-item:dallas:next-action:0070",
           "workflow-item:dallas:next-action:0071",
-          "workflow-item:dallas:next-action:0072"
+          "workflow-item:dallas:next-action:0072",
+          "workflow-item:dallas:next-action:0073"
         ],
         "source_permit_numbers": [
           "ELP-2026-0203",
@@ -800,19 +810,20 @@
           "ELZ-2026-0270",
           "ELZ-2026-0271",
           "ELZ-2026-0272",
-          "ELZ-2026-0273"
+          "ELZ-2026-0273",
+          "ELZ-2026-0274"
         ],
         "trigger_result_counts": {
-          "partial": 47
+          "partial": 48
         },
         "failure_reason_counts": {
-          "incomplete_work": 47
+          "incomplete_work": 48
         },
         "inspection_type_counts": {
-          "rough_in": 47
+          "rough_in": 48
         },
         "observed_followup_result_counts": {
-          "pass": 47
+          "pass": 48
         },
         "operator_note_examples": [
           "Accepted from fixture review: follow-up shows remaining trim complete and branch repairs accepted, matching the recommended remaining-work completion and reinspection actions.",
@@ -4136,6 +4147,49 @@
       "evidence": [
         "Pantry closet branch wiring repaired but replacement toe-kick lighting and cover trim remained incomplete before rough-in approval.",
         "2026-05-23 correction_followup -> pass: Replacement toe-kick lighting installed and cover trim completed for approval."
+      ]
+    },
+    {
+      "queue_item_id": "workflow-item:dallas:next-action:0073",
+      "permit_id": "permit:dallas:elz-2026-0274",
+      "source_permit_number": "ELZ-2026-0274",
+      "permit_status": "finaled",
+      "permit_type_normalized": "electrical_repair",
+      "property": {
+        "property_id": "property:3412-s-ewing-ave-dallas-tx-75216",
+        "normalized_address": "3412 S EWING AVE DALLAS TX 75216",
+        "zip_code": "75216"
+      },
+      "contractor": {
+        "contractor_id": "contractor:dallas:cedars-south-electric",
+        "name": "Cedars South Electric"
+      },
+      "trigger_inspection": {
+        "inspection_id": "inspection:dallas:elz-2026-0274:2026-05-22:rough_in",
+        "inspection_date": "2026-05-22",
+        "inspection_type_normalized": "rough_in",
+        "result_normalized": "partial",
+        "failure_reason_normalized": "incomplete_work",
+        "notes_raw": "Rear pantry closet branch wiring repaired but replacement accent lighting and cover trim remained incomplete before rough-in approval."
+      },
+      "recommended_actions": [
+        "complete_remaining_work",
+        "schedule_reinspection"
+      ],
+      "recommended_action_labels": [
+        "Complete remaining work",
+        "Schedule reinspection"
+      ],
+      "priority": "medium",
+      "expected_followup": {
+        "inspection_date": "2026-05-23",
+        "inspection_type_normalized": "correction_followup",
+        "result_normalized": "pass",
+        "notes_raw": "Replacement accent lighting installed and cover trim completed for approval."
+      },
+      "evidence": [
+        "Rear pantry closet branch wiring repaired but replacement accent lighting and cover trim remained incomplete before rough-in approval.",
+        "2026-05-23 correction_followup -> pass: Replacement accent lighting installed and cover trim completed for approval."
       ]
     }
   ]
