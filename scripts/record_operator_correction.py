@@ -738,9 +738,10 @@ def command_arg_value(command: Any, arg: str) -> str | None:
 
 def command_group_failures(
     commands: Any,
-    expected_next_missing_id: str,
+    expected_next_missing_id: str | None,
     should_be_dry_run: bool,
     require_note: bool = False,
+    expected_queue_item_id: str | None = None,
 ) -> list[str]:
     if not isinstance(commands, dict):
         return ["command group is missing"]
@@ -756,8 +757,13 @@ def command_group_failures(
         if not isinstance(command, str):
             failures.append(f"{decision} command is missing")
             continue
-        if command_arg_value(command, "--expected-next-missing-id") != expected_next_missing_id:
+        if (
+            expected_next_missing_id
+            and command_arg_value(command, "--expected-next-missing-id") != expected_next_missing_id
+        ):
             failures.append(f"{decision} command missing expected next-missing ID")
+        if expected_queue_item_id and command_arg_value(command, "--queue-item-id") != expected_queue_item_id:
+            failures.append(f"{decision} command missing fixed queue item ID")
         if not command_has_arg(command, "--require-missing"):
             failures.append(f"{decision} command missing --require-missing")
         has_dry_run = command_has_arg(command, "--dry-run")
@@ -1213,6 +1219,65 @@ def operator_correction_smoke_check(queue_path: Path, ledger_path: Path) -> dict
                 "and edited action template"
                 if not append_failures
                 else "; ".join(append_failures)
+            ),
+        )
+
+        dry_run_fixed = commands.get("dry_run", {})
+        dry_run_fixed_with_note = commands.get("dry_run_with_note", {})
+        append_fixed = commands.get("append", {})
+
+        fixed_dry_run_failures = command_group_failures(
+            dry_run_fixed,
+            None,
+            should_be_dry_run=True,
+            expected_queue_item_id=queue_item_id,
+        )
+        add_smoke_check(
+            checks,
+            "guarded_dry_run_fixed_item",
+            not fixed_dry_run_failures,
+            (
+                "accepted/rejected/edited fixed-item dry-runs include queue item ID, "
+                "require-missing, dry-run guards, and edited action template"
+                if not fixed_dry_run_failures
+                else "; ".join(fixed_dry_run_failures)
+            ),
+        )
+
+        note_fixed_failures = command_group_failures(
+            dry_run_fixed_with_note,
+            None,
+            should_be_dry_run=True,
+            require_note=True,
+            expected_queue_item_id=queue_item_id,
+        )
+        add_smoke_check(
+            checks,
+            "note_dry_run_fixed_item",
+            not note_fixed_failures,
+            (
+                "accepted/rejected/edited fixed-item note dry-runs keep queue item ID, "
+                "operator-note, and dry-run flags"
+                if not note_fixed_failures
+                else "; ".join(note_fixed_failures)
+            ),
+        )
+
+        fixed_append_failures = command_group_failures(
+            append_fixed,
+            None,
+            should_be_dry_run=False,
+            expected_queue_item_id=queue_item_id,
+        )
+        add_smoke_check(
+            checks,
+            "guarded_append_fixed_item",
+            not fixed_append_failures,
+            (
+                "accepted/rejected/edited fixed-item appends include queue item ID, "
+                "require-missing guards, and edited action template"
+                if not fixed_append_failures
+                else "; ".join(fixed_append_failures)
             ),
         )
 

@@ -103,6 +103,7 @@ Latest bounded improvement completed:
 - `scripts/record_operator_correction.py --next-missing --format text` now prints note-bearing dry-run shortcut and fixed-item command groups, so an operator can validate the exact note-carrying Dallas correction before appending it
 - `scripts/record_operator_correction.py --smoke-check --format text` now runs a non-mutating readiness check for the Dallas operator-correction path, including ledger validation, guarded next-missing command checks, and accepted/rejected/edited dry-run event construction
 - `scripts/record_operator_correction.py --smoke-check --format text` now verifies accepted/rejected/edited next-missing command guard groups, edited-action templates, and note dry-runs instead of only checking the accepted shortcut path
+- `scripts/record_operator_correction.py --smoke-check --format text` now also verifies fixed-item dry-run and append command groups keep the selected queue item ID, stale-capture guards, note placeholders, and edited-action templates
 
 ## Constraints
 
