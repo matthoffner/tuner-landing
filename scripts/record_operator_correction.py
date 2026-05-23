@@ -371,6 +371,23 @@ def ledger_validation(
                 "reference_actions",
                 "reference_actions do not match the current queue recommendation",
             )
+        if item:
+            trigger = item.get("trigger_inspection")
+            if not isinstance(trigger, dict):
+                trigger = {}
+            expected_context = {
+                "permit_id": item.get("permit_id"),
+                "inspection_id": trigger.get("inspection_id"),
+                "source_permit_number": item.get("source_permit_number"),
+            }
+            for field, expected_value in expected_context.items():
+                if isinstance(expected_value, str) and event.get(field) != expected_value:
+                    add_issue(
+                        event_number,
+                        event,
+                        field,
+                        f"{field} does not match the current queue item",
+                    )
 
         unknown_actions = sorted(action for action in corrected_actions if action not in known_action_ids)
         if unknown_actions:
@@ -1607,6 +1624,49 @@ def operator_correction_smoke_check(
             "stale_capture_guard",
             stale_guard_passed,
             stale_guard_detail,
+        )
+
+        context_guard_detail = "ledger validation rejected stale permit/inspection context"
+        context_guard_passed = False
+        stale_context_event = build_operator_correction_event(
+            {
+                "queue_item_id": queue_item_id,
+                "decision": "accepted",
+                "operator_note": "smoke check stale context",
+                "source": "operator-correction-smoke-check",
+            },
+            queue_path,
+            captured_at="2026-01-01T00:00:10Z",
+        )
+        stale_context_event["inspection_id"] = "inspection:dallas:stale-context"
+        with tempfile.TemporaryDirectory(prefix="automoat-correction-context-smoke-") as tmpdir:
+            temp_ledger_path = Path(tmpdir) / "operator-corrections.jsonl"
+            temp_ledger_path.write_text(json.dumps(stale_context_event, sort_keys=True) + "\n", encoding="utf-8")
+            context_validation = ledger_validation(
+                queue_path,
+                temp_ledger_path,
+                output_format=output_format,
+            )
+            context_issues = context_validation.get("issues", [])
+            context_issue_fields = (
+                [issue.get("field") for issue in context_issues if isinstance(issue, dict)]
+                if isinstance(context_issues, list)
+                else []
+            )
+            context_guard_passed = (
+                context_validation.get("status") == "fail"
+                and "inspection_id" in context_issue_fields
+            )
+            if not context_guard_passed:
+                context_guard_detail = (
+                    "ledger validation allowed stale permit/inspection context: "
+                    f"{context_validation.get('status')} with fields {context_issue_fields}"
+                )
+        add_smoke_check(
+            checks,
+            "queue_context_guard",
+            context_guard_passed,
+            context_guard_detail,
         )
 
     failed_checks = [check for check in checks if check.get("status") != "pass"]

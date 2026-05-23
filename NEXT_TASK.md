@@ -114,6 +114,7 @@ Latest bounded improvement completed:
 - `scripts/record_operator_correction.py --smoke-check` now verifies stale-capture rejection against a temporary correction ledger, so the non-mutating readiness check proves `--require-missing` behavior before a Dallas operator writes to the real ledger
 - `scripts/record_operator_correction.py --smoke-check` now verifies stale expected-ID rejection for `--use-next-missing`, so the non-mutating readiness check proves shortcut work orders fail if the first missing Dallas queue item changed before capture
 - `scripts/record_operator_correction.py --smoke-check` now verifies the strict completion gate rejects incomplete Dallas correction coverage, so readiness checks prove `--validate-ledger --require-complete` fails until every queue item has a captured operator decision
+- `scripts/record_operator_correction.py --validate-ledger` now rejects stale permit, inspection, or source permit context in captured correction events, and the smoke check verifies that guard with a temporary ledger before an operator records real Dallas corrections
 
 ## Constraints
 

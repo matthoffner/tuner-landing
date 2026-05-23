@@ -4,6 +4,10 @@ Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
 - lane: editor
+- status: tightened Dallas operator-correction ledger context validation; `scripts/record_operator_correction.py --validate-ledger` now rejects captured correction events whose permit ID, inspection ID, or source permit number no longer matches the current queue item, and `--smoke-check` verifies that stale-context guard with a temporary ledger
+- files: scripts/record_operator_correction.py, README.md, NEXT_TASK.md, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- next: run `python3 scripts/record_operator_correction.py --smoke-check`, then `python3 scripts/record_operator_correction.py --smoke-check --format text`, then use `python3 scripts/record_operator_correction.py --next-missing --format text` to dry-run and append the reviewed accepted/rejected/edited Dallas decision
+- lane: editor
 - status: tightened Dallas operator-correction smoke coverage for the strict completion gate; `scripts/record_operator_correction.py --smoke-check` now verifies `--validate-ledger --require-complete` rejects incomplete correction coverage while queue items are still missing decisions
 - files: scripts/record_operator_correction.py, README.md, NEXT_TASK.md, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
 - next: run `python3 scripts/record_operator_correction.py --smoke-check`, then `python3 scripts/record_operator_correction.py --smoke-check --format text`, then use `python3 scripts/record_operator_correction.py --next-missing --format text` to dry-run and append the reviewed accepted/rejected/edited Dallas decision
