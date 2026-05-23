@@ -86,6 +86,11 @@ def correction_summary(ledger_path: Path = DEFAULT_LEDGER_PATH) -> dict[str, Any
     }
 
 
+def correction_id_exists(correction_id: str, ledger_path: Path = DEFAULT_LEDGER_PATH) -> bool:
+    events, _invalid_lines = read_correction_events(ledger_path)
+    return any(event.get("correction_id") == correction_id for event in events)
+
+
 def queue_item_index(queue_path: Path = DEFAULT_QUEUE_PATH) -> dict[str, dict[str, Any]]:
     queue_payload = read_json(queue_path)
     queue = queue_payload.get("queue", [])
@@ -196,6 +201,9 @@ def append_operator_correction(
     captured_at: str | None = None,
 ) -> dict[str, Any]:
     event = build_operator_correction_event(payload, queue_path, captured_at)
+    correction_id = event.get("correction_id")
+    if isinstance(correction_id, str) and correction_id_exists(correction_id, ledger_path):
+        raise ValueError(f"duplicate correction_id: {correction_id}")
     ledger_path.parent.mkdir(parents=True, exist_ok=True)
     with ledger_path.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(event, sort_keys=True) + "\n")
