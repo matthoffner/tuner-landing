@@ -1033,6 +1033,34 @@ def raw_file_append_work_order(raw_dir, next_append_rows, append_csv_templates):
     return work_order
 
 
+def raw_file_append_sequence(append_work_order):
+    if not isinstance(append_work_order, dict):
+        return []
+
+    sequence = []
+    for file_name in RAW_IMPORT_FILE_NAMES:
+        item = append_work_order.get(file_name)
+        if not isinstance(item, dict):
+            sequence.append(
+                {
+                    "file_name": file_name,
+                    "status": "missing",
+                }
+            )
+            continue
+        sequence.append(
+            {
+                "file_name": file_name,
+                "status": "ready",
+                "file_path": item.get("file_path"),
+                "csv_row_number": item.get("csv_row_number"),
+                "header_line": item.get("header_line"),
+                "template_line": item.get("template_line"),
+            }
+        )
+    return sequence
+
+
 def raw_file_required_field_gaps(raw_dir, required_fields_by_file):
     resolved_raw_dir = repo_path(raw_dir)
     gaps = {}
@@ -1237,6 +1265,7 @@ def raw_handoff_verification(raw_dir, summary_path=SUMMARY_JSON_PATH):
         current_next_append_rows,
         current_append_csv_templates,
     )
+    current_append_sequence = raw_file_append_sequence(current_append_work_order)
     checks = {
         "summary_available": False,
         "next_import_record_handoff_available": False,
@@ -1292,9 +1321,11 @@ def raw_handoff_verification(raw_dir, summary_path=SUMMARY_JSON_PATH):
         "computed_raw_file_next_append_rows": current_next_append_rows,
         "computed_raw_file_append_csv_templates": current_append_csv_templates,
         "computed_raw_file_append_work_order": current_append_work_order,
+        "computed_raw_file_append_sequence": current_append_sequence,
         "expected_raw_file_next_append_rows": {},
         "expected_raw_file_append_csv_templates": {},
         "expected_raw_file_append_work_order": {},
+        "expected_raw_file_append_sequence": [],
         "after_edit_command": REQUIRE_READY_COMMAND,
         "next_step": (
             "Resolve raw handoff verification blockers or regenerate the summary-only "
@@ -1403,6 +1434,9 @@ def raw_handoff_verification(raw_dir, summary_path=SUMMARY_JSON_PATH):
     verification["expected_raw_file_append_work_order"] = handoff.get(
         "raw_file_append_work_order",
         {},
+    )
+    verification["expected_raw_file_append_sequence"] = raw_file_append_sequence(
+        verification["expected_raw_file_append_work_order"],
     )
     verification["after_edit_command"] = handoff.get(
         "after_edit_command",
@@ -2943,6 +2977,24 @@ def print_raw_handoff_verification(verification, output_format="text"):
         "expected_append_work_order: "
         f"{json.dumps(verification.get('expected_raw_file_append_work_order', {}), sort_keys=True)}"
     )
+    print("expected_append_sequence:")
+    sequence = verification.get("expected_raw_file_append_sequence", [])
+    if not sequence:
+        print("  (none)")
+    for item in sequence:
+        if not isinstance(item, dict):
+            continue
+        file_name = item.get("file_name")
+        status = item.get("status")
+        if status != "ready":
+            print(f"  - {file_name}: {status}")
+            continue
+        print(
+            f"  - {file_name}: file={item.get('file_path')} "
+            f"row={item.get('csv_row_number')}"
+        )
+        print(f"    header_line: {item.get('header_line')}")
+        print(f"    template_line: {item.get('template_line')}")
     print(f"after_raw_csv_edits: {verification.get('after_edit_command')}")
     print(f"next_step: {verification.get('next_step')}")
 
