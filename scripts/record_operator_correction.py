@@ -1147,6 +1147,27 @@ def next_missing_correction(
     }
 
 
+def resolve_next_missing_queue_item_id(
+    queue_path: Path,
+    ledger_path: Path,
+    expected_next_missing_id: str | None = None,
+) -> str:
+    next_missing = next_missing_correction(queue_path, ledger_path)
+    item = next_missing.get("item")
+    if not isinstance(item, dict) or not isinstance(item.get("queue_item_id"), str):
+        raise ValueError("No queue items are missing corrections")
+
+    queue_item_id = item["queue_item_id"]
+    expected_queue_item_id = str(expected_next_missing_id or "").strip()
+    if expected_queue_item_id and queue_item_id != expected_queue_item_id:
+        raise ValueError(
+            "next missing queue item changed; "
+            f"expected {expected_queue_item_id}, found {queue_item_id}. "
+            "Regenerate the work order before recording a correction."
+        )
+    return queue_item_id
+
+
 def add_smoke_check(checks: list[dict[str, Any]], name: str, passed: bool, detail: str) -> None:
     checks.append({"name": name, "status": "pass" if passed else "fail", "detail": detail})
 
@@ -1504,6 +1525,23 @@ def operator_correction_smoke_check(
             "; ".join(event_failures) if event_failures else "accepted/rejected/edited events build",
         )
 
+        expected_guard_passed = False
+        expected_guard_detail = "stale expected-ID guard rejected a changed next-missing item"
+        stale_expected_id = f"{queue_item_id}:stale"
+        try:
+            resolve_next_missing_queue_item_id(queue_path, ledger_path, stale_expected_id)
+            expected_guard_detail = "stale expected-ID guard allowed a changed next-missing item"
+        except ValueError as exc:
+            expected_guard_passed = "next missing queue item changed" in str(exc)
+            if not expected_guard_passed:
+                expected_guard_detail = str(exc)
+        add_smoke_check(
+            checks,
+            "expected_next_missing_guard",
+            expected_guard_passed,
+            expected_guard_detail,
+        )
+
         stale_guard_detail = "stale capture guard rejected a captured queue item"
         stale_guard_passed = False
         stale_guard_event = build_operator_correction_event(
@@ -1655,18 +1693,17 @@ def main() -> int:
 
     queue_item_id = args.queue_item_id
     if args.use_next_missing:
-        next_missing = next_missing_correction(args.queue_path, args.ledger_path)
-        item = next_missing.get("item")
-        if not isinstance(item, dict) or not isinstance(item.get("queue_item_id"), str):
-            raise SystemExit("No queue items are missing corrections")
-        queue_item_id = item["queue_item_id"]
-        expected_queue_item_id = str(args.expected_next_missing_id or "").strip()
-        if expected_queue_item_id and queue_item_id != expected_queue_item_id:
-            raise SystemExit(
-                "error: next missing queue item changed; "
-                f"expected {expected_queue_item_id}, found {queue_item_id}. "
-                "Regenerate the work order before recording a correction."
+        try:
+            queue_item_id = resolve_next_missing_queue_item_id(
+                args.queue_path,
+                args.ledger_path,
+                args.expected_next_missing_id,
             )
+        except ValueError as exc:
+            message = str(exc)
+            if message.startswith("No queue items"):
+                raise SystemExit(message) from exc
+            raise SystemExit(f"error: {message}") from exc
 
     if args.require_missing and queue_item_id:
         try:

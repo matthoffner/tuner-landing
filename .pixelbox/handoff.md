@@ -4,6 +4,10 @@ Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
 - lane: editor
+- status: tightened Dallas operator-correction smoke coverage for stale next-missing shortcuts; `scripts/record_operator_correction.py --smoke-check` now verifies `--use-next-missing` rejects a stale `--expected-next-missing-id`, and the CLI capture path uses the same resolver
+- files: scripts/record_operator_correction.py, README.md, NEXT_TASK.md, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- next: run `python3 scripts/record_operator_correction.py --smoke-check`, then `python3 scripts/record_operator_correction.py --smoke-check --format text`, then use `python3 scripts/record_operator_correction.py --next-missing --format text` to dry-run and append the reviewed accepted/rejected/edited Dallas decision
+- lane: editor
 - status: tightened Dallas operator-correction smoke coverage for next-missing follow-up commands; `scripts/record_operator_correction.py --smoke-check` now verifies the validation and completion commands printed by `--next-missing` preserve JSON versus text output mode
 - files: scripts/record_operator_correction.py, README.md, NEXT_TASK.md, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
 - next: run `python3 scripts/record_operator_correction.py --smoke-check`, then `python3 scripts/record_operator_correction.py --smoke-check --format text`, then use `python3 scripts/record_operator_correction.py --next-missing --format text` to dry-run and append the reviewed accepted/rejected/edited Dallas decision

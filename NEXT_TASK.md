@@ -112,6 +112,7 @@ Latest bounded improvement completed:
 - `scripts/record_operator_correction.py --smoke-check` now verifies `--next-missing` validation and completion follow-up commands preserve the requested output format, so work orders cannot drift between JSON automation and text operator modes at the final check
 - `scripts/record_operator_correction.py --smoke-check` now verifies next-missing shortcut commands actually use `--use-next-missing` and fixed-item commands stay on `--queue-item-id`, so generated Dallas work orders cannot blur shortcut and fixed capture modes
 - `scripts/record_operator_correction.py --smoke-check` now verifies stale-capture rejection against a temporary correction ledger, so the non-mutating readiness check proves `--require-missing` behavior before a Dallas operator writes to the real ledger
+- `scripts/record_operator_correction.py --smoke-check` now verifies stale expected-ID rejection for `--use-next-missing`, so the non-mutating readiness check proves shortcut work orders fail if the first missing Dallas queue item changed before capture
 
 ## Constraints
 
