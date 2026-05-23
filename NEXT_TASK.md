@@ -157,6 +157,7 @@ Latest bounded improvement completed:
 - `scripts/record_operator_correction.py --summary` now also exposes the last durable Dallas import-readiness snapshot from `generated/pipeline/dallas-import-pipeline-summary-v1/summary.json` after correction coverage is complete, so operators can see the last `ready`/`blocked` state before rerunning the summary-only readiness gate
 - `scripts/record_operator_correction.py --summary` now includes the last durable Dallas import counts, accepted pattern count, and coverage thin counts inside `last_import_readiness_summary`, and text summaries print those counts before the summary-only readiness rerun
 - `scripts/record_operator_correction.py --summary` now includes coverage thin group names inside `last_import_readiness_summary` and prints them in text summaries, so a completed Dallas correction pass can show exact import-readiness coverage gaps without opening the full coverage report
+- `scripts/record_operator_correction.py --summary` now includes a `next_import_record_handoff` with the raw Dallas CSV files to edit next plus the full `--require-ready` refresh command, so completed correction output points directly from operator capture to the next permit-data import pass
 
 ## Constraints
 

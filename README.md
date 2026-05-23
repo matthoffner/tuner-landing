@@ -44,7 +44,7 @@ Created from Pixelbox.
 - Dallas next missing correction work order: `python3 scripts/record_operator_correction.py --next-missing --format text`
 - Dallas next missing correction text dry-run: `python3 scripts/record_operator_correction.py --use-next-missing --expected-next-missing-id <queue-item-id> --decision accepted --require-missing --dry-run --format text`
 - Dallas next missing correction recorder: `python3 scripts/record_operator_correction.py --use-next-missing --expected-next-missing-id <queue-item-id> --decision accepted --require-missing --format text`
-- Dallas operator-correction progress summary: `python3 scripts/record_operator_correction.py --summary --format text`
+- Dallas operator-correction progress summary and next import raw-file handoff: `python3 scripts/record_operator_correction.py --summary --format text`
 - Dallas accepted correction patterns: `python3 scripts/record_operator_correction.py --list-patterns --format text`
 - Dallas operator-correction JSON smoke check: `python3 scripts/record_operator_correction.py --smoke-check`
 - Dallas operator-correction text smoke check: `python3 scripts/record_operator_correction.py --smoke-check --format text`

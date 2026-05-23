@@ -540,3 +540,7 @@ Use this file to coordinate between editor/runtime lanes.
 - status: added the durable Dallas import-readiness next step to completed operator-correction summaries
 - files: scripts/record_operator_correction.py, .automoat/logs/agent-journal.md
 - next: rerun `python3 scripts/record_operator_correction.py --summary --format text` after future correction captures to see the readiness counts, thin groups, and next import-data handoff in one place
+- lane: editor
+- status: added a raw Dallas CSV handoff to completed operator-correction summaries; `scripts/record_operator_correction.py --summary` now includes `last_import_readiness_summary.next_import_record_handoff` with the raw import directory, `permits.csv`, `inspections.csv`, `contractors.csv`, `rule_documents.csv`, the full `--require-ready` refresh command, and the JSON readiness check, while text summaries print the raw files and post-edit command
+- files: scripts/record_operator_correction.py, README.md, NEXT_TASK.md, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- next: start from `python3 scripts/record_operator_correction.py --summary --format text`; after adding real Dallas rows to the printed raw CSV files, run `python3 scripts/run_dallas_import_pipeline.py --require-ready` and then inspect the printed summary-only JSON readiness gate

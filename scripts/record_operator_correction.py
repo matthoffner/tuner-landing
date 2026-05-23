@@ -33,8 +33,16 @@ IMPORT_READINESS_COMMAND = (
 IMPORT_READINESS_JSON_COMMAND = (
     "python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json"
 )
+IMPORT_REFRESH_COMMAND = "python3 scripts/run_dallas_import_pipeline.py --require-ready"
 IMPORT_READINESS_SUMMARY_PATH = (
     ROOT / "generated" / "pipeline" / "dallas-import-pipeline-summary-v1" / "summary.json"
+)
+DEFAULT_IMPORT_RAW_DIR = ROOT / "generated" / "raw" / "dallas-electrician-import-sample-v2"
+RAW_IMPORT_FILE_NAMES = (
+    "permits.csv",
+    "inspections.csv",
+    "contractors.csv",
+    "rule_documents.csv",
 )
 IMPORT_COUNT_FIELDS = (
     "permits",
@@ -368,6 +376,38 @@ def import_readiness_snapshot_context(summary: dict[str, Any]) -> dict[str, Any]
     }
 
 
+def next_import_record_handoff(summary: dict[str, Any] | None = None) -> dict[str, Any]:
+    inputs = summary.get("inputs") if isinstance(summary, dict) else {}
+    if not isinstance(inputs, dict):
+        inputs = {}
+    raw_dir = inputs.get("raw_dir")
+    if not isinstance(raw_dir, str) or not raw_dir.strip():
+        raw_dir = display_path(DEFAULT_IMPORT_RAW_DIR)
+    raw_dir = raw_dir.rstrip("/")
+    return {
+        "raw_dir": raw_dir,
+        "raw_files": [f"{raw_dir}/{file_name}" for file_name in RAW_IMPORT_FILE_NAMES],
+        "after_edit_command": IMPORT_REFRESH_COMMAND,
+        "readiness_check_command": IMPORT_READINESS_JSON_COMMAND,
+    }
+
+
+def next_import_record_handoff_is_valid(handoff: Any) -> bool:
+    if not isinstance(handoff, dict):
+        return False
+    raw_dir = handoff.get("raw_dir")
+    raw_files = handoff.get("raw_files")
+    return (
+        isinstance(raw_dir, str)
+        and bool(raw_dir.strip())
+        and isinstance(raw_files, list)
+        and len(raw_files) == len(RAW_IMPORT_FILE_NAMES)
+        and all(isinstance(raw_file, str) and raw_file.endswith(".csv") for raw_file in raw_files)
+        and handoff.get("after_edit_command") == IMPORT_REFRESH_COMMAND
+        and handoff.get("readiness_check_command") == IMPORT_READINESS_JSON_COMMAND
+    )
+
+
 def import_readiness_snapshot(path: Path = IMPORT_READINESS_SUMMARY_PATH) -> dict[str, Any]:
     summary_path = display_path(path)
     report_path = display_path(path.with_name("summary.md"))
@@ -386,6 +426,7 @@ def import_readiness_snapshot(path: Path = IMPORT_READINESS_SUMMARY_PATH) -> dic
             "coverage_thin_counts": {},
             "coverage_thin_groups": {},
             "accepted_pattern_count": None,
+            "next_import_record_handoff": next_import_record_handoff(),
         }
 
     try:
@@ -406,6 +447,7 @@ def import_readiness_snapshot(path: Path = IMPORT_READINESS_SUMMARY_PATH) -> dic
             "coverage_thin_counts": {},
             "coverage_thin_groups": {},
             "accepted_pattern_count": None,
+            "next_import_record_handoff": next_import_record_handoff(),
         }
 
     snapshot_context = import_readiness_snapshot_context(summary)
@@ -421,6 +463,7 @@ def import_readiness_snapshot(path: Path = IMPORT_READINESS_SUMMARY_PATH) -> dic
             "summary_report_path": report_path,
             "refresh_command": IMPORT_READINESS_COMMAND,
             "refresh_json_command": IMPORT_READINESS_JSON_COMMAND,
+            "next_import_record_handoff": next_import_record_handoff(summary),
             **snapshot_context,
         }
 
@@ -439,6 +482,7 @@ def import_readiness_snapshot(path: Path = IMPORT_READINESS_SUMMARY_PATH) -> dic
         or IMPORT_READINESS_COMMAND,
         "refresh_json_command": readiness.get("summary_only_require_ready_json_command")
         or IMPORT_READINESS_JSON_COMMAND,
+        "next_import_record_handoff": next_import_record_handoff(summary),
         **snapshot_context,
     }
 
@@ -953,6 +997,16 @@ def format_coverage_thin_groups(groups: Any) -> str:
     return "; ".join(labels) if labels else "(none)"
 
 
+def format_raw_import_files(handoff: Any) -> str:
+    if not isinstance(handoff, dict):
+        return "(none)"
+    raw_files = handoff.get("raw_files")
+    if not isinstance(raw_files, list):
+        return "(none)"
+    files = [raw_file for raw_file in raw_files if isinstance(raw_file, str) and raw_file]
+    return ", ".join(files) if files else "(none)"
+
+
 def format_decision_counts(counts: Any) -> str:
     if not isinstance(counts, dict) or not counts:
         return "(none)"
@@ -1123,6 +1177,15 @@ def format_progress_text(progress: dict[str, Any]) -> str:
             next_step = readiness.get("next_step")
             if isinstance(next_step, str) and next_step.strip():
                 lines.append(f"Last import readiness next step: {next_step}")
+            next_import_handoff = readiness.get("next_import_record_handoff")
+            if isinstance(next_import_handoff, dict):
+                lines.append(
+                    "Next import raw files: "
+                    f"{format_raw_import_files(next_import_handoff)}"
+                )
+                after_edit_command = next_import_handoff.get("after_edit_command")
+                if isinstance(after_edit_command, str) and after_edit_command.strip():
+                    lines.append(f"After raw CSV edits: {after_edit_command}")
     lines.append(f"Validate ledger: {progress.get('validation_command')}")
     lines.append(f"Completion gate: {progress.get('completion_validation_command')}")
     return "\n".join(lines)
@@ -1747,8 +1810,10 @@ def operator_correction_smoke_check(
         latest_import_counts = readiness_snapshot.get("latest_import_counts", {})
         coverage_thin_counts = readiness_snapshot.get("coverage_thin_counts", {})
         coverage_thin_groups = readiness_snapshot.get("coverage_thin_groups", {})
+        import_record_handoff = readiness_snapshot.get("next_import_record_handoff")
+        import_record_handoff_passed = next_import_record_handoff_is_valid(import_record_handoff)
         if readiness_status in {"missing", "unreadable", "unavailable"}:
-            readiness_snapshot_counts_passed = True
+            readiness_snapshot_counts_passed = import_record_handoff_passed
         else:
             readiness_snapshot_counts_passed = (
                 isinstance(latest_import_counts, dict)
@@ -1767,6 +1832,7 @@ def operator_correction_smoke_check(
                 and isinstance(readiness_snapshot.get("accepted_pattern_count"), int)
                 and isinstance(readiness_snapshot.get("next_step"), str)
                 and bool(readiness_snapshot.get("next_step", "").strip())
+                and import_record_handoff_passed
             )
     readiness_snapshot_passed = (
         isinstance(readiness_snapshot, dict)
@@ -1782,7 +1848,7 @@ def operator_correction_smoke_check(
         "progress_import_readiness_snapshot",
         readiness_snapshot_passed,
         (
-            "summary includes the last durable import-readiness snapshot, import counts, thin coverage groups, and next step after complete correction capture"
+            "summary includes the last durable import-readiness snapshot, import counts, thin coverage groups, next step, and raw CSV handoff after complete correction capture"
             if missing_count == 0
             else "summary with missing corrections does not expose the last import-readiness snapshot"
         ),
@@ -2298,6 +2364,10 @@ def format_smoke_check_text(smoke_check: dict[str, Any]) -> str:
         lines.append(
             "Last coverage thin groups: "
             f"{format_coverage_thin_groups(readiness.get('coverage_thin_groups'))}"
+        )
+        lines.append(
+            "Next import raw files: "
+            f"{format_raw_import_files(readiness.get('next_import_record_handoff'))}"
         )
     lines.append(f"Validate ledger: {smoke_check.get('validation_command')}")
     lines.append(f"Completion gate: {smoke_check.get('completion_validation_command')}")
