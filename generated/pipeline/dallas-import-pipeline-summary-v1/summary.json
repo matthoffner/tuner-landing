@@ -49,6 +49,45 @@
         "excluded_by_missing_title": 0
       }
     },
+    "raw_file_exclusion_examples": {
+      "permits.csv": [
+        {
+          "csv_row_number": 16,
+          "reason": "excluded_by_trade",
+          "row": {
+            "permit_number": "PLM-2026-0206",
+            "address": "410 W Jefferson Blvd",
+            "city": "Dallas",
+            "trade": "plumbing",
+            "work_class": "residential"
+          }
+        }
+      ],
+      "inspections.csv": [
+        {
+          "csv_row_number": 42,
+          "reason": "excluded_by_unimported_permit",
+          "row": {
+            "permit_number": "PLM-2026-0206",
+            "inspection_date": "2026-04-11",
+            "inspection_type": "Final",
+            "result": "Pass"
+          }
+        }
+      ],
+      "contractors.csv": [
+        {
+          "csv_row_number": 7,
+          "reason": "excluded_by_license_type",
+          "row": {
+            "registration_id": "REG-5206",
+            "name": "Oak Lawn Plumbing",
+            "license_type": "plumbing_contractor"
+          }
+        }
+      ],
+      "rule_documents.csv": []
+    },
     "raw_file_headers": {
       "permits.csv": [
         "permit_number",

@@ -41,6 +41,32 @@ RAW_IMPORT_FILE_NAMES = (
     "contractors.csv",
     "rule_documents.csv",
 )
+RAW_IMPORT_EXCLUSION_EXAMPLE_LIMIT = 5
+RAW_IMPORT_EXCLUSION_EXAMPLE_FIELDS = {
+    "permits.csv": (
+        "permit_number",
+        "address",
+        "city",
+        "trade",
+        "work_class",
+    ),
+    "inspections.csv": (
+        "permit_number",
+        "inspection_date",
+        "inspection_type",
+        "result",
+    ),
+    "contractors.csv": (
+        "registration_id",
+        "name",
+        "license_type",
+    ),
+    "rule_documents.csv": (
+        "title",
+        "document_type",
+        "effective_date",
+    ),
+}
 RAW_IMPORT_REQUIRED_FIELDS = {
     "permits.csv": [
         "permit_number",
@@ -156,6 +182,19 @@ def csv_dict_data_rows(path):
         return [
             row
             for row in reader
+            if any((value or "").strip() for value in row.values())
+        ]
+
+
+def csv_dict_data_rows_with_numbers(path):
+    resolved = repo_path(path)
+    if not resolved.exists():
+        return None
+    with resolved.open(newline="", encoding="utf-8") as handle:
+        reader = csv.DictReader(handle)
+        return [
+            (line_number, row)
+            for line_number, row in enumerate(reader, start=2)
             if any((value or "").strip() for value in row.values())
         ]
 
@@ -291,6 +330,109 @@ def raw_file_import_scope_counts(raw_dir):
     return counts
 
 
+def raw_row_snapshot(row, fields):
+    return {field: raw_cell(row, field) for field in fields}
+
+
+def add_raw_exclusion_example(examples, file_name, row_number, reason, row):
+    file_examples = examples.get(file_name)
+    if file_examples is None or len(file_examples) >= RAW_IMPORT_EXCLUSION_EXAMPLE_LIMIT:
+        return
+    file_examples.append(
+        {
+            "csv_row_number": row_number,
+            "reason": reason,
+            "row": raw_row_snapshot(
+                row,
+                RAW_IMPORT_EXCLUSION_EXAMPLE_FIELDS[file_name],
+            ),
+        }
+    )
+
+
+def raw_file_exclusion_examples(raw_dir):
+    resolved_raw_dir = repo_path(raw_dir)
+    permit_rows = csv_dict_data_rows_with_numbers(resolved_raw_dir / "permits.csv")
+    inspection_rows = csv_dict_data_rows_with_numbers(
+        resolved_raw_dir / "inspections.csv"
+    )
+    contractor_rows = csv_dict_data_rows_with_numbers(
+        resolved_raw_dir / "contractors.csv"
+    )
+    rule_document_rows = csv_dict_data_rows_with_numbers(
+        resolved_raw_dir / "rule_documents.csv"
+    )
+
+    rows_by_file = {
+        "permits.csv": permit_rows,
+        "inspections.csv": inspection_rows,
+        "contractors.csv": contractor_rows,
+        "rule_documents.csv": rule_document_rows,
+    }
+    examples = {
+        file_name: None if rows_by_file[file_name] is None else []
+        for file_name in RAW_IMPORT_FILE_NAMES
+    }
+
+    in_scope_permit_numbers = set()
+    if permit_rows is not None:
+        for row_number, row in permit_rows:
+            reason = None
+            if raw_cell_lower(row, "city") != "dallas":
+                reason = "excluded_by_city"
+            elif raw_cell_lower(row, "trade") != "electrical":
+                reason = "excluded_by_trade"
+            elif raw_cell_lower(row, "work_class") != "residential":
+                reason = "excluded_by_work_class"
+            else:
+                permit_number = raw_cell(row, "permit_number")
+                if permit_number:
+                    in_scope_permit_numbers.add(permit_number)
+            if reason:
+                add_raw_exclusion_example(
+                    examples,
+                    "permits.csv",
+                    row_number,
+                    reason,
+                    row,
+                )
+
+    if inspection_rows is not None:
+        for row_number, row in inspection_rows:
+            if raw_cell(row, "permit_number") not in in_scope_permit_numbers:
+                add_raw_exclusion_example(
+                    examples,
+                    "inspections.csv",
+                    row_number,
+                    "excluded_by_unimported_permit",
+                    row,
+                )
+
+    if contractor_rows is not None:
+        for row_number, row in contractor_rows:
+            if "electrical" not in raw_cell_lower(row, "license_type"):
+                add_raw_exclusion_example(
+                    examples,
+                    "contractors.csv",
+                    row_number,
+                    "excluded_by_license_type",
+                    row,
+                )
+
+    if rule_document_rows is not None:
+        for row_number, row in rule_document_rows:
+            if not raw_cell(row, "title"):
+                add_raw_exclusion_example(
+                    examples,
+                    "rule_documents.csv",
+                    row_number,
+                    "excluded_by_missing_title",
+                    row,
+                )
+
+    return examples
+
+
 def raw_file_optional_fields(headers_by_file, required_fields_by_file):
     optional_fields = {}
     for file_name in RAW_IMPORT_FILE_NAMES:
@@ -372,6 +514,7 @@ def next_import_record_handoff(raw_dir):
         ],
         "raw_file_row_counts": raw_file_row_counts(raw_dir),
         "raw_file_import_scope_counts": raw_file_import_scope_counts(raw_dir),
+        "raw_file_exclusion_examples": raw_file_exclusion_examples(raw_dir),
         "raw_file_headers": raw_headers,
         "raw_file_required_fields": raw_required_fields,
         "raw_file_optional_fields": raw_file_optional_fields(
@@ -657,6 +800,10 @@ def write_summary(summary):
         "raw_file_import_scope_counts",
         {},
     )
+    raw_exclusion_examples = next_import_handoff.get(
+        "raw_file_exclusion_examples",
+        {},
+    )
     raw_headers = next_import_handoff.get("raw_file_headers", {})
     raw_required_fields = next_import_handoff.get("raw_file_required_fields", {})
     raw_optional_fields = next_import_handoff.get("raw_file_optional_fields", {})
@@ -706,6 +853,23 @@ def write_summary(summary):
                 f"excluded: `{excluded_rows}`, "
                 f"reasons: {inline_counts(reason_counts)}"
             )
+        return labels
+
+    def inline_exclusion_examples(values):
+        if not isinstance(values, dict) or not values:
+            return ["- Raw CSV exclusion examples: none"]
+        labels = []
+        for file_name in RAW_IMPORT_FILE_NAMES:
+            examples = values.get(file_name)
+            if isinstance(examples, list) and examples:
+                labels.append(
+                    f"- `{file_name}` exclusion examples: "
+                    f"`{json.dumps(examples, sort_keys=False)}`"
+                )
+            elif isinstance(examples, list):
+                labels.append(f"- `{file_name}` exclusion examples: none")
+            else:
+                labels.append(f"- `{file_name}` exclusion examples: missing")
         return labels
 
     def inline_headers(values):
@@ -822,6 +986,7 @@ def write_summary(summary):
         f"- Next raw import files: {inline_list(next_import_handoff['raw_files'])}",
         f"- Next raw import row counts: {inline_row_counts(raw_row_counts)}",
         "- Next raw import scope counts: see Follow-Up",
+        "- Next raw import exclusion examples: see Follow-Up",
         "- Next raw import headers: see Follow-Up",
         "- Next raw import required fields: see Follow-Up",
         "- Next raw import optional fields: see Follow-Up",
@@ -998,6 +1163,8 @@ def write_summary(summary):
             ),
             "- Raw CSV import scope counts:",
             *inline_import_scope_counts(raw_import_scope_counts),
+            "- Raw CSV exclusion examples:",
+            *inline_exclusion_examples(raw_exclusion_examples),
             "- Raw CSV headers:",
             *inline_headers(raw_headers),
             "- Raw CSV required fields:",
@@ -1052,6 +1219,10 @@ def print_summary(summary, output_format="text"):
         "raw_file_import_scope_counts",
         {},
     )
+    raw_exclusion_examples = next_import_handoff.get(
+        "raw_file_exclusion_examples",
+        {},
+    )
     raw_headers = next_import_handoff.get("raw_file_headers", {})
     raw_required_fields = next_import_handoff.get("raw_file_required_fields", {})
     raw_optional_fields = next_import_handoff.get("raw_file_optional_fields", {})
@@ -1090,6 +1261,20 @@ def print_summary(summary, output_format="text"):
                 f"(excluded={scope.get('excluded_rows')}, "
                 f"reasons={json.dumps(reason_counts, sort_keys=True)})"
             )
+        return "; ".join(labels)
+
+    def format_exclusion_examples(values):
+        if not isinstance(values, dict) or not values:
+            return "none"
+        labels = []
+        for file_name in RAW_IMPORT_FILE_NAMES:
+            examples = values.get(file_name)
+            if isinstance(examples, list) and examples:
+                labels.append(f"{file_name}={json.dumps(examples, sort_keys=False)}")
+            elif isinstance(examples, list):
+                labels.append(f"{file_name}=none")
+            else:
+                labels.append(f"{file_name}=missing")
         return "; ".join(labels)
 
     def format_headers(values):
@@ -1227,6 +1412,10 @@ def print_summary(summary, output_format="text"):
     print(
         "  raw_import_scope_counts: "
         f"{format_import_scope_counts(raw_import_scope_counts)}"
+    )
+    print(
+        "  raw_import_exclusion_examples: "
+        f"{format_exclusion_examples(raw_exclusion_examples)}"
     )
     print(f"  raw_import_headers: {format_headers(raw_headers)}")
     print(f"  raw_import_required_fields: {format_required_fields(raw_required_fields)}")

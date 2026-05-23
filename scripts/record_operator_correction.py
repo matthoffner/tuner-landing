@@ -45,6 +45,32 @@ RAW_IMPORT_FILE_NAMES = (
     "contractors.csv",
     "rule_documents.csv",
 )
+RAW_IMPORT_EXCLUSION_EXAMPLE_LIMIT = 5
+RAW_IMPORT_EXCLUSION_EXAMPLE_FIELDS = {
+    "permits.csv": (
+        "permit_number",
+        "address",
+        "city",
+        "trade",
+        "work_class",
+    ),
+    "inspections.csv": (
+        "permit_number",
+        "inspection_date",
+        "inspection_type",
+        "result",
+    ),
+    "contractors.csv": (
+        "registration_id",
+        "name",
+        "license_type",
+    ),
+    "rule_documents.csv": (
+        "title",
+        "document_type",
+        "effective_date",
+    ),
+}
 RAW_IMPORT_REQUIRED_FIELDS = {
     "permits.csv": [
         "permit_number",
@@ -396,6 +422,21 @@ def csv_dict_data_rows(path: Path | str) -> list[dict[str, str]] | None:
         ]
 
 
+def csv_dict_data_rows_with_numbers(
+    path: Path | str,
+) -> list[tuple[int, dict[str, str]]] | None:
+    resolved = repo_path(path)
+    if not resolved.exists():
+        return None
+    with resolved.open(newline="", encoding="utf-8") as handle:
+        reader = csv.DictReader(handle)
+        return [
+            (line_number, row)
+            for line_number, row in enumerate(reader, start=2)
+            if any((value or "").strip() for value in row.values())
+        ]
+
+
 def raw_cell(row: dict[str, Any], field: str) -> str:
     return str(row.get(field) or "").strip()
 
@@ -527,6 +568,120 @@ def raw_import_file_import_scope_counts(
         counts["rule_documents.csv"] = rule_document_scope
 
     return counts
+
+
+def raw_import_row_snapshot(
+    row: dict[str, Any],
+    fields: tuple[str, ...],
+) -> dict[str, str]:
+    return {field: raw_cell(row, field) for field in fields}
+
+
+def add_raw_import_exclusion_example(
+    examples: dict[str, list[dict[str, Any]] | None],
+    file_name: str,
+    row_number: int,
+    reason: str,
+    row: dict[str, Any],
+) -> None:
+    file_examples = examples.get(file_name)
+    if file_examples is None or len(file_examples) >= RAW_IMPORT_EXCLUSION_EXAMPLE_LIMIT:
+        return
+    file_examples.append(
+        {
+            "csv_row_number": row_number,
+            "reason": reason,
+            "row": raw_import_row_snapshot(
+                row,
+                RAW_IMPORT_EXCLUSION_EXAMPLE_FIELDS[file_name],
+            ),
+        }
+    )
+
+
+def raw_import_file_exclusion_examples(
+    raw_dir: str,
+) -> dict[str, list[dict[str, Any]] | None]:
+    resolved_raw_dir = repo_path(raw_dir)
+    permit_rows = csv_dict_data_rows_with_numbers(resolved_raw_dir / "permits.csv")
+    inspection_rows = csv_dict_data_rows_with_numbers(
+        resolved_raw_dir / "inspections.csv"
+    )
+    contractor_rows = csv_dict_data_rows_with_numbers(
+        resolved_raw_dir / "contractors.csv"
+    )
+    rule_document_rows = csv_dict_data_rows_with_numbers(
+        resolved_raw_dir / "rule_documents.csv"
+    )
+
+    rows_by_file = {
+        "permits.csv": permit_rows,
+        "inspections.csv": inspection_rows,
+        "contractors.csv": contractor_rows,
+        "rule_documents.csv": rule_document_rows,
+    }
+    examples: dict[str, list[dict[str, Any]] | None] = {
+        file_name: None if rows_by_file[file_name] is None else []
+        for file_name in RAW_IMPORT_FILE_NAMES
+    }
+
+    in_scope_permit_numbers: set[str] = set()
+    if permit_rows is not None:
+        for row_number, row in permit_rows:
+            reason = None
+            if raw_cell_lower(row, "city") != "dallas":
+                reason = "excluded_by_city"
+            elif raw_cell_lower(row, "trade") != "electrical":
+                reason = "excluded_by_trade"
+            elif raw_cell_lower(row, "work_class") != "residential":
+                reason = "excluded_by_work_class"
+            else:
+                permit_number = raw_cell(row, "permit_number")
+                if permit_number:
+                    in_scope_permit_numbers.add(permit_number)
+            if reason:
+                add_raw_import_exclusion_example(
+                    examples,
+                    "permits.csv",
+                    row_number,
+                    reason,
+                    row,
+                )
+
+    if inspection_rows is not None:
+        for row_number, row in inspection_rows:
+            if raw_cell(row, "permit_number") not in in_scope_permit_numbers:
+                add_raw_import_exclusion_example(
+                    examples,
+                    "inspections.csv",
+                    row_number,
+                    "excluded_by_unimported_permit",
+                    row,
+                )
+
+    if contractor_rows is not None:
+        for row_number, row in contractor_rows:
+            if "electrical" not in raw_cell_lower(row, "license_type"):
+                add_raw_import_exclusion_example(
+                    examples,
+                    "contractors.csv",
+                    row_number,
+                    "excluded_by_license_type",
+                    row,
+                )
+
+    if rule_document_rows is not None:
+        for row_number, row in rule_document_rows:
+            if not raw_cell(row, "title"):
+                add_raw_import_exclusion_example(
+                    examples,
+                    "rule_documents.csv",
+                    row_number,
+                    "excluded_by_missing_title",
+                    row,
+                )
+
+    return examples
 
 
 def raw_import_file_optional_fields(
@@ -677,6 +832,34 @@ def raw_import_file_import_scope_counts_are_valid(value: Any) -> bool:
         }
         if set(scope) != expected_keys:
             return False
+    return True
+
+
+def raw_import_file_exclusion_examples_are_valid(value: Any) -> bool:
+    if not isinstance(value, dict):
+        return False
+
+    for file_name in RAW_IMPORT_FILE_NAMES:
+        examples = value.get(file_name)
+        if not isinstance(examples, list) or len(examples) > RAW_IMPORT_EXCLUSION_EXAMPLE_LIMIT:
+            return False
+        expected_reasons = set(RAW_IMPORT_SCOPE_EXCLUSION_FIELDS[file_name])
+        expected_fields = set(RAW_IMPORT_EXCLUSION_EXAMPLE_FIELDS[file_name])
+        for example in examples:
+            if not isinstance(example, dict):
+                return False
+            row_number = example.get("csv_row_number")
+            reason = example.get("reason")
+            row = example.get("row")
+            if (
+                not isinstance(row_number, int)
+                or row_number < 2
+                or reason not in expected_reasons
+                or not isinstance(row, dict)
+                or set(row) != expected_fields
+                or any(not isinstance(value, str) for value in row.values())
+            ):
+                return False
     return True
 
 
@@ -834,6 +1017,9 @@ def next_import_record_handoff(summary: dict[str, Any] | None = None) -> dict[st
     raw_import_scope_counts = summary_handoff.get("raw_file_import_scope_counts")
     if not raw_import_file_import_scope_counts_are_valid(raw_import_scope_counts):
         raw_import_scope_counts = raw_import_file_import_scope_counts(raw_dir)
+    raw_exclusion_examples = summary_handoff.get("raw_file_exclusion_examples")
+    if not raw_import_file_exclusion_examples_are_valid(raw_exclusion_examples):
+        raw_exclusion_examples = raw_import_file_exclusion_examples(raw_dir)
     raw_headers = summary_handoff.get("raw_file_headers")
     if not raw_import_file_headers_are_valid(raw_headers):
         raw_headers = raw_import_file_headers(raw_dir)
@@ -871,6 +1057,7 @@ def next_import_record_handoff(summary: dict[str, Any] | None = None) -> dict[st
         "raw_files": [f"{raw_dir}/{file_name}" for file_name in RAW_IMPORT_FILE_NAMES],
         "raw_file_row_counts": raw_row_counts,
         "raw_file_import_scope_counts": raw_import_scope_counts,
+        "raw_file_exclusion_examples": raw_exclusion_examples,
         "raw_file_headers": raw_headers,
         "raw_file_required_fields": raw_required_fields,
         "raw_file_optional_fields": raw_optional_fields,
@@ -895,6 +1082,9 @@ def next_import_record_handoff_is_valid(handoff: Any) -> bool:
         and raw_import_file_row_counts_are_valid(handoff.get("raw_file_row_counts"))
         and raw_import_file_import_scope_counts_are_valid(
             handoff.get("raw_file_import_scope_counts"),
+        )
+        and raw_import_file_exclusion_examples_are_valid(
+            handoff.get("raw_file_exclusion_examples"),
         )
         and raw_import_file_headers_are_valid(handoff.get("raw_file_headers"))
         and raw_import_file_required_fields_are_valid(handoff.get("raw_file_required_fields"))
@@ -1554,6 +1744,24 @@ def format_raw_import_scope_counts(handoff: Any) -> str:
     return "; ".join(labels) if labels else "(none)"
 
 
+def format_raw_import_exclusion_examples(handoff: Any) -> str:
+    if not isinstance(handoff, dict):
+        return "(none)"
+    examples_by_file = handoff.get("raw_file_exclusion_examples")
+    if not isinstance(examples_by_file, dict):
+        return "(none)"
+    labels = []
+    for file_name in RAW_IMPORT_FILE_NAMES:
+        examples = examples_by_file.get(file_name)
+        if isinstance(examples, list) and examples:
+            labels.append(f"{file_name}={json.dumps(examples, sort_keys=False)}")
+        elif isinstance(examples, list):
+            labels.append(f"{file_name}=none")
+        else:
+            labels.append(f"{file_name}=missing")
+    return "; ".join(labels) if labels else "(none)"
+
+
 def format_raw_import_headers(handoff: Any) -> str:
     if not isinstance(handoff, dict):
         return "(none)"
@@ -1833,6 +2041,10 @@ def format_progress_text(progress: dict[str, Any]) -> str:
                 lines.append(
                     "Next import raw scope counts: "
                     f"{format_raw_import_scope_counts(next_import_handoff)}"
+                )
+                lines.append(
+                    "Next import raw exclusion examples: "
+                    f"{format_raw_import_exclusion_examples(next_import_handoff)}"
                 )
                 lines.append(
                     "Next import raw headers: "
@@ -2519,7 +2731,11 @@ def operator_correction_smoke_check(
         "progress_import_readiness_snapshot",
         readiness_snapshot_passed,
         (
-            "summary includes the last durable import-readiness snapshot, import counts, thin coverage groups, next step, and raw CSV handoff with row counts, import scope counts, headers, required fields, optional fields, append templates, and required-field gaps after complete correction capture"
+            "summary includes the last durable import-readiness snapshot, import "
+            "counts, thin coverage groups, next step, and raw CSV handoff with "
+            "row counts, import scope counts, exclusion examples, headers, "
+            "required fields, optional fields, append templates, and "
+            "required-field gaps after complete correction capture"
             if missing_count == 0
             else "summary with missing corrections does not expose the last import-readiness snapshot"
         ),
@@ -3047,6 +3263,10 @@ def format_smoke_check_text(smoke_check: dict[str, Any]) -> str:
         lines.append(
             "Next import raw scope counts: "
             f"{format_raw_import_scope_counts(readiness.get('next_import_record_handoff'))}"
+        )
+        lines.append(
+            "Next import raw exclusion examples: "
+            f"{format_raw_import_exclusion_examples(readiness.get('next_import_record_handoff'))}"
         )
         lines.append(
             "Next import raw headers: "

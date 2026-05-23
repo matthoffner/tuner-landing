@@ -12,6 +12,7 @@
 - Next raw import files: `generated/raw/dallas-electrician-import-sample-v2/permits.csv`, `generated/raw/dallas-electrician-import-sample-v2/inspections.csv`, `generated/raw/dallas-electrician-import-sample-v2/contractors.csv`, `generated/raw/dallas-electrician-import-sample-v2/rule_documents.csv`
 - Next raw import row counts: `permits.csv`=15, `inspections.csv`=41, `contractors.csv`=6, `rule_documents.csv`=3
 - Next raw import scope counts: see Follow-Up
+- Next raw import exclusion examples: see Follow-Up
 - Next raw import headers: see Follow-Up
 - Next raw import required fields: see Follow-Up
 - Next raw import optional fields: see Follow-Up
@@ -135,6 +136,11 @@ These are the reusable accepted correction patterns currently embedded in the Da
 - `inspections.csv` import scope: `40/41` importable, excluded: `1`, reasons: `{"excluded_by_unimported_permit": 1}`
 - `contractors.csv` import scope: `5/6` importable, excluded: `1`, reasons: `{"excluded_by_license_type": 1}`
 - `rule_documents.csv` import scope: `3/3` importable, excluded: `0`, reasons: `{"excluded_by_missing_title": 0}`
+- Raw CSV exclusion examples:
+- `permits.csv` exclusion examples: `[{"csv_row_number": 16, "reason": "excluded_by_trade", "row": {"permit_number": "PLM-2026-0206", "address": "410 W Jefferson Blvd", "city": "Dallas", "trade": "plumbing", "work_class": "residential"}}]`
+- `inspections.csv` exclusion examples: `[{"csv_row_number": 42, "reason": "excluded_by_unimported_permit", "row": {"permit_number": "PLM-2026-0206", "inspection_date": "2026-04-11", "inspection_type": "Final", "result": "Pass"}}]`
+- `contractors.csv` exclusion examples: `[{"csv_row_number": 7, "reason": "excluded_by_license_type", "row": {"registration_id": "REG-5206", "name": "Oak Lawn Plumbing", "license_type": "plumbing_contractor"}}]`
+- `rule_documents.csv` exclusion examples: none
 - Raw CSV headers:
 - `permits.csv` headers: `permit_number`, `address`, `city`, `state`, `zip_code`, `trade`, `work_class`, `property_type`, `permit_type`, `status`, `file_date`, `issue_date`, `final_date`, `declared_valuation`, `work_description`, `contractor_name`, `source_url`
 - `inspections.csv` headers: `permit_number`, `inspection_date`, `inspection_type`, `result`, `notes`, `inspector_name`, `reinspection_flag`, `source_url`
