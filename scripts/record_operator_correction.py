@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import csv
 import hashlib
+import io
 import json
 import shlex
 import tempfile
@@ -1249,6 +1250,33 @@ def raw_import_file_append_templates(
     return append_templates
 
 
+def csv_line(values: list[str]) -> str:
+    buffer = io.StringIO()
+    writer = csv.writer(buffer, lineterminator="")
+    writer.writerow(values)
+    return buffer.getvalue()
+
+
+def raw_import_file_append_csv_templates(
+    headers_by_file: dict[str, list[str] | None],
+    required_fields_by_file: dict[str, list[str]],
+) -> dict[str, dict[str, str] | None]:
+    append_templates: dict[str, dict[str, str] | None] = {}
+    for file_name in RAW_IMPORT_FILE_NAMES:
+        headers = headers_by_file.get(file_name)
+        required_fields = set(required_fields_by_file.get(file_name, []))
+        if not isinstance(headers, list):
+            append_templates[file_name] = None
+            continue
+        append_templates[file_name] = {
+            "header_line": csv_line(headers),
+            "template_line": csv_line(
+                ["<required>" if header in required_fields else "" for header in headers]
+            ),
+        }
+    return append_templates
+
+
 def raw_import_file_required_field_gaps(
     raw_dir: str,
     required_fields_by_file: dict[str, list[str]],
@@ -1920,6 +1948,32 @@ def raw_import_file_append_templates_are_valid(
     )
 
 
+def raw_import_file_append_csv_templates_are_valid(
+    value: Any,
+    headers_by_file: Any,
+    required_fields_by_file: Any,
+) -> bool:
+    if not isinstance(headers_by_file, dict) or not isinstance(
+        required_fields_by_file,
+        dict,
+    ):
+        return False
+    expected_templates = raw_import_file_append_csv_templates(
+        headers_by_file,
+        required_fields_by_file,
+    )
+    return (
+        isinstance(value, dict)
+        and all(
+            isinstance(value.get(file_name), dict)
+            and value[file_name] == expected_templates[file_name]
+            and isinstance(value[file_name].get("header_line"), str)
+            and isinstance(value[file_name].get("template_line"), str)
+            for file_name in RAW_IMPORT_FILE_NAMES
+        )
+    )
+
+
 def raw_import_file_required_field_gaps_are_valid(value: Any) -> bool:
     if not isinstance(value, dict):
         return False
@@ -2161,6 +2215,16 @@ def next_import_record_handoff(summary: dict[str, Any] | None = None) -> dict[st
             raw_headers,
             raw_required_fields,
         )
+    raw_append_csv_templates = summary_handoff.get("raw_file_append_csv_templates")
+    if not raw_import_file_append_csv_templates_are_valid(
+        raw_append_csv_templates,
+        raw_headers,
+        raw_required_fields,
+    ):
+        raw_append_csv_templates = raw_import_file_append_csv_templates(
+            raw_headers,
+            raw_required_fields,
+        )
     raw_required_field_gaps = summary_handoff.get("raw_file_required_field_gaps")
     if not raw_import_file_required_field_gaps_are_valid(raw_required_field_gaps):
         raw_required_field_gaps = raw_import_file_required_field_gaps(
@@ -2195,6 +2259,7 @@ def next_import_record_handoff(summary: dict[str, Any] | None = None) -> dict[st
         "raw_file_required_fields": raw_required_fields,
         "raw_file_optional_fields": raw_optional_fields,
         "raw_file_append_templates": raw_append_templates,
+        "raw_file_append_csv_templates": raw_append_csv_templates,
         "raw_file_required_field_gaps": raw_required_field_gaps,
         "raw_file_append_preflight": raw_append_preflight,
         "after_edit_command": IMPORT_REFRESH_COMMAND,
@@ -2255,6 +2320,11 @@ def next_import_record_handoff_is_valid(handoff: Any) -> bool:
         )
         and raw_import_file_append_templates_are_valid(
             handoff.get("raw_file_append_templates"),
+            handoff.get("raw_file_headers"),
+            handoff.get("raw_file_required_fields"),
+        )
+        and raw_import_file_append_csv_templates_are_valid(
+            handoff.get("raw_file_append_csv_templates"),
             handoff.get("raw_file_headers"),
             handoff.get("raw_file_required_fields"),
         )
@@ -3166,6 +3236,22 @@ def format_raw_import_append_templates(handoff: Any) -> str:
     return "; ".join(labels) if labels else "(none)"
 
 
+def format_raw_import_append_csv_templates(handoff: Any) -> str:
+    if not isinstance(handoff, dict):
+        return "(none)"
+    templates_by_file = handoff.get("raw_file_append_csv_templates")
+    if not isinstance(templates_by_file, dict):
+        return "(none)"
+    labels = []
+    for file_name in RAW_IMPORT_FILE_NAMES:
+        template = templates_by_file.get(file_name)
+        if isinstance(template, dict):
+            labels.append(f"{file_name}={json.dumps(template, sort_keys=False)}")
+        else:
+            labels.append(f"{file_name}=missing")
+    return "; ".join(labels) if labels else "(none)"
+
+
 def format_raw_import_required_field_gaps(handoff: Any) -> str:
     if not isinstance(handoff, dict):
         return "(none)"
@@ -3429,6 +3515,10 @@ def format_progress_text(progress: dict[str, Any]) -> str:
                 lines.append(
                     "Next import raw append templates: "
                     f"{format_raw_import_append_templates(next_import_handoff)}"
+                )
+                lines.append(
+                    "Next import raw append CSV templates: "
+                    f"{format_raw_import_append_csv_templates(next_import_handoff)}"
                 )
                 lines.append(
                     "Next import raw required-field gaps: "
@@ -4104,8 +4194,9 @@ def operator_correction_smoke_check(
             "row counts, next append rows, last data rows, identity key checks, "
             "value profiles, date profiles, relationship checks, import scope "
             "counts, importable examples, exclusion examples, headers, required "
-            "fields, optional fields, append templates, required-field gaps, "
-            "append preflight, and file fingerprints after complete correction capture"
+            "fields, optional fields, append templates, append CSV templates, "
+            "required-field gaps, append preflight, and file fingerprints after "
+            "complete correction capture"
             if missing_count == 0
             else "summary with missing corrections does not expose the last import-readiness snapshot"
         ),
@@ -4689,6 +4780,10 @@ def format_smoke_check_text(smoke_check: dict[str, Any]) -> str:
         lines.append(
             "Next import raw append templates: "
             f"{format_raw_import_append_templates(readiness.get('next_import_record_handoff'))}"
+        )
+        lines.append(
+            "Next import raw append CSV templates: "
+            f"{format_raw_import_append_csv_templates(readiness.get('next_import_record_handoff'))}"
         )
         lines.append(
             "Next import raw required-field gaps: "

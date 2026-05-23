@@ -3,6 +3,7 @@
 import argparse
 import csv
 import hashlib
+import io
 import json
 import subprocess
 import sys
@@ -971,6 +972,30 @@ def raw_file_append_templates(headers_by_file, required_fields_by_file):
     return append_templates
 
 
+def csv_line(values):
+    buffer = io.StringIO()
+    writer = csv.writer(buffer, lineterminator="")
+    writer.writerow(values)
+    return buffer.getvalue()
+
+
+def raw_file_append_csv_templates(headers_by_file, required_fields_by_file):
+    append_templates = {}
+    for file_name in RAW_IMPORT_FILE_NAMES:
+        headers = headers_by_file.get(file_name)
+        required_fields = set(required_fields_by_file.get(file_name, []))
+        if not isinstance(headers, list):
+            append_templates[file_name] = None
+            continue
+        append_templates[file_name] = {
+            "header_line": csv_line(headers),
+            "template_line": csv_line(
+                ["<required>" if header in required_fields else "" for header in headers]
+            ),
+        }
+    return append_templates
+
+
 def raw_file_required_field_gaps(raw_dir, required_fields_by_file):
     resolved_raw_dir = repo_path(raw_dir)
     gaps = {}
@@ -1201,6 +1226,10 @@ def next_import_record_handoff(raw_dir):
             raw_required_fields,
         ),
         "raw_file_append_templates": raw_file_append_templates(
+            raw_headers,
+            raw_required_fields,
+        ),
+        "raw_file_append_csv_templates": raw_file_append_csv_templates(
             raw_headers,
             raw_required_fields,
         ),
@@ -1515,6 +1544,10 @@ def write_summary(summary):
     raw_required_fields = next_import_handoff.get("raw_file_required_fields", {})
     raw_optional_fields = next_import_handoff.get("raw_file_optional_fields", {})
     raw_append_templates = next_import_handoff.get("raw_file_append_templates", {})
+    raw_append_csv_templates = next_import_handoff.get(
+        "raw_file_append_csv_templates",
+        {},
+    )
     raw_required_field_gaps = next_import_handoff.get(
         "raw_file_required_field_gaps",
         {},
@@ -1784,6 +1817,21 @@ def write_summary(summary):
                 labels.append(f"- `{file_name}` append template: missing")
         return labels
 
+    def inline_append_csv_templates(values):
+        if not isinstance(values, dict) or not values:
+            return ["- Raw CSV append CSV templates: none"]
+        labels = []
+        for file_name in RAW_IMPORT_FILE_NAMES:
+            template = values.get(file_name)
+            if isinstance(template, dict):
+                labels.append(
+                    f"- `{file_name}` append CSV template: "
+                    f"`{json.dumps(template, sort_keys=False)}`"
+                )
+            else:
+                labels.append(f"- `{file_name}` append CSV template: missing")
+        return labels
+
     def inline_required_field_gaps(values):
         if not isinstance(values, dict) or not values:
             return ["- Raw CSV required-field gaps: none"]
@@ -1868,6 +1916,7 @@ def write_summary(summary):
         "- Next raw import headers: see Follow-Up",
         "- Next raw import required fields: see Follow-Up",
         "- Next raw import optional fields: see Follow-Up",
+        "- Next raw import append CSV templates: see Follow-Up",
         "- Next raw import required-field gaps: see Follow-Up",
         "",
         "## Execution Readiness",
@@ -2071,6 +2120,8 @@ def write_summary(summary):
             *inline_optional_fields(raw_optional_fields),
             "- Raw CSV append templates:",
             *inline_append_templates(raw_append_templates),
+            "- Raw CSV append CSV templates:",
+            *inline_append_csv_templates(raw_append_csv_templates),
             "- Raw CSV required-field gaps:",
             *inline_required_field_gaps(raw_required_field_gaps),
             f"- Require-ready pipeline: `{follow_up['require_ready_pipeline']}`",
@@ -2148,6 +2199,10 @@ def print_summary(summary, output_format="text"):
     raw_required_fields = next_import_handoff.get("raw_file_required_fields", {})
     raw_optional_fields = next_import_handoff.get("raw_file_optional_fields", {})
     raw_append_templates = next_import_handoff.get("raw_file_append_templates", {})
+    raw_append_csv_templates = next_import_handoff.get(
+        "raw_file_append_csv_templates",
+        {},
+    )
     raw_required_field_gaps = next_import_handoff.get(
         "raw_file_required_field_gaps",
         {},
@@ -2379,6 +2434,20 @@ def print_summary(summary, output_format="text"):
                 labels.append(f"{file_name}=missing")
         return "; ".join(labels)
 
+    def format_append_csv_templates(values):
+        if not isinstance(values, dict) or not values:
+            return "none"
+        labels = []
+        for file_name in RAW_IMPORT_FILE_NAMES:
+            template = values.get(file_name)
+            if isinstance(template, dict):
+                labels.append(
+                    f"{file_name}={json.dumps(template, sort_keys=False)}"
+                )
+            else:
+                labels.append(f"{file_name}=missing")
+        return "; ".join(labels)
+
     def format_required_field_gaps(values):
         if not isinstance(values, dict) or not values:
             return "none"
@@ -2503,6 +2572,10 @@ def print_summary(summary, output_format="text"):
     print(f"  raw_import_required_fields: {format_required_fields(raw_required_fields)}")
     print(f"  raw_import_optional_fields: {format_optional_fields(raw_optional_fields)}")
     print(f"  raw_import_append_templates: {format_append_templates(raw_append_templates)}")
+    print(
+        "  raw_import_append_csv_templates: "
+        f"{format_append_csv_templates(raw_append_csv_templates)}"
+    )
     print(
         "  raw_import_required_field_gaps: "
         f"{format_required_field_gaps(raw_required_field_gaps)}"

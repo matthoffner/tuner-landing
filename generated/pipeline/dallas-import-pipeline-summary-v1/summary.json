@@ -948,6 +948,24 @@
         "text_content": ""
       }
     },
+    "raw_file_append_csv_templates": {
+      "permits.csv": {
+        "header_line": "permit_number,address,city,state,zip_code,trade,work_class,property_type,permit_type,status,file_date,issue_date,final_date,declared_valuation,work_description,contractor_name,source_url",
+        "template_line": "<required>,<required>,<required>,,,<required>,<required>,,,,,,,,,,"
+      },
+      "inspections.csv": {
+        "header_line": "permit_number,inspection_date,inspection_type,result,notes,inspector_name,reinspection_flag,source_url",
+        "template_line": "<required>,<required>,<required>,<required>,,,,"
+      },
+      "contractors.csv": {
+        "header_line": "registration_id,name,license_type,registration_status,city,state",
+        "template_line": "<required>,<required>,<required>,,,"
+      },
+      "rule_documents.csv": {
+        "header_line": "title,document_type,effective_date,source_url,text_content",
+        "template_line": "<required>,,,,"
+      }
+    },
     "raw_file_required_field_gaps": {
       "permits.csv": {
         "rows_checked": 15,
