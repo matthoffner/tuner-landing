@@ -5,14 +5,14 @@
   "source_eval_dir": "generated/evals/dallas-electrician-import-sample-v2",
   "workflow_type": "reviewed-inspection-action-queue",
   "summary": {
-    "queue_items": 15,
+    "queue_items": 16,
     "priority_counts": {
       "high": 6,
-      "medium": 9
+      "medium": 10
     },
     "trigger_result_counts": {
       "fail": 6,
-      "not_ready": 3,
+      "not_ready": 4,
       "partial": 6
     },
     "recommended_action_counts": {
@@ -21,16 +21,16 @@
       "correct_grounding_or_bonding": 4,
       "correct_panel_or_service": 2,
       "correct_wiring_or_devices": 3,
-      "ensure_site_access": 3,
-      "schedule_reinspection": 13
+      "ensure_site_access": 4,
+      "schedule_reinspection": 14
     }
   },
   "operator_correction_summary": {
     "ledger_path": "generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl",
-    "total_events": 15,
-    "queue_items_with_corrections": 15,
+    "total_events": 16,
+    "queue_items_with_corrections": 16,
     "decision_counts": {
-      "accepted": 15
+      "accepted": 16
     },
     "invalid_lines": 0,
     "latest_by_queue_item": {
@@ -172,14 +172,64 @@
           "complete_remaining_work",
           "schedule_reinspection"
         ]
+      },
+      "workflow-item:dallas:next-action:0016": {
+        "correction_id": "operator-correction:20260523T140500000000Z:0016",
+        "captured_at": "2026-05-23T14:05:00Z",
+        "decision": "accepted",
+        "corrected_actions": [
+          "ensure_site_access",
+          "schedule_reinspection"
+        ]
       }
     }
   },
   "operator_correction_patterns": {
     "source": "latest accepted operator correction per current queue item",
-    "accepted_latest_corrections": 15,
+    "accepted_latest_corrections": 16,
     "accepted_pattern_count": 6,
     "patterns": [
+      {
+        "corrected_actions": [
+          "ensure_site_access",
+          "schedule_reinspection"
+        ],
+        "corrected_action_labels": [
+          "Ensure site access",
+          "Schedule reinspection"
+        ],
+        "queue_item_count": 4,
+        "queue_item_ids": [
+          "workflow-item:dallas:next-action:0001",
+          "workflow-item:dallas:next-action:0010",
+          "workflow-item:dallas:next-action:0011",
+          "workflow-item:dallas:next-action:0016"
+        ],
+        "source_permit_numbers": [
+          "ELM-2026-0211",
+          "ELS-2026-0202",
+          "ELS-2026-0210",
+          "ELZ-2026-0217"
+        ],
+        "trigger_result_counts": {
+          "not_ready": 4
+        },
+        "failure_reason_counts": {
+          "access_or_scheduling_issue": 4
+        },
+        "inspection_type_counts": {
+          "final": 2,
+          "service_release": 2
+        },
+        "observed_followup_result_counts": {
+          "pass": 4
+        },
+        "operator_note_examples": [
+          "Follow-up passed after site access was cleared and the return visit was scheduled.",
+          "Accepted from fixture follow-up: site access was restored and the correction follow-up passed, matching ensure_site_access plus schedule_reinspection."
+        ],
+        "pattern_id": "operator-pattern:accepted:0001"
+      },
       {
         "corrected_actions": [
           "complete_remaining_work",
@@ -216,7 +266,7 @@
           "Accepted from fixture review: follow-up shows remaining trim complete and branch repairs accepted, matching the recommended remaining-work completion and reinspection actions.",
           "Accepted from fixture follow-up evidence: remaining trim and junction cover were completed and the correction follow-up passed, matching complete_remaining_work plus schedule_reinspection."
         ],
-        "pattern_id": "operator-pattern:accepted:0001"
+        "pattern_id": "operator-pattern:accepted:0002"
       },
       {
         "corrected_actions": [
@@ -255,45 +305,6 @@
         "operator_note_examples": [
           "Accepted from fixture review: follow-up shows GFCI added and final trim completed for approval.",
           "Accepted from fixture review: follow-up shows GFCI protection installed and device trim completed for approval, matching the recommended wiring/device correction and reinspection actions."
-        ],
-        "pattern_id": "operator-pattern:accepted:0002"
-      },
-      {
-        "corrected_actions": [
-          "ensure_site_access",
-          "schedule_reinspection"
-        ],
-        "corrected_action_labels": [
-          "Ensure site access",
-          "Schedule reinspection"
-        ],
-        "queue_item_count": 3,
-        "queue_item_ids": [
-          "workflow-item:dallas:next-action:0001",
-          "workflow-item:dallas:next-action:0010",
-          "workflow-item:dallas:next-action:0011"
-        ],
-        "source_permit_numbers": [
-          "ELM-2026-0211",
-          "ELS-2026-0202",
-          "ELS-2026-0210"
-        ],
-        "trigger_result_counts": {
-          "not_ready": 3
-        },
-        "failure_reason_counts": {
-          "access_or_scheduling_issue": 3
-        },
-        "inspection_type_counts": {
-          "final": 1,
-          "service_release": 2
-        },
-        "observed_followup_result_counts": {
-          "pass": 3
-        },
-        "operator_note_examples": [
-          "Follow-up passed after site access was cleared and the return visit was scheduled.",
-          "Accepted from fixture follow-up: site access was restored and the correction follow-up passed, matching ensure_site_access plus schedule_reinspection."
         ],
         "pattern_id": "operator-pattern:accepted:0003"
       },
@@ -1063,6 +1074,49 @@
       "evidence": [
         "Remaining junction cover and hallway trim incomplete before repair rough-in approval.",
         "2026-05-01 correction_followup -> pass: Remaining cover and trim completed for repair approval."
+      ]
+    },
+    {
+      "queue_item_id": "workflow-item:dallas:next-action:0016",
+      "permit_id": "permit:dallas:elz-2026-0217",
+      "source_permit_number": "ELZ-2026-0217",
+      "permit_status": "finaled",
+      "permit_type_normalized": "electrical_repair",
+      "property": {
+        "property_id": "property:2726-s-ewing-ave-dallas-tx-75216",
+        "normalized_address": "2726 S EWING AVE DALLAS TX 75216",
+        "zip_code": "75216"
+      },
+      "contractor": {
+        "contractor_id": "contractor:dallas:cedars-south-electric",
+        "name": "Cedars South Electric"
+      },
+      "trigger_inspection": {
+        "inspection_id": "inspection:dallas:elz-2026-0217:2026-04-28:final",
+        "inspection_date": "2026-04-28",
+        "inspection_type_normalized": "final",
+        "result_normalized": "not_ready",
+        "failure_reason_normalized": "access_or_scheduling_issue",
+        "notes_raw": "Locked gate blocked final inspection access for porch circuit trim verification."
+      },
+      "recommended_actions": [
+        "ensure_site_access",
+        "schedule_reinspection"
+      ],
+      "recommended_action_labels": [
+        "Ensure site access",
+        "Schedule reinspection"
+      ],
+      "priority": "medium",
+      "expected_followup": {
+        "inspection_date": "2026-05-03",
+        "inspection_type_normalized": "correction_followup",
+        "result_normalized": "pass",
+        "notes_raw": "Access confirmed and final trim verified for repair approval."
+      },
+      "evidence": [
+        "Locked gate blocked final inspection access for porch circuit trim verification.",
+        "2026-05-03 correction_followup -> pass: Access confirmed and final trim verified for repair approval."
       ]
     }
   ]

@@ -217,17 +217,17 @@
       "has_source_records": true,
       "has_rule_documents": true,
       "counts": {
-        "properties": 15,
-        "permits": 15,
-        "inspections": 42,
+        "properties": 16,
+        "permits": 16,
+        "inspections": 44,
         "contractors": 5,
         "rule_documents": 3,
-        "source_records": 65,
-        "sequences": 15,
+        "source_records": 68,
+        "sequences": 16,
         "pattern_slices": 5,
-        "tasks": 53,
-        "label_reviews": 21,
-        "dev_tasks": 48,
+        "tasks": 55,
+        "label_reviews": 22,
+        "dev_tasks": 50,
         "test_tasks": 5,
         "result_states": 6,
         "repeated_result_states": 6,
@@ -252,9 +252,9 @@
         "recommended_next_action"
       ],
       "task_family_counts": {
-        "next_inspection_outcome": 27,
+        "next_inspection_outcome": 28,
         "failure_reason_classification": 6,
-        "recommended_next_action": 15,
+        "recommended_next_action": 16,
         "pattern_extraction": 5
       },
       "sequence_coverage_union": [
@@ -299,12 +299,14 @@
           "permit:dallas:els-2026-0213",
           "permit:dallas:els-2026-0214",
           "permit:dallas:elz-2026-0215",
-          "permit:dallas:elz-2026-0216"
+          "permit:dallas:elz-2026-0216",
+          "permit:dallas:elz-2026-0217"
         ],
         "not_ready": [
           "permit:dallas:elm-2026-0211",
           "permit:dallas:els-2026-0202",
-          "permit:dallas:els-2026-0210"
+          "permit:dallas:els-2026-0210",
+          "permit:dallas:elz-2026-0217"
         ],
         "fail": [
           "permit:dallas:eln-2026-0204",
@@ -327,7 +329,8 @@
         "access_or_scheduling_issue": [
           "permit:dallas:elm-2026-0211",
           "permit:dallas:els-2026-0202",
-          "permit:dallas:els-2026-0210"
+          "permit:dallas:els-2026-0210",
+          "permit:dallas:elz-2026-0217"
         ],
         "grounding_or_bonding_issue": [
           "permit:dallas:eln-2026-0204",
@@ -352,7 +355,8 @@
         "ensure_site_access|schedule_reinspection": [
           "permit:dallas:elm-2026-0211",
           "permit:dallas:els-2026-0202",
-          "permit:dallas:els-2026-0210"
+          "permit:dallas:els-2026-0210",
+          "permit:dallas:elz-2026-0217"
         ],
         "correct_grounding_or_bonding|add_labels_or_documentation": [
           "permit:dallas:eln-2026-0204",

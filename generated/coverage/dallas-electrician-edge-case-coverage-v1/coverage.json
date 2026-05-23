@@ -366,12 +366,13 @@
         },
         {
           "value": "not_ready",
-          "row_count": 3,
-          "permit_count": 3,
+          "row_count": 4,
+          "permit_count": 4,
           "permit_ids": [
             "permit:dallas:elm-2026-0211",
             "permit:dallas:els-2026-0202",
-            "permit:dallas:els-2026-0210"
+            "permit:dallas:els-2026-0210",
+            "permit:dallas:elz-2026-0217"
           ],
           "repeated": true
         },
@@ -391,8 +392,8 @@
         },
         {
           "value": "pass",
-          "row_count": 23,
-          "permit_count": 15,
+          "row_count": 24,
+          "permit_count": 16,
           "permit_ids": [
             "permit:dallas:elm-2026-0205",
             "permit:dallas:elm-2026-0211",
@@ -408,7 +409,8 @@
             "permit:dallas:els-2026-0213",
             "permit:dallas:els-2026-0214",
             "permit:dallas:elz-2026-0215",
-            "permit:dallas:elz-2026-0216"
+            "permit:dallas:elz-2026-0216",
+            "permit:dallas:elz-2026-0217"
           ],
           "repeated": true
         },
@@ -426,12 +428,13 @@
       "failure_reasons": [
         {
           "value": "access_or_scheduling_issue",
-          "row_count": 3,
-          "permit_count": 3,
+          "row_count": 4,
+          "permit_count": 4,
           "permit_ids": [
             "permit:dallas:elm-2026-0211",
             "permit:dallas:els-2026-0202",
-            "permit:dallas:els-2026-0210"
+            "permit:dallas:els-2026-0210",
+            "permit:dallas:elz-2026-0217"
           ],
           "repeated": true
         },
@@ -600,12 +603,13 @@
         },
         {
           "value": "ensure_site_access|schedule_reinspection",
-          "row_count": 3,
-          "permit_count": 3,
+          "row_count": 4,
+          "permit_count": 4,
           "permit_ids": [
             "permit:dallas:elm-2026-0211",
             "permit:dallas:els-2026-0202",
-            "permit:dallas:els-2026-0210"
+            "permit:dallas:els-2026-0210",
+            "permit:dallas:elz-2026-0217"
           ],
           "repeated": true
         }

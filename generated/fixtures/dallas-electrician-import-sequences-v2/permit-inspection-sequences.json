@@ -1422,6 +1422,89 @@
         "source_record_id": "source:contractor:reg-5103",
         "state": "TX"
       }
+    },
+    {
+      "sequence_id": "sequence:dallas:elz-2026-0217",
+      "sequence_summary": "Residential electrical repair permit with a not_ready, pass inspection path and site access and scheduling problems.",
+      "property": {
+        "address_confidence": "high",
+        "city": "Dallas",
+        "normalized_address": "2726 S EWING AVE DALLAS TX 75216",
+        "property_id": "property:2726-s-ewing-ave-dallas-tx-75216",
+        "property_type": "single_family",
+        "state": "TX",
+        "street_address": "2726 S Ewing Ave",
+        "zip_code": "75216"
+      },
+      "permit": {
+        "contractor_id": "contractor:dallas:cedars-south-electric",
+        "declared_valuation": 8200,
+        "file_date": "2026-04-22",
+        "final_date": "2026-05-03",
+        "is_residential_inferred": false,
+        "issue_date": "2026-04-23",
+        "permit_id": "permit:dallas:elz-2026-0217",
+        "permit_type_normalized": "electrical_repair",
+        "permit_type_raw": "Electrical repair",
+        "property_id": "property:2726-s-ewing-ave-dallas-tx-75216",
+        "source_permit_number": "ELZ-2026-0217",
+        "source_record_id": "source:permit:elz-2026-0217",
+        "source_system": "permit_csv_extract",
+        "source_url": "https://example.local/dallas/permits/ELZ-2026-0217",
+        "status_normalized": "finaled",
+        "status_raw": "Finaled",
+        "trade": "electrical",
+        "work_class": "residential",
+        "work_description": "Repair rear porch branch circuit and coordinate final access for trim verification."
+      },
+      "inspections": [
+        {
+          "failure_reason_normalized": "access_or_scheduling_issue",
+          "inspection_date": "2026-04-28",
+          "inspection_id": "inspection:dallas:elz-2026-0217:2026-04-28:final",
+          "inspection_type_normalized": "final",
+          "inspection_type_raw": "Final",
+          "inspector_name": "Inspector Rivera",
+          "notes_raw": "Locked gate blocked final inspection access for porch circuit trim verification.",
+          "permit_id": "permit:dallas:elz-2026-0217",
+          "reinspection_flag": false,
+          "result_normalized": "not_ready",
+          "result_raw": "Not Ready",
+          "source_record_id": "source:inspection:elz-2026-0217:2026-04-28:final",
+          "source_url": "https://example.local/dallas/inspections/ELZ-2026-0217/1"
+        },
+        {
+          "inspection_date": "2026-05-03",
+          "inspection_id": "inspection:dallas:elz-2026-0217:2026-05-03:correction_followup",
+          "inspection_type_normalized": "correction_followup",
+          "inspection_type_raw": "Correction follow-up",
+          "inspector_name": "Inspector Rivera",
+          "notes_raw": "Access confirmed and final trim verified for repair approval.",
+          "permit_id": "permit:dallas:elz-2026-0217",
+          "reinspection_flag": true,
+          "result_normalized": "pass",
+          "result_raw": "Pass",
+          "source_record_id": "source:inspection:elz-2026-0217:2026-05-03:correction_followup",
+          "source_url": "https://example.local/dallas/inspections/ELZ-2026-0217/2"
+        }
+      ],
+      "eval_task_coverage": [
+        "next_inspection_outcome",
+        "recommended_next_action"
+      ],
+      "reference_actions": [
+        "ensure_site_access",
+        "schedule_reinspection"
+      ],
+      "contractor": {
+        "city": "Dallas",
+        "contractor_id": "contractor:dallas:cedars-south-electric",
+        "license_type": "electrical_contractor",
+        "name": "Cedars South Electric",
+        "registration_status": "registered",
+        "source_record_id": "source:contractor:reg-5103",
+        "state": "TX"
+      }
     }
   ]
 }
