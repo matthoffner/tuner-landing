@@ -2501,6 +2501,89 @@
         "source_record_id": "source:contractor:reg-5103",
         "state": "TX"
       }
+    },
+    {
+      "sequence_id": "sequence:dallas:elz-2026-0230",
+      "sequence_summary": "Residential electrical repair permit with a partial, pass inspection path and wiring and device corrections.",
+      "property": {
+        "address_confidence": "high",
+        "city": "Dallas",
+        "normalized_address": "2884 S EWING AVE DALLAS TX 75216",
+        "property_id": "property:2884-s-ewing-ave-dallas-tx-75216",
+        "property_type": "single_family",
+        "state": "TX",
+        "street_address": "2884 S Ewing Ave",
+        "zip_code": "75216"
+      },
+      "permit": {
+        "contractor_id": "contractor:dallas:cedars-south-electric",
+        "declared_valuation": 10900,
+        "file_date": "2026-05-15",
+        "final_date": "2026-05-23",
+        "is_residential_inferred": false,
+        "issue_date": "2026-05-16",
+        "permit_id": "permit:dallas:elz-2026-0230",
+        "permit_type_normalized": "electrical_repair",
+        "permit_type_raw": "Electrical repair",
+        "property_id": "property:2884-s-ewing-ave-dallas-tx-75216",
+        "source_permit_number": "ELZ-2026-0230",
+        "source_record_id": "source:permit:elz-2026-0230",
+        "source_system": "permit_csv_extract",
+        "source_url": "https://example.local/dallas/permits/ELZ-2026-0230",
+        "status_normalized": "finaled",
+        "status_raw": "Finaled",
+        "trade": "electrical",
+        "work_class": "residential",
+        "work_description": "Repair laundry branch wiring and replace damaged exhaust fan timer devices after tenant turnover."
+      },
+      "inspections": [
+        {
+          "failure_reason_normalized": "wiring_or_device_issue",
+          "inspection_date": "2026-05-21",
+          "inspection_id": "inspection:dallas:elz-2026-0230:2026-05-21:rough_in",
+          "inspection_type_normalized": "rough_in",
+          "inspection_type_raw": "Rough-in",
+          "inspector_name": "Inspector Patel",
+          "notes_raw": "Laundry branch wiring repaired but replacement exhaust fan timer devices and cover trim remained incomplete before rough-in approval.",
+          "permit_id": "permit:dallas:elz-2026-0230",
+          "reinspection_flag": false,
+          "result_normalized": "partial",
+          "result_raw": "Partial",
+          "source_record_id": "source:inspection:elz-2026-0230:2026-05-21:rough_in",
+          "source_url": "https://example.local/dallas/inspections/ELZ-2026-0230/1"
+        },
+        {
+          "inspection_date": "2026-05-23",
+          "inspection_id": "inspection:dallas:elz-2026-0230:2026-05-23:correction_followup",
+          "inspection_type_normalized": "correction_followup",
+          "inspection_type_raw": "Correction follow-up",
+          "inspector_name": "Inspector Patel",
+          "notes_raw": "Replacement exhaust fan timer devices installed and cover trim completed for approval.",
+          "permit_id": "permit:dallas:elz-2026-0230",
+          "reinspection_flag": true,
+          "result_normalized": "pass",
+          "result_raw": "Pass",
+          "source_record_id": "source:inspection:elz-2026-0230:2026-05-23:correction_followup",
+          "source_url": "https://example.local/dallas/inspections/ELZ-2026-0230/2"
+        }
+      ],
+      "eval_task_coverage": [
+        "next_inspection_outcome",
+        "recommended_next_action"
+      ],
+      "reference_actions": [
+        "correct_wiring_or_devices",
+        "schedule_reinspection"
+      ],
+      "contractor": {
+        "city": "Dallas",
+        "contractor_id": "contractor:dallas:cedars-south-electric",
+        "license_type": "electrical_contractor",
+        "name": "Cedars South Electric",
+        "registration_status": "registered",
+        "source_record_id": "source:contractor:reg-5103",
+        "state": "TX"
+      }
     }
   ]
 }

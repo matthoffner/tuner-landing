@@ -4,10 +4,10 @@ This artifact turns reviewed Dallas electrician inspection labels into a concret
 
 ## Summary
 
-- Queue items: `28`
-- Priority counts: `{"high": 6, "medium": 22}`
-- Trigger result counts: `{"fail": 6, "not_ready": 4, "partial": 18}`
-- Operator correction events: `28`
+- Queue items: `29`
+- Priority counts: `{"high": 6, "medium": 23}`
+- Trigger result counts: `{"fail": 6, "not_ready": 4, "partial": 19}`
+- Operator correction events: `29`
 - Operator correction ledger: `generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl`
 - Accepted correction patterns: `6`
 
@@ -15,14 +15,14 @@ This artifact turns reviewed Dallas electrician inspection labels into a concret
 
 ### operator-pattern:accepted:0001
 
-- Queue items: `11`
+- Queue items: `12`
 - Actions: `Correct wiring or devices, Schedule reinspection`
 - Action IDs: `correct_wiring_or_devices, schedule_reinspection`
-- Trigger results: `{"fail": 2, "partial": 9}`
-- Failure reasons: `{"wiring_or_device_issue": 11}`
-- Inspection types: `{"final": 2, "rough_in": 9}`
-- Follow-up results: `{"pass": 11}`
-- Example permits: `ELP-2026-0209, ELR-2026-0201, ELR-2026-0207, ELZ-2026-0218, ELZ-2026-0219, ELZ-2026-0220, ELZ-2026-0221, ELZ-2026-0222, ELZ-2026-0223, ELZ-2026-0224, ELZ-2026-0229`
+- Trigger results: `{"fail": 2, "partial": 10}`
+- Failure reasons: `{"wiring_or_device_issue": 12}`
+- Inspection types: `{"final": 2, "rough_in": 10}`
+- Follow-up results: `{"pass": 12}`
+- Example permits: `ELP-2026-0209, ELR-2026-0201, ELR-2026-0207, ELZ-2026-0218, ELZ-2026-0219, ELZ-2026-0220, ELZ-2026-0221, ELZ-2026-0222, ELZ-2026-0223, ELZ-2026-0224, ELZ-2026-0229, ELZ-2026-0230`
 
 ### operator-pattern:accepted:0002
 
@@ -360,3 +360,13 @@ This artifact turns reviewed Dallas electrician inspection labels into a concret
 - Recommended actions: `Correct wiring or devices, Schedule reinspection`
 - Follow-up observed: `2026-05-23` `correction_followup` -> `pass`
 - Evidence: Porch branch wiring repaired but replacement exterior GFCI devices and cover trim remained incomplete before rough-in approval.
+
+### ELZ-2026-0230 - 2884 S EWING AVE DALLAS TX 75216
+
+- Priority: `medium`
+- Contractor: `Cedars South Electric`
+- Trigger: `2026-05-21` `rough_in` -> `partial`
+- Failure reason: `wiring_or_device_issue`
+- Recommended actions: `Correct wiring or devices, Schedule reinspection`
+- Follow-up observed: `2026-05-23` `correction_followup` -> `pass`
+- Evidence: Laundry branch wiring repaired but replacement exhaust fan timer devices and cover trim remained incomplete before rough-in approval.

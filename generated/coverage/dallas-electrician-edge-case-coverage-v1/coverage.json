@@ -378,8 +378,8 @@
         },
         {
           "value": "partial",
-          "row_count": 18,
-          "permit_count": 18,
+          "row_count": 19,
+          "permit_count": 19,
           "permit_ids": [
             "permit:dallas:eln-2026-0204",
             "permit:dallas:eln-2026-0208",
@@ -398,14 +398,15 @@
             "permit:dallas:elz-2026-0226",
             "permit:dallas:elz-2026-0227",
             "permit:dallas:elz-2026-0228",
-            "permit:dallas:elz-2026-0229"
+            "permit:dallas:elz-2026-0229",
+            "permit:dallas:elz-2026-0230"
           ],
           "repeated": true
         },
         {
           "value": "pass",
-          "row_count": 36,
-          "permit_count": 28,
+          "row_count": 37,
+          "permit_count": 29,
           "permit_ids": [
             "permit:dallas:elm-2026-0205",
             "permit:dallas:elm-2026-0211",
@@ -434,7 +435,8 @@
             "permit:dallas:elz-2026-0226",
             "permit:dallas:elz-2026-0227",
             "permit:dallas:elz-2026-0228",
-            "permit:dallas:elz-2026-0229"
+            "permit:dallas:elz-2026-0229",
+            "permit:dallas:elz-2026-0230"
           ],
           "repeated": true
         },
@@ -499,8 +501,8 @@
         },
         {
           "value": "wiring_or_device_issue",
-          "row_count": 11,
-          "permit_count": 11,
+          "row_count": 12,
+          "permit_count": 12,
           "permit_ids": [
             "permit:dallas:elp-2026-0209",
             "permit:dallas:elr-2026-0201",
@@ -512,7 +514,8 @@
             "permit:dallas:elz-2026-0222",
             "permit:dallas:elz-2026-0223",
             "permit:dallas:elz-2026-0224",
-            "permit:dallas:elz-2026-0229"
+            "permit:dallas:elz-2026-0229",
+            "permit:dallas:elz-2026-0230"
           ],
           "repeated": true
         }
@@ -564,10 +567,10 @@
             "zip_code": "75216",
             "inspection_type_normalized": "rough_in"
           },
-          "permit_count": 16,
-          "inspection_count": 16,
+          "permit_count": 17,
+          "inspection_count": 17,
           "failed_inspection_count": 0,
-          "failed_or_partial_inspection_count": 16,
+          "failed_or_partial_inspection_count": 17,
           "repeated": true
         },
         {
@@ -632,8 +635,8 @@
         },
         {
           "value": "correct_wiring_or_devices|schedule_reinspection",
-          "row_count": 11,
-          "permit_count": 11,
+          "row_count": 12,
+          "permit_count": 12,
           "permit_ids": [
             "permit:dallas:elp-2026-0209",
             "permit:dallas:elr-2026-0201",
@@ -645,7 +648,8 @@
             "permit:dallas:elz-2026-0222",
             "permit:dallas:elz-2026-0223",
             "permit:dallas:elz-2026-0224",
-            "permit:dallas:elz-2026-0229"
+            "permit:dallas:elz-2026-0229",
+            "permit:dallas:elz-2026-0230"
           ],
           "repeated": true
         },
