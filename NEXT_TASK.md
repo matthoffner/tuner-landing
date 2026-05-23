@@ -46,7 +46,7 @@ Updated next best artifacts:
 
 - keep the real MVP cockpit running with `python3 scripts/serve_mvp_cockpit.py --auto-start --port 4174`
 - expose the running cockpit to remote observers with `python3 scripts/bridge_mvp_cockpit.py` and share the read-only URL from `.automoat/state/mvp-bridge-status.json`
-- run `python3 scripts/record_operator_correction.py --smoke-check` for the default JSON contract or `python3 scripts/record_operator_correction.py --smoke-check --format text` for the readable operator contract, check correction capture progress with `python3 scripts/record_operator_correction.py --summary --format text`, use the printed next-missing command or run `python3 scripts/record_operator_correction.py --next-missing --format text`, use its action catalog when an edited decision needs corrected action IDs, dry-run or record the first uncaptured item directly with one of the printed text-mode commands, keep the printed `--expected-next-missing-id` guard on next-missing shortcuts, run the printed ledger-validation command, use `python3 scripts/record_operator_correction.py --validate-ledger --require-complete --format text` as the final all-items gate, and summarize useful correction patterns back into the Dallas workflow artifact
+- run `python3 scripts/record_operator_correction.py --smoke-check` for the default JSON contract and `python3 scripts/record_operator_correction.py --smoke-check --format text` for the readable operator contract, verify the completed correction ledger with `python3 scripts/record_operator_correction.py --summary --format text` and `python3 scripts/record_operator_correction.py --validate-ledger --require-complete --format text`, then summarize useful accepted-correction patterns back into the Dallas workflow artifact before widening fixture coverage
 - decide whether the remaining thin latest-import labels, `incomplete_work` and `complete_remaining_work|schedule_reinspection`, need another repeated sequence before real data import
 
 Latest bounded improvement completed:
@@ -127,6 +127,7 @@ Latest bounded improvement completed:
 - Captured the tenth Dallas operator correction through the non-server CLI: `workflow-item:dallas:next-action:0001` is now accepted in `operator-corrections.jsonl`, the regenerated workflow reports `10` captured corrections, and the next missing work order advances to `workflow-item:dallas:next-action:0011`
 - Captured the eleventh Dallas operator correction through the non-server CLI: `workflow-item:dallas:next-action:0011` is now accepted in `operator-corrections.jsonl`, the regenerated workflow reports `11` captured corrections, and the next missing work order advances to `workflow-item:dallas:next-action:0003`
 - Captured the twelfth Dallas operator correction through the non-server CLI: `workflow-item:dallas:next-action:0003` is now accepted in `operator-corrections.jsonl`, the regenerated workflow reports `12` captured corrections, and the next missing work order advances to `workflow-item:dallas:next-action:0005`
+- Captured the thirteenth Dallas operator correction through the non-server CLI: `workflow-item:dallas:next-action:0005` is now accepted in `operator-corrections.jsonl`, and the regenerated workflow plus completion gate report all `13` current queue items captured
 
 ## Constraints
 

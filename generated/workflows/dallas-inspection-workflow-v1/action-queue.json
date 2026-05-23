@@ -27,10 +27,10 @@
   },
   "operator_correction_summary": {
     "ledger_path": "generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl",
-    "total_events": 12,
-    "queue_items_with_corrections": 12,
+    "total_events": 13,
+    "queue_items_with_corrections": 13,
     "decision_counts": {
-      "accepted": 12
+      "accepted": 13
     },
     "invalid_lines": 0,
     "latest_by_queue_item": {
@@ -138,6 +138,16 @@
       "workflow-item:dallas:next-action:0003": {
         "correction_id": "operator-correction:20260523T075452707370Z:0003",
         "captured_at": "2026-05-23T07:54:52Z",
+        "decision": "accepted",
+        "corrected_actions": [
+          "correct_grounding_or_bonding",
+          "add_labels_or_documentation",
+          "schedule_reinspection"
+        ]
+      },
+      "workflow-item:dallas:next-action:0005": {
+        "correction_id": "operator-correction:20260523T125000000000Z:0005",
+        "captured_at": "2026-05-23T12:50:00Z",
         "decision": "accepted",
         "corrected_actions": [
           "correct_grounding_or_bonding",
