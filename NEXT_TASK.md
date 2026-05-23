@@ -46,7 +46,7 @@ Updated next best artifacts:
 
 - keep the real MVP cockpit running with `python3 scripts/serve_mvp_cockpit.py --auto-start --port 4174`
 - expose the running cockpit to remote observers with `python3 scripts/bridge_mvp_cockpit.py` and share the read-only URL from `.automoat/state/mvp-bridge-status.json`
-- list current queue IDs with `python3 scripts/record_operator_correction.py --list-queue-items`, then exercise the local operator-correction capture path with real accepted/rejected/edited queue decisions and summarize useful correction patterns back into the Dallas workflow artifact
+- check correction capture progress with `python3 scripts/record_operator_correction.py --summary`, list current queue IDs with `python3 scripts/record_operator_correction.py --list-queue-items`, then exercise the local operator-correction capture path with real accepted/rejected/edited queue decisions and summarize useful correction patterns back into the Dallas workflow artifact
 - decide whether the remaining thin latest-import labels, `incomplete_work` and `complete_remaining_work|schedule_reinspection`, need another repeated sequence before real data import
 
 Latest bounded improvement completed:
@@ -78,6 +78,7 @@ Latest bounded improvement completed:
 - `scripts/serve_mvp_cockpit.py` now accepts local `POST /api/operator-corrections` events from the browser-readable action queue, appending accepted/rejected/edited operator decisions to `generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl` while keeping remote bridges read-only
 - `scripts/operator_corrections.py` now centralizes operator-correction validation and event writing, and `scripts/record_operator_correction.py` can append or dry-run one accepted/rejected/edited Dallas queue decision without starting the cockpit
 - `scripts/record_operator_correction.py --list-queue-items` now prints the current Dallas action queue IDs, priorities, trigger context, and recommended action IDs so operators can capture corrections without opening the generated JSON by hand
+- `scripts/record_operator_correction.py --summary` now prints operator-correction capture progress, and `--list-queue-items` marks each Dallas queue item as captured or missing so operators can avoid duplicate correction passes
 
 ## Constraints
 

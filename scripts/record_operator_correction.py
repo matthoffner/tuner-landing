@@ -13,6 +13,7 @@ from operator_corrections import (
     DEFAULT_QUEUE_PATH,
     append_operator_correction,
     build_operator_correction_event,
+    correction_summary,
     read_json,
 )
 
@@ -24,7 +25,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--list-queue-items",
         action="store_true",
-        help="print queue item IDs and recommended actions without appending corrections",
+        help="print queue item IDs, recommended actions, and correction status without appending corrections",
+    )
+    parser.add_argument(
+        "--summary",
+        action="store_true",
+        help="print correction ledger progress without appending corrections",
     )
     parser.add_argument("--queue-item-id")
     parser.add_argument("--decision", choices=("accepted", "rejected", "edited"))
@@ -42,24 +48,60 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--dry-run", action="store_true", help="validate and print the event without appending")
     args = parser.parse_args()
-    if not args.list_queue_items:
+    if not args.list_queue_items and not args.summary:
         if not args.queue_item_id:
-            parser.error("--queue-item-id is required unless --list-queue-items is used")
+            parser.error("--queue-item-id is required unless --list-queue-items or --summary is used")
         if not args.decision:
-            parser.error("--decision is required unless --list-queue-items is used")
+            parser.error("--decision is required unless --list-queue-items or --summary is used")
     return args
 
 
-def queue_listing(queue_path: Path) -> dict[str, Any]:
+def correction_progress(queue_path: Path, ledger_path: Path) -> dict[str, Any]:
     payload = read_json(queue_path)
     queue = payload.get("queue")
     if not isinstance(queue, list):
         raise ValueError("queue file must contain a queue list")
 
+    summary = correction_summary(ledger_path)
+    latest_by_queue_item = summary.get("latest_by_queue_item", {})
+    if not isinstance(latest_by_queue_item, dict):
+        latest_by_queue_item = {}
+
+    queue_item_ids = [
+        item.get("queue_item_id")
+        for item in queue
+        if isinstance(item, dict) and isinstance(item.get("queue_item_id"), str)
+    ]
+    corrected_ids = {queue_item_id for queue_item_id in queue_item_ids if queue_item_id in latest_by_queue_item}
+    missing_ids = [queue_item_id for queue_item_id in queue_item_ids if queue_item_id not in corrected_ids]
+
+    return {
+        "workflow_id": payload.get("workflow_id"),
+        "queue_items": len(queue_item_ids),
+        "queue_items_with_corrections": len(corrected_ids),
+        "queue_items_missing_corrections": len(missing_ids),
+        "missing_queue_item_ids": missing_ids,
+        "operator_correction_summary": summary,
+    }
+
+
+def queue_listing(queue_path: Path, ledger_path: Path) -> dict[str, Any]:
+    payload = read_json(queue_path)
+    queue = payload.get("queue")
+    if not isinstance(queue, list):
+        raise ValueError("queue file must contain a queue list")
+
+    progress = correction_progress(queue_path, ledger_path)
+    summary = progress["operator_correction_summary"]
+    latest_by_queue_item = summary.get("latest_by_queue_item", {})
+    if not isinstance(latest_by_queue_item, dict):
+        latest_by_queue_item = {}
+
     items = []
     for item in queue:
         if not isinstance(item, dict):
             continue
+        queue_item_id = item.get("queue_item_id")
         trigger = item.get("trigger_inspection")
         if not isinstance(trigger, dict):
             trigger = {}
@@ -69,9 +111,20 @@ def queue_listing(queue_path: Path) -> dict[str, Any]:
         contractor = item.get("contractor")
         if not isinstance(contractor, dict):
             contractor = {}
+        latest_correction = latest_by_queue_item.get(queue_item_id)
+        if isinstance(latest_correction, dict):
+            correction = {
+                "status": "captured",
+                "decision": latest_correction.get("decision"),
+                "correction_id": latest_correction.get("correction_id"),
+                "captured_at": latest_correction.get("captured_at"),
+                "corrected_actions": latest_correction.get("corrected_actions", []),
+            }
+        else:
+            correction = {"status": "missing"}
         items.append(
             {
-                "queue_item_id": item.get("queue_item_id"),
+                "queue_item_id": queue_item_id,
                 "source_permit_number": item.get("source_permit_number"),
                 "priority": item.get("priority"),
                 "address": property_record.get("normalized_address"),
@@ -81,12 +134,15 @@ def queue_listing(queue_path: Path) -> dict[str, Any]:
                 "trigger_result": trigger.get("result_normalized"),
                 "failure_reason": trigger.get("failure_reason_normalized"),
                 "recommended_actions": item.get("recommended_actions", []),
+                "correction": correction,
             }
         )
 
     return {
-        "workflow_id": payload.get("workflow_id"),
+        "workflow_id": progress["workflow_id"],
         "queue_items": len(items),
+        "queue_items_with_corrections": progress["queue_items_with_corrections"],
+        "queue_items_missing_corrections": progress["queue_items_missing_corrections"],
         "items": items,
     }
 
@@ -94,7 +150,10 @@ def queue_listing(queue_path: Path) -> dict[str, Any]:
 def main() -> int:
     args = parse_args()
     if args.list_queue_items:
-        print(json.dumps(queue_listing(args.queue_path), indent=2, sort_keys=True))
+        print(json.dumps(queue_listing(args.queue_path, args.ledger_path), indent=2, sort_keys=True))
+        return 0
+    if args.summary:
+        print(json.dumps(correction_progress(args.queue_path, args.ledger_path), indent=2, sort_keys=True))
         return 0
 
     payload = {

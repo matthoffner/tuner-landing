@@ -115,3 +115,4 @@ Use short dated entries. Focus on decisions, changes, blockers, and next steps.
 - Updated `scripts/run_mvp_loop.py` so cockpit status includes the workflow's operator-correction summary.
 - Added a shared `scripts/operator_corrections.py` helper and `scripts/record_operator_correction.py` CLI so an operator can validate or append one accepted/rejected/edited Dallas queue correction without running the cockpit server.
 - Added `--list-queue-items` to `scripts/record_operator_correction.py` so the non-server correction path can print current queue item IDs, trigger context, and recommended action IDs before appending or dry-running a decision.
+- Added `--summary` to `scripts/record_operator_correction.py` and made `--list-queue-items` correction-aware so the non-server correction path shows total captured queue items, missing queue item IDs, and per-item captured/missing status before an operator records another Dallas decision.
