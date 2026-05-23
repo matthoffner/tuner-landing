@@ -4,6 +4,10 @@ Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
 - lane: editor
+- status: added a strict automation mode for Dallas import execution readiness; `python3 scripts/run_dallas_import_pipeline.py --require-ready` still refreshes imported `v2` through the strict correction ledger and durable summary, but now exits nonzero if `execution_readiness.status` is blocked
+- files: scripts/run_dallas_import_pipeline.py, generated/pipeline/dallas-import-pipeline-summary-v1/summary.json, generated/pipeline/dallas-import-pipeline-summary-v1/summary.md, README.md, NEXT_TASK.md, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- next: run `python3 scripts/run_dallas_import_pipeline.py --require-ready`, inspect `execution_readiness.blockers` only if the command fails, then widen or import new Dallas rows when the readiness gate stays green
+- lane: editor
 - status: added a machine-readable Dallas import execution-readiness gate; `python3 scripts/run_dallas_import_pipeline.py` still refreshes imported `v2` through the strict correction ledger, and now writes `execution_readiness: ready` into `generated/pipeline/dallas-import-pipeline-summary-v1/summary.json` plus `summary.md` from contract pass state, complete operator corrections, correction-gate status, no thin coverage groups, and accepted pattern availability
 - files: scripts/run_dallas_import_pipeline.py, generated/pipeline/dallas-import-pipeline-summary-v1/summary.json, generated/pipeline/dallas-import-pipeline-summary-v1/summary.md, NEXT_TASK.md, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
 - next: run `python3 scripts/run_dallas_import_pipeline.py`, inspect `execution_readiness.status`, `execution_readiness.blockers`, `workflow.accepted_patterns`, and `coverage.thin_groups` in `generated/pipeline/dallas-import-pipeline-summary-v1/summary.json`, then widen or import new Dallas rows only when the readiness gate stays green

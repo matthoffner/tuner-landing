@@ -27,6 +27,7 @@ PATTERNS_COMMAND = "python3 scripts/record_operator_correction.py --list-pattern
 COMPLETION_GATE_COMMAND = (
     "python3 scripts/record_operator_correction.py --validate-ledger --require-complete --format text"
 )
+REQUIRE_READY_COMMAND = "python3 scripts/run_dallas_import_pipeline.py --require-ready"
 
 
 def parse_args():
@@ -45,6 +46,11 @@ def parse_args():
         "--skip-correction-gate",
         action="store_true",
         help="Refresh artifacts without requiring every generated queue item to have a correction.",
+    )
+    parser.add_argument(
+        "--require-ready",
+        action="store_true",
+        help="Exit nonzero if the generated execution_readiness gate is blocked.",
     )
     return parser.parse_args()
 
@@ -214,6 +220,7 @@ def build_execution_readiness(contract, workflow, coverage, correction_gate):
         "blockers": blockers,
         "next_step": next_step,
         "run_command": "python3 scripts/run_dallas_import_pipeline.py",
+        "require_ready_command": REQUIRE_READY_COMMAND,
     }
 
 
@@ -281,6 +288,7 @@ def build_summary(args):
             "workflow_report": command_path(WORKFLOW_REPORT_PATH),
             "summary_json": command_path(SUMMARY_JSON_PATH),
             "summary_report": command_path(SUMMARY_REPORT_PATH),
+            "require_ready_pipeline": REQUIRE_READY_COMMAND,
         },
         "latest_import": summarize_contract_dataset(contract, args.dataset_id),
     }
@@ -372,6 +380,7 @@ def write_summary(summary):
         ),
         f"- Next step: {execution_readiness['next_step']}",
         f"- Run command: `{execution_readiness['run_command']}`",
+        f"- Require-ready command: `{execution_readiness['require_ready_command']}`",
         "",
         "## Import Artifact Snapshot",
         "",
@@ -489,6 +498,7 @@ def write_summary(summary):
             "",
             f"- Pattern review: `{follow_up['patterns_command']}`",
             f"- Completion gate: `{follow_up['completion_gate']}`",
+            f"- Require-ready pipeline: `{follow_up['require_ready_pipeline']}`",
             "",
             "## Reports",
             "",
@@ -573,6 +583,7 @@ def print_summary(summary):
     print(f"  workflow_report: {follow_up['workflow_report']}")
     print(f"  summary_json: {follow_up['summary_json']}")
     print(f"  summary_report: {follow_up['summary_report']}")
+    print(f"  require_ready_pipeline: {follow_up['require_ready_pipeline']}")
 
 
 def main():
@@ -648,6 +659,9 @@ def main():
     summary = build_summary(args)
     write_summary(summary)
     print_summary(summary)
+    if args.require_ready and summary["execution_readiness"]["status"] != "ready":
+        blockers = ", ".join(summary["execution_readiness"]["blockers"]) or "unknown"
+        raise SystemExit(f"Dallas import execution readiness blocked: {blockers}")
 
 
 if __name__ == "__main__":
