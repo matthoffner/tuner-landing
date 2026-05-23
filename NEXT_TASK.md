@@ -100,6 +100,7 @@ Latest bounded improvement completed:
 - `scripts/record_operator_correction.py --dry-run` now rejects duplicate `correction_id` values against the selected ledger, so deterministic replay checks catch timestamp collisions before an operator sees a reusable capture command
 - `scripts/record_operator_correction.py --next-missing` shortcut commands now include `--expected-next-missing-id`, and `--use-next-missing` refuses to record if the first missing queue item has changed since the work order was generated
 - `scripts/record_operator_correction.py --summary --format text` now prints copyable next-missing, ledger-validation, and completion-gate commands so the non-server Dallas correction pass can start from progress output without switching docs
+- `scripts/record_operator_correction.py --next-missing --format text` now prints note-bearing dry-run shortcut and fixed-item command groups, so an operator can validate the exact note-carrying Dallas correction before appending it
 
 ## Constraints
 

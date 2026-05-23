@@ -627,6 +627,16 @@ def suggested_record_commands(
             expected_next_missing_id=queue_item_id,
             output_format=output_format,
         ),
+        "dry_run_next_missing_with_note": guarded_record_command_group(
+            None,
+            queue_path,
+            ledger_path,
+            dry_run=True,
+            operator_note=operator_note,
+            use_next_missing=True,
+            expected_next_missing_id=queue_item_id,
+            output_format=output_format,
+        ),
         "append_next_missing": guarded_record_command_group(
             None,
             queue_path,
@@ -884,11 +894,20 @@ def format_next_missing_text(next_missing: dict[str, Any]) -> str:
         commands = {}
     lines.extend(format_command_group(commands.get("dry_run_next_missing"), "Dry-run next-missing shortcut"))
     lines.append("")
+    lines.extend(
+        format_command_group(
+            commands.get("dry_run_next_missing_with_note"),
+            "Dry-run next-missing shortcut with note",
+        )
+    )
+    lines.append("")
     lines.extend(format_command_group(commands.get("append_next_missing"), "Append next-missing shortcut"))
     lines.append("")
     lines.extend(format_command_group(commands.get("append_next_missing_with_note"), "Append next-missing shortcut with note"))
     lines.append("")
     lines.extend(format_command_group(commands.get("dry_run"), "Dry-run fixed-item commands"))
+    lines.append("")
+    lines.extend(format_command_group(commands.get("dry_run_with_note"), "Dry-run fixed-item commands with note"))
     lines.append("")
     lines.extend(format_command_group(commands.get("append"), "Append fixed-item commands"))
     lines.append("")

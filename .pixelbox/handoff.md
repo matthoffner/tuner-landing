@@ -4,6 +4,10 @@ Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
 - lane: editor
+- status: made non-server Dallas note capture easier to verify; `scripts/record_operator_correction.py --next-missing --format text` now prints note-bearing dry-run shortcut and fixed-item command groups before append commands
+- files: scripts/record_operator_correction.py, README.md, NEXT_TASK.md, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- next: run `python3 scripts/record_operator_correction.py --next-missing --format text`, dry-run the reviewed accepted/rejected/edited command with `--operator-note` when rationale matters, then append and finish with the printed completion gate
+- lane: editor
 - status: made non-server Dallas correction progress output self-directing; `scripts/record_operator_correction.py --summary --format text` now prints copyable next-missing, ledger-validation, and completion-gate commands
 - files: scripts/record_operator_correction.py, README.md, NEXT_TASK.md, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
 - next: run `python3 scripts/record_operator_correction.py --summary --format text`, follow the printed next-missing command to capture the reviewed accepted/rejected/edited Dallas decision, then finish with the printed completion gate
