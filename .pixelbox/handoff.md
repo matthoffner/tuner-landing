@@ -4,6 +4,10 @@ Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
 - lane: editor
+- status: made non-server Dallas correction progress output self-directing; `scripts/record_operator_correction.py --summary --format text` now prints copyable next-missing, ledger-validation, and completion-gate commands
+- files: scripts/record_operator_correction.py, README.md, NEXT_TASK.md, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- next: run `python3 scripts/record_operator_correction.py --summary --format text`, follow the printed next-missing command to capture the reviewed accepted/rejected/edited Dallas decision, then finish with the printed completion gate
+- lane: editor
 - status: guarded non-server Dallas next-missing shortcuts; `scripts/record_operator_correction.py --next-missing` now prints `--expected-next-missing-id`, and `--use-next-missing` refuses to record if the first missing queue item changed since the work order was generated
 - files: scripts/record_operator_correction.py, README.md, NEXT_TASK.md, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
 - next: run `python3 scripts/record_operator_correction.py --next-missing --format text`, keep the printed `--expected-next-missing-id` on the reviewed accepted/rejected/edited command, then finish with `python3 scripts/record_operator_correction.py --validate-ledger --require-complete --format text`

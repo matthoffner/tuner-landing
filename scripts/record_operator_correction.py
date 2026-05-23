@@ -129,7 +129,11 @@ def queue_item_has_correction(ledger_path: Path, queue_item_id: str) -> bool:
     return isinstance(latest_by_queue_item, dict) and queue_item_id in latest_by_queue_item
 
 
-def correction_progress(queue_path: Path, ledger_path: Path) -> dict[str, Any]:
+def correction_progress(
+    queue_path: Path,
+    ledger_path: Path,
+    output_format: str = "json",
+) -> dict[str, Any]:
     payload = read_json(queue_path)
     queue = payload.get("queue")
     if not isinstance(queue, list):
@@ -155,6 +159,22 @@ def correction_progress(queue_path: Path, ledger_path: Path) -> dict[str, Any]:
         "queue_items_missing_corrections": len(missing_ids),
         "missing_queue_item_ids": missing_ids,
         "operator_correction_summary": summary,
+        "next_missing_command": (
+            read_only_command("--next-missing", queue_path, ledger_path, output_format=output_format)
+            if missing_ids
+            else None
+        ),
+        "validation_command": validate_ledger_command(
+            queue_path,
+            ledger_path,
+            output_format=output_format,
+        ),
+        "completion_validation_command": validate_ledger_command(
+            queue_path,
+            ledger_path,
+            output_format=output_format,
+            require_complete=True,
+        ),
     }
 
 
@@ -696,8 +716,12 @@ def format_progress_text(progress: dict[str, Any]) -> str:
     if missing_ids:
         lines.append("Missing queue items:")
         lines.extend(f"- {queue_item_id}" for queue_item_id in missing_ids)
+        if progress.get("next_missing_command"):
+            lines.append(f"Next missing work order: {progress.get('next_missing_command')}")
     else:
         lines.append("Missing queue items: (none)")
+    lines.append(f"Validate ledger: {progress.get('validation_command')}")
+    lines.append(f"Completion gate: {progress.get('completion_validation_command')}")
     return "\n".join(lines)
 
 
@@ -1016,7 +1040,7 @@ def main() -> int:
             print(json.dumps(next_missing, indent=2, sort_keys=True))
         return 0
     if args.summary:
-        progress = correction_progress(args.queue_path, args.ledger_path)
+        progress = correction_progress(args.queue_path, args.ledger_path, output_format=args.format)
         if args.format == "text":
             print(format_progress_text(progress))
         else:
