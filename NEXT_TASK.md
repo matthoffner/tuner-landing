@@ -46,7 +46,7 @@ Updated next best artifacts:
 
 - keep the real MVP cockpit running with `python3 scripts/serve_mvp_cockpit.py --auto-start --port 4174`
 - expose the running cockpit to remote observers with `python3 scripts/bridge_mvp_cockpit.py` and share the read-only URL from `.automoat/state/mvp-bridge-status.json`
-- check correction capture progress with `python3 scripts/record_operator_correction.py --summary --format text`, use the printed next-missing command or run `python3 scripts/record_operator_correction.py --next-missing --format text`, use its action catalog when an edited decision needs corrected action IDs, dry-run or record the first uncaptured item directly with one of the printed text-mode commands, keep the printed `--expected-next-missing-id` guard on next-missing shortcuts, run the printed ledger-validation command, use `python3 scripts/record_operator_correction.py --validate-ledger --require-complete --format text` as the final all-items gate, and summarize useful correction patterns back into the Dallas workflow artifact
+- run `python3 scripts/record_operator_correction.py --smoke-check --format text`, check correction capture progress with `python3 scripts/record_operator_correction.py --summary --format text`, use the printed next-missing command or run `python3 scripts/record_operator_correction.py --next-missing --format text`, use its action catalog when an edited decision needs corrected action IDs, dry-run or record the first uncaptured item directly with one of the printed text-mode commands, keep the printed `--expected-next-missing-id` guard on next-missing shortcuts, run the printed ledger-validation command, use `python3 scripts/record_operator_correction.py --validate-ledger --require-complete --format text` as the final all-items gate, and summarize useful correction patterns back into the Dallas workflow artifact
 - decide whether the remaining thin latest-import labels, `incomplete_work` and `complete_remaining_work|schedule_reinspection`, need another repeated sequence before real data import
 
 Latest bounded improvement completed:
@@ -101,6 +101,7 @@ Latest bounded improvement completed:
 - `scripts/record_operator_correction.py --next-missing` shortcut commands now include `--expected-next-missing-id`, and `--use-next-missing` refuses to record if the first missing queue item has changed since the work order was generated
 - `scripts/record_operator_correction.py --summary --format text` now prints copyable next-missing, ledger-validation, and completion-gate commands so the non-server Dallas correction pass can start from progress output without switching docs
 - `scripts/record_operator_correction.py --next-missing --format text` now prints note-bearing dry-run shortcut and fixed-item command groups, so an operator can validate the exact note-carrying Dallas correction before appending it
+- `scripts/record_operator_correction.py --smoke-check --format text` now runs a non-mutating readiness check for the Dallas operator-correction path, including ledger validation, guarded next-missing command checks, and accepted/rejected/edited dry-run event construction
 
 ## Constraints
 

@@ -4,6 +4,10 @@ Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
 - lane: editor
+- status: added a non-mutating Dallas operator-correction smoke check; `scripts/record_operator_correction.py --smoke-check --format text` now verifies ledger validity, guarded next-missing commands, and accepted/rejected/edited dry-run event construction before capture
+- files: scripts/record_operator_correction.py, README.md, NEXT_TASK.md, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- next: run `python3 scripts/record_operator_correction.py --smoke-check --format text`, then use `python3 scripts/record_operator_correction.py --next-missing --format text` to dry-run and append the reviewed accepted/rejected/edited Dallas decision
+- lane: editor
 - status: made non-server Dallas note capture easier to verify; `scripts/record_operator_correction.py --next-missing --format text` now prints note-bearing dry-run shortcut and fixed-item command groups before append commands
 - files: scripts/record_operator_correction.py, README.md, NEXT_TASK.md, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
 - next: run `python3 scripts/record_operator_correction.py --next-missing --format text`, dry-run the reviewed accepted/rejected/edited command with `--operator-note` when rationale matters, then append and finish with the printed completion gate

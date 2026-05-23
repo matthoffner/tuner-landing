@@ -55,6 +55,14 @@ def parse_args() -> argparse.Namespace:
         help="validate captured correction events against the current queue and action catalog",
     )
     parser.add_argument(
+        "--smoke-check",
+        action="store_true",
+        help=(
+            "run a non-mutating readiness check for the next-missing correction path, "
+            "including dry-run event construction"
+        ),
+    )
+    parser.add_argument(
         "--require-complete",
         action="store_true",
         help="with --validate-ledger, fail if any current queue item is missing a correction",
@@ -98,7 +106,13 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--dry-run", action="store_true", help="validate and print the event without appending")
     args = parser.parse_args()
-    read_only_mode = args.list_queue_items or args.next_missing or args.summary or args.validate_ledger
+    read_only_mode = (
+        args.list_queue_items
+        or args.next_missing
+        or args.summary
+        or args.validate_ledger
+        or args.smoke_check
+    )
     if args.missing_only and not args.list_queue_items:
         parser.error("--missing-only requires --list-queue-items")
     if args.require_complete and not args.validate_ledger:
@@ -113,12 +127,12 @@ def parse_args() -> argparse.Namespace:
         if not args.queue_item_id and not args.use_next_missing:
             parser.error(
                 "--queue-item-id or --use-next-missing is required unless --list-queue-items, "
-                "--next-missing, --summary, or --validate-ledger is used"
+                "--next-missing, --summary, --validate-ledger, or --smoke-check is used"
             )
         if not args.decision:
             parser.error(
                 "--decision is required unless --list-queue-items, --next-missing, --summary, "
-                "or --validate-ledger is used"
+                "--validate-ledger, or --smoke-check is used"
             )
     return args
 
@@ -697,6 +711,31 @@ def format_decision_counts(counts: Any) -> str:
     return ", ".join(f"{decision}={count}" for decision, count in sorted(counts.items()))
 
 
+def command_parts(command: Any) -> list[str]:
+    if not isinstance(command, str):
+        return []
+    try:
+        return shlex.split(command)
+    except ValueError:
+        return []
+
+
+def command_has_arg(command: Any, arg: str) -> bool:
+    return arg in command_parts(command)
+
+
+def command_arg_value(command: Any, arg: str) -> str | None:
+    parts = command_parts(command)
+    try:
+        index = parts.index(arg)
+    except ValueError:
+        return None
+    value_index = index + 1
+    if value_index >= len(parts):
+        return None
+    return parts[value_index]
+
+
 def pluralize(value: Any, singular: str, plural: str) -> str:
     return singular if value == 1 else plural
 
@@ -1038,6 +1077,221 @@ def next_missing_correction(
     }
 
 
+def add_smoke_check(checks: list[dict[str, Any]], name: str, passed: bool, detail: str) -> None:
+    checks.append({"name": name, "status": "pass" if passed else "fail", "detail": detail})
+
+
+def operator_correction_smoke_check(queue_path: Path, ledger_path: Path) -> dict[str, Any]:
+    progress = correction_progress(queue_path, ledger_path, output_format="text")
+    validation = ledger_validation(queue_path, ledger_path)
+    next_missing = next_missing_correction(queue_path, ledger_path, output_format="text")
+    checks: list[dict[str, Any]] = []
+
+    queue_items = progress.get("queue_items")
+    missing_count = progress.get("queue_items_missing_corrections")
+    add_smoke_check(
+        checks,
+        "queue_loaded",
+        isinstance(queue_items, int) and queue_items > 0,
+        f"{queue_items} queue items found",
+    )
+    add_smoke_check(
+        checks,
+        "ledger_validation",
+        validation.get("status") == "pass",
+        f"{validation.get('issue_count')} issues, {validation.get('invalid_lines')} invalid lines",
+    )
+
+    catalog = action_catalog(queue_path)
+    action_ids = catalog.get("action_ids", [])
+    add_smoke_check(
+        checks,
+        "action_catalog",
+        isinstance(action_ids, list) and bool(action_ids),
+        f"{len(action_ids) if isinstance(action_ids, list) else 0} known action IDs",
+    )
+
+    item = next_missing.get("item")
+    queue_item_id = item.get("queue_item_id") if isinstance(item, dict) else None
+    if isinstance(missing_count, int) and missing_count > 0:
+        add_smoke_check(
+            checks,
+            "next_missing_item",
+            isinstance(queue_item_id, str) and bool(queue_item_id),
+            str(queue_item_id or "no next missing item"),
+        )
+    else:
+        add_smoke_check(
+            checks,
+            "next_missing_item",
+            item is None,
+            "all current queue items have captured corrections",
+        )
+
+    dry_run_events: list[dict[str, Any]] = []
+    if isinstance(item, dict) and isinstance(queue_item_id, str):
+        commands = next_missing.get("suggested_commands", {})
+        if not isinstance(commands, dict):
+            commands = {}
+        dry_run_shortcut = commands.get("dry_run_next_missing", {})
+        dry_run_with_note = commands.get("dry_run_next_missing_with_note", {})
+        append_shortcut = commands.get("append_next_missing", {})
+        accepted_dry_run = dry_run_shortcut.get("accepted") if isinstance(dry_run_shortcut, dict) else None
+        accepted_note_dry_run = dry_run_with_note.get("accepted") if isinstance(dry_run_with_note, dict) else None
+        accepted_append = append_shortcut.get("accepted") if isinstance(append_shortcut, dict) else None
+
+        guarded_shortcut = (
+            command_arg_value(accepted_dry_run, "--expected-next-missing-id") == queue_item_id
+            and command_has_arg(accepted_dry_run, "--require-missing")
+            and command_has_arg(accepted_dry_run, "--dry-run")
+        )
+        add_smoke_check(
+            checks,
+            "guarded_dry_run_shortcut",
+            guarded_shortcut,
+            "accepted next-missing dry-run includes expected-ID, require-missing, and dry-run guards",
+        )
+
+        note_dry_run = (
+            command_arg_value(accepted_note_dry_run, "--operator-note") == "<operator-note>"
+            and command_has_arg(accepted_note_dry_run, "--dry-run")
+        )
+        add_smoke_check(
+            checks,
+            "note_dry_run_shortcut",
+            note_dry_run,
+            "accepted note dry-run keeps operator-note and dry-run flags",
+        )
+
+        guarded_append = (
+            command_arg_value(accepted_append, "--expected-next-missing-id") == queue_item_id
+            and command_has_arg(accepted_append, "--require-missing")
+            and not command_has_arg(accepted_append, "--dry-run")
+        )
+        add_smoke_check(
+            checks,
+            "guarded_append_shortcut",
+            guarded_append,
+            "accepted next-missing append includes expected-ID and require-missing guards",
+        )
+
+        recommended_actions: list[str] = []
+        try:
+            recommended_actions = normalize_action_list(item.get("recommended_actions"))
+        except ValueError:
+            pass
+        add_smoke_check(
+            checks,
+            "next_missing_actions",
+            bool(recommended_actions),
+            format_action_list(recommended_actions),
+        )
+
+        event_specs = [
+            ("accepted", "", ["corrected_actions", recommended_actions]),
+            ("rejected", "", ["corrected_actions", []]),
+            ("edited", ",".join(recommended_actions), ["corrected_actions", recommended_actions]),
+        ]
+        event_failures = []
+        for offset, (decision, corrected_actions, expected_field) in enumerate(event_specs, start=1):
+            try:
+                event = build_operator_correction_event(
+                    {
+                        "queue_item_id": queue_item_id,
+                        "decision": decision,
+                        "corrected_actions": corrected_actions,
+                        "operator_note": "smoke check only",
+                        "source": "operator-correction-smoke-check",
+                    },
+                    queue_path,
+                    captured_at=f"2026-01-01T00:00:0{offset}Z",
+                )
+                dry_run_events.append(
+                    {
+                        "decision": decision,
+                        "correction_id": event.get("correction_id"),
+                        "corrected_actions": event.get("corrected_actions"),
+                    }
+                )
+                field_name, expected_value = expected_field
+                if event.get(field_name) != expected_value:
+                    event_failures.append(f"{decision} produced unexpected {field_name}")
+            except ValueError as exc:
+                event_failures.append(f"{decision}: {exc}")
+        add_smoke_check(
+            checks,
+            "dry_run_event_construction",
+            not event_failures,
+            "; ".join(event_failures) if event_failures else "accepted/rejected/edited events build",
+        )
+
+    failed_checks = [check for check in checks if check.get("status") != "pass"]
+    return {
+        "workflow_id": progress.get("workflow_id"),
+        "status": "fail" if failed_checks else "pass",
+        "queue_items": progress.get("queue_items"),
+        "queue_items_with_corrections": progress.get("queue_items_with_corrections"),
+        "queue_items_missing_corrections": progress.get("queue_items_missing_corrections"),
+        "next_missing_queue_item_id": queue_item_id,
+        "checks": checks,
+        "dry_run_events": dry_run_events,
+        "next_missing_command": progress.get("next_missing_command"),
+        "validation_command": progress.get("validation_command"),
+        "completion_validation_command": progress.get("completion_validation_command"),
+    }
+
+
+def format_smoke_check_text(smoke_check: dict[str, Any]) -> str:
+    lines = [
+        "Dallas operator-correction smoke check",
+        f"Status: {str(smoke_check.get('status', 'fail')).upper()}",
+        f"Workflow: {smoke_check.get('workflow_id')}",
+        (
+            "Queue corrections: "
+            f"{smoke_check.get('queue_items_with_corrections')} captured, "
+            f"{smoke_check.get('queue_items_missing_corrections')} missing, "
+            f"{smoke_check.get('queue_items')} total"
+        ),
+    ]
+    next_missing_queue_item_id = smoke_check.get("next_missing_queue_item_id")
+    if next_missing_queue_item_id:
+        lines.append(f"Next missing queue item: {next_missing_queue_item_id}")
+    else:
+        lines.append("Next missing queue item: (none)")
+
+    checks = smoke_check.get("checks", [])
+    lines.append("Checks:")
+    if isinstance(checks, list) and checks:
+        for check in checks:
+            if not isinstance(check, dict):
+                continue
+            lines.append(
+                "- "
+                f"{str(check.get('status', 'fail')).upper()}: "
+                f"{check.get('name')} - {check.get('detail')}"
+            )
+    else:
+        lines.append("- FAIL: no checks ran")
+
+    dry_run_events = smoke_check.get("dry_run_events", [])
+    if isinstance(dry_run_events, list) and dry_run_events:
+        lines.append("Dry-run event shapes:")
+        for event in dry_run_events:
+            if not isinstance(event, dict):
+                continue
+            lines.append(
+                "- "
+                f"{event.get('decision')}: "
+                f"{format_action_list(event.get('corrected_actions'))}"
+            )
+
+    if smoke_check.get("next_missing_command"):
+        lines.append(f"Next missing work order: {smoke_check.get('next_missing_command')}")
+    lines.append(f"Validate ledger: {smoke_check.get('validation_command')}")
+    lines.append(f"Completion gate: {smoke_check.get('completion_validation_command')}")
+    return "\n".join(lines)
+
+
 def main() -> int:
     args = parse_args()
     if args.list_queue_items:
@@ -1072,6 +1326,13 @@ def main() -> int:
         else:
             print(json.dumps(validation, indent=2, sort_keys=True))
         return 0 if validation["status"] == "pass" else 1
+    if args.smoke_check:
+        smoke_check = operator_correction_smoke_check(args.queue_path, args.ledger_path)
+        if args.format == "text":
+            print(format_smoke_check_text(smoke_check))
+        else:
+            print(json.dumps(smoke_check, indent=2, sort_keys=True))
+        return 0 if smoke_check["status"] == "pass" else 1
 
     queue_item_id = args.queue_item_id
     if args.use_next_missing:
