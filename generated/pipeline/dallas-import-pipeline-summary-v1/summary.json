@@ -49,6 +49,193 @@
         "excluded_by_missing_title": 0
       }
     },
+    "raw_file_importable_examples": {
+      "permits.csv": [
+        {
+          "csv_row_number": 2,
+          "reason": "importable_dallas_residential_electrical_permit",
+          "row": {
+            "permit_number": "ELR-2026-0201",
+            "address": "412 N Winnetka Ave",
+            "city": "Dallas",
+            "trade": "electrical",
+            "work_class": "residential"
+          }
+        },
+        {
+          "csv_row_number": 3,
+          "reason": "importable_dallas_residential_electrical_permit",
+          "row": {
+            "permit_number": "ELR-2026-0207",
+            "address": "527 N Clinton Ave",
+            "city": "Dallas",
+            "trade": "electrical",
+            "work_class": "residential"
+          }
+        },
+        {
+          "csv_row_number": 4,
+          "reason": "importable_dallas_residential_electrical_permit",
+          "row": {
+            "permit_number": "ELS-2026-0202",
+            "address": "9915 Ferguson Rd",
+            "city": "Dallas",
+            "trade": "electrical",
+            "work_class": "residential"
+          }
+        },
+        {
+          "csv_row_number": 5,
+          "reason": "importable_dallas_residential_electrical_permit",
+          "row": {
+            "permit_number": "ELP-2026-0203",
+            "address": "2234 S Marsalis Ave",
+            "city": "Dallas",
+            "trade": "electrical",
+            "work_class": "residential"
+          }
+        },
+        {
+          "csv_row_number": 6,
+          "reason": "importable_dallas_residential_electrical_permit",
+          "row": {
+            "permit_number": "ELP-2026-0209",
+            "address": "2615 S Ewing Ave",
+            "city": "Dallas",
+            "trade": "electrical",
+            "work_class": "residential"
+          }
+        }
+      ],
+      "inspections.csv": [
+        {
+          "csv_row_number": 2,
+          "reason": "linked_to_importable_permit",
+          "row": {
+            "permit_number": "ELR-2026-0201",
+            "inspection_date": "2026-04-04",
+            "inspection_type": "Rough-in",
+            "result": "Pass"
+          }
+        },
+        {
+          "csv_row_number": 3,
+          "reason": "linked_to_importable_permit",
+          "row": {
+            "permit_number": "ELR-2026-0201",
+            "inspection_date": "2026-04-09",
+            "inspection_type": "Final",
+            "result": "Fail"
+          }
+        },
+        {
+          "csv_row_number": 4,
+          "reason": "linked_to_importable_permit",
+          "row": {
+            "permit_number": "ELR-2026-0201",
+            "inspection_date": "2026-04-12",
+            "inspection_type": "Correction follow-up",
+            "result": "Pass"
+          }
+        },
+        {
+          "csv_row_number": 5,
+          "reason": "linked_to_importable_permit",
+          "row": {
+            "permit_number": "ELR-2026-0207",
+            "inspection_date": "2026-04-08",
+            "inspection_type": "Rough-in",
+            "result": "Pass"
+          }
+        },
+        {
+          "csv_row_number": 6,
+          "reason": "linked_to_importable_permit",
+          "row": {
+            "permit_number": "ELR-2026-0207",
+            "inspection_date": "2026-04-13",
+            "inspection_type": "Final",
+            "result": "Fail"
+          }
+        }
+      ],
+      "contractors.csv": [
+        {
+          "csv_row_number": 2,
+          "reason": "electrical_license_type",
+          "row": {
+            "registration_id": "REG-5101",
+            "name": "Bishop Arts Electric",
+            "license_type": "electrical_contractor"
+          }
+        },
+        {
+          "csv_row_number": 3,
+          "reason": "electrical_license_type",
+          "row": {
+            "registration_id": "REG-5102",
+            "name": "Casa View Electric",
+            "license_type": "electrical_contractor"
+          }
+        },
+        {
+          "csv_row_number": 4,
+          "reason": "electrical_license_type",
+          "row": {
+            "registration_id": "REG-5103",
+            "name": "Cedars South Electric",
+            "license_type": "electrical_contractor"
+          }
+        },
+        {
+          "csv_row_number": 5,
+          "reason": "electrical_license_type",
+          "row": {
+            "registration_id": "REG-5104",
+            "name": "White Rock Electric",
+            "license_type": "electrical_contractor"
+          }
+        },
+        {
+          "csv_row_number": 6,
+          "reason": "electrical_license_type",
+          "row": {
+            "registration_id": "REG-5105",
+            "name": "Trinity Grove Electric",
+            "license_type": "electrical_contractor"
+          }
+        }
+      ],
+      "rule_documents.csv": [
+        {
+          "csv_row_number": 2,
+          "reason": "has_title",
+          "row": {
+            "title": "Dallas residential electrical final checklist",
+            "document_type": "inspection_checklist",
+            "effective_date": "2025-01-01"
+          }
+        },
+        {
+          "csv_row_number": 3,
+          "reason": "has_title",
+          "row": {
+            "title": "Dallas service upgrade release guidance",
+            "document_type": "guidance_page",
+            "effective_date": "2025-01-01"
+          }
+        },
+        {
+          "csv_row_number": 4,
+          "reason": "has_title",
+          "row": {
+            "title": "Dallas reinspection access note",
+            "document_type": "faq",
+            "effective_date": "2025-01-01"
+          }
+        }
+      ]
+    },
     "raw_file_exclusion_examples": {
       "permits.csv": [
         {
