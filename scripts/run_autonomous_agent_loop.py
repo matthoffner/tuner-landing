@@ -97,6 +97,15 @@ def shell(command: list[str], timeout: float | None = None) -> subprocess.Comple
     )
 
 
+def import_readiness_command() -> list[str]:
+    return [
+        sys.executable,
+        "scripts/run_dallas_import_pipeline.py",
+        "--summary-only",
+        "--require-ready",
+    ]
+
+
 def latest_handoff_status() -> str:
     if not HANDOFF_PATH.exists():
         return "handoff missing"
@@ -461,6 +470,30 @@ def run_iteration(
         return payload
 
     steps.append(sync_landing(log_file))
+    readiness_step = run_check(
+        log_file,
+        "refresh Dallas import readiness summary",
+        import_readiness_command(),
+    )
+    steps.append(readiness_step)
+    if readiness_step["exit_status"] != 0:
+        payload = write_status(
+            event_file,
+            run_id,
+            iteration,
+            "failing",
+            "import_readiness_failed",
+            started_at,
+            steps,
+            "Dallas import execution readiness check failed",
+        )
+        emit(
+            log_file,
+            "iteration "
+            f"{iteration} end status=failing phase=import_readiness_failed "
+            f"dirty_paths_excluding_preview={payload['git']['dirty_count_excluding_preview']}",
+        )
+        return payload
     steps.append(run_check(log_file, "git diff check", ["git", "diff", "--check"]))
     steps.append(publish_changes(log_file, stamp))
 

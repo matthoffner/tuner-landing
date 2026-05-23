@@ -76,6 +76,15 @@ def shell(command: list[str]) -> subprocess.CompletedProcess[str]:
     )
 
 
+def import_readiness_command() -> list[str]:
+    return [
+        sys.executable,
+        "scripts/run_dallas_import_pipeline.py",
+        "--summary-only",
+        "--require-ready",
+    ]
+
+
 def run_step(log_file: Path, name: str, command: list[str]) -> dict[str, Any]:
     started = time.monotonic()
     emit(log_file, f"step start: {name}")
@@ -277,6 +286,11 @@ def run_iteration(
             log_file,
             "regenerate Dallas inspection workflow",
             [sys.executable, "scripts/generate_dallas_inspection_workflow.py"],
+        ),
+        run_step(
+            log_file,
+            "refresh Dallas import readiness summary",
+            import_readiness_command(),
         ),
     ]
     artifacts = inspect_artifacts()
