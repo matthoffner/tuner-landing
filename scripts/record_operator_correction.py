@@ -187,6 +187,23 @@ def display_path(path: Path) -> str:
         return str(path)
 
 
+def read_only_command(
+    flag: str,
+    queue_path: Path,
+    ledger_path: Path,
+    output_format: str = "json",
+) -> str:
+    args = [
+        "python3",
+        "scripts/record_operator_correction.py",
+        *command_path_args(queue_path, ledger_path),
+        flag,
+    ]
+    if output_format == "text":
+        args.extend(["--format", "text"])
+    return shlex.join(args)
+
+
 def ledger_validation(queue_path: Path, ledger_path: Path, require_complete: bool = False) -> dict[str, Any]:
     payload = read_json(queue_path)
     queue = payload.get("queue")
@@ -327,6 +344,11 @@ def ledger_validation(queue_path: Path, ledger_path: Path, require_complete: boo
         "issue_count": issue_count,
         "status": "pass" if issue_count == 0 else "fail",
         "issues": issues,
+        "next_missing_command": (
+            read_only_command("--next-missing", queue_path, ledger_path, output_format="text")
+            if missing_queue_item_ids
+            else None
+        ),
     }
 
 
@@ -830,6 +852,8 @@ def format_ledger_validation_text(validation: dict[str, Any]) -> str:
     if isinstance(missing_ids, list) and missing_ids:
         lines.append("Missing queue items:")
         lines.extend(f"- {queue_item_id}" for queue_item_id in missing_ids)
+        if validation.get("next_missing_command"):
+            lines.append(f"Next missing work order: {validation.get('next_missing_command')}")
     else:
         lines.append("Missing queue items: (none)")
 

@@ -92,6 +92,7 @@ Latest bounded improvement completed:
 - `scripts/record_operator_correction.py --validate-ledger` now reports captured versus missing Dallas queue item coverage, so the final non-server check shows both ledger shape validity and remaining uncaptured work
 - `scripts/record_operator_correction.py --next-missing --format text` and `--list-queue-items --missing-only --format text` now include evidence and observed follow-up context from the Dallas action queue, so an operator can judge accepted/rejected/edited decisions without opening the generated JSON
 - `scripts/record_operator_correction.py --validate-ledger --require-complete` now gives the non-server correction path a strict final gate that fails until every current Dallas action-queue item has a captured operator correction
+- `scripts/record_operator_correction.py --validate-ledger --format text` now prints the next `--next-missing --format text` work-order command when queue items are still uncaptured, so validation output points directly back to the next operator pass
 
 ## Constraints
 

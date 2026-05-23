@@ -4,6 +4,10 @@ Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
 - lane: editor
+- status: made non-server Dallas correction validation more self-directing; text-mode `scripts/record_operator_correction.py --validate-ledger` output now prints the next `--next-missing --format text` work-order command whenever queue items remain uncaptured
+- files: scripts/record_operator_correction.py, README.md, NEXT_TASK.md, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- next: run `python3 scripts/record_operator_correction.py --validate-ledger --require-complete --format text`, then use the printed next-missing work order to capture the next accepted/rejected/edited Dallas operator decision
+- lane: editor
 - status: added a strict non-server Dallas correction completion gate; `scripts/record_operator_correction.py --validate-ledger --require-complete` now fails until every current action-queue item has a captured operator correction, and next-missing text work orders print that final gate
 - files: scripts/record_operator_correction.py, README.md, NEXT_TASK.md, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
 - next: run `python3 scripts/record_operator_correction.py --next-missing --format text`, capture accepted/rejected/edited decisions for each missing Dallas item, then finish with `python3 scripts/record_operator_correction.py --validate-ledger --require-complete --format text`
