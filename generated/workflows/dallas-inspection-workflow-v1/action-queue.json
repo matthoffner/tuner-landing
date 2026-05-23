@@ -5,32 +5,32 @@
   "source_eval_dir": "generated/evals/dallas-electrician-import-sample-v2",
   "workflow_type": "reviewed-inspection-action-queue",
   "summary": {
-    "queue_items": 18,
+    "queue_items": 19,
     "priority_counts": {
       "high": 6,
-      "medium": 12
+      "medium": 13
     },
     "trigger_result_counts": {
       "fail": 6,
       "not_ready": 4,
-      "partial": 8
+      "partial": 9
     },
     "recommended_action_counts": {
       "add_labels_or_documentation": 6,
       "complete_remaining_work": 3,
       "correct_grounding_or_bonding": 4,
       "correct_panel_or_service": 2,
-      "correct_wiring_or_devices": 5,
+      "correct_wiring_or_devices": 6,
       "ensure_site_access": 4,
-      "schedule_reinspection": 16
+      "schedule_reinspection": 17
     }
   },
   "operator_correction_summary": {
     "ledger_path": "generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl",
-    "total_events": 18,
-    "queue_items_with_corrections": 18,
+    "total_events": 19,
+    "queue_items_with_corrections": 19,
     "decision_counts": {
-      "accepted": 18
+      "accepted": 19
     },
     "invalid_lines": 0,
     "latest_by_queue_item": {
@@ -199,12 +199,21 @@
           "correct_wiring_or_devices",
           "schedule_reinspection"
         ]
+      },
+      "workflow-item:dallas:next-action:0019": {
+        "correction_id": "operator-correction:20260523T160500000000Z:0019",
+        "captured_at": "2026-05-23T16:05:00Z",
+        "decision": "accepted",
+        "corrected_actions": [
+          "correct_wiring_or_devices",
+          "schedule_reinspection"
+        ]
       }
     }
   },
   "operator_correction_patterns": {
     "source": "latest accepted operator correction per current queue item",
-    "accepted_latest_corrections": 18,
+    "accepted_latest_corrections": 19,
     "accepted_pattern_count": 6,
     "patterns": [
       {
@@ -216,34 +225,36 @@
           "Correct wiring or devices",
           "Schedule reinspection"
         ],
-        "queue_item_count": 5,
+        "queue_item_count": 6,
         "queue_item_ids": [
           "workflow-item:dallas:next-action:0007",
           "workflow-item:dallas:next-action:0008",
           "workflow-item:dallas:next-action:0009",
           "workflow-item:dallas:next-action:0017",
-          "workflow-item:dallas:next-action:0018"
+          "workflow-item:dallas:next-action:0018",
+          "workflow-item:dallas:next-action:0019"
         ],
         "source_permit_numbers": [
           "ELP-2026-0209",
           "ELR-2026-0201",
           "ELR-2026-0207",
           "ELZ-2026-0218",
-          "ELZ-2026-0219"
+          "ELZ-2026-0219",
+          "ELZ-2026-0220"
         ],
         "trigger_result_counts": {
           "fail": 2,
-          "partial": 3
+          "partial": 4
         },
         "failure_reason_counts": {
-          "wiring_or_device_issue": 5
+          "wiring_or_device_issue": 6
         },
         "inspection_type_counts": {
           "final": 2,
-          "rough_in": 3
+          "rough_in": 4
         },
         "observed_followup_result_counts": {
-          "pass": 5
+          "pass": 6
         },
         "operator_note_examples": [
           "Accepted from fixture review: follow-up shows GFCI added and final trim completed for approval.",
@@ -1225,6 +1236,49 @@
       "evidence": [
         "Bathroom branch wiring repaired but AFCI breaker and receptacle trim remained incomplete before rough-in approval.",
         "2026-05-08 correction_followup -> pass: AFCI protection installed and receptacle trim completed for approval."
+      ]
+    },
+    {
+      "queue_item_id": "workflow-item:dallas:next-action:0019",
+      "permit_id": "permit:dallas:elz-2026-0220",
+      "source_permit_number": "ELZ-2026-0220",
+      "permit_status": "finaled",
+      "permit_type_normalized": "electrical_repair",
+      "property": {
+        "property_id": "property:2764-s-ewing-ave-dallas-tx-75216",
+        "normalized_address": "2764 S EWING AVE DALLAS TX 75216",
+        "zip_code": "75216"
+      },
+      "contractor": {
+        "contractor_id": "contractor:dallas:cedars-south-electric",
+        "name": "Cedars South Electric"
+      },
+      "trigger_inspection": {
+        "inspection_id": "inspection:dallas:elz-2026-0220:2026-05-05:rough_in",
+        "inspection_date": "2026-05-05",
+        "inspection_type_normalized": "rough_in",
+        "result_normalized": "partial",
+        "failure_reason_normalized": "wiring_or_device_issue",
+        "notes_raw": "Bedroom branch wiring repaired but replacement receptacle devices and wall trim remained incomplete before rough-in approval."
+      },
+      "recommended_actions": [
+        "correct_wiring_or_devices",
+        "schedule_reinspection"
+      ],
+      "recommended_action_labels": [
+        "Correct wiring or devices",
+        "Schedule reinspection"
+      ],
+      "priority": "medium",
+      "expected_followup": {
+        "inspection_date": "2026-05-10",
+        "inspection_type_normalized": "correction_followup",
+        "result_normalized": "pass",
+        "notes_raw": "Replacement receptacle devices installed and wall trim completed for approval."
+      },
+      "evidence": [
+        "Bedroom branch wiring repaired but replacement receptacle devices and wall trim remained incomplete before rough-in approval.",
+        "2026-05-10 correction_followup -> pass: Replacement receptacle devices installed and wall trim completed for approval."
       ]
     }
   ]

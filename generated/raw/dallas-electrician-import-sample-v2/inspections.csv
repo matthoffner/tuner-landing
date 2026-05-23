@@ -48,3 +48,5 @@ ELZ-2026-0218,2026-05-01,Rough-in,Partial,Kitchen branch wiring repaired but GFC
 ELZ-2026-0218,2026-05-06,Correction follow-up,Pass,GFCI protection installed and missing device completed for approval.,Inspector Patel,true,https://example.local/dallas/inspections/ELZ-2026-0218/2
 ELZ-2026-0219,2026-05-03,Rough-in,Partial,Bathroom branch wiring repaired but AFCI breaker and receptacle trim remained incomplete before rough-in approval.,Inspector Patel,false,https://example.local/dallas/inspections/ELZ-2026-0219/1
 ELZ-2026-0219,2026-05-08,Correction follow-up,Pass,AFCI protection installed and receptacle trim completed for approval.,Inspector Patel,true,https://example.local/dallas/inspections/ELZ-2026-0219/2
+ELZ-2026-0220,2026-05-05,Rough-in,Partial,Bedroom branch wiring repaired but replacement receptacle devices and wall trim remained incomplete before rough-in approval.,Inspector Patel,false,https://example.local/dallas/inspections/ELZ-2026-0220/1
+ELZ-2026-0220,2026-05-10,Correction follow-up,Pass,Replacement receptacle devices installed and wall trim completed for approval.,Inspector Patel,true,https://example.local/dallas/inspections/ELZ-2026-0220/2

@@ -572,5 +572,30 @@
       "followup_result_normalized": "pass"
     },
     "reviewer_note": "Derived directly from normalized inspection progression and follow-up notes."
+  },
+  {
+    "review_id": "label-review:dallas:next-action:0019",
+    "task_id": "eval:dallas:next-action:0019",
+    "task_type": "recommended_next_action",
+    "permit_id": "permit:dallas:elz-2026-0220",
+    "inspection_id": "inspection:dallas:elz-2026-0220:2026-05-05:rough_in",
+    "review_status": "normalized_row_generated",
+    "label_source": "normalized_rows",
+    "label_payload": {
+      "reference_actions": [
+        "correct_wiring_or_devices",
+        "schedule_reinspection"
+      ]
+    },
+    "evidence": [
+      "Bedroom branch wiring repaired but replacement receptacle devices and wall trim remained incomplete before rough-in approval.",
+      "2026-05-10 correction_followup -> pass: Replacement receptacle devices installed and wall trim completed for approval."
+    ],
+    "metadata": {
+      "permit_type_normalized": "electrical_repair",
+      "latest_result_normalized": "partial",
+      "followup_result_normalized": "pass"
+    },
+    "reviewer_note": "Derived directly from normalized inspection progression and follow-up notes."
   }
 ]
