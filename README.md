@@ -52,7 +52,7 @@ Created from Pixelbox.
 The eventual app shell can be React Server Components instead of an iframe. Use RSC for the initial cockpit snapshot from `/api/status` and whitelisted artifacts, then use a small client component with `EventSource('/events')` for the live terminal/log stream. Keep mutation endpoints local-only; remote bridges should stay read-only.
 
 Local operator corrections from the Dallas action queue post to `/api/operator-corrections` and append `generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl`. The read-only bridge can expose the ledger, but it rejects mutation requests.
-Use `python3 scripts/record_operator_correction.py --summary` to check capture progress, `python3 scripts/record_operator_correction.py --list-queue-items` to review all current queue item IDs, `python3 scripts/record_operator_correction.py --list-queue-items --missing-only` to list uncaptured Dallas queue items, and `python3 scripts/record_operator_correction.py --next-missing` to print the next uncaptured item with accept/reject commands, edited-action templates, and optional `--operator-note` variants.
+Use `python3 scripts/record_operator_correction.py --summary` to check capture progress, `python3 scripts/record_operator_correction.py --list-queue-items` to review all current queue item IDs, `python3 scripts/record_operator_correction.py --list-queue-items --missing-only` to list uncaptured Dallas queue items, and `python3 scripts/record_operator_correction.py --next-missing` to print the next uncaptured item with accept/reject commands, edited-action templates, optional `--operator-note` variants, and the current known action ID catalog.
 
 ## Deploy
 

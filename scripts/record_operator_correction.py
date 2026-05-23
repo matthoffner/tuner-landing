@@ -98,6 +98,36 @@ def correction_progress(queue_path: Path, ledger_path: Path) -> dict[str, Any]:
     }
 
 
+def action_catalog(queue_path: Path) -> dict[str, Any]:
+    payload = read_json(queue_path)
+    queue = payload.get("queue")
+    if not isinstance(queue, list):
+        raise ValueError("queue file must contain a queue list")
+
+    actions: dict[str, dict[str, Any]] = {}
+    for item in queue:
+        if not isinstance(item, dict):
+            continue
+        queue_item_id = item.get("queue_item_id")
+        if not isinstance(queue_item_id, str):
+            continue
+        for action_id in item.get("recommended_actions", []):
+            if not isinstance(action_id, str):
+                continue
+            action = actions.setdefault(
+                action_id,
+                {"action_id": action_id, "queue_item_count": 0, "queue_item_ids": []},
+            )
+            action["queue_item_count"] += 1
+            action["queue_item_ids"].append(queue_item_id)
+
+    return {
+        "workflow_id": payload.get("workflow_id"),
+        "action_ids": sorted(actions),
+        "actions": [actions[action_id] for action_id in sorted(actions)],
+    }
+
+
 def queue_listing(queue_path: Path, ledger_path: Path, missing_only: bool = False) -> dict[str, Any]:
     payload = read_json(queue_path)
     queue = payload.get("queue")
@@ -154,6 +184,7 @@ def queue_listing(queue_path: Path, ledger_path: Path, missing_only: bool = Fals
         )
 
     return {
+        "action_catalog": action_catalog(queue_path),
         "filter": "missing" if missing_only else "all",
         "workflow_id": progress["workflow_id"],
         "queue_items": progress["queue_items"],
@@ -286,6 +317,7 @@ def next_missing_correction(queue_path: Path, ledger_path: Path) -> dict[str, An
     items = listing["items"]
     item = items[0] if items else None
     return {
+        "action_catalog": listing["action_catalog"],
         "filter": "next_missing",
         "workflow_id": listing["workflow_id"],
         "queue_items": listing["queue_items"],
