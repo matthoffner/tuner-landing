@@ -107,3 +107,9 @@ Use short dated entries. Focus on decisions, changes, blockers, and next steps.
 - Added `scripts/run_autonomous_agent_loop.py`, which writes the same cockpit status/log files but runs a real bounded `codex exec` iteration, then syncs landing output, checks the diff, commits changed paths except `.pxcode/preview.json`, and pushes to `main`.
 - Updated `scripts/serve_mvp_cockpit.py` with `--loop-mode agent` / `--agent-loop`, and added `scripts/start_autonomous_cockpit_bridge.py` so the autonomous cockpit plus read-only bridge can be restarted as detached processes with one command.
 - Refreshed the landing page and README copy so the cockpit is described as an autonomous Codex agent loop rather than only a deterministic Dallas artifact heartbeat.
+
+## 2026-05-23
+
+- Added local operator-correction capture for the Dallas inspection action queue: the generated workflow page now includes accept/reject/edit controls, preserves a source-controlled `operator-corrections.jsonl` ledger, and carries correction counts in `action-queue.json` plus `action-queue.md`.
+- Added local-only `POST /api/operator-corrections` handling to `scripts/serve_mvp_cockpit.py`; read-only bridges can view correction summaries and the ledger but still reject mutations.
+- Updated `scripts/run_mvp_loop.py` so cockpit status includes the workflow's operator-correction summary.

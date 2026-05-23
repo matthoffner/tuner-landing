@@ -133,6 +133,7 @@ def inspect_artifacts() -> dict[str, Any]:
             "queue_items": queue_summary.get("queue_items"),
             "priority_counts": queue_summary.get("priority_counts", {}),
             "recommended_action_counts": queue_summary.get("recommended_action_counts", {}),
+            "operator_corrections": queue.get("operator_correction_summary", {}),
         },
     }
 

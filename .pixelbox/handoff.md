@@ -4,6 +4,10 @@ Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
 - lane: editor
+- status: added local operator-correction capture for the Dallas inspection action queue; the generated workflow page can submit accept/reject/edit events to the local cockpit, which appends `generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl`, while read-only bridges remain non-mutating
+- files: scripts/generate_dallas_inspection_workflow.py, scripts/serve_mvp_cockpit.py, scripts/run_mvp_loop.py, generated/workflows/dallas-inspection-workflow-v1/action-queue.json, generated/workflows/dallas-inspection-workflow-v1/action-queue.md, generated/workflows/dallas-inspection-workflow-v1/index.html, generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl, README.md, NEXT_TASK.md, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- next: run the local cockpit and capture a few real accepted/rejected/edited Dallas queue decisions, then summarize recurring correction patterns back into the workflow artifact
+- lane: editor
 - status: added a true autonomous Codex loop path: `scripts/run_autonomous_agent_loop.py` runs bounded `codex exec` iterations, syncs/verifies, commits, and pushes, while `scripts/serve_mvp_cockpit.py --loop-mode agent` and `scripts/start_autonomous_cockpit_bridge.py` expose it through the same cockpit/bridge
 - files: scripts/run_autonomous_agent_loop.py, scripts/start_autonomous_cockpit_bridge.py, scripts/serve_mvp_cockpit.py, README.md, generated/landing.html, index.html, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
 - next: restart the detached cockpit with `python3 scripts/start_autonomous_cockpit_bridge.py`, then watch the first real `codex exec` iteration and verify it commits/pushes safely

@@ -25,6 +25,14 @@
       "schedule_reinspection": 11
     }
   },
+  "operator_correction_summary": {
+    "ledger_path": "generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl",
+    "total_events": 0,
+    "queue_items_with_corrections": 0,
+    "decision_counts": {},
+    "invalid_lines": 0,
+    "latest_by_queue_item": {}
+  },
   "queue": [
     {
       "queue_item_id": "workflow-item:dallas:next-action:0008",

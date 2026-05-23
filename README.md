@@ -46,6 +46,8 @@ Created from Pixelbox.
 
 The eventual app shell can be React Server Components instead of an iframe. Use RSC for the initial cockpit snapshot from `/api/status` and whitelisted artifacts, then use a small client component with `EventSource('/events')` for the live terminal/log stream. Keep mutation endpoints local-only; remote bridges should stay read-only.
 
+Local operator corrections from the Dallas action queue post to `/api/operator-corrections` and append `generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl`. The read-only bridge can expose the ledger, but it rejects mutation requests.
+
 ## Deploy
 
 - Vercel should rebuild from pushes to `main`.

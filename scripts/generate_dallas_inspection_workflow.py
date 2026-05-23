@@ -10,6 +10,7 @@ ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_NORMALIZED_DIR = ROOT / "generated" / "normalized" / "dallas-electrician-import-sample-v2"
 DEFAULT_EVAL_DIR = ROOT / "generated" / "evals" / "dallas-electrician-import-sample-v2"
 DEFAULT_OUTPUT_DIR = ROOT / "generated" / "workflows" / "dallas-inspection-workflow-v1"
+CORRECTION_LEDGER_PATH = DEFAULT_OUTPUT_DIR / "operator-corrections.jsonl"
 
 PRIORITY_BY_RESULT = {
     "fail": "high",
@@ -54,6 +55,30 @@ def write_json(path: Path, payload):
 def write_text(path: Path, text: str):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text)
+
+
+def ensure_correction_ledger(path: Path):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if not path.exists():
+        path.write_text("")
+
+
+def load_correction_events(path: Path):
+    if not path.exists():
+        return [], 0
+
+    events = []
+    invalid_lines = 0
+    with path.open() as handle:
+        for line in handle:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                events.append(json.loads(line))
+            except json.JSONDecodeError:
+                invalid_lines += 1
+    return events, invalid_lines
 
 
 def find_next_inspection(inspections, target_inspection_id):
@@ -156,7 +181,31 @@ def build_summary(items):
     }
 
 
-def build_payload(items):
+def build_correction_summary(events, invalid_lines):
+    decision_counts = Counter(event.get("decision", "unknown") for event in events)
+    latest_by_queue_item = {}
+    for event in events:
+        queue_item_id = event.get("queue_item_id")
+        if not queue_item_id:
+            continue
+        latest_by_queue_item[queue_item_id] = {
+            "correction_id": event.get("correction_id"),
+            "captured_at": event.get("captured_at"),
+            "decision": event.get("decision"),
+            "corrected_actions": event.get("corrected_actions", []),
+        }
+    return {
+        "ledger_path": "generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl",
+        "total_events": len(events),
+        "queue_items_with_corrections": len(latest_by_queue_item),
+        "decision_counts": dict(sorted(decision_counts.items())),
+        "invalid_lines": invalid_lines,
+        "latest_by_queue_item": latest_by_queue_item,
+    }
+
+
+def build_payload(items, correction_events=None, invalid_correction_lines=0):
+    correction_events = correction_events or []
     return {
         "workflow_id": "dallas-inspection-workflow-v1",
         "generated_by": "scripts/generate_dallas_inspection_workflow.py",
@@ -164,6 +213,10 @@ def build_payload(items):
         "source_eval_dir": "generated/evals/dallas-electrician-import-sample-v2",
         "workflow_type": "reviewed-inspection-action-queue",
         "summary": build_summary(items),
+        "operator_correction_summary": build_correction_summary(
+            correction_events,
+            invalid_correction_lines,
+        ),
         "queue": items,
     }
 
@@ -179,6 +232,8 @@ def build_markdown(payload):
         f"- Queue items: `{payload['summary']['queue_items']}`",
         f"- Priority counts: `{json.dumps(payload['summary']['priority_counts'], sort_keys=True)}`",
         f"- Trigger result counts: `{json.dumps(payload['summary']['trigger_result_counts'], sort_keys=True)}`",
+        f"- Operator correction events: `{payload['operator_correction_summary']['total_events']}`",
+        f"- Operator correction ledger: `{payload['operator_correction_summary']['ledger_path']}`",
         "",
         "## Action Queue",
         "",
@@ -211,17 +266,37 @@ def css_class(value):
 
 def build_html(payload):
     summary = payload["summary"]
+    correction_summary = payload["operator_correction_summary"]
+    latest_corrections = correction_summary.get("latest_by_queue_item", {})
+    queue_state = json.dumps(
+        {
+            item["queue_item_id"]: {
+                "recommended_actions": item["recommended_actions"],
+                "source_permit_number": item["source_permit_number"],
+            }
+            for item in payload["queue"]
+        },
+        sort_keys=True,
+    ).replace("<", "\\u003c")
     rows = []
     for item in payload["queue"]:
         trigger = item["trigger_inspection"]
         followup = item["expected_followup"]
+        latest_correction = latest_corrections.get(item["queue_item_id"])
+        correction_status = (
+            "Latest correction: "
+            f"{latest_correction.get('decision')} at {latest_correction.get('captured_at')}"
+            if latest_correction
+            else "No correction captured"
+        )
+        recommended_actions_text = ", ".join(item["recommended_actions"])
         actions = "".join(
             f"<li>{escape(label)}</li>"
             for label in item["recommended_action_labels"]
         )
         rows.append(
             f"""
-            <article class="queue-item priority-{css_class(item['priority'])}">
+            <article class="queue-item priority-{css_class(item['priority'])}" data-queue-item-id="{escape(item['queue_item_id'])}">
               <div class="queue-topline">
                 <div>
                   <h2>{escape(item['source_permit_number'])}</h2>
@@ -240,6 +315,23 @@ def build_html(payload):
                 <ul>{actions}</ul>
               </div>
               <p class="evidence">{escape(trigger.get('notes_raw') or '')}</p>
+              <div class="correction">
+                <h3>Operator Correction</h3>
+                <div class="correction-buttons" aria-label="Correction decision">
+                  <button type="button" data-decision="accepted">Accept</button>
+                  <button type="button" data-decision="rejected">Reject</button>
+                  <button type="button" data-decision="edited">Save Edit</button>
+                </div>
+                <label>
+                  <span>Corrected action IDs</span>
+                  <input class="corrected-actions" value="{escape(recommended_actions_text)}">
+                </label>
+                <label>
+                  <span>Operator note</span>
+                  <textarea class="operator-note" rows="2"></textarea>
+                </label>
+                <p class="correction-status">{escape(correction_status)}</p>
+              </div>
             </article>
             """
         )
@@ -296,9 +388,9 @@ def build_html(payload):
       }}
       .summary {{
         display: grid;
-        grid-template-columns: repeat(3, minmax(120px, 1fr));
+        grid-template-columns: repeat(4, minmax(120px, 1fr));
         gap: 10px;
-        min-width: min(420px, 100%);
+        min-width: min(540px, 100%);
       }}
       .metric {{
         border: 1px solid var(--line);
@@ -389,9 +481,60 @@ def build_html(payload):
         font-size: 13px;
         line-height: 1.45;
       }}
+      .correction {{
+        margin-top: 14px;
+        padding-top: 12px;
+        border-top: 1px solid var(--line);
+      }}
+      .correction-buttons {{
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 10px;
+      }}
+      .correction button {{
+        border: 1px solid var(--accent);
+        background: var(--accent);
+        color: #ffffff;
+        min-height: 34px;
+        padding: 0 10px;
+        font-weight: 700;
+        cursor: pointer;
+      }}
+      .correction button[data-decision="rejected"] {{
+        border-color: var(--line);
+        background: var(--panel);
+        color: var(--ink);
+      }}
+      .correction label {{
+        display: grid;
+        gap: 4px;
+        margin: 8px 0;
+        color: var(--muted);
+        font-size: 12px;
+        text-transform: uppercase;
+      }}
+      .correction input,
+      .correction textarea {{
+        width: 100%;
+        border: 1px solid var(--line);
+        background: #fbfcf8;
+        color: var(--ink);
+        padding: 8px;
+        font: 13px/1.4 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        text-transform: none;
+      }}
+      .correction-status {{
+        margin: 8px 0 0;
+        color: var(--muted);
+        font-size: 12px;
+      }}
+      .correction-status.saved {{ color: var(--accent); }}
+      .correction-status.pending {{ color: var(--medium); }}
+      .correction-status.error {{ color: var(--high); }}
       @media (max-width: 760px) {{
         header {{ grid-template-columns: 1fr; }}
-        .summary {{ grid-template-columns: repeat(3, 1fr); }}
+        .summary {{ grid-template-columns: repeat(2, 1fr); }}
       }}
       @media (max-width: 520px) {{
         main {{ padding: 22px 14px 40px; }}
@@ -411,12 +554,80 @@ def build_html(payload):
           <div class="metric"><strong>{summary['queue_items']}</strong><span>items</span></div>
           <div class="metric"><strong>{summary['priority_counts'].get('high', 0)}</strong><span>high priority</span></div>
           <div class="metric"><strong>{summary['priority_counts'].get('medium', 0)}</strong><span>medium priority</span></div>
+          <div class="metric"><strong>{correction_summary['total_events']}</strong><span>corrections</span></div>
         </div>
       </header>
       <section class="queue" aria-label="Inspection action queue">
         {''.join(rows)}
       </section>
     </main>
+    <script>
+      const queueItems = {queue_state};
+      const pendingKey = "automoat.operator-corrections.pending";
+
+      function parseActions(value) {{
+        return value.split(",").map((part) => part.trim()).filter(Boolean);
+      }}
+
+      function setStatus(article, text, state) {{
+        const status = article.querySelector(".correction-status");
+        status.textContent = text;
+        status.className = `correction-status ${{state || ""}}`;
+      }}
+
+      function pendingCorrections() {{
+        try {{
+          return JSON.parse(localStorage.getItem(pendingKey) || "[]");
+        }} catch (_error) {{
+          return [];
+        }}
+      }}
+
+      async function submitCorrection(button) {{
+        const article = button.closest(".queue-item");
+        const queueItemId = article.dataset.queueItemId;
+        const decision = button.dataset.decision;
+        const note = article.querySelector(".operator-note").value.trim();
+        const correctedActions = parseActions(article.querySelector(".corrected-actions").value);
+        const payload = {{
+          queue_item_id: queueItemId,
+          decision,
+          operator_note: note,
+          corrected_actions: decision === "rejected" ? [] : correctedActions,
+          source: "workflow-html",
+        }};
+
+        if (decision === "accepted" && payload.corrected_actions.length === 0) {{
+          payload.corrected_actions = queueItems[queueItemId]?.recommended_actions || [];
+        }}
+
+        try {{
+          const response = await fetch("/api/operator-corrections", {{
+            method: "POST",
+            headers: {{ "Content-Type": "application/json" }},
+            body: JSON.stringify(payload),
+          }});
+          if (!response.ok) {{
+            throw new Error((await response.text()).trim() || `HTTP ${{response.status}}`);
+          }}
+          const event = await response.json();
+          setStatus(article, `Saved ${{event.decision}} correction at ${{event.captured_at}}`, "saved");
+        }} catch (error) {{
+          const pending = pendingCorrections();
+          pending.push({{
+            ...payload,
+            captured_at: new Date().toISOString(),
+            pending_reason: String(error.message || error),
+          }});
+          localStorage.setItem(pendingKey, JSON.stringify(pending));
+          setStatus(article, "Saved in browser pending cockpit sync", "pending");
+        }}
+      }}
+
+      document.querySelectorAll("[data-decision]").forEach((button) => {{
+        button.addEventListener("click", () => submitCorrection(button));
+      }});
+    </script>
   </body>
 </html>
 """
@@ -424,7 +635,9 @@ def build_html(payload):
 
 def main():
     items = build_action_queue(DEFAULT_NORMALIZED_DIR, DEFAULT_EVAL_DIR)
-    payload = build_payload(items)
+    ensure_correction_ledger(CORRECTION_LEDGER_PATH)
+    correction_events, invalid_correction_lines = load_correction_events(CORRECTION_LEDGER_PATH)
+    payload = build_payload(items, correction_events, invalid_correction_lines)
     write_json(DEFAULT_OUTPUT_DIR / "action-queue.json", payload)
     write_text(DEFAULT_OUTPUT_DIR / "action-queue.md", build_markdown(payload))
     write_text(DEFAULT_OUTPUT_DIR / "index.html", build_html(payload))
