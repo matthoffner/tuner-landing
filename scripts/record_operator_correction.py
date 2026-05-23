@@ -29,6 +29,9 @@ from operator_corrections import (
 IMPORT_READINESS_COMMAND = (
     "python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready"
 )
+IMPORT_READINESS_JSON_COMMAND = (
+    "python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json"
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -216,6 +219,7 @@ def correction_progress(
             output_format=output_format,
         ),
         "import_readiness_command": IMPORT_READINESS_COMMAND if not missing_ids else None,
+        "import_readiness_json_command": IMPORT_READINESS_JSON_COMMAND if not missing_ids else None,
     }
 
 
@@ -911,6 +915,10 @@ def format_progress_text(progress: dict[str, Any]) -> str:
         lines.append(f"Pattern review: {progress.get('patterns_command')}")
         if progress.get("import_readiness_command"):
             lines.append(f"Import readiness gate: {progress.get('import_readiness_command')}")
+        if progress.get("import_readiness_json_command"):
+            lines.append(
+                f"Import readiness JSON gate: {progress.get('import_readiness_json_command')}"
+            )
     lines.append(f"Validate ledger: {progress.get('validation_command')}")
     lines.append(f"Completion gate: {progress.get('completion_validation_command')}")
     return "\n".join(lines)
@@ -1515,13 +1523,17 @@ def operator_correction_smoke_check(
         "progress_import_readiness_command",
         (
             progress.get("import_readiness_command") == IMPORT_READINESS_COMMAND
+            and progress.get("import_readiness_json_command") == IMPORT_READINESS_JSON_COMMAND
             if missing_count == 0
-            else progress.get("import_readiness_command") is None
+            else (
+                progress.get("import_readiness_command") is None
+                and progress.get("import_readiness_json_command") is None
+            )
         ),
         (
-            "summary points to the import-readiness gate after complete correction capture"
+            "summary points to text and JSON import-readiness gates after complete correction capture"
             if missing_count == 0
-            else "summary with missing corrections does not advertise the import-readiness gate"
+            else "summary with missing corrections does not advertise import-readiness gates"
         ),
     )
 
@@ -1578,6 +1590,11 @@ def operator_correction_smoke_check(
                 require_complete=True,
                 output_format=output_format,
             )
+            fixture_progress = correction_progress(
+                queue_path,
+                ledger_path_for_checks,
+                output_format=output_format,
+            )
             fixture_issues = fixture_completion.get("issues", [])
             fixture_issue_fields = (
                 [issue.get("field") for issue in fixture_issues if isinstance(issue, dict)]
@@ -1611,6 +1628,20 @@ def operator_correction_smoke_check(
                         "temporary incomplete ledger was not rejected by the completion gate: "
                         f"{fixture_completion.get('status')} with fields {fixture_issue_fields}"
                     )
+                ),
+            )
+            fixture_hides_readiness = (
+                fixture_progress.get("import_readiness_command") is None
+                and fixture_progress.get("import_readiness_json_command") is None
+            )
+            add_smoke_check(
+                checks,
+                "temporary_progress_import_readiness_command",
+                fixture_hides_readiness,
+                (
+                    "temporary incomplete ledger does not advertise import-readiness gates"
+                    if fixture_hides_readiness
+                    else "temporary incomplete ledger advertised an import-readiness gate"
                 ),
             )
 
@@ -1942,6 +1973,7 @@ def operator_correction_smoke_check(
         "completion_validation_command": progress.get("completion_validation_command"),
         "patterns_command": progress.get("patterns_command"),
         "import_readiness_command": progress.get("import_readiness_command"),
+        "import_readiness_json_command": progress.get("import_readiness_json_command"),
     }
     if temp_smoke_dir is not None:
         temp_smoke_dir.cleanup()
@@ -1999,6 +2031,10 @@ def format_smoke_check_text(smoke_check: dict[str, Any]) -> str:
         lines.append(f"Pattern review: {smoke_check.get('patterns_command')}")
     if smoke_check.get("import_readiness_command"):
         lines.append(f"Import readiness gate: {smoke_check.get('import_readiness_command')}")
+    if smoke_check.get("import_readiness_json_command"):
+        lines.append(
+            f"Import readiness JSON gate: {smoke_check.get('import_readiness_json_command')}"
+        )
     lines.append(f"Validate ledger: {smoke_check.get('validation_command')}")
     lines.append(f"Completion gate: {smoke_check.get('completion_validation_command')}")
     return "\n".join(lines)
