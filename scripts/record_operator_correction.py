@@ -179,6 +179,13 @@ RAW_IMPORT_RELATIONSHIP_CHECKS = {
         "target_import_scope": "electrical_contractors",
     },
 }
+RAW_IMPORT_APPEND_PREFLIGHT_CHECKS = (
+    "raw_files_present",
+    "required_fields_complete",
+    "identity_keys_present_and_unique",
+    "date_values_parse",
+    "relationships_resolve",
+)
 RAW_IMPORT_SCOPE_EXCLUSION_FIELDS = {
     "permits.csv": (
         "excluded_by_city",
@@ -1307,6 +1314,138 @@ def raw_import_file_last_data_rows(
     return last_rows
 
 
+def raw_import_file_append_preflight(
+    row_counts: dict[str, int | None],
+    fingerprints: dict[str, dict[str, Any] | None],
+    required_field_gaps: dict[str, dict[str, Any] | None],
+    identity_key_checks: dict[str, dict[str, Any] | None],
+    date_profiles: dict[str, dict[str, Any] | None],
+    relationship_checks: dict[str, dict[str, Any] | None],
+) -> dict[str, Any]:
+    checks = {check_name: True for check_name in RAW_IMPORT_APPEND_PREFLIGHT_CHECKS}
+    blockers: list[dict[str, Any]] = []
+
+    def add_blocker(check_name: str, message: str, **details: Any) -> None:
+        checks[check_name] = False
+        blocker = {"check": check_name, "message": message}
+        blocker.update(details)
+        blockers.append(blocker)
+
+    for file_name in RAW_IMPORT_FILE_NAMES:
+        if not isinstance(row_counts.get(file_name), int) or not isinstance(
+            fingerprints.get(file_name),
+            dict,
+        ):
+            add_blocker(
+                "raw_files_present",
+                f"{file_name} is missing or unreadable",
+                file_name=file_name,
+            )
+
+        required_gap = required_field_gaps.get(file_name)
+        if not isinstance(required_gap, dict):
+            add_blocker(
+                "required_fields_complete",
+                f"{file_name} required-field gap check is unavailable",
+                file_name=file_name,
+            )
+        else:
+            missing_headers = required_gap.get("missing_required_headers", [])
+            rows_with_gaps = required_gap.get("rows_with_missing_required_fields")
+            if missing_headers or rows_with_gaps:
+                add_blocker(
+                    "required_fields_complete",
+                    f"{file_name} has missing importer-required fields",
+                    file_name=file_name,
+                    missing_required_headers=missing_headers,
+                    rows_with_missing_required_fields=rows_with_gaps,
+                )
+
+        identity_check = identity_key_checks.get(file_name)
+        if not isinstance(identity_check, dict):
+            add_blocker(
+                "identity_keys_present_and_unique",
+                f"{file_name} identity-key check is unavailable",
+                file_name=file_name,
+            )
+        else:
+            duplicate_count = identity_check.get("duplicate_identity_key_count")
+            missing_identity_rows = identity_check.get("rows_missing_identity")
+            if duplicate_count or missing_identity_rows:
+                add_blocker(
+                    "identity_keys_present_and_unique",
+                    f"{file_name} has missing or duplicated identity keys",
+                    file_name=file_name,
+                    duplicate_identity_key_count=duplicate_count,
+                    rows_missing_identity=missing_identity_rows,
+                )
+
+        date_profile = date_profiles.get(file_name)
+        if not isinstance(date_profile, dict):
+            add_blocker(
+                "date_values_parse",
+                f"{file_name} date profile is unavailable",
+                file_name=file_name,
+            )
+        else:
+            fields = date_profile.get("fields")
+            if not isinstance(fields, dict):
+                fields = {}
+            for field_name, field_profile in fields.items():
+                invalid_count = (
+                    field_profile.get("invalid_date_count")
+                    if isinstance(field_profile, dict)
+                    else None
+                )
+                if invalid_count:
+                    add_blocker(
+                        "date_values_parse",
+                        f"{file_name}.{field_name} has invalid dates",
+                        file_name=file_name,
+                        field_name=field_name,
+                        invalid_date_count=invalid_count,
+                    )
+
+    for relationship_name in RAW_IMPORT_RELATIONSHIP_CHECKS:
+        relationship = relationship_checks.get(relationship_name)
+        if not isinstance(relationship, dict):
+            add_blocker(
+                "relationships_resolve",
+                f"{relationship_name} relationship check is unavailable",
+                relationship_name=relationship_name,
+            )
+            continue
+        unresolved_rows = relationship.get("unresolved_rows")
+        if unresolved_rows:
+            add_blocker(
+                "relationships_resolve",
+                f"{relationship_name} has unresolved raw rows",
+                relationship_name=relationship_name,
+                unresolved_rows=unresolved_rows,
+                unmatched_target_rows=relationship.get("unmatched_target_rows"),
+                missing_source_value_rows=relationship.get("missing_source_value_rows"),
+            )
+
+    if blockers:
+        next_step = (
+            "Resolve raw CSV append preflight blockers before adding more Dallas "
+            "permit rows, then rerun the summary-only readiness check."
+        )
+    else:
+        next_step = (
+            "Raw CSV append preflight is clear; append new Dallas rows at "
+            "`raw_file_next_append_rows`, then run `after_edit_command`."
+        )
+
+    return {
+        "status": "passed" if not blockers else "blocked",
+        "ready_for_append": not blockers,
+        "checks": checks,
+        "blockers": blockers,
+        "next_step": next_step,
+    }
+
+
 def raw_import_file_row_counts_are_valid(value: Any) -> bool:
     return (
         isinstance(value, dict)
@@ -1842,6 +1981,54 @@ def raw_import_file_last_data_rows_are_valid(value: Any, row_counts: Any) -> boo
     return True
 
 
+def raw_import_file_append_preflight_is_valid(value: Any) -> bool:
+    if not isinstance(value, dict):
+        return False
+
+    status = value.get("status")
+    ready = value.get("ready_for_append")
+    checks = value.get("checks")
+    blockers = value.get("blockers")
+    next_step = value.get("next_step")
+    if (
+        status not in {"passed", "blocked"}
+        or not isinstance(ready, bool)
+        or ready != (status == "passed")
+        or not isinstance(checks, dict)
+        or set(checks) != set(RAW_IMPORT_APPEND_PREFLIGHT_CHECKS)
+        or any(not isinstance(checks.get(check_name), bool) for check_name in checks)
+        or not isinstance(blockers, list)
+        or not isinstance(next_step, str)
+        or not next_step.strip()
+    ):
+        return False
+
+    for blocker in blockers:
+        if not isinstance(blocker, dict):
+            return False
+        check_name = blocker.get("check")
+        message = blocker.get("message")
+        if (
+            check_name not in RAW_IMPORT_APPEND_PREFLIGHT_CHECKS
+            or not isinstance(message, str)
+            or not message.strip()
+        ):
+            return False
+        file_name = blocker.get("file_name")
+        if file_name is not None and file_name not in RAW_IMPORT_FILE_NAMES:
+            return False
+        relationship_name = blocker.get("relationship_name")
+        if (
+            relationship_name is not None
+            and relationship_name not in RAW_IMPORT_RELATIONSHIP_CHECKS
+        ):
+            return False
+
+    failed_checks = {check_name for check_name, passed in checks.items() if not passed}
+    blocker_checks = {blocker.get("check") for blocker in blockers}
+    return bool(blockers) == (status == "blocked") and failed_checks == blocker_checks
+
+
 def count_snapshot(value: Any, fields: tuple[str, ...]) -> dict[str, int]:
     if not isinstance(value, dict):
         return {}
@@ -1980,6 +2167,16 @@ def next_import_record_handoff(summary: dict[str, Any] | None = None) -> dict[st
             raw_dir,
             raw_required_fields,
         )
+    raw_append_preflight = summary_handoff.get("raw_file_append_preflight")
+    if not raw_import_file_append_preflight_is_valid(raw_append_preflight):
+        raw_append_preflight = raw_import_file_append_preflight(
+            raw_row_counts,
+            raw_fingerprints,
+            raw_required_field_gaps,
+            raw_identity_key_checks,
+            raw_date_profiles,
+            raw_relationship_checks,
+        )
     return {
         "raw_dir": raw_dir,
         "raw_files": [f"{raw_dir}/{file_name}" for file_name in RAW_IMPORT_FILE_NAMES],
@@ -1999,6 +2196,7 @@ def next_import_record_handoff(summary: dict[str, Any] | None = None) -> dict[st
         "raw_file_optional_fields": raw_optional_fields,
         "raw_file_append_templates": raw_append_templates,
         "raw_file_required_field_gaps": raw_required_field_gaps,
+        "raw_file_append_preflight": raw_append_preflight,
         "after_edit_command": IMPORT_REFRESH_COMMAND,
         "readiness_check_command": IMPORT_READINESS_JSON_COMMAND,
     }
@@ -2062,6 +2260,9 @@ def next_import_record_handoff_is_valid(handoff: Any) -> bool:
         )
         and raw_import_file_required_field_gaps_are_valid(
             handoff.get("raw_file_required_field_gaps"),
+        )
+        and raw_import_file_append_preflight_is_valid(
+            handoff.get("raw_file_append_preflight"),
         )
         and handoff.get("after_edit_command") == IMPORT_REFRESH_COMMAND
         and handoff.get("readiness_check_command") == IMPORT_READINESS_JSON_COMMAND
@@ -2680,6 +2881,22 @@ def format_raw_import_row_counts(handoff: Any) -> str:
     return ", ".join(labels) if labels else "(none)"
 
 
+def format_raw_import_append_preflight(handoff: Any) -> str:
+    if not isinstance(handoff, dict):
+        return "(none)"
+    preflight = handoff.get("raw_file_append_preflight")
+    if not isinstance(preflight, dict):
+        return "(none)"
+    blockers = preflight.get("blockers", [])
+    blocker_label = json.dumps(blockers, sort_keys=False) if blockers else "none"
+    return (
+        f"status={preflight.get('status')} "
+        f"ready={str(preflight.get('ready_for_append')).lower()} "
+        f"checks={json.dumps(preflight.get('checks', {}), sort_keys=True)} "
+        f"blockers={blocker_label}"
+    )
+
+
 def format_raw_import_fingerprints(handoff: Any) -> str:
     if not isinstance(handoff, dict):
         return "(none)"
@@ -3152,6 +3369,10 @@ def format_progress_text(progress: dict[str, Any]) -> str:
                 lines.append(
                     "Next import raw row counts: "
                     f"{format_raw_import_row_counts(next_import_handoff)}"
+                )
+                lines.append(
+                    "Next import raw append preflight: "
+                    f"{format_raw_import_append_preflight(next_import_handoff)}"
                 )
                 lines.append(
                     "Next import raw fingerprints: "
@@ -3884,7 +4105,7 @@ def operator_correction_smoke_check(
             "value profiles, date profiles, relationship checks, import scope "
             "counts, importable examples, exclusion examples, headers, required "
             "fields, optional fields, append templates, required-field gaps, "
-            "and file fingerprints after complete correction capture"
+            "append preflight, and file fingerprints after complete correction capture"
             if missing_count == 0
             else "summary with missing corrections does not expose the last import-readiness snapshot"
         ),
@@ -4408,6 +4629,10 @@ def format_smoke_check_text(smoke_check: dict[str, Any]) -> str:
         lines.append(
             "Next import raw row counts: "
             f"{format_raw_import_row_counts(readiness.get('next_import_record_handoff'))}"
+        )
+        lines.append(
+            "Next import raw append preflight: "
+            f"{format_raw_import_append_preflight(readiness.get('next_import_record_handoff'))}"
         )
         lines.append(
             "Next import raw fingerprints: "

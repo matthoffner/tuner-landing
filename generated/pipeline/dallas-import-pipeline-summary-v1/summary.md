@@ -11,6 +11,7 @@
 - Next gap: All current latest-import result states, failure reasons, pattern slices, and expected next-action groups have repeated support; keep the action queue and coverage report current as real Dallas import records widen.
 - Next raw import files: `generated/raw/dallas-electrician-import-sample-v2/permits.csv`, `generated/raw/dallas-electrician-import-sample-v2/inspections.csv`, `generated/raw/dallas-electrician-import-sample-v2/contractors.csv`, `generated/raw/dallas-electrician-import-sample-v2/rule_documents.csv`
 - Next raw import row counts: `permits.csv`=15, `inspections.csv`=41, `contractors.csv`=6, `rule_documents.csv`=3
+- Next raw import append preflight: `passed`
 - Next raw import fingerprints: see Follow-Up
 - Next raw import append rows: `permits.csv` row 17, `inspections.csv` row 43, `contractors.csv` row 8, `rule_documents.csv` row 5
 - Next raw import last data rows: see Follow-Up
@@ -139,6 +140,12 @@ These are the reusable accepted correction patterns currently embedded in the Da
 - Raw CSV readiness check: `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json`
 - Raw CSV files: `generated/raw/dallas-electrician-import-sample-v2/permits.csv`, `generated/raw/dallas-electrician-import-sample-v2/inspections.csv`, `generated/raw/dallas-electrician-import-sample-v2/contractors.csv`, `generated/raw/dallas-electrician-import-sample-v2/rule_documents.csv`
 - Raw CSV row counts: `permits.csv`=15, `inspections.csv`=41, `contractors.csv`=6, `rule_documents.csv`=3
+- Raw CSV append preflight:
+- Raw CSV append preflight status: `passed`
+- Raw CSV append preflight ready: `true`
+- Raw CSV append preflight checks: `{"date_values_parse": true, "identity_keys_present_and_unique": true, "raw_files_present": true, "relationships_resolve": true, "required_fields_complete": true}`
+- Raw CSV append preflight blockers: none
+- Raw CSV append preflight next step: Raw CSV append preflight is clear; append new Dallas rows at `raw_file_next_append_rows`, then run `after_edit_command`.
 - Raw CSV fingerprints:
 - `permits.csv` fingerprint: `sha256` `7863d3ac9b55dd4f2a604ea792b4ba5bb9c190bede768b0befe7612f2a24f1c1` (4670 bytes)
 - `inspections.csv` fingerprint: `sha256` `292b83542ff6643692214f86e6f53f0c1070587c5a422e86352243f4750b6797` (8290 bytes)

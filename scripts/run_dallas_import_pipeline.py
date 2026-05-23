@@ -175,6 +175,13 @@ RAW_IMPORT_RELATIONSHIP_CHECKS = {
         "target_import_scope": "electrical_contractors",
     },
 }
+RAW_IMPORT_APPEND_PREFLIGHT_CHECKS = (
+    "raw_files_present",
+    "required_fields_complete",
+    "identity_keys_present_and_unique",
+    "date_values_parse",
+    "relationships_resolve",
+)
 
 
 def parse_args():
@@ -1024,27 +1031,169 @@ def raw_file_last_data_rows(raw_dir):
     return last_rows
 
 
+def raw_file_append_preflight(
+    row_counts,
+    fingerprints,
+    required_field_gaps,
+    identity_key_checks,
+    date_profiles,
+    relationship_checks,
+):
+    checks = {check_name: True for check_name in RAW_IMPORT_APPEND_PREFLIGHT_CHECKS}
+    blockers = []
+
+    def add_blocker(check_name, message, **details):
+        checks[check_name] = False
+        blocker = {"check": check_name, "message": message}
+        blocker.update(details)
+        blockers.append(blocker)
+
+    for file_name in RAW_IMPORT_FILE_NAMES:
+        if not isinstance(row_counts.get(file_name), int) or not isinstance(
+            fingerprints.get(file_name),
+            dict,
+        ):
+            add_blocker(
+                "raw_files_present",
+                f"{file_name} is missing or unreadable",
+                file_name=file_name,
+            )
+
+        required_gap = required_field_gaps.get(file_name)
+        if not isinstance(required_gap, dict):
+            add_blocker(
+                "required_fields_complete",
+                f"{file_name} required-field gap check is unavailable",
+                file_name=file_name,
+            )
+        else:
+            missing_headers = required_gap.get("missing_required_headers", [])
+            rows_with_gaps = required_gap.get("rows_with_missing_required_fields")
+            if missing_headers or rows_with_gaps:
+                add_blocker(
+                    "required_fields_complete",
+                    f"{file_name} has missing importer-required fields",
+                    file_name=file_name,
+                    missing_required_headers=missing_headers,
+                    rows_with_missing_required_fields=rows_with_gaps,
+                )
+
+        identity_check = identity_key_checks.get(file_name)
+        if not isinstance(identity_check, dict):
+            add_blocker(
+                "identity_keys_present_and_unique",
+                f"{file_name} identity-key check is unavailable",
+                file_name=file_name,
+            )
+        else:
+            duplicate_count = identity_check.get("duplicate_identity_key_count")
+            missing_identity_rows = identity_check.get("rows_missing_identity")
+            if duplicate_count or missing_identity_rows:
+                add_blocker(
+                    "identity_keys_present_and_unique",
+                    f"{file_name} has missing or duplicated identity keys",
+                    file_name=file_name,
+                    duplicate_identity_key_count=duplicate_count,
+                    rows_missing_identity=missing_identity_rows,
+                )
+
+        date_profile = date_profiles.get(file_name)
+        if not isinstance(date_profile, dict):
+            add_blocker(
+                "date_values_parse",
+                f"{file_name} date profile is unavailable",
+                file_name=file_name,
+            )
+        else:
+            for field_name, field_profile in date_profile.get("fields", {}).items():
+                invalid_count = (
+                    field_profile.get("invalid_date_count")
+                    if isinstance(field_profile, dict)
+                    else None
+                )
+                if invalid_count:
+                    add_blocker(
+                        "date_values_parse",
+                        f"{file_name}.{field_name} has invalid dates",
+                        file_name=file_name,
+                        field_name=field_name,
+                        invalid_date_count=invalid_count,
+                    )
+
+    for relationship_name in RAW_IMPORT_RELATIONSHIP_CHECKS:
+        relationship = relationship_checks.get(relationship_name)
+        if not isinstance(relationship, dict):
+            add_blocker(
+                "relationships_resolve",
+                f"{relationship_name} relationship check is unavailable",
+                relationship_name=relationship_name,
+            )
+            continue
+        unresolved_rows = relationship.get("unresolved_rows")
+        if unresolved_rows:
+            add_blocker(
+                "relationships_resolve",
+                f"{relationship_name} has unresolved raw rows",
+                relationship_name=relationship_name,
+                unresolved_rows=unresolved_rows,
+                unmatched_target_rows=relationship.get("unmatched_target_rows"),
+                missing_source_value_rows=relationship.get("missing_source_value_rows"),
+            )
+
+    if blockers:
+        next_step = (
+            "Resolve raw CSV append preflight blockers before adding more Dallas "
+            "permit rows, then rerun the summary-only readiness check."
+        )
+    else:
+        next_step = (
+            "Raw CSV append preflight is clear; append new Dallas rows at "
+            "`raw_file_next_append_rows`, then run `after_edit_command`."
+        )
+
+    return {
+        "status": "passed" if not blockers else "blocked",
+        "ready_for_append": not blockers,
+        "checks": checks,
+        "blockers": blockers,
+        "next_step": next_step,
+    }
+
+
 def next_import_record_handoff(raw_dir):
     display_raw_dir = command_path(raw_dir).rstrip("/")
     raw_row_counts = raw_file_row_counts(raw_dir)
+    raw_fingerprints = raw_file_fingerprints(raw_dir)
+    raw_last_data_rows = raw_file_last_data_rows(raw_dir)
+    raw_identity_key_checks = raw_file_identity_key_checks(raw_dir)
+    raw_value_profiles = raw_file_value_profiles(raw_dir)
+    raw_date_profiles = raw_file_date_profiles(raw_dir)
+    raw_relationship_checks = raw_file_relationship_checks(raw_dir)
+    raw_import_scope_counts = raw_file_import_scope_counts(raw_dir)
+    raw_importable_examples = raw_file_importable_examples(raw_dir)
+    raw_exclusion_examples = raw_file_exclusion_examples(raw_dir)
     raw_headers = raw_file_headers(raw_dir)
     raw_required_fields = raw_file_required_fields()
+    raw_required_field_gaps = raw_file_required_field_gaps(
+        raw_dir,
+        raw_required_fields,
+    )
     return {
         "raw_dir": display_raw_dir,
         "raw_files": [
             f"{display_raw_dir}/{file_name}" for file_name in RAW_IMPORT_FILE_NAMES
         ],
         "raw_file_row_counts": raw_row_counts,
-        "raw_file_fingerprints": raw_file_fingerprints(raw_dir),
+        "raw_file_fingerprints": raw_fingerprints,
         "raw_file_next_append_rows": raw_file_next_append_rows(raw_row_counts),
-        "raw_file_last_data_rows": raw_file_last_data_rows(raw_dir),
-        "raw_file_identity_key_checks": raw_file_identity_key_checks(raw_dir),
-        "raw_file_value_profiles": raw_file_value_profiles(raw_dir),
-        "raw_file_date_profiles": raw_file_date_profiles(raw_dir),
-        "raw_file_relationship_checks": raw_file_relationship_checks(raw_dir),
-        "raw_file_import_scope_counts": raw_file_import_scope_counts(raw_dir),
-        "raw_file_importable_examples": raw_file_importable_examples(raw_dir),
-        "raw_file_exclusion_examples": raw_file_exclusion_examples(raw_dir),
+        "raw_file_last_data_rows": raw_last_data_rows,
+        "raw_file_identity_key_checks": raw_identity_key_checks,
+        "raw_file_value_profiles": raw_value_profiles,
+        "raw_file_date_profiles": raw_date_profiles,
+        "raw_file_relationship_checks": raw_relationship_checks,
+        "raw_file_import_scope_counts": raw_import_scope_counts,
+        "raw_file_importable_examples": raw_importable_examples,
+        "raw_file_exclusion_examples": raw_exclusion_examples,
         "raw_file_headers": raw_headers,
         "raw_file_required_fields": raw_required_fields,
         "raw_file_optional_fields": raw_file_optional_fields(
@@ -1055,9 +1204,14 @@ def next_import_record_handoff(raw_dir):
             raw_headers,
             raw_required_fields,
         ),
-        "raw_file_required_field_gaps": raw_file_required_field_gaps(
-            raw_dir,
-            raw_required_fields,
+        "raw_file_required_field_gaps": raw_required_field_gaps,
+        "raw_file_append_preflight": raw_file_append_preflight(
+            raw_row_counts,
+            raw_fingerprints,
+            raw_required_field_gaps,
+            raw_identity_key_checks,
+            raw_date_profiles,
+            raw_relationship_checks,
         ),
         "after_edit_command": REQUIRE_READY_COMMAND,
         "readiness_check_command": SUMMARY_ONLY_REQUIRE_READY_JSON_COMMAND,
@@ -1365,6 +1519,10 @@ def write_summary(summary):
         "raw_file_required_field_gaps",
         {},
     )
+    raw_append_preflight = next_import_handoff.get(
+        "raw_file_append_preflight",
+        {},
+    )
 
     def inline_list(values):
         return ", ".join(f"`{value}`" for value in values) if values else "none"
@@ -1647,6 +1805,29 @@ def write_summary(summary):
             )
         return labels
 
+    def inline_append_preflight(value):
+        if not isinstance(value, dict) or not value:
+            return ["- Raw CSV append preflight: missing"]
+        blockers = value.get("blockers", [])
+        return [
+            f"- Raw CSV append preflight status: `{value.get('status')}`",
+            (
+                "- Raw CSV append preflight ready: "
+                f"`{str(value.get('ready_for_append')).lower()}`"
+            ),
+            (
+                "- Raw CSV append preflight checks: "
+                f"`{json.dumps(value.get('checks', {}), sort_keys=True)}`"
+            ),
+            (
+                "- Raw CSV append preflight blockers: "
+                f"`{json.dumps(blockers, sort_keys=False)}`"
+                if blockers
+                else "- Raw CSV append preflight blockers: none"
+            ),
+            f"- Raw CSV append preflight next step: {value.get('next_step')}",
+        ]
+
     lines = [
         "# Dallas Import Pipeline Summary",
         "",
@@ -1673,6 +1854,7 @@ def write_summary(summary):
         f"- Next gap: {contract['next_gap']}",
         f"- Next raw import files: {inline_list(next_import_handoff['raw_files'])}",
         f"- Next raw import row counts: {inline_row_counts(raw_row_counts)}",
+        f"- Next raw import append preflight: `{raw_append_preflight.get('status')}`",
         "- Next raw import fingerprints: see Follow-Up",
         f"- Next raw import append rows: {inline_next_append_rows(raw_next_append_rows)}",
         "- Next raw import last data rows: see Follow-Up",
@@ -1857,6 +2039,8 @@ def write_summary(summary):
                 "- Raw CSV row counts: "
                 f"{inline_row_counts(raw_row_counts)}"
             ),
+            "- Raw CSV append preflight:",
+            *inline_append_preflight(raw_append_preflight),
             "- Raw CSV fingerprints:",
             *inline_fingerprints(raw_fingerprints),
             (
@@ -1966,6 +2150,10 @@ def print_summary(summary, output_format="text"):
     raw_append_templates = next_import_handoff.get("raw_file_append_templates", {})
     raw_required_field_gaps = next_import_handoff.get(
         "raw_file_required_field_gaps",
+        {},
+    )
+    raw_append_preflight = next_import_handoff.get(
+        "raw_file_append_preflight",
         {},
     )
 
@@ -2211,6 +2399,18 @@ def print_summary(summary, output_format="text"):
             )
         return "; ".join(labels)
 
+    def format_append_preflight(value):
+        if not isinstance(value, dict) or not value:
+            return "missing"
+        blockers = value.get("blockers", [])
+        blocker_label = json.dumps(blockers, sort_keys=False) if blockers else "none"
+        return (
+            f"status={value.get('status')} "
+            f"ready={str(value.get('ready_for_append')).lower()} "
+            f"checks={json.dumps(value.get('checks', {}), sort_keys=True)} "
+            f"blockers={blocker_label}"
+        )
+
     print("==> Dallas import pipeline summary")
     print(f"dataset_id: {summary['dataset_id']}")
     print(f"contract_passed: {str(contract.get('overall_passed')).lower()}")
@@ -2267,6 +2467,7 @@ def print_summary(summary, output_format="text"):
     print(f"  completion_gate: {follow_up['completion_gate']}")
     print(f"  raw_import_files: {', '.join(next_import_handoff['raw_files'])}")
     print(f"  raw_import_row_counts: {format_row_counts(raw_row_counts)}")
+    print(f"  raw_import_append_preflight: {format_append_preflight(raw_append_preflight)}")
     print(f"  raw_import_fingerprints: {format_fingerprints(raw_fingerprints)}")
     print(f"  raw_import_next_append_rows: {format_next_append_rows(raw_next_append_rows)}")
     print(f"  raw_import_last_data_rows: {format_last_data_rows(raw_last_data_rows)}")

@@ -991,6 +991,19 @@
         }
       }
     },
+    "raw_file_append_preflight": {
+      "status": "passed",
+      "ready_for_append": true,
+      "checks": {
+        "raw_files_present": true,
+        "required_fields_complete": true,
+        "identity_keys_present_and_unique": true,
+        "date_values_parse": true,
+        "relationships_resolve": true
+      },
+      "blockers": [],
+      "next_step": "Raw CSV append preflight is clear; append new Dallas rows at `raw_file_next_append_rows`, then run `after_edit_command`."
+    },
     "after_edit_command": "python3 scripts/run_dallas_import_pipeline.py --require-ready",
     "readiness_check_command": "python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json"
   },
