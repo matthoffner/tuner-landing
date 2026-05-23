@@ -12,6 +12,7 @@ Created from Pixelbox.
 - [Use Cases](./use-cases.md)
 - [MVP](./mvp.md)
 - [Generated Status Page](./generated/landing.html)
+- [Dallas Import Pipeline Summary](./generated/pipeline/dallas-import-pipeline-summary-v1/summary.md)
 - [Dallas Edge-Case Coverage](./generated/coverage/dallas-electrician-edge-case-coverage-v1/coverage.md)
 - [Dallas Inspection Workflow](./generated/workflows/dallas-inspection-workflow-v1/index.html)
 - [Loop Instructions](./LOOP.md)
@@ -33,7 +34,7 @@ Created from Pixelbox.
 - Dallas discovery artifact writer: `python3 scripts/generate_dallas_discovery_artifacts.py`
 - Dallas discovery batch mode: `python3 scripts/generate_dallas_discovery_artifacts.py --batch-input-dir generated/intake --batch-output-dir generated/discovery`
 - Dallas extract importer: `python3 scripts/import_dallas_permit_extracts.py`
-- Dallas latest import pipeline: `python3 scripts/run_dallas_import_pipeline.py` prints the next-gap summary, copyable follow-up commands, and generated report paths.
+- Dallas latest import pipeline: `python3 scripts/run_dallas_import_pipeline.py` prints the next-gap summary, copyable follow-up commands, generated report paths, and writes `generated/pipeline/dallas-import-pipeline-summary-v1/summary.json` plus `summary.md`.
 - Dallas edge-case coverage writer: `python3 scripts/generate_dallas_edge_case_coverage.py`
 - Dallas inspection workflow writer: `python3 scripts/generate_dallas_inspection_workflow.py`
 - Dallas operator-correction queue listing: `python3 scripts/record_operator_correction.py --list-queue-items`

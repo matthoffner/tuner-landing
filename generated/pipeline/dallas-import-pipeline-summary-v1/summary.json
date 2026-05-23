@@ -1,0 +1,43 @@
+{
+  "summary_id": "dallas-import-pipeline-summary-v1",
+  "dataset_id": "dallas-electrician-import-sample-v2",
+  "inputs": {
+    "raw_dir": "generated/raw/dallas-electrician-import-sample-v2",
+    "normalized_dir": "generated/normalized/dallas-electrician-import-sample-v2",
+    "fixture_dir": "generated/fixtures/dallas-electrician-import-sequences-v2",
+    "eval_dir": "generated/evals/dallas-electrician-import-sample-v2"
+  },
+  "contract": {
+    "overall_passed": true,
+    "checks_passed": 13,
+    "checks_total": 13,
+    "next_gap": "All current latest-import result states, failure reasons, pattern slices, and expected next-action groups have repeated support; keep the action queue and coverage report current as real Dallas import records widen.",
+    "json_path": "generated/contracts/dallas-electrician-contract-summary-v1/summary.json",
+    "report_path": "generated/contracts/dallas-electrician-contract-summary-v1/summary.md"
+  },
+  "workflow": {
+    "queue_items": 14,
+    "operator_corrections_captured": 14,
+    "accepted_pattern_count": 6,
+    "json_path": "generated/workflows/dallas-inspection-workflow-v1/action-queue.json",
+    "report_path": "generated/workflows/dallas-inspection-workflow-v1/action-queue.md"
+  },
+  "coverage": {
+    "json_path": "generated/coverage/dallas-electrician-edge-case-coverage-v1/coverage.json",
+    "report_path": "generated/coverage/dallas-electrician-edge-case-coverage-v1/coverage.md"
+  },
+  "correction_gate": {
+    "required": true,
+    "status": "passed",
+    "command": "python3 scripts/record_operator_correction.py --validate-ledger --require-complete --format text"
+  },
+  "follow_up": {
+    "patterns_command": "python3 scripts/record_operator_correction.py --list-patterns --format text",
+    "completion_gate": "python3 scripts/record_operator_correction.py --validate-ledger --require-complete --format text",
+    "coverage_report": "generated/coverage/dallas-electrician-edge-case-coverage-v1/coverage.md",
+    "contract_report": "generated/contracts/dallas-electrician-contract-summary-v1/summary.md",
+    "workflow_report": "generated/workflows/dallas-inspection-workflow-v1/action-queue.md",
+    "summary_json": "generated/pipeline/dallas-import-pipeline-summary-v1/summary.json",
+    "summary_report": "generated/pipeline/dallas-import-pipeline-summary-v1/summary.md"
+  }
+}

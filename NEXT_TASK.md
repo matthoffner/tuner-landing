@@ -48,7 +48,7 @@ Updated next best artifacts:
 - expose the running cockpit to remote observers with `python3 scripts/bridge_mvp_cockpit.py` and share the read-only URL from `.automoat/state/mvp-bridge-status.json`
 - run `python3 scripts/record_operator_correction.py --smoke-check` for the default JSON contract and `python3 scripts/record_operator_correction.py --smoke-check --format text` for the readable operator contract, then verify the completed correction ledger with `python3 scripts/record_operator_correction.py --summary --format text` and `python3 scripts/record_operator_correction.py --validate-ledger --require-complete --format text` before widening fixture coverage
 - use `python3 scripts/record_operator_correction.py --list-patterns --format text` after capture to inspect reusable accepted operator patterns without opening generated JSON by hand
-- use `python3 scripts/run_dallas_import_pipeline.py` to refresh the latest Dallas import sample from CSV through normalized rows, fixture pack, evals, coverage, contract summary, workflow, and the strict correction-ledger gate in one deterministic pass
+- use `python3 scripts/run_dallas_import_pipeline.py` to refresh the latest Dallas import sample from CSV through normalized rows, fixture pack, evals, coverage, contract summary, workflow, the strict correction-ledger gate, and a durable generated pipeline summary in one deterministic pass
 - keep `generated/workflows/dallas-inspection-workflow-v1/action-queue.json` `operator_correction_patterns` current as accepted operational patterns widen
 - use the now-repeated latest-import coverage to choose the next real Dallas import-readiness gap instead of adding more hidden fixture rows by default
 
@@ -138,6 +138,7 @@ Latest bounded improvement completed:
 - `scripts/record_operator_correction.py --smoke-check` now builds a temporary incomplete correction ledger when the real ledger is already complete, so next-missing command guards, dry-run event construction, and completion-gate rejection stay covered without mutating the real Dallas ledger
 - `scripts/run_dallas_import_pipeline.py` now refreshes the latest Dallas import-data MVP artifacts end to end, and `scripts/import_dallas_permit_extracts.py` now writes a deterministic imported project timestamp so repeated pipeline checks avoid timestamp churn
 - `scripts/run_dallas_import_pipeline.py` now prints copyable pattern-review and completion-gate commands plus generated coverage, contract, and workflow report paths after the next-gap summary, so the next Dallas import-readiness pass can start from one command output
+- `scripts/run_dallas_import_pipeline.py` now writes `generated/pipeline/dallas-import-pipeline-summary-v1/summary.json` and `summary.md`, giving the autonomous loop a durable machine-readable and operator-readable import-run result instead of relying only on terminal output
 
 ## Constraints
 

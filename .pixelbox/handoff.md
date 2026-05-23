@@ -4,6 +4,10 @@ Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
 - lane: editor
+- status: made the Dallas import pipeline summary durable; `python3 scripts/run_dallas_import_pipeline.py` still refreshes imported `v2` through the strict correction gate, and now writes `generated/pipeline/dallas-import-pipeline-summary-v1/summary.json` plus `summary.md` with contract, workflow, coverage, correction-gate, and follow-up command paths
+- files: scripts/run_dallas_import_pipeline.py, generated/pipeline/dallas-import-pipeline-summary-v1/summary.json, generated/pipeline/dallas-import-pipeline-summary-v1/summary.md, README.md, NEXT_TASK.md, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- next: run `python3 scripts/run_dallas_import_pipeline.py`, inspect `generated/pipeline/dallas-import-pipeline-summary-v1/summary.json`, then use the listed patterns command plus coverage, contract, and workflow reports to choose the next real Dallas import-readiness gap as new records arrive
+- lane: editor
 - status: made the Dallas import pipeline summary self-directing; `python3 scripts/run_dallas_import_pipeline.py` still refreshes imported `v2` through the strict correction gate, and now prints a `follow_up` block with the accepted-pattern review command, completion gate, and generated coverage, contract, and workflow report paths
 - files: scripts/run_dallas_import_pipeline.py, README.md, NEXT_TASK.md, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
 - next: run `python3 scripts/run_dallas_import_pipeline.py`, then use its printed `patterns_command` plus the coverage, contract, and workflow reports to choose the next real Dallas import-readiness gap as new records arrive

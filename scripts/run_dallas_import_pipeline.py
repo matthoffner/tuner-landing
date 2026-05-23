@@ -15,10 +15,18 @@ DEFAULT_FIXTURE_DIR = ROOT / "generated" / "fixtures" / "dallas-electrician-impo
 DEFAULT_EVAL_DIR = ROOT / "generated" / "evals" / LATEST_IMPORT_DATASET_ID
 WORKFLOW_PATH = ROOT / "generated" / "workflows" / "dallas-inspection-workflow-v1" / "action-queue.json"
 CONTRACT_PATH = ROOT / "generated" / "contracts" / "dallas-electrician-contract-summary-v1" / "summary.json"
+COVERAGE_JSON_PATH = ROOT / "generated" / "coverage" / "dallas-electrician-edge-case-coverage-v1" / "coverage.json"
 COVERAGE_REPORT_PATH = ROOT / "generated" / "coverage" / "dallas-electrician-edge-case-coverage-v1" / "coverage.md"
 CONTRACT_REPORT_PATH = ROOT / "generated" / "contracts" / "dallas-electrician-contract-summary-v1" / "summary.md"
 WORKFLOW_REPORT_PATH = ROOT / "generated" / "workflows" / "dallas-inspection-workflow-v1" / "action-queue.md"
+SUMMARY_DIR = ROOT / "generated" / "pipeline" / "dallas-import-pipeline-summary-v1"
+SUMMARY_JSON_PATH = SUMMARY_DIR / "summary.json"
+SUMMARY_REPORT_PATH = SUMMARY_DIR / "summary.md"
 PYTHON = sys.executable
+PATTERNS_COMMAND = "python3 scripts/record_operator_correction.py --list-patterns --format text"
+COMPLETION_GATE_COMMAND = (
+    "python3 scripts/record_operator_correction.py --validate-ledger --require-complete --format text"
+)
 
 
 def parse_args():
@@ -70,31 +78,132 @@ def load_json(path):
         return json.load(handle)
 
 
-def print_summary(dataset_id):
+def build_summary(args):
     contract = load_json(CONTRACT_PATH)
     workflow = load_json(WORKFLOW_PATH)
     contract_checks = contract.get("checks", [])
     workflow_summary = workflow.get("summary", {})
     correction_summary = workflow.get("operator_correction_summary", {})
     pattern_summary = workflow.get("operator_correction_patterns", {})
+    checks_passed = sum(1 for check in contract_checks if check.get("passed"))
+    queue_items = workflow_summary.get("queue_items")
+    correction_count = correction_summary.get("queue_items_with_corrections")
+
+    return {
+        "summary_id": "dallas-import-pipeline-summary-v1",
+        "dataset_id": args.dataset_id,
+        "inputs": {
+            "raw_dir": command_path(args.raw_dir),
+            "normalized_dir": command_path(args.normalized_dir),
+            "fixture_dir": command_path(args.fixture_dir),
+            "eval_dir": command_path(args.eval_dir),
+        },
+        "contract": {
+            "overall_passed": contract.get("overall_passed"),
+            "checks_passed": checks_passed,
+            "checks_total": len(contract_checks),
+            "next_gap": contract.get("next_gap"),
+            "json_path": command_path(CONTRACT_PATH),
+            "report_path": command_path(CONTRACT_REPORT_PATH),
+        },
+        "workflow": {
+            "queue_items": queue_items,
+            "operator_corrections_captured": correction_count,
+            "accepted_pattern_count": pattern_summary.get("accepted_pattern_count"),
+            "json_path": command_path(WORKFLOW_PATH),
+            "report_path": command_path(WORKFLOW_REPORT_PATH),
+        },
+        "coverage": {
+            "json_path": command_path(COVERAGE_JSON_PATH),
+            "report_path": command_path(COVERAGE_REPORT_PATH),
+        },
+        "correction_gate": {
+            "required": not args.skip_correction_gate,
+            "status": "skipped" if args.skip_correction_gate else "passed",
+            "command": COMPLETION_GATE_COMMAND,
+        },
+        "follow_up": {
+            "patterns_command": PATTERNS_COMMAND,
+            "completion_gate": COMPLETION_GATE_COMMAND,
+            "coverage_report": command_path(COVERAGE_REPORT_PATH),
+            "contract_report": command_path(CONTRACT_REPORT_PATH),
+            "workflow_report": command_path(WORKFLOW_REPORT_PATH),
+            "summary_json": command_path(SUMMARY_JSON_PATH),
+            "summary_report": command_path(SUMMARY_REPORT_PATH),
+        },
+    }
+
+
+def write_summary(summary):
+    SUMMARY_DIR.mkdir(parents=True, exist_ok=True)
+    with SUMMARY_JSON_PATH.open("w") as handle:
+        json.dump(summary, handle, indent=2)
+        handle.write("\n")
+
+    contract = summary["contract"]
+    workflow = summary["workflow"]
+    follow_up = summary["follow_up"]
+    correction_gate = summary["correction_gate"]
+    contract_status = "PASS" if contract["overall_passed"] else "FAIL"
+    gate_status = correction_gate["status"].upper()
+    lines = [
+        "# Dallas Import Pipeline Summary",
+        "",
+        f"- Dataset: `{summary['dataset_id']}`",
+        (
+            f"- Contract: {contract_status} "
+            f"(`{contract['checks_passed']}/{contract['checks_total']}` checks)"
+        ),
+        f"- Queue items: `{workflow['queue_items']}`",
+        (
+            "- Operator corrections: "
+            f"`{workflow['operator_corrections_captured']}/{workflow['queue_items']}`"
+        ),
+        f"- Accepted patterns: `{workflow['accepted_pattern_count']}`",
+        f"- Correction gate: {gate_status}",
+        f"- Next gap: {contract['next_gap']}",
+        "",
+        "## Follow-Up",
+        "",
+        f"- Pattern review: `{follow_up['patterns_command']}`",
+        f"- Completion gate: `{follow_up['completion_gate']}`",
+        "",
+        "## Reports",
+        "",
+        f"- Coverage: `{follow_up['coverage_report']}`",
+        f"- Contract: `{follow_up['contract_report']}`",
+        f"- Workflow: `{follow_up['workflow_report']}`",
+        f"- Summary JSON: `{follow_up['summary_json']}`",
+    ]
+    with SUMMARY_REPORT_PATH.open("w") as handle:
+        handle.write("\n".join(lines))
+        handle.write("\n")
+
+
+def print_summary(summary):
+    contract = summary["contract"]
+    workflow = summary["workflow"]
+    follow_up = summary["follow_up"]
 
     print("==> Dallas import pipeline summary")
-    print(f"dataset_id: {dataset_id}")
+    print(f"dataset_id: {summary['dataset_id']}")
     print(f"contract_passed: {str(contract.get('overall_passed')).lower()}")
-    print(f"contract_checks: {sum(1 for check in contract_checks if check.get('passed'))}/{len(contract_checks)}")
-    print(f"queue_items: {workflow_summary.get('queue_items')}")
+    print(f"contract_checks: {contract.get('checks_passed')}/{contract.get('checks_total')}")
+    print(f"queue_items: {workflow.get('queue_items')}")
     print(
         "operator_corrections: "
-        f"{correction_summary.get('queue_items_with_corrections')}/{workflow_summary.get('queue_items')}"
+        f"{workflow.get('operator_corrections_captured')}/{workflow.get('queue_items')}"
     )
-    print(f"accepted_patterns: {pattern_summary.get('accepted_pattern_count')}")
+    print(f"accepted_patterns: {workflow.get('accepted_pattern_count')}")
     print(f"next_gap: {contract.get('next_gap')}")
     print("follow_up:")
-    print("  patterns_command: python3 scripts/record_operator_correction.py --list-patterns --format text")
-    print("  completion_gate: python3 scripts/record_operator_correction.py --validate-ledger --require-complete --format text")
-    print(f"  coverage_report: {command_path(COVERAGE_REPORT_PATH)}")
-    print(f"  contract_report: {command_path(CONTRACT_REPORT_PATH)}")
-    print(f"  workflow_report: {command_path(WORKFLOW_REPORT_PATH)}")
+    print(f"  patterns_command: {follow_up['patterns_command']}")
+    print(f"  completion_gate: {follow_up['completion_gate']}")
+    print(f"  coverage_report: {follow_up['coverage_report']}")
+    print(f"  contract_report: {follow_up['contract_report']}")
+    print(f"  workflow_report: {follow_up['workflow_report']}")
+    print(f"  summary_json: {follow_up['summary_json']}")
+    print(f"  summary_report: {follow_up['summary_report']}")
 
 
 def main():
@@ -167,7 +276,9 @@ def main():
 
     for label, command in steps:
         run_step(label, command)
-    print_summary(args.dataset_id)
+    summary = build_summary(args)
+    write_summary(summary)
+    print_summary(summary)
 
 
 if __name__ == "__main__":
