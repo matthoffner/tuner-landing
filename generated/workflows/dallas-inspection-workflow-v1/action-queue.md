@@ -4,10 +4,10 @@ This artifact turns reviewed Dallas electrician inspection labels into a concret
 
 ## Summary
 
-- Queue items: `19`
-- Priority counts: `{"high": 6, "medium": 13}`
-- Trigger result counts: `{"fail": 6, "not_ready": 4, "partial": 9}`
-- Operator correction events: `19`
+- Queue items: `20`
+- Priority counts: `{"high": 6, "medium": 14}`
+- Trigger result counts: `{"fail": 6, "not_ready": 4, "partial": 10}`
+- Operator correction events: `20`
 - Operator correction ledger: `generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl`
 - Accepted correction patterns: `6`
 
@@ -15,14 +15,14 @@ This artifact turns reviewed Dallas electrician inspection labels into a concret
 
 ### operator-pattern:accepted:0001
 
-- Queue items: `6`
+- Queue items: `7`
 - Actions: `Correct wiring or devices, Schedule reinspection`
 - Action IDs: `correct_wiring_or_devices, schedule_reinspection`
-- Trigger results: `{"fail": 2, "partial": 4}`
-- Failure reasons: `{"wiring_or_device_issue": 6}`
-- Inspection types: `{"final": 2, "rough_in": 4}`
-- Follow-up results: `{"pass": 6}`
-- Example permits: `ELP-2026-0209, ELR-2026-0201, ELR-2026-0207, ELZ-2026-0218, ELZ-2026-0219, ELZ-2026-0220`
+- Trigger results: `{"fail": 2, "partial": 5}`
+- Failure reasons: `{"wiring_or_device_issue": 7}`
+- Inspection types: `{"final": 2, "rough_in": 5}`
+- Follow-up results: `{"pass": 7}`
+- Example permits: `ELP-2026-0209, ELR-2026-0201, ELR-2026-0207, ELZ-2026-0218, ELZ-2026-0219, ELZ-2026-0220, ELZ-2026-0221`
 
 ### operator-pattern:accepted:0002
 
@@ -270,3 +270,13 @@ This artifact turns reviewed Dallas electrician inspection labels into a concret
 - Recommended actions: `Correct wiring or devices, Schedule reinspection`
 - Follow-up observed: `2026-05-10` `correction_followup` -> `pass`
 - Evidence: Bedroom branch wiring repaired but replacement receptacle devices and wall trim remained incomplete before rough-in approval.
+
+### ELZ-2026-0221 - 2776 S EWING AVE DALLAS TX 75216
+
+- Priority: `medium`
+- Contractor: `Cedars South Electric`
+- Trigger: `2026-05-07` `rough_in` -> `partial`
+- Failure reason: `wiring_or_device_issue`
+- Recommended actions: `Correct wiring or devices, Schedule reinspection`
+- Follow-up observed: `2026-05-12` `correction_followup` -> `pass`
+- Evidence: Laundry branch wiring repaired but replacement device boxes and cover trim remained incomplete before rough-in approval.
