@@ -46,7 +46,7 @@ Updated next best artifacts:
 
 - keep the real MVP cockpit running with `python3 scripts/serve_mvp_cockpit.py --auto-start --port 4174`
 - expose the running cockpit to remote observers with `python3 scripts/bridge_mvp_cockpit.py` and share the read-only URL from `.automoat/state/mvp-bridge-status.json`
-- check correction capture progress with `python3 scripts/record_operator_correction.py --summary`, pick the next uncaptured queue item with `python3 scripts/record_operator_correction.py --next-missing --format text`, use its action catalog when an edited decision needs corrected action IDs, dry-run or record the first uncaptured item directly with one of the printed text-mode commands, run the printed ledger-validation command, and summarize useful correction patterns back into the Dallas workflow artifact
+- check correction capture progress with `python3 scripts/record_operator_correction.py --summary`, pick the next uncaptured queue item with `python3 scripts/record_operator_correction.py --next-missing --format text`, use its action catalog when an edited decision needs corrected action IDs, dry-run or record the first uncaptured item directly with one of the printed text-mode commands, run the printed ledger-validation command, use `python3 scripts/record_operator_correction.py --validate-ledger --require-complete --format text` as the final all-items gate, and summarize useful correction patterns back into the Dallas workflow artifact
 - decide whether the remaining thin latest-import labels, `incomplete_work` and `complete_remaining_work|schedule_reinspection`, need another repeated sequence before real data import
 
 Latest bounded improvement completed:
@@ -91,6 +91,7 @@ Latest bounded improvement completed:
 - `scripts/record_operator_correction.py --next-missing --format text` now also prints the matching text-mode ledger-validation command, so a non-server operator pass can finish with the same copyable work order instead of switching back to README instructions
 - `scripts/record_operator_correction.py --validate-ledger` now reports captured versus missing Dallas queue item coverage, so the final non-server check shows both ledger shape validity and remaining uncaptured work
 - `scripts/record_operator_correction.py --next-missing --format text` and `--list-queue-items --missing-only --format text` now include evidence and observed follow-up context from the Dallas action queue, so an operator can judge accepted/rejected/edited decisions without opening the generated JSON
+- `scripts/record_operator_correction.py --validate-ledger --require-complete` now gives the non-server correction path a strict final gate that fails until every current Dallas action-queue item has a captured operator correction
 
 ## Constraints
 

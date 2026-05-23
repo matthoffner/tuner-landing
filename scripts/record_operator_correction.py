@@ -53,6 +53,11 @@ def parse_args() -> argparse.Namespace:
         help="validate captured correction events against the current queue and action catalog",
     )
     parser.add_argument(
+        "--require-complete",
+        action="store_true",
+        help="with --validate-ledger, fail if any current queue item is missing a correction",
+    )
+    parser.add_argument(
         "--format",
         choices=("json", "text"),
         default="json",
@@ -90,6 +95,8 @@ def parse_args() -> argparse.Namespace:
     read_only_mode = args.list_queue_items or args.next_missing or args.summary or args.validate_ledger
     if args.missing_only and not args.list_queue_items:
         parser.error("--missing-only requires --list-queue-items")
+    if args.require_complete and not args.validate_ledger:
+        parser.error("--require-complete requires --validate-ledger")
     if args.use_next_missing and read_only_mode:
         parser.error("--use-next-missing records a decision and cannot be combined with read-only modes")
     if args.use_next_missing and args.queue_item_id:
@@ -180,7 +187,7 @@ def display_path(path: Path) -> str:
         return str(path)
 
 
-def ledger_validation(queue_path: Path, ledger_path: Path) -> dict[str, Any]:
+def ledger_validation(queue_path: Path, ledger_path: Path, require_complete: bool = False) -> dict[str, Any]:
     payload = read_json(queue_path)
     queue = payload.get("queue")
     if not isinstance(queue, list):
@@ -284,7 +291,6 @@ def ledger_validation(queue_path: Path, ledger_path: Path) -> dict[str, Any]:
         elif decision == "edited" and not corrected_actions:
             add_issue(event_number, event, "corrected_actions", "edited corrections require corrected actions")
 
-    issue_count = invalid_lines + len(issues)
     corrected_queue_item_ids = set()
     for event in events:
         queue_item_id = event.get("queue_item_id")
@@ -293,9 +299,24 @@ def ledger_validation(queue_path: Path, ledger_path: Path) -> dict[str, Any]:
     missing_queue_item_ids = [
         queue_item_id for queue_item_id in queue_item_ids if queue_item_id not in corrected_queue_item_ids
     ]
+    if require_complete and missing_queue_item_ids:
+        issues.append(
+            {
+                "event_number": None,
+                "correction_id": None,
+                "queue_item_id": "current queue",
+                "field": "queue_correction_coverage",
+                "message": (
+                    f"{len(missing_queue_item_ids)} current queue items are missing required corrections"
+                ),
+            }
+        )
+
+    issue_count = invalid_lines + len(issues)
     return {
         "workflow_id": payload.get("workflow_id"),
         "ledger_path": display_path(ledger_path),
+        "require_complete": require_complete,
         "queue_items": len(queue_items),
         "queue_items_with_corrections": len(corrected_queue_item_ids),
         "queue_items_missing_corrections": len(missing_queue_item_ids),
@@ -435,13 +456,20 @@ def record_command(
     return shlex.join(args)
 
 
-def validate_ledger_command(queue_path: Path, ledger_path: Path, output_format: str = "json") -> str:
+def validate_ledger_command(
+    queue_path: Path,
+    ledger_path: Path,
+    output_format: str = "json",
+    require_complete: bool = False,
+) -> str:
     args = [
         "python3",
         "scripts/record_operator_correction.py",
         *command_path_args(queue_path, ledger_path),
         "--validate-ledger",
     ]
+    if require_complete:
+        args.append("--require-complete")
     if output_format == "text":
         args.extend(["--format", "text"])
     return shlex.join(args)
@@ -717,6 +745,7 @@ def format_next_missing_text(next_missing: dict[str, Any]) -> str:
     if not isinstance(item, dict):
         lines.append("Next queue item: (none)")
         lines.append(f"Validate ledger: {next_missing.get('validation_command')}")
+        lines.append(f"Completion gate: {next_missing.get('completion_validation_command')}")
         return "\n".join(lines)
 
     lines.extend(
@@ -772,6 +801,10 @@ def format_next_missing_text(next_missing: dict[str, Any]) -> str:
     lines.extend(format_command_group(commands.get("append_with_note"), "Append fixed-item commands with note"))
     lines.append("")
     lines.append(f"Validate ledger after capture: {next_missing.get('validation_command')}")
+    lines.append(
+        "Completion gate after all corrections: "
+        f"{next_missing.get('completion_validation_command')}"
+    )
     return "\n".join(lines)
 
 
@@ -781,6 +814,7 @@ def format_ledger_validation_text(validation: dict[str, Any]) -> str:
         f"Status: {str(validation.get('status', 'fail')).upper()}",
         f"Workflow: {validation.get('workflow_id')}",
         f"Ledger: {validation.get('ledger_path')}",
+        f"Completion required: {'yes' if validation.get('require_complete') else 'no'}",
         f"Queue items: {validation.get('queue_items')}",
         (
             "Queue corrections: "
@@ -808,9 +842,11 @@ def format_ledger_validation_text(validation: dict[str, Any]) -> str:
     for issue in issues:
         if not isinstance(issue, dict):
             continue
+        event_number = issue.get("event_number")
+        event_label = f"event {event_number}" if event_number else "coverage"
         lines.append(
             "- "
-            f"event {issue.get('event_number')} "
+            f"{event_label} "
             f"{issue.get('field')}: {issue.get('message')} "
             f"({issue.get('queue_item_id') or issue.get('correction_id') or 'unknown event'})"
         )
@@ -860,6 +896,12 @@ def next_missing_correction(
             else {}
         ),
         "validation_command": validate_ledger_command(queue_path, ledger_path, output_format=output_format),
+        "completion_validation_command": validate_ledger_command(
+            queue_path,
+            ledger_path,
+            output_format=output_format,
+            require_complete=True,
+        ),
     }
 
 
@@ -891,7 +933,7 @@ def main() -> int:
             print(json.dumps(progress, indent=2, sort_keys=True))
         return 0
     if args.validate_ledger:
-        validation = ledger_validation(args.queue_path, args.ledger_path)
+        validation = ledger_validation(args.queue_path, args.ledger_path, args.require_complete)
         if args.format == "text":
             print(format_ledger_validation_text(validation))
         else:
