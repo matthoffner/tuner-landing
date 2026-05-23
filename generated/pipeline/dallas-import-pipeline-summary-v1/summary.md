@@ -13,6 +13,7 @@
 - Next raw import row counts: `permits.csv`=15, `inspections.csv`=41, `contractors.csv`=6, `rule_documents.csv`=3
 - Next raw import append rows: `permits.csv` row 17, `inspections.csv` row 43, `contractors.csv` row 8, `rule_documents.csv` row 5
 - Next raw import last data rows: see Follow-Up
+- Next raw import identity key checks: see Follow-Up
 - Next raw import scope counts: see Follow-Up
 - Next raw importable examples: see Follow-Up
 - Next raw import exclusion examples: see Follow-Up
@@ -140,6 +141,11 @@ These are the reusable accepted correction patterns currently embedded in the Da
 - `inspections.csv` last data row: `{"csv_row_number": 42, "row": {"permit_number": "PLM-2026-0206", "inspection_date": "2026-04-11", "inspection_type": "Final", "result": "Pass"}}`
 - `contractors.csv` last data row: `{"csv_row_number": 7, "row": {"registration_id": "REG-5206", "name": "Oak Lawn Plumbing", "license_type": "plumbing_contractor"}}`
 - `rule_documents.csv` last data row: `{"csv_row_number": 4, "row": {"title": "Dallas reinspection access note", "document_type": "faq", "effective_date": "2025-01-01"}}`
+- Raw CSV identity key checks:
+- `permits.csv` identity keys: fields `permit_number`, duplicates `0`, rows with duplicate identity `0`, missing identity rows `0`, examples `[]`
+- `inspections.csv` identity keys: fields `permit_number`, `inspection_date`, `inspection_type`, duplicates `0`, rows with duplicate identity `0`, missing identity rows `0`, examples `[]`
+- `contractors.csv` identity keys: fields `registration_id`, duplicates `0`, rows with duplicate identity `0`, missing identity rows `0`, examples `[]`
+- `rule_documents.csv` identity keys: fields `title`, duplicates `0`, rows with duplicate identity `0`, missing identity rows `0`, examples `[]`
 - Raw CSV import scope counts:
 - `permits.csv` import scope: `14/15` importable, excluded: `1`, reasons: `{"excluded_by_city": 0, "excluded_by_trade": 1, "excluded_by_work_class": 0}`
 - `inspections.csv` import scope: `40/41` importable, excluded: `1`, reasons: `{"excluded_by_unimported_permit": 1}`

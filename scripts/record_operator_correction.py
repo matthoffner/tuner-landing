@@ -101,6 +101,23 @@ RAW_IMPORT_REQUIRED_FIELDS = {
         "title",
     ],
 }
+RAW_IMPORT_IDENTITY_FIELDS = {
+    "permits.csv": [
+        "permit_number",
+    ],
+    "inspections.csv": [
+        "permit_number",
+        "inspection_date",
+        "inspection_type",
+    ],
+    "contractors.csv": [
+        "registration_id",
+    ],
+    "rule_documents.csv": [
+        "title",
+    ],
+}
+RAW_IMPORT_IDENTITY_EXAMPLE_LIMIT = 5
 RAW_IMPORT_SCOPE_EXCLUSION_FIELDS = {
     "permits.csv": (
         "excluded_by_city",
@@ -484,6 +501,51 @@ def raw_import_file_required_fields() -> dict[str, list[str]]:
         file_name: list(RAW_IMPORT_REQUIRED_FIELDS[file_name])
         for file_name in RAW_IMPORT_FILE_NAMES
     }
+
+
+def raw_import_file_identity_key_checks(raw_dir: str) -> dict[str, dict[str, Any] | None]:
+    resolved_raw_dir = repo_path(raw_dir)
+    checks: dict[str, dict[str, Any] | None] = {}
+    for file_name in RAW_IMPORT_FILE_NAMES:
+        rows = csv_dict_data_rows_with_numbers(resolved_raw_dir / file_name)
+        identity_fields = RAW_IMPORT_IDENTITY_FIELDS[file_name]
+        if rows is None:
+            checks[file_name] = None
+            continue
+
+        row_numbers_by_key: dict[tuple[str, ...], list[int]] = {}
+        rows_missing_identity = 0
+        for row_number, row in rows:
+            key = tuple(raw_cell(row, field) for field in identity_fields)
+            if any(not value for value in key):
+                rows_missing_identity += 1
+                continue
+            row_numbers_by_key.setdefault(key, []).append(row_number)
+
+        duplicate_keys = [
+            (key, row_numbers)
+            for key, row_numbers in row_numbers_by_key.items()
+            if len(row_numbers) > 1
+        ]
+        duplicate_examples = [
+            {
+                "identity_key": dict(zip(identity_fields, key)),
+                "csv_row_numbers": row_numbers,
+            }
+            for key, row_numbers in duplicate_keys[:RAW_IMPORT_IDENTITY_EXAMPLE_LIMIT]
+        ]
+        checks[file_name] = {
+            "identity_fields": list(identity_fields),
+            "rows_checked": len(rows),
+            "rows_with_identity": len(rows) - rows_missing_identity,
+            "rows_missing_identity": rows_missing_identity,
+            "duplicate_identity_key_count": len(duplicate_keys),
+            "rows_with_duplicate_identity": sum(
+                len(row_numbers) for _, row_numbers in duplicate_keys
+            ),
+            "duplicate_identity_key_examples": duplicate_examples,
+        }
+    return checks
 
 
 def raw_import_file_import_scope_counts(
@@ -955,6 +1017,60 @@ def raw_import_file_required_fields_are_valid(value: Any) -> bool:
     )
 
 
+def raw_import_file_identity_key_checks_are_valid(value: Any) -> bool:
+    if not isinstance(value, dict):
+        return False
+
+    for file_name in RAW_IMPORT_FILE_NAMES:
+        check = value.get(file_name)
+        if not isinstance(check, dict):
+            return False
+        identity_fields = check.get("identity_fields")
+        rows_checked = check.get("rows_checked")
+        rows_with_identity = check.get("rows_with_identity")
+        rows_missing_identity = check.get("rows_missing_identity")
+        duplicate_key_count = check.get("duplicate_identity_key_count")
+        duplicate_rows = check.get("rows_with_duplicate_identity")
+        duplicate_examples = check.get("duplicate_identity_key_examples")
+        if (
+            identity_fields != RAW_IMPORT_IDENTITY_FIELDS[file_name]
+            or not isinstance(rows_checked, int)
+            or rows_checked < 0
+            or not isinstance(rows_with_identity, int)
+            or rows_with_identity < 0
+            or rows_with_identity > rows_checked
+            or not isinstance(rows_missing_identity, int)
+            or rows_missing_identity < 0
+            or rows_missing_identity > rows_checked
+            or rows_with_identity + rows_missing_identity != rows_checked
+            or not isinstance(duplicate_key_count, int)
+            or duplicate_key_count < 0
+            or not isinstance(duplicate_rows, int)
+            or duplicate_rows < 0
+            or duplicate_rows > rows_with_identity
+            or not isinstance(duplicate_examples, list)
+            or len(duplicate_examples) > RAW_IMPORT_IDENTITY_EXAMPLE_LIMIT
+        ):
+            return False
+
+        expected_fields = set(RAW_IMPORT_IDENTITY_FIELDS[file_name])
+        for example in duplicate_examples:
+            if not isinstance(example, dict):
+                return False
+            identity_key = example.get("identity_key")
+            row_numbers = example.get("csv_row_numbers")
+            if (
+                not isinstance(identity_key, dict)
+                or set(identity_key) != expected_fields
+                or any(not isinstance(key_value, str) for key_value in identity_key.values())
+                or not isinstance(row_numbers, list)
+                or len(row_numbers) < 2
+                or any(not isinstance(row_number, int) or row_number < 2 for row_number in row_numbers)
+            ):
+                return False
+    return True
+
+
 def raw_import_file_import_scope_counts_are_valid(value: Any) -> bool:
     if not isinstance(value, dict):
         return False
@@ -1242,6 +1358,9 @@ def next_import_record_handoff(summary: dict[str, Any] | None = None) -> dict[st
         raw_row_counts,
     ):
         raw_last_data_rows = raw_import_file_last_data_rows(raw_dir)
+    raw_identity_key_checks = summary_handoff.get("raw_file_identity_key_checks")
+    if not raw_import_file_identity_key_checks_are_valid(raw_identity_key_checks):
+        raw_identity_key_checks = raw_import_file_identity_key_checks(raw_dir)
     raw_import_scope_counts = summary_handoff.get("raw_file_import_scope_counts")
     if not raw_import_file_import_scope_counts_are_valid(raw_import_scope_counts):
         raw_import_scope_counts = raw_import_file_import_scope_counts(raw_dir)
@@ -1289,6 +1408,7 @@ def next_import_record_handoff(summary: dict[str, Any] | None = None) -> dict[st
         "raw_file_row_counts": raw_row_counts,
         "raw_file_next_append_rows": raw_next_append_rows,
         "raw_file_last_data_rows": raw_last_data_rows,
+        "raw_file_identity_key_checks": raw_identity_key_checks,
         "raw_file_import_scope_counts": raw_import_scope_counts,
         "raw_file_importable_examples": raw_importable_examples,
         "raw_file_exclusion_examples": raw_exclusion_examples,
@@ -1321,6 +1441,9 @@ def next_import_record_handoff_is_valid(handoff: Any) -> bool:
         and raw_import_file_last_data_rows_are_valid(
             handoff.get("raw_file_last_data_rows"),
             handoff.get("raw_file_row_counts"),
+        )
+        and raw_import_file_identity_key_checks_are_valid(
+            handoff.get("raw_file_identity_key_checks"),
         )
         and raw_import_file_import_scope_counts_are_valid(
             handoff.get("raw_file_import_scope_counts"),
@@ -1996,6 +2119,30 @@ def format_raw_import_last_data_rows(handoff: Any) -> str:
     return "; ".join(labels) if labels else "(none)"
 
 
+def format_raw_import_identity_key_checks(handoff: Any) -> str:
+    if not isinstance(handoff, dict):
+        return "(none)"
+    checks_by_file = handoff.get("raw_file_identity_key_checks")
+    if not isinstance(checks_by_file, dict):
+        return "(none)"
+    labels = []
+    for file_name in RAW_IMPORT_FILE_NAMES:
+        check = checks_by_file.get(file_name)
+        if not isinstance(check, dict):
+            labels.append(f"{file_name}=missing")
+            continue
+        fields = check.get("identity_fields", [])
+        examples = check.get("duplicate_identity_key_examples", [])
+        labels.append(
+            f"{file_name}=fields:{'|'.join(str(field) for field in fields) if fields else 'none'} "
+            f"duplicates={check.get('duplicate_identity_key_count')} "
+            f"duplicate_rows={check.get('rows_with_duplicate_identity')} "
+            f"missing_identity_rows={check.get('rows_missing_identity')} "
+            f"examples={json.dumps(examples, sort_keys=False)}"
+        )
+    return "; ".join(labels) if labels else "(none)"
+
+
 def format_raw_import_scope_counts(handoff: Any) -> str:
     if not isinstance(handoff, dict):
         return "(none)"
@@ -2341,6 +2488,10 @@ def format_progress_text(progress: dict[str, Any]) -> str:
                 lines.append(
                     "Next import raw last data rows: "
                     f"{format_raw_import_last_data_rows(next_import_handoff)}"
+                )
+                lines.append(
+                    "Next import raw identity key checks: "
+                    f"{format_raw_import_identity_key_checks(next_import_handoff)}"
                 )
                 lines.append(
                     "Next import raw scope counts: "
@@ -3041,10 +3192,10 @@ def operator_correction_smoke_check(
         (
             "summary includes the last durable import-readiness snapshot, import "
             "counts, thin coverage groups, next step, and raw CSV handoff with "
-            "row counts, next append rows, last data rows, import scope counts, importable "
-            "examples, exclusion examples, headers, required fields, optional "
-            "fields, append templates, and required-field gaps after complete "
-            "correction capture"
+            "row counts, next append rows, last data rows, identity key checks, "
+            "import scope counts, importable examples, exclusion examples, headers, "
+            "required fields, optional fields, append templates, and required-field "
+            "gaps after complete correction capture"
             if missing_count == 0
             else "summary with missing corrections does not expose the last import-readiness snapshot"
         ),
@@ -3576,6 +3727,10 @@ def format_smoke_check_text(smoke_check: dict[str, Any]) -> str:
         lines.append(
             "Next import raw last data rows: "
             f"{format_raw_import_last_data_rows(readiness.get('next_import_record_handoff'))}"
+        )
+        lines.append(
+            "Next import raw identity key checks: "
+            f"{format_raw_import_identity_key_checks(readiness.get('next_import_record_handoff'))}"
         )
         lines.append(
             "Next import raw scope counts: "

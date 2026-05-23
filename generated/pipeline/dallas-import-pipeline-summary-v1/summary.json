@@ -64,6 +64,54 @@
         }
       }
     },
+    "raw_file_identity_key_checks": {
+      "permits.csv": {
+        "identity_fields": [
+          "permit_number"
+        ],
+        "rows_checked": 15,
+        "rows_with_identity": 15,
+        "rows_missing_identity": 0,
+        "duplicate_identity_key_count": 0,
+        "rows_with_duplicate_identity": 0,
+        "duplicate_identity_key_examples": []
+      },
+      "inspections.csv": {
+        "identity_fields": [
+          "permit_number",
+          "inspection_date",
+          "inspection_type"
+        ],
+        "rows_checked": 41,
+        "rows_with_identity": 41,
+        "rows_missing_identity": 0,
+        "duplicate_identity_key_count": 0,
+        "rows_with_duplicate_identity": 0,
+        "duplicate_identity_key_examples": []
+      },
+      "contractors.csv": {
+        "identity_fields": [
+          "registration_id"
+        ],
+        "rows_checked": 6,
+        "rows_with_identity": 6,
+        "rows_missing_identity": 0,
+        "duplicate_identity_key_count": 0,
+        "rows_with_duplicate_identity": 0,
+        "duplicate_identity_key_examples": []
+      },
+      "rule_documents.csv": {
+        "identity_fields": [
+          "title"
+        ],
+        "rows_checked": 3,
+        "rows_with_identity": 3,
+        "rows_missing_identity": 0,
+        "duplicate_identity_key_count": 0,
+        "rows_with_duplicate_identity": 0,
+        "duplicate_identity_key_examples": []
+      }
+    },
     "raw_file_import_scope_counts": {
       "permits.csv": {
         "rows_checked": 15,

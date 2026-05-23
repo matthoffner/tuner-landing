@@ -97,6 +97,23 @@ RAW_IMPORT_REQUIRED_FIELDS = {
         "title",
     ],
 }
+RAW_IMPORT_IDENTITY_FIELDS = {
+    "permits.csv": [
+        "permit_number",
+    ],
+    "inspections.csv": [
+        "permit_number",
+        "inspection_date",
+        "inspection_type",
+    ],
+    "contractors.csv": [
+        "registration_id",
+    ],
+    "rule_documents.csv": [
+        "title",
+    ],
+}
+RAW_IMPORT_IDENTITY_EXAMPLE_LIMIT = 5
 
 
 def parse_args():
@@ -244,6 +261,51 @@ def raw_file_required_fields():
         file_name: list(RAW_IMPORT_REQUIRED_FIELDS[file_name])
         for file_name in RAW_IMPORT_FILE_NAMES
     }
+
+
+def raw_file_identity_key_checks(raw_dir):
+    resolved_raw_dir = repo_path(raw_dir)
+    checks = {}
+    for file_name in RAW_IMPORT_FILE_NAMES:
+        rows = csv_dict_data_rows_with_numbers(resolved_raw_dir / file_name)
+        identity_fields = RAW_IMPORT_IDENTITY_FIELDS[file_name]
+        if rows is None:
+            checks[file_name] = None
+            continue
+
+        row_numbers_by_key = {}
+        rows_missing_identity = 0
+        for row_number, row in rows:
+            key = tuple(raw_cell(row, field) for field in identity_fields)
+            if any(not value for value in key):
+                rows_missing_identity += 1
+                continue
+            row_numbers_by_key.setdefault(key, []).append(row_number)
+
+        duplicate_keys = [
+            (key, row_numbers)
+            for key, row_numbers in row_numbers_by_key.items()
+            if len(row_numbers) > 1
+        ]
+        duplicate_examples = [
+            {
+                "identity_key": dict(zip(identity_fields, key)),
+                "csv_row_numbers": row_numbers,
+            }
+            for key, row_numbers in duplicate_keys[:RAW_IMPORT_IDENTITY_EXAMPLE_LIMIT]
+        ]
+        checks[file_name] = {
+            "identity_fields": list(identity_fields),
+            "rows_checked": len(rows),
+            "rows_with_identity": len(rows) - rows_missing_identity,
+            "rows_missing_identity": rows_missing_identity,
+            "duplicate_identity_key_count": len(duplicate_keys),
+            "rows_with_duplicate_identity": sum(
+                len(row_numbers) for _, row_numbers in duplicate_keys
+            ),
+            "duplicate_identity_key_examples": duplicate_examples,
+        }
+    return checks
 
 
 def raw_file_import_scope_counts(raw_dir):
@@ -640,6 +702,7 @@ def next_import_record_handoff(raw_dir):
         "raw_file_row_counts": raw_row_counts,
         "raw_file_next_append_rows": raw_file_next_append_rows(raw_row_counts),
         "raw_file_last_data_rows": raw_file_last_data_rows(raw_dir),
+        "raw_file_identity_key_checks": raw_file_identity_key_checks(raw_dir),
         "raw_file_import_scope_counts": raw_file_import_scope_counts(raw_dir),
         "raw_file_importable_examples": raw_file_importable_examples(raw_dir),
         "raw_file_exclusion_examples": raw_file_exclusion_examples(raw_dir),
@@ -926,6 +989,10 @@ def write_summary(summary):
     raw_row_counts = next_import_handoff.get("raw_file_row_counts", {})
     raw_next_append_rows = next_import_handoff.get("raw_file_next_append_rows", {})
     raw_last_data_rows = next_import_handoff.get("raw_file_last_data_rows", {})
+    raw_identity_key_checks = next_import_handoff.get(
+        "raw_file_identity_key_checks",
+        {},
+    )
     raw_import_scope_counts = next_import_handoff.get(
         "raw_file_import_scope_counts",
         {},
@@ -990,6 +1057,27 @@ def write_summary(summary):
                 labels.append(f"- `{file_name}` last data row: none")
             else:
                 labels.append(f"- `{file_name}` last data row: missing")
+        return labels
+
+    def inline_identity_key_checks(values):
+        if not isinstance(values, dict) or not values:
+            return ["- Raw CSV identity key checks: none"]
+        labels = []
+        for file_name in RAW_IMPORT_FILE_NAMES:
+            check = values.get(file_name)
+            if not isinstance(check, dict):
+                labels.append(f"- `{file_name}` identity keys: missing")
+                continue
+            labels.append(
+                f"- `{file_name}` identity keys: "
+                f"fields {inline_list(check.get('identity_fields', []))}, "
+                f"duplicates `{check.get('duplicate_identity_key_count')}`, "
+                f"rows with duplicate identity "
+                f"`{check.get('rows_with_duplicate_identity')}`, "
+                f"missing identity rows `{check.get('rows_missing_identity')}`, "
+                "examples "
+                f"`{json.dumps(check.get('duplicate_identity_key_examples', []), sort_keys=False)}`"
+            )
         return labels
 
     def inline_import_scope_counts(values):
@@ -1166,6 +1254,7 @@ def write_summary(summary):
         f"- Next raw import row counts: {inline_row_counts(raw_row_counts)}",
         f"- Next raw import append rows: {inline_next_append_rows(raw_next_append_rows)}",
         "- Next raw import last data rows: see Follow-Up",
+        "- Next raw import identity key checks: see Follow-Up",
         "- Next raw import scope counts: see Follow-Up",
         "- Next raw importable examples: see Follow-Up",
         "- Next raw import exclusion examples: see Follow-Up",
@@ -1349,6 +1438,8 @@ def write_summary(summary):
             ),
             "- Raw CSV last data rows:",
             *inline_last_data_rows(raw_last_data_rows),
+            "- Raw CSV identity key checks:",
+            *inline_identity_key_checks(raw_identity_key_checks),
             "- Raw CSV import scope counts:",
             *inline_import_scope_counts(raw_import_scope_counts),
             "- Raw CSV importable examples:",
@@ -1407,6 +1498,10 @@ def print_summary(summary, output_format="text"):
     raw_row_counts = next_import_handoff.get("raw_file_row_counts", {})
     raw_next_append_rows = next_import_handoff.get("raw_file_next_append_rows", {})
     raw_last_data_rows = next_import_handoff.get("raw_file_last_data_rows", {})
+    raw_identity_key_checks = next_import_handoff.get(
+        "raw_file_identity_key_checks",
+        {},
+    )
     raw_import_scope_counts = next_import_handoff.get(
         "raw_file_import_scope_counts",
         {},
@@ -1460,6 +1555,26 @@ def print_summary(summary, output_format="text"):
                 labels.append(f"{file_name}=none")
             else:
                 labels.append(f"{file_name}=missing")
+        return "; ".join(labels)
+
+    def format_identity_key_checks(values):
+        if not isinstance(values, dict) or not values:
+            return "none"
+        labels = []
+        for file_name in RAW_IMPORT_FILE_NAMES:
+            check = values.get(file_name)
+            if not isinstance(check, dict):
+                labels.append(f"{file_name}=missing")
+                continue
+            fields = check.get("identity_fields", [])
+            duplicate_examples = check.get("duplicate_identity_key_examples", [])
+            labels.append(
+                f"{file_name}=fields:{'|'.join(fields) if fields else 'none'} "
+                f"duplicates={check.get('duplicate_identity_key_count')} "
+                f"duplicate_rows={check.get('rows_with_duplicate_identity')} "
+                f"missing_identity_rows={check.get('rows_missing_identity')} "
+                f"examples={json.dumps(duplicate_examples, sort_keys=False)}"
+            )
         return "; ".join(labels)
 
     def format_import_scope_counts(values):
@@ -1646,6 +1761,10 @@ def print_summary(summary, output_format="text"):
     print(f"  raw_import_row_counts: {format_row_counts(raw_row_counts)}")
     print(f"  raw_import_next_append_rows: {format_next_append_rows(raw_next_append_rows)}")
     print(f"  raw_import_last_data_rows: {format_last_data_rows(raw_last_data_rows)}")
+    print(
+        "  raw_import_identity_key_checks: "
+        f"{format_identity_key_checks(raw_identity_key_checks)}"
+    )
     print(
         "  raw_import_scope_counts: "
         f"{format_import_scope_counts(raw_import_scope_counts)}"
