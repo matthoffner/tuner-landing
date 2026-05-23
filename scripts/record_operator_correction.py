@@ -51,6 +51,11 @@ def parse_args() -> argparse.Namespace:
         help="print correction ledger progress without appending corrections",
     )
     parser.add_argument(
+        "--list-patterns",
+        action="store_true",
+        help="print accepted operator-correction patterns from the generated action queue",
+    )
+    parser.add_argument(
         "--validate-ledger",
         action="store_true",
         help="validate captured correction events against the current queue and action catalog",
@@ -111,6 +116,7 @@ def parse_args() -> argparse.Namespace:
         args.list_queue_items
         or args.next_missing
         or args.summary
+        or args.list_patterns
         or args.validate_ledger
         or args.smoke_check
     )
@@ -192,6 +198,40 @@ def correction_progress(
             ledger_path,
             output_format=output_format,
         ),
+        "completion_validation_command": validate_ledger_command(
+            queue_path,
+            ledger_path,
+            output_format=output_format,
+            require_complete=True,
+        ),
+    }
+
+
+def operator_correction_patterns(
+    queue_path: Path,
+    ledger_path: Path,
+    output_format: str = "json",
+) -> dict[str, Any]:
+    payload = read_json(queue_path)
+    patterns = payload.get("operator_correction_patterns")
+    if not isinstance(patterns, dict):
+        patterns = {
+            "source": "generated action queue",
+            "accepted_latest_corrections": 0,
+            "accepted_pattern_count": 0,
+            "patterns": [],
+        }
+
+    progress = correction_progress(queue_path, ledger_path)
+    return {
+        "workflow_id": payload.get("workflow_id"),
+        "queue_items": progress["queue_items"],
+        "queue_items_with_corrections": progress["queue_items_with_corrections"],
+        "queue_items_missing_corrections": progress["queue_items_missing_corrections"],
+        "source": patterns.get("source"),
+        "accepted_latest_corrections": patterns.get("accepted_latest_corrections", 0),
+        "accepted_pattern_count": patterns.get("accepted_pattern_count", 0),
+        "patterns": patterns.get("patterns", []),
         "completion_validation_command": validate_ledger_command(
             queue_path,
             ledger_path,
@@ -878,6 +918,59 @@ def format_action_catalog_text(catalog: Any) -> list[str]:
     return lines
 
 
+def format_count_map(value: Any) -> str:
+    if not isinstance(value, dict) or not value:
+        return "{}"
+    return json.dumps(value, sort_keys=True)
+
+
+def format_operator_patterns_text(payload: dict[str, Any]) -> str:
+    lines = [
+        "Dallas accepted operator-correction patterns",
+        f"Workflow: {payload.get('workflow_id')}",
+        (
+            "Queue corrections: "
+            f"{payload.get('queue_items_with_corrections')} captured, "
+            f"{payload.get('queue_items_missing_corrections')} missing, "
+            f"{payload.get('queue_items')} total"
+        ),
+        f"Accepted latest corrections: {payload.get('accepted_latest_corrections')}",
+        f"Accepted patterns: {payload.get('accepted_pattern_count')}",
+        f"Source: {payload.get('source')}",
+        "",
+        "Patterns:",
+    ]
+    patterns = payload.get("patterns", [])
+    if not isinstance(patterns, list) or not patterns:
+        lines.append("- (none)")
+        lines.append(f"Completion gate: {payload.get('completion_validation_command')}")
+        return "\n".join(lines)
+
+    for pattern in patterns:
+        if not isinstance(pattern, dict):
+            continue
+        lines.extend(
+            [
+                f"- {pattern.get('pattern_id')} ({pattern.get('queue_item_count')} queue items)",
+                f"  Actions: {format_action_list(pattern.get('corrected_actions'))}",
+                f"  Labels: {format_action_list(pattern.get('corrected_action_labels'))}",
+                f"  Trigger results: {format_count_map(pattern.get('trigger_result_counts'))}",
+                f"  Failure reasons: {format_count_map(pattern.get('failure_reason_counts'))}",
+                f"  Inspection types: {format_count_map(pattern.get('inspection_type_counts'))}",
+                f"  Follow-up results: {format_count_map(pattern.get('observed_followup_result_counts'))}",
+                f"  Queue items: {format_action_list(pattern.get('queue_item_ids'))}",
+                f"  Example permits: {format_action_list(pattern.get('source_permit_numbers'))}",
+            ]
+        )
+        note_examples = pattern.get("operator_note_examples")
+        if isinstance(note_examples, list) and note_examples:
+            lines.append("  Operator note examples:")
+            lines.extend(f"  - {note}" for note in note_examples)
+    lines.append("")
+    lines.append(f"Completion gate: {payload.get('completion_validation_command')}")
+    return "\n".join(lines)
+
+
 def format_queue_listing_text(listing: dict[str, Any]) -> str:
     lines = [
         f"Dallas correction queue ({listing.get('filter')})",
@@ -1273,6 +1366,40 @@ def operator_correction_smoke_check(
         "action_catalog",
         isinstance(action_ids, list) and bool(action_ids),
         f"{len(action_ids) if isinstance(action_ids, list) else 0} known action IDs",
+    )
+    pattern_payload = operator_correction_patterns(
+        queue_path,
+        ledger_path,
+        output_format=output_format,
+    )
+    accepted_pattern_count = pattern_payload.get("accepted_pattern_count")
+    accepted_latest_corrections = pattern_payload.get("accepted_latest_corrections")
+    add_smoke_check(
+        checks,
+        "operator_correction_patterns",
+        isinstance(accepted_pattern_count, int) and isinstance(accepted_latest_corrections, int),
+        (
+            f"{accepted_pattern_count} accepted patterns from "
+            f"{accepted_latest_corrections} latest accepted corrections"
+        ),
+    )
+    pattern_completion_command = pattern_payload.get("completion_validation_command")
+    pattern_command_passed = command_preserves_output_format(
+        pattern_completion_command,
+        output_format,
+    )
+    add_smoke_check(
+        checks,
+        "pattern_completion_command_output_format",
+        pattern_command_passed,
+        (
+            f"pattern completion command keeps {expected_format_label}"
+            if pattern_command_passed
+            else (
+                "pattern completion command changed output mode: "
+                f"{pattern_completion_command}"
+            )
+        ),
     )
 
     item = next_missing.get("item")
@@ -1766,6 +1893,17 @@ def main() -> int:
             print(format_progress_text(progress))
         else:
             print(json.dumps(progress, indent=2, sort_keys=True))
+        return 0
+    if args.list_patterns:
+        pattern_payload = operator_correction_patterns(
+            args.queue_path,
+            args.ledger_path,
+            output_format=args.format,
+        )
+        if args.format == "text":
+            print(format_operator_patterns_text(pattern_payload))
+        else:
+            print(json.dumps(pattern_payload, indent=2, sort_keys=True))
         return 0
     if args.validate_ledger:
         validation = ledger_validation(

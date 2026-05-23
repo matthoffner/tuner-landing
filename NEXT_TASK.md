@@ -47,6 +47,7 @@ Updated next best artifacts:
 - keep the real MVP cockpit running with `python3 scripts/serve_mvp_cockpit.py --auto-start --port 4174`
 - expose the running cockpit to remote observers with `python3 scripts/bridge_mvp_cockpit.py` and share the read-only URL from `.automoat/state/mvp-bridge-status.json`
 - run `python3 scripts/record_operator_correction.py --smoke-check` for the default JSON contract and `python3 scripts/record_operator_correction.py --smoke-check --format text` for the readable operator contract, then verify the completed correction ledger with `python3 scripts/record_operator_correction.py --summary --format text` and `python3 scripts/record_operator_correction.py --validate-ledger --require-complete --format text` before widening fixture coverage
+- use `python3 scripts/record_operator_correction.py --list-patterns --format text` after capture to inspect reusable accepted operator patterns without opening generated JSON by hand
 - keep `generated/workflows/dallas-inspection-workflow-v1/action-queue.json` `operator_correction_patterns` current as accepted operational patterns widen
 - use the now-repeated latest-import coverage to choose the next real Dallas import-readiness gap instead of adding more hidden fixture rows by default
 
@@ -132,6 +133,7 @@ Latest bounded improvement completed:
 - `scripts/generate_dallas_inspection_workflow.py` now groups the latest accepted operator corrections into `operator_correction_patterns`; regenerated workflow artifacts surface `6` reusable accepted action patterns across all `13` captured Dallas queue items
 - `generated/raw/dallas-electrician-import-sample-v2/` now includes one more CSV-backed Dallas electrical repair permit that repeats the incomplete-work rough-in path, and the regenerated imported `v2` artifacts now carry `14` permits, `40` inspections, `51` eval tasks, `20` reviewed label rows, and `62` source-lineage rows
 - Captured the fourteenth Dallas operator correction through the non-server CLI: `workflow-item:dallas:next-action:0014` is accepted from fixture follow-up evidence, and the regenerated workflow plus completion gate report all `14` current queue items captured with `complete_remaining_work|schedule_reinspection` backed by two accepted correction examples
+- `scripts/record_operator_correction.py --list-patterns --format text` now exposes the generated accepted operator-correction patterns directly from the non-server CLI, and the smoke check verifies the pattern payload is available
 
 ## Constraints
 
