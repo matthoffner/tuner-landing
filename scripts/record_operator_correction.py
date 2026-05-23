@@ -379,6 +379,7 @@ def record_command(
     operator_note: str | None = None,
     use_next_missing: bool = False,
     require_missing: bool = False,
+    output_format: str = "json",
 ) -> str:
     args = [
         "python3",
@@ -398,6 +399,8 @@ def record_command(
         args.extend(["--operator-note", operator_note])
     if require_missing:
         args.append("--require-missing")
+    if output_format == "text":
+        args.extend(["--format", "text"])
     if dry_run:
         args.append("--dry-run")
     return shlex.join(args)
@@ -410,6 +413,7 @@ def guarded_record_command_group(
     dry_run: bool = False,
     operator_note: str | None = None,
     use_next_missing: bool = False,
+    output_format: str = "json",
 ) -> dict[str, str]:
     return {
         "accepted": record_command(
@@ -421,6 +425,7 @@ def guarded_record_command_group(
             operator_note=operator_note,
             use_next_missing=use_next_missing,
             require_missing=True,
+            output_format=output_format,
         ),
         "rejected": record_command(
             queue_item_id,
@@ -431,6 +436,7 @@ def guarded_record_command_group(
             operator_note=operator_note,
             use_next_missing=use_next_missing,
             require_missing=True,
+            output_format=output_format,
         ),
         "edited_template": record_command(
             queue_item_id,
@@ -442,19 +448,34 @@ def guarded_record_command_group(
             operator_note=operator_note,
             use_next_missing=use_next_missing,
             require_missing=True,
+            output_format=output_format,
         ),
     }
 
 
-def suggested_record_commands(item: dict[str, Any], queue_path: Path, ledger_path: Path) -> dict[str, Any]:
+def suggested_record_commands(
+    item: dict[str, Any],
+    queue_path: Path,
+    ledger_path: Path,
+    output_format: str = "json",
+) -> dict[str, Any]:
     queue_item_id = str(item.get("queue_item_id", ""))
     operator_note = "<operator-note>"
     return {
         "dry_run_next_missing": guarded_record_command_group(
-            None, queue_path, ledger_path, dry_run=True, use_next_missing=True
+            None,
+            queue_path,
+            ledger_path,
+            dry_run=True,
+            use_next_missing=True,
+            output_format=output_format,
         ),
         "append_next_missing": guarded_record_command_group(
-            None, queue_path, ledger_path, use_next_missing=True
+            None,
+            queue_path,
+            ledger_path,
+            use_next_missing=True,
+            output_format=output_format,
         ),
         "append_next_missing_with_note": guarded_record_command_group(
             None,
@@ -462,21 +483,35 @@ def suggested_record_commands(item: dict[str, Any], queue_path: Path, ledger_pat
             ledger_path,
             operator_note=operator_note,
             use_next_missing=True,
+            output_format=output_format,
         ),
-        "dry_run": guarded_record_command_group(queue_item_id, queue_path, ledger_path, dry_run=True),
+        "dry_run": guarded_record_command_group(
+            queue_item_id,
+            queue_path,
+            ledger_path,
+            dry_run=True,
+            output_format=output_format,
+        ),
         "dry_run_with_note": guarded_record_command_group(
             queue_item_id,
             queue_path,
             ledger_path,
             dry_run=True,
             operator_note=operator_note,
+            output_format=output_format,
         ),
-        "append": guarded_record_command_group(queue_item_id, queue_path, ledger_path),
+        "append": guarded_record_command_group(
+            queue_item_id,
+            queue_path,
+            ledger_path,
+            output_format=output_format,
+        ),
         "append_with_note": guarded_record_command_group(
             queue_item_id,
             queue_path,
             ledger_path,
             operator_note=operator_note,
+            output_format=output_format,
         ),
     }
 
@@ -715,7 +750,11 @@ def format_correction_event_text(event: dict[str, Any], ledger_path: Path, dry_r
     return "\n".join(lines)
 
 
-def next_missing_correction(queue_path: Path, ledger_path: Path) -> dict[str, Any]:
+def next_missing_correction(
+    queue_path: Path,
+    ledger_path: Path,
+    output_format: str = "json",
+) -> dict[str, Any]:
     listing = queue_listing(queue_path, ledger_path, missing_only=True)
     items = listing["items"]
     item = items[0] if items else None
@@ -727,7 +766,11 @@ def next_missing_correction(queue_path: Path, ledger_path: Path) -> dict[str, An
         "queue_items_with_corrections": listing["queue_items_with_corrections"],
         "queue_items_missing_corrections": listing["queue_items_missing_corrections"],
         "item": item,
-        "suggested_commands": suggested_record_commands(item, queue_path, ledger_path) if item else {},
+        "suggested_commands": (
+            suggested_record_commands(item, queue_path, ledger_path, output_format=output_format)
+            if item
+            else {}
+        ),
     }
 
 
@@ -741,7 +784,11 @@ def main() -> int:
             print(json.dumps(listing, indent=2, sort_keys=True))
         return 0
     if args.next_missing:
-        next_missing = next_missing_correction(args.queue_path, args.ledger_path)
+        next_missing = next_missing_correction(
+            args.queue_path,
+            args.ledger_path,
+            output_format=args.format,
+        )
         if args.format == "text":
             print(format_next_missing_text(next_missing))
         else:

@@ -4,6 +4,10 @@ Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
 - lane: editor
+- status: kept text-mode Dallas correction work orders readable end to end; `scripts/record_operator_correction.py --next-missing --format text` now includes `--format text` in its copyable dry-run and append commands while JSON work orders keep the default command shape
+- files: scripts/record_operator_correction.py, README.md, NEXT_TASK.md, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- next: run `python3 scripts/record_operator_correction.py --next-missing --format text`, copy the printed accepted/rejected/edited command for the reviewed decision, then validate with `python3 scripts/record_operator_correction.py --validate-ledger --format text`
+- lane: editor
 - status: made non-server Dallas correction capture confirmation readable; `scripts/record_operator_correction.py --format text` now formats correction dry-runs and appends as operator-facing event summaries while JSON remains the default
 - files: scripts/record_operator_correction.py, README.md, NEXT_TASK.md, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
 - next: run `python3 scripts/record_operator_correction.py --use-next-missing --decision accepted --require-missing --dry-run --format text`, then append the reviewed accepted/rejected/edited decision and validate with `python3 scripts/record_operator_correction.py --validate-ledger --format text`
