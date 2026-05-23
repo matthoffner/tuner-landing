@@ -4,10 +4,10 @@ This artifact turns reviewed Dallas electrician inspection labels into a concret
 
 ## Summary
 
-- Queue items: `32`
-- Priority counts: `{"high": 6, "medium": 26}`
-- Trigger result counts: `{"fail": 6, "not_ready": 4, "partial": 22}`
-- Operator correction events: `32`
+- Queue items: `33`
+- Priority counts: `{"high": 6, "medium": 27}`
+- Trigger result counts: `{"fail": 6, "not_ready": 4, "partial": 23}`
+- Operator correction events: `33`
 - Operator correction ledger: `generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl`
 - Accepted correction patterns: `6`
 
@@ -26,14 +26,14 @@ This artifact turns reviewed Dallas electrician inspection labels into a concret
 
 ### operator-pattern:accepted:0002
 
-- Queue items: `10`
+- Queue items: `11`
 - Actions: `Complete remaining work, Schedule reinspection`
 - Action IDs: `complete_remaining_work, schedule_reinspection`
-- Trigger results: `{"partial": 10}`
-- Failure reasons: `{"incomplete_work": 10}`
-- Inspection types: `{"rough_in": 10}`
-- Follow-up results: `{"pass": 10}`
-- Example permits: `ELP-2026-0203, ELZ-2026-0215, ELZ-2026-0216, ELZ-2026-0225, ELZ-2026-0226, ELZ-2026-0227, ELZ-2026-0228, ELZ-2026-0231, ELZ-2026-0232, ELZ-2026-0233`
+- Trigger results: `{"partial": 11}`
+- Failure reasons: `{"incomplete_work": 11}`
+- Inspection types: `{"rough_in": 11}`
+- Follow-up results: `{"pass": 11}`
+- Example permits: `ELP-2026-0203, ELZ-2026-0215, ELZ-2026-0216, ELZ-2026-0225, ELZ-2026-0226, ELZ-2026-0227, ELZ-2026-0228, ELZ-2026-0231, ELZ-2026-0232, ELZ-2026-0233, ELZ-2026-0234`
 
 ### operator-pattern:accepted:0003
 
@@ -400,3 +400,13 @@ This artifact turns reviewed Dallas electrician inspection labels into a concret
 - Recommended actions: `Complete remaining work, Schedule reinspection`
 - Follow-up observed: `2026-05-23` `correction_followup` -> `pass`
 - Evidence: Den branch wiring repaired but replacement recessed lighting and cover trim remained incomplete before rough-in approval.
+
+### ELZ-2026-0234 - 2932 S EWING AVE DALLAS TX 75216
+
+- Priority: `medium`
+- Contractor: `Cedars South Electric`
+- Trigger: `2026-05-22` `rough_in` -> `partial`
+- Failure reason: `incomplete_work`
+- Recommended actions: `Complete remaining work, Schedule reinspection`
+- Follow-up observed: `2026-05-23` `correction_followup` -> `pass`
+- Evidence: Bedroom branch wiring repaired but replacement vanity lighting and cover trim remained incomplete before rough-in approval.
