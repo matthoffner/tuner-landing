@@ -608,6 +608,25 @@ def raw_file_required_field_gaps(raw_dir, required_fields_by_file):
     return gaps
 
 
+def raw_file_last_data_rows(raw_dir):
+    resolved_raw_dir = repo_path(raw_dir)
+    last_rows = {}
+    for file_name in RAW_IMPORT_FILE_NAMES:
+        rows = csv_dict_data_rows_with_numbers(resolved_raw_dir / file_name)
+        if not rows:
+            last_rows[file_name] = None
+            continue
+        row_number, row = rows[-1]
+        last_rows[file_name] = {
+            "csv_row_number": row_number,
+            "row": raw_row_snapshot(
+                row,
+                RAW_IMPORT_EXCLUSION_EXAMPLE_FIELDS[file_name],
+            ),
+        }
+    return last_rows
+
+
 def next_import_record_handoff(raw_dir):
     display_raw_dir = command_path(raw_dir).rstrip("/")
     raw_row_counts = raw_file_row_counts(raw_dir)
@@ -620,6 +639,7 @@ def next_import_record_handoff(raw_dir):
         ],
         "raw_file_row_counts": raw_row_counts,
         "raw_file_next_append_rows": raw_file_next_append_rows(raw_row_counts),
+        "raw_file_last_data_rows": raw_file_last_data_rows(raw_dir),
         "raw_file_import_scope_counts": raw_file_import_scope_counts(raw_dir),
         "raw_file_importable_examples": raw_file_importable_examples(raw_dir),
         "raw_file_exclusion_examples": raw_file_exclusion_examples(raw_dir),
@@ -905,6 +925,7 @@ def write_summary(summary):
     ]
     raw_row_counts = next_import_handoff.get("raw_file_row_counts", {})
     raw_next_append_rows = next_import_handoff.get("raw_file_next_append_rows", {})
+    raw_last_data_rows = next_import_handoff.get("raw_file_last_data_rows", {})
     raw_import_scope_counts = next_import_handoff.get(
         "raw_file_import_scope_counts",
         {},
@@ -953,6 +974,23 @@ def write_summary(summary):
                 f"`{file_name}` row {row_number if isinstance(row_number, int) else 'missing'}"
             )
         return ", ".join(labels)
+
+    def inline_last_data_rows(values):
+        if not isinstance(values, dict) or not values:
+            return ["- Raw CSV last data rows: none"]
+        labels = []
+        for file_name in RAW_IMPORT_FILE_NAMES:
+            last_row = values.get(file_name)
+            if isinstance(last_row, dict):
+                labels.append(
+                    f"- `{file_name}` last data row: "
+                    f"`{json.dumps(last_row, sort_keys=False)}`"
+                )
+            elif last_row is None:
+                labels.append(f"- `{file_name}` last data row: none")
+            else:
+                labels.append(f"- `{file_name}` last data row: missing")
+        return labels
 
     def inline_import_scope_counts(values):
         if not isinstance(values, dict) or not values:
@@ -1127,6 +1165,7 @@ def write_summary(summary):
         f"- Next raw import files: {inline_list(next_import_handoff['raw_files'])}",
         f"- Next raw import row counts: {inline_row_counts(raw_row_counts)}",
         f"- Next raw import append rows: {inline_next_append_rows(raw_next_append_rows)}",
+        "- Next raw import last data rows: see Follow-Up",
         "- Next raw import scope counts: see Follow-Up",
         "- Next raw importable examples: see Follow-Up",
         "- Next raw import exclusion examples: see Follow-Up",
@@ -1308,6 +1347,8 @@ def write_summary(summary):
                 "- Raw CSV next append rows: "
                 f"{inline_next_append_rows(raw_next_append_rows)}"
             ),
+            "- Raw CSV last data rows:",
+            *inline_last_data_rows(raw_last_data_rows),
             "- Raw CSV import scope counts:",
             *inline_import_scope_counts(raw_import_scope_counts),
             "- Raw CSV importable examples:",
@@ -1365,6 +1406,7 @@ def print_summary(summary, output_format="text"):
     coverage_thin = coverage.get("latest_thin_counts", {})
     raw_row_counts = next_import_handoff.get("raw_file_row_counts", {})
     raw_next_append_rows = next_import_handoff.get("raw_file_next_append_rows", {})
+    raw_last_data_rows = next_import_handoff.get("raw_file_last_data_rows", {})
     raw_import_scope_counts = next_import_handoff.get(
         "raw_file_import_scope_counts",
         {},
@@ -1405,6 +1447,20 @@ def print_summary(summary, output_format="text"):
                 f"{file_name}=row {row_number if isinstance(row_number, int) else 'missing'}"
             )
         return ", ".join(labels)
+
+    def format_last_data_rows(values):
+        if not isinstance(values, dict) or not values:
+            return "none"
+        labels = []
+        for file_name in RAW_IMPORT_FILE_NAMES:
+            last_row = values.get(file_name)
+            if isinstance(last_row, dict):
+                labels.append(f"{file_name}={json.dumps(last_row, sort_keys=False)}")
+            elif last_row is None:
+                labels.append(f"{file_name}=none")
+            else:
+                labels.append(f"{file_name}=missing")
+        return "; ".join(labels)
 
     def format_import_scope_counts(values):
         if not isinstance(values, dict) or not values:
@@ -1589,6 +1645,7 @@ def print_summary(summary, output_format="text"):
     print(f"  raw_import_files: {', '.join(next_import_handoff['raw_files'])}")
     print(f"  raw_import_row_counts: {format_row_counts(raw_row_counts)}")
     print(f"  raw_import_next_append_rows: {format_next_append_rows(raw_next_append_rows)}")
+    print(f"  raw_import_last_data_rows: {format_last_data_rows(raw_last_data_rows)}")
     print(
         "  raw_import_scope_counts: "
         f"{format_import_scope_counts(raw_import_scope_counts)}"

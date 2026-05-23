@@ -206,3 +206,4 @@ Use short dated entries. Focus on decisions, changes, blockers, and next steps.
 ## 2026-05-23
 
 - Added raw CSV next append rows to the Dallas next-import handoff: `scripts/run_dallas_import_pipeline.py` now writes `raw_file_next_append_rows`, `scripts/record_operator_correction.py --summary` carries those row numbers into completed correction output, and the refreshed pipeline summary points the next raw edits at `permits.csv` row `17`, `inspections.csv` row `43`, `contractors.csv` row `8`, and `rule_documents.csv` row `5`.
+- Added raw CSV last data rows to the Dallas next-import handoff: `scripts/run_dallas_import_pipeline.py` now writes `raw_file_last_data_rows`, `scripts/record_operator_correction.py --summary` carries those terminal row previews into completed correction output, and the refreshed pipeline summary shows the last permit, inspection, contractor, and rule-document rows beside the next append rows.

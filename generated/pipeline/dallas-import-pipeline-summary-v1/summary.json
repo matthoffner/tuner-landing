@@ -27,6 +27,43 @@
       "contractors.csv": 8,
       "rule_documents.csv": 5
     },
+    "raw_file_last_data_rows": {
+      "permits.csv": {
+        "csv_row_number": 16,
+        "row": {
+          "permit_number": "PLM-2026-0206",
+          "address": "410 W Jefferson Blvd",
+          "city": "Dallas",
+          "trade": "plumbing",
+          "work_class": "residential"
+        }
+      },
+      "inspections.csv": {
+        "csv_row_number": 42,
+        "row": {
+          "permit_number": "PLM-2026-0206",
+          "inspection_date": "2026-04-11",
+          "inspection_type": "Final",
+          "result": "Pass"
+        }
+      },
+      "contractors.csv": {
+        "csv_row_number": 7,
+        "row": {
+          "registration_id": "REG-5206",
+          "name": "Oak Lawn Plumbing",
+          "license_type": "plumbing_contractor"
+        }
+      },
+      "rule_documents.csv": {
+        "csv_row_number": 4,
+        "row": {
+          "title": "Dallas reinspection access note",
+          "document_type": "faq",
+          "effective_date": "2025-01-01"
+        }
+      }
+    },
     "raw_file_import_scope_counts": {
       "permits.csv": {
         "rows_checked": 15,
