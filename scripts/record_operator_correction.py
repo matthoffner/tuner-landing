@@ -335,6 +335,11 @@ def queue_listing(queue_path: Path, ledger_path: Path, missing_only: bool = Fals
         contractor = item.get("contractor")
         if not isinstance(contractor, dict):
             contractor = {}
+        expected_followup = item.get("expected_followup")
+        if not isinstance(expected_followup, dict):
+            expected_followup = {}
+        raw_evidence = item.get("evidence")
+        evidence = [str(value) for value in raw_evidence] if isinstance(raw_evidence, list) else []
         latest_correction = latest_by_queue_item.get(queue_item_id)
         if isinstance(latest_correction, dict):
             correction = {
@@ -359,6 +364,14 @@ def queue_listing(queue_path: Path, ledger_path: Path, missing_only: bool = Fals
                 "trigger_type": trigger.get("inspection_type_normalized"),
                 "trigger_result": trigger.get("result_normalized"),
                 "failure_reason": trigger.get("failure_reason_normalized"),
+                "trigger_notes": trigger.get("notes_raw"),
+                "expected_followup": {
+                    "inspection_date": expected_followup.get("inspection_date"),
+                    "inspection_type": expected_followup.get("inspection_type_normalized"),
+                    "result": expected_followup.get("result_normalized"),
+                    "notes": expected_followup.get("notes_raw"),
+                },
+                "evidence": evidence,
                 "recommended_actions": item.get("recommended_actions", []),
                 "correction": correction,
             }
@@ -643,6 +656,12 @@ def format_queue_listing_text(listing: dict[str, Any]) -> str:
                 f"at {correction.get('captured_at')} "
                 f"as {format_action_list(correction.get('corrected_actions'))}"
             )
+        expected_followup = item.get("expected_followup", {})
+        if not isinstance(expected_followup, dict):
+            expected_followup = {}
+        evidence = item.get("evidence", [])
+        if not isinstance(evidence, list):
+            evidence = []
         lines.extend(
             [
                 f"- {item.get('queue_item_id')} [{item.get('priority')}]",
@@ -656,10 +675,19 @@ def format_queue_listing_text(listing: dict[str, Any]) -> str:
                     f"{item.get('trigger_result')} / "
                     f"{item.get('failure_reason')}"
                 ),
+                (
+                    "  Follow-up observed: "
+                    f"{expected_followup.get('inspection_date')} "
+                    f"{expected_followup.get('inspection_type')} -> "
+                    f"{expected_followup.get('result')}"
+                ),
                 f"  Recommended actions: {format_action_list(item.get('recommended_actions'))}",
                 f"  Correction: {correction_detail}",
             ]
         )
+        if evidence:
+            lines.append("  Evidence:")
+            lines.extend(f"  - {value}" for value in evidence)
     return "\n".join(lines)
 
 
@@ -705,6 +733,23 @@ def format_next_missing_text(next_missing: dict[str, Any]) -> str:
                 f"{item.get('failure_reason')}"
             ),
             f"Recommended actions: {format_action_list(item.get('recommended_actions'))}",
+        ]
+    )
+    expected_followup = item.get("expected_followup", {})
+    if not isinstance(expected_followup, dict):
+        expected_followup = {}
+    lines.append(
+        "Follow-up observed: "
+        f"{expected_followup.get('inspection_date')} "
+        f"{expected_followup.get('inspection_type')} -> "
+        f"{expected_followup.get('result')}"
+    )
+    evidence = item.get("evidence", [])
+    if isinstance(evidence, list) and evidence:
+        lines.append("Evidence:")
+        lines.extend(f"- {value}" for value in evidence)
+    lines.extend(
+        [
             "",
             *format_action_catalog_text(next_missing.get("action_catalog")),
             "",
