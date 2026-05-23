@@ -21,6 +21,52 @@
       "contractors.csv": 6,
       "rule_documents.csv": 3
     },
+    "raw_file_headers": {
+      "permits.csv": [
+        "permit_number",
+        "address",
+        "city",
+        "state",
+        "zip_code",
+        "trade",
+        "work_class",
+        "property_type",
+        "permit_type",
+        "status",
+        "file_date",
+        "issue_date",
+        "final_date",
+        "declared_valuation",
+        "work_description",
+        "contractor_name",
+        "source_url"
+      ],
+      "inspections.csv": [
+        "permit_number",
+        "inspection_date",
+        "inspection_type",
+        "result",
+        "notes",
+        "inspector_name",
+        "reinspection_flag",
+        "source_url"
+      ],
+      "contractors.csv": [
+        "registration_id",
+        "name",
+        "license_type",
+        "registration_status",
+        "city",
+        "state"
+      ],
+      "rule_documents.csv": [
+        "title",
+        "document_type",
+        "effective_date",
+        "source_url",
+        "text_content"
+      ]
+    },
     "after_edit_command": "python3 scripts/run_dallas_import_pipeline.py --require-ready",
     "readiness_check_command": "python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json"
   },

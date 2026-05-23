@@ -160,6 +160,7 @@ Latest bounded improvement completed:
 - `scripts/record_operator_correction.py --summary` now includes a `next_import_record_handoff` with the raw Dallas CSV files to edit next plus the full `--require-ready` refresh command, so completed correction output points directly from operator capture to the next permit-data import pass
 - `scripts/run_dallas_import_pipeline.py` now writes the same raw Dallas CSV handoff directly into `generated/pipeline/dallas-import-pipeline-summary-v1/summary.json` and `summary.md`, so the import-readiness summary is self-contained before the next permit-data widening pass
 - `scripts/run_dallas_import_pipeline.py` and `scripts/record_operator_correction.py` now add raw CSV row counts to that next-import handoff, so the next Dallas permit-data widening pass can see the current `permits.csv`, `inspections.csv`, `contractors.csv`, and `rule_documents.csv` volume before editing
+- `scripts/run_dallas_import_pipeline.py` and `scripts/record_operator_correction.py` now add raw CSV headers to that next-import handoff, so the next Dallas permit-data widening pass can add rows without opening each import file just to recover the column contract
 
 ## Constraints
 

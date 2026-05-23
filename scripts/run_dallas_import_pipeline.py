@@ -112,10 +112,30 @@ def csv_data_row_count(path):
         return sum(1 for row in reader if any(cell.strip() for cell in row))
 
 
+def csv_header(path):
+    resolved = repo_path(path)
+    if not resolved.exists():
+        return None
+    with resolved.open(newline="", encoding="utf-8") as handle:
+        reader = csv.reader(handle)
+        header = next(reader, None)
+        if header is None:
+            return []
+        return [cell.strip() for cell in header if cell.strip()]
+
+
 def raw_file_row_counts(raw_dir):
     resolved_raw_dir = repo_path(raw_dir)
     return {
         file_name: csv_data_row_count(resolved_raw_dir / file_name)
+        for file_name in RAW_IMPORT_FILE_NAMES
+    }
+
+
+def raw_file_headers(raw_dir):
+    resolved_raw_dir = repo_path(raw_dir)
+    return {
+        file_name: csv_header(resolved_raw_dir / file_name)
         for file_name in RAW_IMPORT_FILE_NAMES
     }
 
@@ -128,6 +148,7 @@ def next_import_record_handoff(raw_dir):
             f"{display_raw_dir}/{file_name}" for file_name in RAW_IMPORT_FILE_NAMES
         ],
         "raw_file_row_counts": raw_file_row_counts(raw_dir),
+        "raw_file_headers": raw_file_headers(raw_dir),
         "after_edit_command": REQUIRE_READY_COMMAND,
         "readiness_check_command": SUMMARY_ONLY_REQUIRE_READY_JSON_COMMAND,
     }
@@ -395,6 +416,7 @@ def write_summary(summary):
         if values
     ]
     raw_row_counts = next_import_handoff.get("raw_file_row_counts", {})
+    raw_headers = next_import_handoff.get("raw_file_headers", {})
 
     def inline_list(values):
         return ", ".join(f"`{value}`" for value in values) if values else "none"
@@ -412,6 +434,23 @@ def write_summary(summary):
                 f"`{file_name}`={count if isinstance(count, int) else 'missing'}"
             )
         return ", ".join(labels)
+
+    def inline_headers(values):
+        if not isinstance(values, dict) or not values:
+            return ["- Raw CSV headers: none"]
+        labels = []
+        for file_name in RAW_IMPORT_FILE_NAMES:
+            headers = values.get(file_name)
+            if isinstance(headers, list) and headers:
+                labels.append(
+                    f"- `{file_name}` headers: "
+                    + ", ".join(f"`{header}`" for header in headers)
+                )
+            elif isinstance(headers, list):
+                labels.append(f"- `{file_name}` headers: none")
+            else:
+                labels.append(f"- `{file_name}` headers: missing")
+        return labels
 
     lines = [
         "# Dallas Import Pipeline Summary",
@@ -439,6 +478,7 @@ def write_summary(summary):
         f"- Next gap: {contract['next_gap']}",
         f"- Next raw import files: {inline_list(next_import_handoff['raw_files'])}",
         f"- Next raw import row counts: {inline_row_counts(raw_row_counts)}",
+        "- Next raw import headers: see Follow-Up",
         "",
         "## Execution Readiness",
         "",
@@ -609,6 +649,8 @@ def write_summary(summary):
                 "- Raw CSV row counts: "
                 f"{inline_row_counts(raw_row_counts)}"
             ),
+            "- Raw CSV headers:",
+            *inline_headers(raw_headers),
             f"- Require-ready pipeline: `{follow_up['require_ready_pipeline']}`",
             (
                 "- Summary-only require-ready pipeline: "
@@ -649,6 +691,7 @@ def print_summary(summary, output_format="text"):
     coverage_repeated = coverage.get("latest_repeated_counts", {})
     coverage_thin = coverage.get("latest_thin_counts", {})
     raw_row_counts = next_import_handoff.get("raw_file_row_counts", {})
+    raw_headers = next_import_handoff.get("raw_file_headers", {})
 
     def format_row_counts(values):
         if not isinstance(values, dict) or not values:
@@ -658,6 +701,20 @@ def print_summary(summary, output_format="text"):
             count = values.get(file_name)
             labels.append(f"{file_name}={count if isinstance(count, int) else 'missing'}")
         return ", ".join(labels)
+
+    def format_headers(values):
+        if not isinstance(values, dict) or not values:
+            return "none"
+        labels = []
+        for file_name in RAW_IMPORT_FILE_NAMES:
+            headers = values.get(file_name)
+            if isinstance(headers, list) and headers:
+                labels.append(f"{file_name}={'|'.join(headers)}")
+            elif isinstance(headers, list):
+                labels.append(f"{file_name}=none")
+            else:
+                labels.append(f"{file_name}=missing")
+        return "; ".join(labels)
 
     print("==> Dallas import pipeline summary")
     print(f"dataset_id: {summary['dataset_id']}")
@@ -715,6 +772,7 @@ def print_summary(summary, output_format="text"):
     print(f"  completion_gate: {follow_up['completion_gate']}")
     print(f"  raw_import_files: {', '.join(next_import_handoff['raw_files'])}")
     print(f"  raw_import_row_counts: {format_row_counts(raw_row_counts)}")
+    print(f"  raw_import_headers: {format_headers(raw_headers)}")
     print(f"  after_raw_csv_edits: {next_import_handoff['after_edit_command']}")
     print(
         "  raw_csv_readiness_check: "
