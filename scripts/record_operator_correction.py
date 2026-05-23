@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import shlex
 import tempfile
@@ -322,6 +323,39 @@ def display_path(path: Path) -> str:
         return str(path)
 
 
+def repo_path(path: Path | str) -> Path:
+    value = Path(path)
+    return value if value.is_absolute() else ROOT / value
+
+
+def csv_data_row_count(path: Path | str) -> int | None:
+    resolved = repo_path(path)
+    if not resolved.exists():
+        return None
+    with resolved.open(newline="", encoding="utf-8") as handle:
+        reader = csv.reader(handle)
+        next(reader, None)
+        return sum(1 for row in reader if any(cell.strip() for cell in row))
+
+
+def raw_import_file_row_counts(raw_dir: str) -> dict[str, int | None]:
+    resolved_raw_dir = repo_path(raw_dir)
+    return {
+        file_name: csv_data_row_count(resolved_raw_dir / file_name)
+        for file_name in RAW_IMPORT_FILE_NAMES
+    }
+
+
+def raw_import_file_row_counts_are_valid(value: Any) -> bool:
+    return (
+        isinstance(value, dict)
+        and all(
+            isinstance(value.get(file_name), int) and value[file_name] >= 0
+            for file_name in RAW_IMPORT_FILE_NAMES
+        )
+    )
+
+
 def count_snapshot(value: Any, fields: tuple[str, ...]) -> dict[str, int]:
     if not isinstance(value, dict):
         return {}
@@ -380,13 +414,22 @@ def next_import_record_handoff(summary: dict[str, Any] | None = None) -> dict[st
     inputs = summary.get("inputs") if isinstance(summary, dict) else {}
     if not isinstance(inputs, dict):
         inputs = {}
+    summary_handoff = (
+        summary.get("next_import_record_handoff") if isinstance(summary, dict) else {}
+    )
+    if not isinstance(summary_handoff, dict):
+        summary_handoff = {}
     raw_dir = inputs.get("raw_dir")
     if not isinstance(raw_dir, str) or not raw_dir.strip():
         raw_dir = display_path(DEFAULT_IMPORT_RAW_DIR)
     raw_dir = raw_dir.rstrip("/")
+    raw_row_counts = summary_handoff.get("raw_file_row_counts")
+    if not raw_import_file_row_counts_are_valid(raw_row_counts):
+        raw_row_counts = raw_import_file_row_counts(raw_dir)
     return {
         "raw_dir": raw_dir,
         "raw_files": [f"{raw_dir}/{file_name}" for file_name in RAW_IMPORT_FILE_NAMES],
+        "raw_file_row_counts": raw_row_counts,
         "after_edit_command": IMPORT_REFRESH_COMMAND,
         "readiness_check_command": IMPORT_READINESS_JSON_COMMAND,
     }
@@ -403,6 +446,7 @@ def next_import_record_handoff_is_valid(handoff: Any) -> bool:
         and isinstance(raw_files, list)
         and len(raw_files) == len(RAW_IMPORT_FILE_NAMES)
         and all(isinstance(raw_file, str) and raw_file.endswith(".csv") for raw_file in raw_files)
+        and raw_import_file_row_counts_are_valid(handoff.get("raw_file_row_counts"))
         and handoff.get("after_edit_command") == IMPORT_REFRESH_COMMAND
         and handoff.get("readiness_check_command") == IMPORT_READINESS_JSON_COMMAND
     )
@@ -1007,6 +1051,19 @@ def format_raw_import_files(handoff: Any) -> str:
     return ", ".join(files) if files else "(none)"
 
 
+def format_raw_import_row_counts(handoff: Any) -> str:
+    if not isinstance(handoff, dict):
+        return "(none)"
+    counts = handoff.get("raw_file_row_counts")
+    if not isinstance(counts, dict):
+        return "(none)"
+    labels = []
+    for file_name in RAW_IMPORT_FILE_NAMES:
+        count = counts.get(file_name)
+        labels.append(f"{file_name}={count if isinstance(count, int) else 'missing'}")
+    return ", ".join(labels) if labels else "(none)"
+
+
 def format_decision_counts(counts: Any) -> str:
     if not isinstance(counts, dict) or not counts:
         return "(none)"
@@ -1182,6 +1239,10 @@ def format_progress_text(progress: dict[str, Any]) -> str:
                 lines.append(
                     "Next import raw files: "
                     f"{format_raw_import_files(next_import_handoff)}"
+                )
+                lines.append(
+                    "Next import raw row counts: "
+                    f"{format_raw_import_row_counts(next_import_handoff)}"
                 )
                 after_edit_command = next_import_handoff.get("after_edit_command")
                 if isinstance(after_edit_command, str) and after_edit_command.strip():
@@ -1848,7 +1909,7 @@ def operator_correction_smoke_check(
         "progress_import_readiness_snapshot",
         readiness_snapshot_passed,
         (
-            "summary includes the last durable import-readiness snapshot, import counts, thin coverage groups, next step, and raw CSV handoff after complete correction capture"
+            "summary includes the last durable import-readiness snapshot, import counts, thin coverage groups, next step, and raw CSV handoff with row counts after complete correction capture"
             if missing_count == 0
             else "summary with missing corrections does not expose the last import-readiness snapshot"
         ),
@@ -2368,6 +2429,10 @@ def format_smoke_check_text(smoke_check: dict[str, Any]) -> str:
         lines.append(
             "Next import raw files: "
             f"{format_raw_import_files(readiness.get('next_import_record_handoff'))}"
+        )
+        lines.append(
+            "Next import raw row counts: "
+            f"{format_raw_import_row_counts(readiness.get('next_import_record_handoff'))}"
         )
     lines.append(f"Validate ledger: {smoke_check.get('validation_command')}")
     lines.append(f"Completion gate: {smoke_check.get('completion_validation_command')}")
