@@ -76,6 +76,7 @@ Latest bounded improvement completed:
 - `scripts/run_mvp_loop.py` and `scripts/serve_mvp_cockpit.py` now provide a real local cockpit loop: the server starts a loop process, streams `.automoat/logs/mvp-loop.log`, exposes `.automoat/state/mvp-loop-status.json`, and repeatedly regenerates/verifies the Dallas contract, coverage, and action queue
 - `scripts/bridge_mvp_cockpit.py` now opens a read-only ngrok bridge to a whitelisted cockpit viewer so remote observers can see the local loop without controlling it
 - `scripts/serve_mvp_cockpit.py` now accepts local `POST /api/operator-corrections` events from the browser-readable action queue, appending accepted/rejected/edited operator decisions to `generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl` while keeping remote bridges read-only
+- `scripts/operator_corrections.py` now centralizes operator-correction validation and event writing, and `scripts/record_operator_correction.py` can append or dry-run one accepted/rejected/edited Dallas queue decision without starting the cockpit
 
 ## Constraints
 

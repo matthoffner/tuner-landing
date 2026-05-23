@@ -18,16 +18,13 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import unquote, urlparse
 
+from operator_corrections import append_operator_correction, correction_summary
+
 
 ROOT = Path(__file__).resolve().parents[1]
 LOG_FILE = ROOT / ".automoat" / "logs" / "mvp-loop.log"
 STATUS_FILE = ROOT / ".automoat" / "state" / "mvp-loop-status.json"
 PID_FILE = ROOT / ".automoat" / "state" / "mvp-loop.pid"
-QUEUE_PATH = ROOT / "generated" / "workflows" / "dallas-inspection-workflow-v1" / "action-queue.json"
-CORRECTION_LEDGER_PATH = (
-    ROOT / "generated" / "workflows" / "dallas-inspection-workflow-v1" / "operator-corrections.jsonl"
-)
-VALID_CORRECTION_DECISIONS = {"accepted", "rejected", "edited"}
 MAX_CORRECTION_BYTES = 8192
 
 LOOP_PROCESS: subprocess.Popen[str] | None = None
@@ -45,142 +42,6 @@ def tail_lines(path: Path, limit: int = 160) -> list[str]:
         return []
     lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
     return lines[-limit:]
-
-
-def read_json(path: Path) -> dict[str, object]:
-    with path.open("r", encoding="utf-8") as handle:
-        return json.load(handle)
-
-
-def read_correction_events() -> list[dict[str, object]]:
-    if not CORRECTION_LEDGER_PATH.exists():
-        return []
-
-    events = []
-    with CORRECTION_LEDGER_PATH.open("r", encoding="utf-8") as handle:
-        for line in handle:
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                event = json.loads(line)
-            except json.JSONDecodeError:
-                continue
-            if isinstance(event, dict):
-                events.append(event)
-    return events
-
-
-def correction_summary() -> dict[str, object]:
-    events = read_correction_events()
-    decision_counts: dict[str, int] = {}
-    latest_by_queue_item: dict[str, dict[str, object]] = {}
-    for event in events:
-        decision = str(event.get("decision", "unknown"))
-        decision_counts[decision] = decision_counts.get(decision, 0) + 1
-        queue_item_id = event.get("queue_item_id")
-        if isinstance(queue_item_id, str) and queue_item_id:
-            latest_by_queue_item[queue_item_id] = event
-    return {
-        "ledger_path": "generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl",
-        "total_events": len(events),
-        "queue_items_with_corrections": len(latest_by_queue_item),
-        "decision_counts": dict(sorted(decision_counts.items())),
-        "latest_by_queue_item": latest_by_queue_item,
-    }
-
-
-def queue_item_index() -> dict[str, dict[str, object]]:
-    queue_payload = read_json(QUEUE_PATH)
-    queue = queue_payload.get("queue", [])
-    if not isinstance(queue, list):
-        return {}
-    return {
-        item["queue_item_id"]: item
-        for item in queue
-        if isinstance(item, dict) and isinstance(item.get("queue_item_id"), str)
-    }
-
-
-def normalize_action_list(value: object) -> list[str]:
-    if value is None:
-        return []
-    if isinstance(value, str):
-        candidates = value.split(",")
-    elif isinstance(value, list):
-        candidates = value
-    else:
-        raise ValueError("corrected_actions must be a list or comma-separated string")
-
-    actions = []
-    for candidate in candidates:
-        action = str(candidate).strip()
-        if action:
-            actions.append(action)
-    return actions
-
-
-def build_operator_correction_event(payload: object) -> dict[str, object]:
-    if not isinstance(payload, dict):
-        raise ValueError("correction payload must be a JSON object")
-
-    queue_item_id = str(payload.get("queue_item_id", "")).strip()
-    if not queue_item_id:
-        raise ValueError("queue_item_id is required")
-
-    items = queue_item_index()
-    if queue_item_id not in items:
-        raise ValueError(f"unknown queue_item_id: {queue_item_id}")
-    item = items[queue_item_id]
-
-    decision = str(payload.get("decision", "")).strip().lower()
-    if decision not in VALID_CORRECTION_DECISIONS:
-        raise ValueError("decision must be accepted, rejected, or edited")
-
-    recommended_actions = normalize_action_list(item.get("recommended_actions"))
-    corrected_actions = normalize_action_list(payload.get("corrected_actions"))
-    if decision == "accepted":
-        outcome_actions = recommended_actions
-    elif decision == "rejected":
-        outcome_actions = []
-    else:
-        if not corrected_actions:
-            raise ValueError("edited corrections require corrected_actions")
-        outcome_actions = corrected_actions
-
-    operator_note = str(payload.get("operator_note", "")).strip()
-    if len(operator_note) > 800:
-        operator_note = operator_note[:800]
-
-    trigger = item.get("trigger_inspection", {})
-    if not isinstance(trigger, dict):
-        trigger = {}
-
-    now = datetime.now(timezone.utc)
-    captured_at = now.strftime("%Y-%m-%dT%H:%M:%SZ")
-    correction_stamp = now.strftime("%Y%m%dT%H%M%S%fZ")
-    item_suffix = queue_item_id.rsplit(":", 1)[-1]
-    return {
-        "correction_id": f"operator-correction:{correction_stamp}:{item_suffix}",
-        "captured_at": captured_at,
-        "queue_item_id": queue_item_id,
-        "permit_id": item.get("permit_id"),
-        "inspection_id": trigger.get("inspection_id"),
-        "source_permit_number": item.get("source_permit_number"),
-        "decision": decision,
-        "reference_actions": recommended_actions,
-        "corrected_actions": outcome_actions,
-        "operator_note": operator_note,
-        "source": str(payload.get("source") or "mvp-cockpit"),
-    }
-
-
-def append_operator_correction(payload: object) -> dict[str, object]:
-    event = build_operator_correction_event(payload)
-    CORRECTION_LEDGER_PATH.parent.mkdir(parents=True, exist_ok=True)
-    with CORRECTION_LEDGER_PATH.open("a", encoding="utf-8") as handle:
-        handle.write(json.dumps(event, sort_keys=True) + "\n")
-    return event
 
 
 def read_status() -> dict[str, object]:

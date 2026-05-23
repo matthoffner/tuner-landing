@@ -113,3 +113,4 @@ Use short dated entries. Focus on decisions, changes, blockers, and next steps.
 - Added local operator-correction capture for the Dallas inspection action queue: the generated workflow page now includes accept/reject/edit controls, preserves a source-controlled `operator-corrections.jsonl` ledger, and carries correction counts in `action-queue.json` plus `action-queue.md`.
 - Added local-only `POST /api/operator-corrections` handling to `scripts/serve_mvp_cockpit.py`; read-only bridges can view correction summaries and the ledger but still reject mutations.
 - Updated `scripts/run_mvp_loop.py` so cockpit status includes the workflow's operator-correction summary.
+- Added a shared `scripts/operator_corrections.py` helper and `scripts/record_operator_correction.py` CLI so an operator can validate or append one accepted/rejected/edited Dallas queue correction without running the cockpit server.

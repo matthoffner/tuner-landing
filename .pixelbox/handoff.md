@@ -4,6 +4,10 @@ Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
 - lane: editor
+- status: added a non-server operator-correction capture path; `scripts/operator_corrections.py` now centralizes Dallas correction validation/event writing and `scripts/record_operator_correction.py` can dry-run or append one accepted/rejected/edited queue decision against the same ledger used by the cockpit
+- files: scripts/operator_corrections.py, scripts/record_operator_correction.py, scripts/serve_mvp_cockpit.py, README.md, NEXT_TASK.md, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- next: use the browser queue or `python3 scripts/record_operator_correction.py --queue-item-id <id> --decision <accepted|rejected|edited>` to capture real Dallas operator decisions, then regenerate the workflow summary
+- lane: editor
 - status: added local operator-correction capture for the Dallas inspection action queue; the generated workflow page can submit accept/reject/edit events to the local cockpit, which appends `generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl`, while read-only bridges remain non-mutating
 - files: scripts/generate_dallas_inspection_workflow.py, scripts/serve_mvp_cockpit.py, scripts/run_mvp_loop.py, generated/workflows/dallas-inspection-workflow-v1/action-queue.json, generated/workflows/dallas-inspection-workflow-v1/action-queue.md, generated/workflows/dallas-inspection-workflow-v1/index.html, generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl, README.md, NEXT_TASK.md, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
 - next: run the local cockpit and capture a few real accepted/rejected/edited Dallas queue decisions, then summarize recurring correction patterns back into the workflow artifact
