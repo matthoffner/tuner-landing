@@ -7,7 +7,7 @@ This artifact turns reviewed Dallas electrician inspection labels into a concret
 - Queue items: `13`
 - Priority counts: `{"high": 6, "medium": 7}`
 - Trigger result counts: `{"fail": 6, "not_ready": 3, "partial": 4}`
-- Operator correction events: `10`
+- Operator correction events: `11`
 - Operator correction ledger: `generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl`
 
 ## Action Queue
