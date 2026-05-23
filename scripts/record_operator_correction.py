@@ -324,6 +324,22 @@ def count_snapshot(value: Any, fields: tuple[str, ...]) -> dict[str, int]:
     }
 
 
+def list_snapshot(value: Any, fields: tuple[str, ...]) -> dict[str, list[str]]:
+    if not isinstance(value, dict):
+        return {}
+
+    snapshot: dict[str, list[str]] = {}
+    for field in fields:
+        raw_values = value.get(field)
+        if isinstance(raw_values, list):
+            snapshot[field] = [
+                raw_value
+                for raw_value in raw_values
+                if isinstance(raw_value, str)
+            ]
+    return snapshot
+
+
 def import_readiness_snapshot_context(summary: dict[str, Any]) -> dict[str, Any]:
     latest_import = summary.get("latest_import")
     if not isinstance(latest_import, dict):
@@ -342,6 +358,10 @@ def import_readiness_snapshot_context(summary: dict[str, Any]) -> dict[str, Any]
         ),
         "coverage_thin_counts": count_snapshot(
             coverage.get("latest_thin_counts"),
+            COVERAGE_THIN_COUNT_FIELDS,
+        ),
+        "coverage_thin_groups": list_snapshot(
+            coverage.get("thin_groups"),
             COVERAGE_THIN_COUNT_FIELDS,
         ),
         "accepted_pattern_count": workflow.get("accepted_pattern_count"),
@@ -363,6 +383,7 @@ def import_readiness_snapshot(path: Path = IMPORT_READINESS_SUMMARY_PATH) -> dic
             "refresh_json_command": IMPORT_READINESS_JSON_COMMAND,
             "latest_import_counts": {},
             "coverage_thin_counts": {},
+            "coverage_thin_groups": {},
             "accepted_pattern_count": None,
         }
 
@@ -381,6 +402,7 @@ def import_readiness_snapshot(path: Path = IMPORT_READINESS_SUMMARY_PATH) -> dic
             "refresh_json_command": IMPORT_READINESS_JSON_COMMAND,
             "latest_import_counts": {},
             "coverage_thin_counts": {},
+            "coverage_thin_groups": {},
             "accepted_pattern_count": None,
         }
 
@@ -915,6 +937,18 @@ def format_action_list(actions: Any) -> str:
     return ", ".join(str(action) for action in actions)
 
 
+def format_coverage_thin_groups(groups: Any) -> str:
+    if not isinstance(groups, dict) or not groups:
+        return "(none)"
+
+    labels = []
+    for field in COVERAGE_THIN_COUNT_FIELDS:
+        values = groups.get(field)
+        if isinstance(values, list) and values:
+            labels.append(f"{field}={format_action_list(values)}")
+    return "; ".join(labels) if labels else "(none)"
+
+
 def format_decision_counts(counts: Any) -> str:
     if not isinstance(counts, dict) or not counts:
         return "(none)"
@@ -1074,6 +1108,10 @@ def format_progress_text(progress: dict[str, Any]) -> str:
                     f"failure_reasons={coverage_thin_counts.get('failure_reasons', 0)}, "
                     f"pattern_slices={coverage_thin_counts.get('pattern_slices', 0)}, "
                     f"next_action_groups={coverage_thin_counts.get('next_action_groups', 0)}"
+                )
+                lines.append(
+                    "Last coverage thin groups: "
+                    f"{format_coverage_thin_groups(readiness.get('coverage_thin_groups'))}"
                 )
             blockers = readiness.get("blockers", [])
             if isinstance(blockers, list) and blockers:
@@ -1701,6 +1739,7 @@ def operator_correction_smoke_check(
         readiness_status = readiness_snapshot.get("status")
         latest_import_counts = readiness_snapshot.get("latest_import_counts", {})
         coverage_thin_counts = readiness_snapshot.get("coverage_thin_counts", {})
+        coverage_thin_groups = readiness_snapshot.get("coverage_thin_groups", {})
         if readiness_status in {"missing", "unreadable", "unavailable"}:
             readiness_snapshot_counts_passed = True
         else:
@@ -1712,6 +1751,12 @@ def operator_correction_smoke_check(
                 and isinstance(coverage_thin_counts, dict)
                 and isinstance(coverage_thin_counts.get("result_states"), int)
                 and isinstance(coverage_thin_counts.get("next_action_groups"), int)
+                and isinstance(coverage_thin_groups, dict)
+                and all(
+                    isinstance(values, list)
+                    and all(isinstance(value, str) for value in values)
+                    for values in coverage_thin_groups.values()
+                )
                 and isinstance(readiness_snapshot.get("accepted_pattern_count"), int)
             )
     readiness_snapshot_passed = (
@@ -1728,7 +1773,7 @@ def operator_correction_smoke_check(
         "progress_import_readiness_snapshot",
         readiness_snapshot_passed,
         (
-            "summary includes the last durable import-readiness snapshot and import counts after complete correction capture"
+            "summary includes the last durable import-readiness snapshot, import counts, and thin coverage groups after complete correction capture"
             if missing_count == 0
             else "summary with missing corrections does not expose the last import-readiness snapshot"
         ),
@@ -2240,6 +2285,10 @@ def format_smoke_check_text(smoke_check: dict[str, Any]) -> str:
             "Last import readiness summary: "
             f"{readiness.get('status')} "
             f"({readiness.get('summary_json_path')})"
+        )
+        lines.append(
+            "Last coverage thin groups: "
+            f"{format_coverage_thin_groups(readiness.get('coverage_thin_groups'))}"
         )
     lines.append(f"Validate ledger: {smoke_check.get('validation_command')}")
     lines.append(f"Completion gate: {smoke_check.get('completion_validation_command')}")
