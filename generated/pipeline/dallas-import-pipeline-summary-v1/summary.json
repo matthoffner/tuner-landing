@@ -21,6 +21,12 @@
       "contractors.csv": 6,
       "rule_documents.csv": 3
     },
+    "raw_file_next_append_rows": {
+      "permits.csv": 17,
+      "inspections.csv": 43,
+      "contractors.csv": 8,
+      "rule_documents.csv": 5
+    },
     "raw_file_import_scope_counts": {
       "permits.csv": {
         "rows_checked": 15,

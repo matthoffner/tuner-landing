@@ -460,6 +460,17 @@ def raw_import_file_row_counts(raw_dir: str) -> dict[str, int | None]:
     }
 
 
+def raw_import_file_next_append_rows(
+    row_counts: dict[str, int | None],
+) -> dict[str, int | None]:
+    return {
+        file_name: row_counts[file_name] + 2
+        if isinstance(row_counts.get(file_name), int)
+        else None
+        for file_name in RAW_IMPORT_FILE_NAMES
+    }
+
+
 def raw_import_file_headers(raw_dir: str) -> dict[str, list[str] | None]:
     resolved_raw_dir = repo_path(raw_dir)
     return {
@@ -881,6 +892,23 @@ def raw_import_file_row_counts_are_valid(value: Any) -> bool:
     )
 
 
+def raw_import_file_next_append_rows_are_valid(
+    value: Any,
+    row_counts: Any,
+) -> bool:
+    if not raw_import_file_row_counts_are_valid(row_counts):
+        return False
+    expected_rows = raw_import_file_next_append_rows(row_counts)
+    return (
+        isinstance(value, dict)
+        and all(
+            isinstance(value.get(file_name), int)
+            and value[file_name] == expected_rows[file_name]
+            for file_name in RAW_IMPORT_FILE_NAMES
+        )
+    )
+
+
 def raw_import_file_headers_are_valid(value: Any) -> bool:
     return (
         isinstance(value, dict)
@@ -1153,6 +1181,12 @@ def next_import_record_handoff(summary: dict[str, Any] | None = None) -> dict[st
     raw_row_counts = summary_handoff.get("raw_file_row_counts")
     if not raw_import_file_row_counts_are_valid(raw_row_counts):
         raw_row_counts = raw_import_file_row_counts(raw_dir)
+    raw_next_append_rows = summary_handoff.get("raw_file_next_append_rows")
+    if not raw_import_file_next_append_rows_are_valid(
+        raw_next_append_rows,
+        raw_row_counts,
+    ):
+        raw_next_append_rows = raw_import_file_next_append_rows(raw_row_counts)
     raw_import_scope_counts = summary_handoff.get("raw_file_import_scope_counts")
     if not raw_import_file_import_scope_counts_are_valid(raw_import_scope_counts):
         raw_import_scope_counts = raw_import_file_import_scope_counts(raw_dir)
@@ -1198,6 +1232,7 @@ def next_import_record_handoff(summary: dict[str, Any] | None = None) -> dict[st
         "raw_dir": raw_dir,
         "raw_files": [f"{raw_dir}/{file_name}" for file_name in RAW_IMPORT_FILE_NAMES],
         "raw_file_row_counts": raw_row_counts,
+        "raw_file_next_append_rows": raw_next_append_rows,
         "raw_file_import_scope_counts": raw_import_scope_counts,
         "raw_file_importable_examples": raw_importable_examples,
         "raw_file_exclusion_examples": raw_exclusion_examples,
@@ -1223,6 +1258,10 @@ def next_import_record_handoff_is_valid(handoff: Any) -> bool:
         and len(raw_files) == len(RAW_IMPORT_FILE_NAMES)
         and all(isinstance(raw_file, str) and raw_file.endswith(".csv") for raw_file in raw_files)
         and raw_import_file_row_counts_are_valid(handoff.get("raw_file_row_counts"))
+        and raw_import_file_next_append_rows_are_valid(
+            handoff.get("raw_file_next_append_rows"),
+            handoff.get("raw_file_row_counts"),
+        )
         and raw_import_file_import_scope_counts_are_valid(
             handoff.get("raw_file_import_scope_counts"),
         )
@@ -1864,6 +1903,21 @@ def format_raw_import_row_counts(handoff: Any) -> str:
     return ", ".join(labels) if labels else "(none)"
 
 
+def format_raw_import_next_append_rows(handoff: Any) -> str:
+    if not isinstance(handoff, dict):
+        return "(none)"
+    rows_by_file = handoff.get("raw_file_next_append_rows")
+    if not isinstance(rows_by_file, dict):
+        return "(none)"
+    labels = []
+    for file_name in RAW_IMPORT_FILE_NAMES:
+        row_number = rows_by_file.get(file_name)
+        labels.append(
+            f"{file_name}=row {row_number if isinstance(row_number, int) else 'missing'}"
+        )
+    return ", ".join(labels) if labels else "(none)"
+
+
 def format_raw_import_scope_counts(handoff: Any) -> str:
     if not isinstance(handoff, dict):
         return "(none)"
@@ -2201,6 +2255,10 @@ def format_progress_text(progress: dict[str, Any]) -> str:
                 lines.append(
                     "Next import raw row counts: "
                     f"{format_raw_import_row_counts(next_import_handoff)}"
+                )
+                lines.append(
+                    "Next import raw append rows: "
+                    f"{format_raw_import_next_append_rows(next_import_handoff)}"
                 )
                 lines.append(
                     "Next import raw scope counts: "
@@ -2901,9 +2959,10 @@ def operator_correction_smoke_check(
         (
             "summary includes the last durable import-readiness snapshot, import "
             "counts, thin coverage groups, next step, and raw CSV handoff with "
-            "row counts, import scope counts, importable examples, exclusion "
-            "examples, headers, required fields, optional fields, append "
-            "templates, and required-field gaps after complete correction capture"
+            "row counts, next append rows, import scope counts, importable "
+            "examples, exclusion examples, headers, required fields, optional "
+            "fields, append templates, and required-field gaps after complete "
+            "correction capture"
             if missing_count == 0
             else "summary with missing corrections does not expose the last import-readiness snapshot"
         ),
@@ -3427,6 +3486,10 @@ def format_smoke_check_text(smoke_check: dict[str, Any]) -> str:
         lines.append(
             "Next import raw row counts: "
             f"{format_raw_import_row_counts(readiness.get('next_import_record_handoff'))}"
+        )
+        lines.append(
+            "Next import raw append rows: "
+            f"{format_raw_import_next_append_rows(readiness.get('next_import_record_handoff'))}"
         )
         lines.append(
             "Next import raw scope counts: "
