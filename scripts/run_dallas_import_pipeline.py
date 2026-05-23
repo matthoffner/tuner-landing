@@ -170,16 +170,36 @@ def raw_file_required_fields():
     }
 
 
+def raw_file_optional_fields(headers_by_file, required_fields_by_file):
+    optional_fields = {}
+    for file_name in RAW_IMPORT_FILE_NAMES:
+        headers = headers_by_file.get(file_name)
+        required_fields = set(required_fields_by_file.get(file_name, []))
+        if not isinstance(headers, list):
+            optional_fields[file_name] = None
+            continue
+        optional_fields[file_name] = [
+            header for header in headers if header not in required_fields
+        ]
+    return optional_fields
+
+
 def next_import_record_handoff(raw_dir):
     display_raw_dir = command_path(raw_dir).rstrip("/")
+    raw_headers = raw_file_headers(raw_dir)
+    raw_required_fields = raw_file_required_fields()
     return {
         "raw_dir": display_raw_dir,
         "raw_files": [
             f"{display_raw_dir}/{file_name}" for file_name in RAW_IMPORT_FILE_NAMES
         ],
         "raw_file_row_counts": raw_file_row_counts(raw_dir),
-        "raw_file_headers": raw_file_headers(raw_dir),
-        "raw_file_required_fields": raw_file_required_fields(),
+        "raw_file_headers": raw_headers,
+        "raw_file_required_fields": raw_required_fields,
+        "raw_file_optional_fields": raw_file_optional_fields(
+            raw_headers,
+            raw_required_fields,
+        ),
         "after_edit_command": REQUIRE_READY_COMMAND,
         "readiness_check_command": SUMMARY_ONLY_REQUIRE_READY_JSON_COMMAND,
     }
@@ -449,6 +469,7 @@ def write_summary(summary):
     raw_row_counts = next_import_handoff.get("raw_file_row_counts", {})
     raw_headers = next_import_handoff.get("raw_file_headers", {})
     raw_required_fields = next_import_handoff.get("raw_file_required_fields", {})
+    raw_optional_fields = next_import_handoff.get("raw_file_optional_fields", {})
 
     def inline_list(values):
         return ", ".join(f"`{value}`" for value in values) if values else "none"
@@ -501,6 +522,23 @@ def write_summary(summary):
                 labels.append(f"- `{file_name}` required: missing")
         return labels
 
+    def inline_optional_fields(values):
+        if not isinstance(values, dict) or not values:
+            return ["- Raw CSV optional fields: none"]
+        labels = []
+        for file_name in RAW_IMPORT_FILE_NAMES:
+            fields = values.get(file_name)
+            if isinstance(fields, list) and fields:
+                labels.append(
+                    f"- `{file_name}` optional: "
+                    + ", ".join(f"`{field}`" for field in fields)
+                )
+            elif isinstance(fields, list):
+                labels.append(f"- `{file_name}` optional: none")
+            else:
+                labels.append(f"- `{file_name}` optional: missing")
+        return labels
+
     lines = [
         "# Dallas Import Pipeline Summary",
         "",
@@ -529,6 +567,7 @@ def write_summary(summary):
         f"- Next raw import row counts: {inline_row_counts(raw_row_counts)}",
         "- Next raw import headers: see Follow-Up",
         "- Next raw import required fields: see Follow-Up",
+        "- Next raw import optional fields: see Follow-Up",
         "",
         "## Execution Readiness",
         "",
@@ -703,6 +742,8 @@ def write_summary(summary):
             *inline_headers(raw_headers),
             "- Raw CSV required fields:",
             *inline_required_fields(raw_required_fields),
+            "- Raw CSV optional fields:",
+            *inline_optional_fields(raw_optional_fields),
             f"- Require-ready pipeline: `{follow_up['require_ready_pipeline']}`",
             (
                 "- Summary-only require-ready pipeline: "
@@ -745,6 +786,7 @@ def print_summary(summary, output_format="text"):
     raw_row_counts = next_import_handoff.get("raw_file_row_counts", {})
     raw_headers = next_import_handoff.get("raw_file_headers", {})
     raw_required_fields = next_import_handoff.get("raw_file_required_fields", {})
+    raw_optional_fields = next_import_handoff.get("raw_file_optional_fields", {})
 
     def format_row_counts(values):
         if not isinstance(values, dict) or not values:
@@ -770,6 +812,20 @@ def print_summary(summary, output_format="text"):
         return "; ".join(labels)
 
     def format_required_fields(values):
+        if not isinstance(values, dict) or not values:
+            return "none"
+        labels = []
+        for file_name in RAW_IMPORT_FILE_NAMES:
+            fields = values.get(file_name)
+            if isinstance(fields, list) and fields:
+                labels.append(f"{file_name}={'|'.join(fields)}")
+            elif isinstance(fields, list):
+                labels.append(f"{file_name}=none")
+            else:
+                labels.append(f"{file_name}=missing")
+        return "; ".join(labels)
+
+    def format_optional_fields(values):
         if not isinstance(values, dict) or not values:
             return "none"
         labels = []
@@ -841,6 +897,7 @@ def print_summary(summary, output_format="text"):
     print(f"  raw_import_row_counts: {format_row_counts(raw_row_counts)}")
     print(f"  raw_import_headers: {format_headers(raw_headers)}")
     print(f"  raw_import_required_fields: {format_required_fields(raw_required_fields)}")
+    print(f"  raw_import_optional_fields: {format_optional_fields(raw_optional_fields)}")
     print(f"  after_raw_csv_edits: {next_import_handoff['after_edit_command']}")
     print(
         "  raw_csv_readiness_check: "

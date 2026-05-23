@@ -90,6 +90,39 @@
         "title"
       ]
     },
+    "raw_file_optional_fields": {
+      "permits.csv": [
+        "state",
+        "zip_code",
+        "property_type",
+        "permit_type",
+        "status",
+        "file_date",
+        "issue_date",
+        "final_date",
+        "declared_valuation",
+        "work_description",
+        "contractor_name",
+        "source_url"
+      ],
+      "inspections.csv": [
+        "notes",
+        "inspector_name",
+        "reinspection_flag",
+        "source_url"
+      ],
+      "contractors.csv": [
+        "registration_status",
+        "city",
+        "state"
+      ],
+      "rule_documents.csv": [
+        "document_type",
+        "effective_date",
+        "source_url",
+        "text_content"
+      ]
+    },
     "after_edit_command": "python3 scripts/run_dallas_import_pipeline.py --require-ready",
     "readiness_check_command": "python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json"
   },

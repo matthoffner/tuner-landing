@@ -58,6 +58,7 @@ Updated next best artifacts:
 Latest bounded improvement completed:
 
 - `scripts/run_dallas_import_pipeline.py` and `scripts/record_operator_correction.py` now add raw CSV required fields to the next-import handoff, so Dallas permit-data widening can distinguish all headers from the fields the importer depends on before editing `permits.csv`, `inspections.csv`, `contractors.csv`, or `rule_documents.csv`
+- `scripts/run_dallas_import_pipeline.py` and `scripts/record_operator_correction.py` now add raw CSV optional fields to the next-import handoff, so the next Dallas row-widening pass can see required and optional columns explicitly without recomputing the difference from headers
 - `generated/normalized/dallas-electrician-sample-v1/` now provides row-shaped Dallas sample records
 - `scripts/generate_dallas_fixture_pack.py` now emits the Dallas fixture pack deterministically from normalized permit and inspection rows
 - `scripts/generate_dallas_label_reviews.py` now emits reviewed label rows directly from normalized Dallas permit and inspection records, and `scripts/generate_dallas_eval_artifacts.py` now uses that row-derived supervision path
@@ -162,6 +163,7 @@ Latest bounded improvement completed:
 - `scripts/run_dallas_import_pipeline.py` now writes the same raw Dallas CSV handoff directly into `generated/pipeline/dallas-import-pipeline-summary-v1/summary.json` and `summary.md`, so the import-readiness summary is self-contained before the next permit-data widening pass
 - `scripts/run_dallas_import_pipeline.py` and `scripts/record_operator_correction.py` now add raw CSV row counts to that next-import handoff, so the next Dallas permit-data widening pass can see the current `permits.csv`, `inspections.csv`, `contractors.csv`, and `rule_documents.csv` volume before editing
 - `scripts/run_dallas_import_pipeline.py` and `scripts/record_operator_correction.py` now add raw CSV headers to that next-import handoff, so the next Dallas permit-data widening pass can add rows without opening each import file just to recover the column contract
+- `scripts/run_dallas_import_pipeline.py` and `scripts/record_operator_correction.py` now add raw CSV optional fields to that next-import handoff, so the next Dallas permit-data widening pass can see which non-required columns are still available for richer real import rows
 
 ## Constraints
 
