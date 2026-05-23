@@ -116,6 +116,7 @@ Latest bounded improvement completed:
 - `scripts/record_operator_correction.py --smoke-check` now verifies the strict completion gate rejects incomplete Dallas correction coverage, so readiness checks prove `--validate-ledger --require-complete` fails until every queue item has a captured operator decision
 - `scripts/record_operator_correction.py --validate-ledger` now rejects stale permit, inspection, or source permit context in captured correction events, and the smoke check verifies that guard with a temporary ledger before an operator records real Dallas corrections
 - Captured the first Dallas operator correction through the non-server CLI: `workflow-item:dallas:next-action:0008` is now accepted in `operator-corrections.jsonl`, the regenerated workflow reports `1` captured correction, and the next missing work order advances to `workflow-item:dallas:next-action:0004`
+- Captured the second Dallas operator correction through the non-server CLI: `workflow-item:dallas:next-action:0004` is now accepted in `operator-corrections.jsonl`, the regenerated workflow reports `2` captured corrections, and the next missing work order advances to `workflow-item:dallas:next-action:0002`
 
 ## Constraints
 
