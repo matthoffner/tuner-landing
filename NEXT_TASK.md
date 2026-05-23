@@ -89,6 +89,7 @@ Latest bounded improvement completed:
 - `scripts/record_operator_correction.py --format text` now also applies to correction dry-runs and appends, giving operators a readable event confirmation while keeping JSON as the default automation output
 - `scripts/record_operator_correction.py --next-missing --format text` now includes `--format text` in its copyable dry-run and append commands, so a text work order keeps the operator in readable confirmations while JSON work orders keep the default automation shape
 - `scripts/record_operator_correction.py --next-missing --format text` now also prints the matching text-mode ledger-validation command, so a non-server operator pass can finish with the same copyable work order instead of switching back to README instructions
+- `scripts/record_operator_correction.py --validate-ledger` now reports captured versus missing Dallas queue item coverage, so the final non-server check shows both ledger shape validity and remaining uncaptured work
 
 ## Constraints
 

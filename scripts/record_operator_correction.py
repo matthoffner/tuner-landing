@@ -186,6 +186,11 @@ def ledger_validation(queue_path: Path, ledger_path: Path) -> dict[str, Any]:
     if not isinstance(queue, list):
         raise ValueError("queue file must contain a queue list")
 
+    queue_item_ids = [
+        item.get("queue_item_id")
+        for item in queue
+        if isinstance(item, dict) and isinstance(item.get("queue_item_id"), str)
+    ]
     queue_items = {
         item.get("queue_item_id"): item
         for item in queue
@@ -280,10 +285,21 @@ def ledger_validation(queue_path: Path, ledger_path: Path) -> dict[str, Any]:
             add_issue(event_number, event, "corrected_actions", "edited corrections require corrected actions")
 
     issue_count = invalid_lines + len(issues)
+    corrected_queue_item_ids = set()
+    for event in events:
+        queue_item_id = event.get("queue_item_id")
+        if isinstance(queue_item_id, str) and queue_item_id in queue_items:
+            corrected_queue_item_ids.add(queue_item_id)
+    missing_queue_item_ids = [
+        queue_item_id for queue_item_id in queue_item_ids if queue_item_id not in corrected_queue_item_ids
+    ]
     return {
         "workflow_id": payload.get("workflow_id"),
         "ledger_path": display_path(ledger_path),
         "queue_items": len(queue_items),
+        "queue_items_with_corrections": len(corrected_queue_item_ids),
+        "queue_items_missing_corrections": len(missing_queue_item_ids),
+        "missing_queue_item_ids": missing_queue_item_ids,
         "known_action_ids": sorted(known_action_ids),
         "events_checked": len(events),
         "invalid_lines": invalid_lines,
@@ -721,10 +737,22 @@ def format_ledger_validation_text(validation: dict[str, Any]) -> str:
         f"Workflow: {validation.get('workflow_id')}",
         f"Ledger: {validation.get('ledger_path')}",
         f"Queue items: {validation.get('queue_items')}",
+        (
+            "Queue corrections: "
+            f"{validation.get('queue_items_with_corrections')} captured, "
+            f"{validation.get('queue_items_missing_corrections')} missing"
+        ),
         f"Events checked: {validation.get('events_checked')}",
         f"Invalid ledger lines: {validation.get('invalid_lines')}",
         f"Issues: {validation.get('issue_count')}",
     ]
+
+    missing_ids = validation.get("missing_queue_item_ids", [])
+    if isinstance(missing_ids, list) and missing_ids:
+        lines.append("Missing queue items:")
+        lines.extend(f"- {queue_item_id}" for queue_item_id in missing_ids)
+    else:
+        lines.append("Missing queue items: (none)")
 
     issues = validation.get("issues", [])
     if not isinstance(issues, list) or not issues:
