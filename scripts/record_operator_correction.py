@@ -742,6 +742,7 @@ def command_group_failures(
     should_be_dry_run: bool,
     require_note: bool = False,
     expected_queue_item_id: str | None = None,
+    expected_output_format: str | None = None,
 ) -> list[str]:
     if not isinstance(commands, dict):
         return ["command group is missing"]
@@ -766,6 +767,11 @@ def command_group_failures(
             failures.append(f"{decision} command missing fixed queue item ID")
         if not command_has_arg(command, "--require-missing"):
             failures.append(f"{decision} command missing --require-missing")
+        actual_output_format = command_arg_value(command, "--format")
+        if expected_output_format == "text" and actual_output_format != "text":
+            failures.append(f"{decision} command missing --format text")
+        elif expected_output_format == "json" and actual_output_format is not None:
+            failures.append(f"{decision} command should keep the default JSON output format")
         has_dry_run = command_has_arg(command, "--dry-run")
         if should_be_dry_run and not has_dry_run:
             failures.append(f"{decision} command missing --dry-run")
@@ -1179,14 +1185,19 @@ def operator_correction_smoke_check(queue_path: Path, ledger_path: Path) -> dict
         dry_run_with_note = commands.get("dry_run_next_missing_with_note", {})
         append_shortcut = commands.get("append_next_missing", {})
 
-        dry_run_failures = command_group_failures(dry_run_shortcut, queue_item_id, should_be_dry_run=True)
+        dry_run_failures = command_group_failures(
+            dry_run_shortcut,
+            queue_item_id,
+            should_be_dry_run=True,
+            expected_output_format="text",
+        )
         add_smoke_check(
             checks,
             "guarded_dry_run_shortcut",
             not dry_run_failures,
             (
                 "accepted/rejected/edited dry-runs include expected-ID, require-missing, "
-                "dry-run guards, and edited action template"
+                "text output, dry-run guards, and edited action template"
                 if not dry_run_failures
                 else "; ".join(dry_run_failures)
             ),
@@ -1197,26 +1208,32 @@ def operator_correction_smoke_check(queue_path: Path, ledger_path: Path) -> dict
             queue_item_id,
             should_be_dry_run=True,
             require_note=True,
+            expected_output_format="text",
         )
         add_smoke_check(
             checks,
             "note_dry_run_shortcut",
             not note_dry_run_failures,
             (
-                "accepted/rejected/edited note dry-runs keep operator-note and dry-run flags"
+                "accepted/rejected/edited note dry-runs keep text output, operator-note, and dry-run flags"
                 if not note_dry_run_failures
                 else "; ".join(note_dry_run_failures)
             ),
         )
 
-        append_failures = command_group_failures(append_shortcut, queue_item_id, should_be_dry_run=False)
+        append_failures = command_group_failures(
+            append_shortcut,
+            queue_item_id,
+            should_be_dry_run=False,
+            expected_output_format="text",
+        )
         add_smoke_check(
             checks,
             "guarded_append_shortcut",
             not append_failures,
             (
                 "accepted/rejected/edited appends include expected-ID, require-missing guards, "
-                "and edited action template"
+                "text output, and edited action template"
                 if not append_failures
                 else "; ".join(append_failures)
             ),
@@ -1231,6 +1248,7 @@ def operator_correction_smoke_check(queue_path: Path, ledger_path: Path) -> dict
             None,
             should_be_dry_run=True,
             expected_queue_item_id=queue_item_id,
+            expected_output_format="text",
         )
         add_smoke_check(
             checks,
@@ -1238,7 +1256,7 @@ def operator_correction_smoke_check(queue_path: Path, ledger_path: Path) -> dict
             not fixed_dry_run_failures,
             (
                 "accepted/rejected/edited fixed-item dry-runs include queue item ID, "
-                "require-missing, dry-run guards, and edited action template"
+                "require-missing, text output, dry-run guards, and edited action template"
                 if not fixed_dry_run_failures
                 else "; ".join(fixed_dry_run_failures)
             ),
@@ -1250,6 +1268,7 @@ def operator_correction_smoke_check(queue_path: Path, ledger_path: Path) -> dict
             should_be_dry_run=True,
             require_note=True,
             expected_queue_item_id=queue_item_id,
+            expected_output_format="text",
         )
         add_smoke_check(
             checks,
@@ -1257,7 +1276,7 @@ def operator_correction_smoke_check(queue_path: Path, ledger_path: Path) -> dict
             not note_fixed_failures,
             (
                 "accepted/rejected/edited fixed-item note dry-runs keep queue item ID, "
-                "operator-note, and dry-run flags"
+                "text output, operator-note, and dry-run flags"
                 if not note_fixed_failures
                 else "; ".join(note_fixed_failures)
             ),
@@ -1268,6 +1287,7 @@ def operator_correction_smoke_check(queue_path: Path, ledger_path: Path) -> dict
             None,
             should_be_dry_run=False,
             expected_queue_item_id=queue_item_id,
+            expected_output_format="text",
         )
         add_smoke_check(
             checks,
@@ -1275,7 +1295,7 @@ def operator_correction_smoke_check(queue_path: Path, ledger_path: Path) -> dict
             not fixed_append_failures,
             (
                 "accepted/rejected/edited fixed-item appends include queue item ID, "
-                "require-missing guards, and edited action template"
+                "require-missing guards, text output, and edited action template"
                 if not fixed_append_failures
                 else "; ".join(fixed_append_failures)
             ),
