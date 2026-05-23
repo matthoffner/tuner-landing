@@ -4,13 +4,14 @@ import argparse
 import csv
 import json
 import re
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_INPUT_DIR = ROOT / "generated" / "raw" / "dallas-electrician-import-sample-v1"
 DEFAULT_OUTPUT_DIR = ROOT / "generated" / "normalized" / "dallas-electrician-import-sample-v1"
+DEFAULT_CAPTURED_AT = "2026-04-26T00:00:00Z"
 
 PERMIT_TYPE_MAP = {
     "residential electrical remodel": "electrical_remodel",
@@ -170,7 +171,7 @@ def is_truthy(value: str):
     return normalize_whitespace(value).lower() in {"1", "true", "yes", "y"}
 
 
-def build_rule_document_records(rule_rows):
+def build_rule_document_records(rule_rows, captured_at):
     documents = []
     source_records = []
 
@@ -200,7 +201,7 @@ def build_rule_document_records(rule_rows):
                 "source_system": "rule_document_csv_extract",
                 "source_path_or_url": "rule_documents.csv",
                 "record_type": "rule_document",
-                "captured_at": "2026-04-26T00:00:00Z",
+                "captured_at": captured_at,
                 "raw_payload": row,
             }
         )
@@ -237,7 +238,7 @@ def build_property_records(permit_rows):
     return properties, property_id_by_key
 
 
-def build_contractor_records(contractor_rows):
+def build_contractor_records(contractor_rows, captured_at):
     contractors = []
     contractor_id_by_name = {}
     source_records = []
@@ -267,7 +268,7 @@ def build_contractor_records(contractor_rows):
                 "source_system": "contractor_csv_extract",
                 "source_path_or_url": "contractors.csv",
                 "record_type": "contractor",
-                "captured_at": "2026-04-26T00:00:00Z",
+                "captured_at": captured_at,
                 "raw_payload": row,
             }
         )
@@ -289,7 +290,7 @@ def filter_permit_rows(permit_rows):
     return kept
 
 
-def build_permit_records(permit_rows, property_id_by_key, contractor_id_by_name):
+def build_permit_records(permit_rows, property_id_by_key, contractor_id_by_name, captured_at):
     permits = []
     source_records = []
 
@@ -333,7 +334,7 @@ def build_permit_records(permit_rows, property_id_by_key, contractor_id_by_name)
                 "source_system": "permit_csv_extract",
                 "source_path_or_url": "permits.csv",
                 "record_type": "permit",
-                "captured_at": "2026-04-26T00:00:00Z",
+                "captured_at": captured_at,
                 "raw_payload": row,
             }
         )
@@ -341,7 +342,7 @@ def build_permit_records(permit_rows, property_id_by_key, contractor_id_by_name)
     return permits, source_records
 
 
-def build_inspection_records(inspection_rows, permit_ids_by_number):
+def build_inspection_records(inspection_rows, permit_ids_by_number, captured_at):
     inspections = []
     source_records = []
 
@@ -381,7 +382,7 @@ def build_inspection_records(inspection_rows, permit_ids_by_number):
                 "source_system": "inspection_csv_extract",
                 "source_path_or_url": "inspections.csv",
                 "record_type": "inspection",
-                "captured_at": "2026-04-26T00:00:00Z",
+                "captured_at": captured_at,
                 "raw_payload": row,
             }
         )
@@ -390,7 +391,13 @@ def build_inspection_records(inspection_rows, permit_ids_by_number):
     return inspections, source_records
 
 
-def build_project(output_dir: Path, permit_count: int, inspection_count: int, rule_document_count: int):
+def build_project(
+    output_dir: Path,
+    permit_count: int,
+    inspection_count: int,
+    rule_document_count: int,
+    captured_at: str,
+):
     dataset_name = output_dir.name.replace("-", " ").title()
     source_fragments = [
         f"{permit_count} permits",
@@ -404,7 +411,7 @@ def build_project(output_dir: Path, permit_count: int, inspection_count: int, ru
         "locality": "Dallas, Texas",
         "trade": "electricians",
         "workflow": "residential electrical permits and inspections",
-        "created_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+        "created_at": captured_at,
         "source_summary": (
             "Imported Dallas residential electrical extract with "
             + ", ".join(source_fragments)
@@ -415,6 +422,7 @@ def build_project(output_dir: Path, permit_count: int, inspection_count: int, ru
 
 def main():
     args = parse_args()
+    captured_at = DEFAULT_CAPTURED_AT
     permit_rows = filter_permit_rows(load_csv(args.input_dir / "permits.csv"))
     inspection_rows = load_csv(args.input_dir / "inspections.csv")
     contractor_rows = load_csv(args.input_dir / "contractors.csv")
@@ -424,15 +432,34 @@ def main():
         rule_document_rows = load_csv(rule_document_path)
 
     properties, property_id_by_key = build_property_records(permit_rows)
-    contractors, contractor_id_by_name, contractor_sources = build_contractor_records(contractor_rows)
+    contractors, contractor_id_by_name, contractor_sources = build_contractor_records(
+        contractor_rows,
+        captured_at,
+    )
     permits, permit_sources = build_permit_records(
-        permit_rows, property_id_by_key, contractor_id_by_name
+        permit_rows,
+        property_id_by_key,
+        contractor_id_by_name,
+        captured_at,
     )
     permit_ids_by_number = {row["source_permit_number"]: row["permit_id"] for row in permits}
-    inspections, inspection_sources = build_inspection_records(inspection_rows, permit_ids_by_number)
-    rule_documents, rule_document_sources = build_rule_document_records(rule_document_rows)
+    inspections, inspection_sources = build_inspection_records(
+        inspection_rows,
+        permit_ids_by_number,
+        captured_at,
+    )
+    rule_documents, rule_document_sources = build_rule_document_records(
+        rule_document_rows,
+        captured_at,
+    )
     source_records = contractor_sources + permit_sources + inspection_sources + rule_document_sources
-    project = build_project(args.output_dir, len(permits), len(inspections), len(rule_documents))
+    project = build_project(
+        args.output_dir,
+        len(permits),
+        len(inspections),
+        len(rule_documents),
+        captured_at,
+    )
 
     write_json(args.output_dir / "projects.json", project)
     write_jsonl(args.output_dir / "properties.jsonl", properties)
