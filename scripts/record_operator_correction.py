@@ -1129,11 +1129,20 @@ def add_smoke_check(checks: list[dict[str, Any]], name: str, passed: bool, detai
     checks.append({"name": name, "status": "pass" if passed else "fail", "detail": detail})
 
 
-def operator_correction_smoke_check(queue_path: Path, ledger_path: Path) -> dict[str, Any]:
-    progress = correction_progress(queue_path, ledger_path, output_format="text")
+def output_format_label(output_format: str) -> str:
+    return "text output" if output_format == "text" else "default JSON output"
+
+
+def operator_correction_smoke_check(
+    queue_path: Path,
+    ledger_path: Path,
+    output_format: str = "json",
+) -> dict[str, Any]:
+    progress = correction_progress(queue_path, ledger_path, output_format=output_format)
     validation = ledger_validation(queue_path, ledger_path)
-    next_missing = next_missing_correction(queue_path, ledger_path, output_format="text")
+    next_missing = next_missing_correction(queue_path, ledger_path, output_format=output_format)
     checks: list[dict[str, Any]] = []
+    expected_format_label = output_format_label(output_format)
 
     queue_items = progress.get("queue_items")
     missing_count = progress.get("queue_items_missing_corrections")
@@ -1190,7 +1199,7 @@ def operator_correction_smoke_check(queue_path: Path, ledger_path: Path) -> dict
             dry_run_shortcut,
             queue_item_id,
             should_be_dry_run=True,
-            expected_output_format="text",
+            expected_output_format=output_format,
         )
         add_smoke_check(
             checks,
@@ -1198,7 +1207,7 @@ def operator_correction_smoke_check(queue_path: Path, ledger_path: Path) -> dict
             not dry_run_failures,
             (
                 "accepted/rejected/edited dry-runs include expected-ID, require-missing, "
-                "text output, dry-run guards, and edited action template"
+                f"{expected_format_label}, dry-run guards, and edited action template"
                 if not dry_run_failures
                 else "; ".join(dry_run_failures)
             ),
@@ -1209,14 +1218,15 @@ def operator_correction_smoke_check(queue_path: Path, ledger_path: Path) -> dict
             queue_item_id,
             should_be_dry_run=True,
             require_note=True,
-            expected_output_format="text",
+            expected_output_format=output_format,
         )
         add_smoke_check(
             checks,
             "note_dry_run_shortcut",
             not note_dry_run_failures,
             (
-                "accepted/rejected/edited note dry-runs keep text output, operator-note, and dry-run flags"
+                "accepted/rejected/edited note dry-runs keep "
+                f"{expected_format_label}, operator-note, and dry-run flags"
                 if not note_dry_run_failures
                 else "; ".join(note_dry_run_failures)
             ),
@@ -1226,7 +1236,7 @@ def operator_correction_smoke_check(queue_path: Path, ledger_path: Path) -> dict
             append_shortcut,
             queue_item_id,
             should_be_dry_run=False,
-            expected_output_format="text",
+            expected_output_format=output_format,
         )
         add_smoke_check(
             checks,
@@ -1234,7 +1244,7 @@ def operator_correction_smoke_check(queue_path: Path, ledger_path: Path) -> dict
             not append_failures,
             (
                 "accepted/rejected/edited appends include expected-ID, require-missing guards, "
-                "text output, and edited action template"
+                f"{expected_format_label}, and edited action template"
                 if not append_failures
                 else "; ".join(append_failures)
             ),
@@ -1245,14 +1255,15 @@ def operator_correction_smoke_check(queue_path: Path, ledger_path: Path) -> dict
             queue_item_id,
             should_be_dry_run=False,
             require_note=True,
-            expected_output_format="text",
+            expected_output_format=output_format,
         )
         add_smoke_check(
             checks,
             "note_append_shortcut",
             not note_append_failures,
             (
-                "accepted/rejected/edited note appends keep text output and operator-note placeholders"
+                "accepted/rejected/edited note appends keep "
+                f"{expected_format_label} and operator-note placeholders"
                 if not note_append_failures
                 else "; ".join(note_append_failures)
             ),
@@ -1268,7 +1279,7 @@ def operator_correction_smoke_check(queue_path: Path, ledger_path: Path) -> dict
             None,
             should_be_dry_run=True,
             expected_queue_item_id=queue_item_id,
-            expected_output_format="text",
+            expected_output_format=output_format,
         )
         add_smoke_check(
             checks,
@@ -1276,7 +1287,7 @@ def operator_correction_smoke_check(queue_path: Path, ledger_path: Path) -> dict
             not fixed_dry_run_failures,
             (
                 "accepted/rejected/edited fixed-item dry-runs include queue item ID, "
-                "require-missing, text output, dry-run guards, and edited action template"
+                f"require-missing, {expected_format_label}, dry-run guards, and edited action template"
                 if not fixed_dry_run_failures
                 else "; ".join(fixed_dry_run_failures)
             ),
@@ -1288,7 +1299,7 @@ def operator_correction_smoke_check(queue_path: Path, ledger_path: Path) -> dict
             should_be_dry_run=True,
             require_note=True,
             expected_queue_item_id=queue_item_id,
-            expected_output_format="text",
+            expected_output_format=output_format,
         )
         add_smoke_check(
             checks,
@@ -1296,7 +1307,7 @@ def operator_correction_smoke_check(queue_path: Path, ledger_path: Path) -> dict
             not note_fixed_failures,
             (
                 "accepted/rejected/edited fixed-item note dry-runs keep queue item ID, "
-                "text output, operator-note, and dry-run flags"
+                f"{expected_format_label}, operator-note, and dry-run flags"
                 if not note_fixed_failures
                 else "; ".join(note_fixed_failures)
             ),
@@ -1307,7 +1318,7 @@ def operator_correction_smoke_check(queue_path: Path, ledger_path: Path) -> dict
             None,
             should_be_dry_run=False,
             expected_queue_item_id=queue_item_id,
-            expected_output_format="text",
+            expected_output_format=output_format,
         )
         add_smoke_check(
             checks,
@@ -1315,7 +1326,7 @@ def operator_correction_smoke_check(queue_path: Path, ledger_path: Path) -> dict
             not fixed_append_failures,
             (
                 "accepted/rejected/edited fixed-item appends include queue item ID, "
-                "require-missing guards, text output, and edited action template"
+                f"require-missing guards, {expected_format_label}, and edited action template"
                 if not fixed_append_failures
                 else "; ".join(fixed_append_failures)
             ),
@@ -1327,15 +1338,15 @@ def operator_correction_smoke_check(queue_path: Path, ledger_path: Path) -> dict
             should_be_dry_run=False,
             require_note=True,
             expected_queue_item_id=queue_item_id,
-            expected_output_format="text",
+            expected_output_format=output_format,
         )
         add_smoke_check(
             checks,
             "note_append_fixed_item",
             not note_fixed_append_failures,
             (
-                "accepted/rejected/edited fixed-item note appends keep queue item ID, text output, "
-                "and operator-note placeholders"
+                "accepted/rejected/edited fixed-item note appends keep queue item ID, "
+                f"{expected_format_label}, and operator-note placeholders"
                 if not note_fixed_append_failures
                 else "; ".join(note_fixed_append_failures)
             ),
@@ -1395,6 +1406,7 @@ def operator_correction_smoke_check(queue_path: Path, ledger_path: Path) -> dict
     return {
         "workflow_id": progress.get("workflow_id"),
         "status": "fail" if failed_checks else "pass",
+        "output_format": output_format,
         "queue_items": progress.get("queue_items"),
         "queue_items_with_corrections": progress.get("queue_items_with_corrections"),
         "queue_items_missing_corrections": progress.get("queue_items_missing_corrections"),
@@ -1412,6 +1424,7 @@ def format_smoke_check_text(smoke_check: dict[str, Any]) -> str:
         "Dallas operator-correction smoke check",
         f"Status: {str(smoke_check.get('status', 'fail')).upper()}",
         f"Workflow: {smoke_check.get('workflow_id')}",
+        f"Output format checked: {smoke_check.get('output_format')}",
         (
             "Queue corrections: "
             f"{smoke_check.get('queue_items_with_corrections')} captured, "
@@ -1493,7 +1506,11 @@ def main() -> int:
             print(json.dumps(validation, indent=2, sort_keys=True))
         return 0 if validation["status"] == "pass" else 1
     if args.smoke_check:
-        smoke_check = operator_correction_smoke_check(args.queue_path, args.ledger_path)
+        smoke_check = operator_correction_smoke_check(
+            args.queue_path,
+            args.ledger_path,
+            output_format=args.format,
+        )
         if args.format == "text":
             print(format_smoke_check_text(smoke_check))
         else:

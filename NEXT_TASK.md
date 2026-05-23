@@ -46,7 +46,7 @@ Updated next best artifacts:
 
 - keep the real MVP cockpit running with `python3 scripts/serve_mvp_cockpit.py --auto-start --port 4174`
 - expose the running cockpit to remote observers with `python3 scripts/bridge_mvp_cockpit.py` and share the read-only URL from `.automoat/state/mvp-bridge-status.json`
-- run `python3 scripts/record_operator_correction.py --smoke-check --format text`, check correction capture progress with `python3 scripts/record_operator_correction.py --summary --format text`, use the printed next-missing command or run `python3 scripts/record_operator_correction.py --next-missing --format text`, use its action catalog when an edited decision needs corrected action IDs, dry-run or record the first uncaptured item directly with one of the printed text-mode commands, keep the printed `--expected-next-missing-id` guard on next-missing shortcuts, run the printed ledger-validation command, use `python3 scripts/record_operator_correction.py --validate-ledger --require-complete --format text` as the final all-items gate, and summarize useful correction patterns back into the Dallas workflow artifact
+- run `python3 scripts/record_operator_correction.py --smoke-check` for the default JSON contract or `python3 scripts/record_operator_correction.py --smoke-check --format text` for the readable operator contract, check correction capture progress with `python3 scripts/record_operator_correction.py --summary --format text`, use the printed next-missing command or run `python3 scripts/record_operator_correction.py --next-missing --format text`, use its action catalog when an edited decision needs corrected action IDs, dry-run or record the first uncaptured item directly with one of the printed text-mode commands, keep the printed `--expected-next-missing-id` guard on next-missing shortcuts, run the printed ledger-validation command, use `python3 scripts/record_operator_correction.py --validate-ledger --require-complete --format text` as the final all-items gate, and summarize useful correction patterns back into the Dallas workflow artifact
 - decide whether the remaining thin latest-import labels, `incomplete_work` and `complete_remaining_work|schedule_reinspection`, need another repeated sequence before real data import
 
 Latest bounded improvement completed:
@@ -106,6 +106,7 @@ Latest bounded improvement completed:
 - `scripts/record_operator_correction.py --smoke-check --format text` now also verifies fixed-item dry-run and append command groups keep the selected queue item ID, stale-capture guards, note placeholders, and edited-action templates
 - `scripts/record_operator_correction.py --smoke-check --format text` now verifies text-mode generated dry-run and append commands keep `--format text`, so operator work orders continue producing readable confirmations instead of silently falling back to JSON
 - `scripts/record_operator_correction.py --smoke-check --format text` now verifies note-bearing append shortcut and fixed-item command groups keep `--operator-note`, stale-capture guards, text output, and queue identity guards before capture
+- `scripts/record_operator_correction.py --smoke-check` now honors the requested output format, so the default JSON smoke check verifies generated commands stay machine-readable while `--format text` still verifies text-mode command preservation
 
 ## Constraints
 
