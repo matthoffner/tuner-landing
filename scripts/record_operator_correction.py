@@ -915,7 +915,12 @@ def format_ledger_validation_text(validation: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def format_correction_event_text(event: dict[str, Any], ledger_path: Path, dry_run: bool) -> str:
+def format_correction_event_text(
+    event: dict[str, Any],
+    queue_path: Path,
+    ledger_path: Path,
+    dry_run: bool,
+) -> str:
     title = "Dallas operator correction dry run" if dry_run else "Dallas operator correction recorded"
     ledger_line = "Ledger: not written (--dry-run)" if dry_run else f"Ledger: {display_path(ledger_path)}"
     note = str(event.get("operator_note") or "").strip()
@@ -932,6 +937,12 @@ def format_correction_event_text(event: dict[str, Any], ledger_path: Path, dry_r
         f"Operator note: {note if note else '(none)'}",
         f"Source: {event.get('source')}",
         ledger_line,
+        f"Validate ledger: {validate_ledger_command(queue_path, ledger_path, output_format='text')}",
+        f"Next missing work order: {read_only_command('--next-missing', queue_path, ledger_path, output_format='text')}",
+        (
+            "Completion gate: "
+            f"{validate_ledger_command(queue_path, ledger_path, output_format='text', require_complete=True)}"
+        ),
     ]
     return "\n".join(lines)
 
@@ -1035,7 +1046,7 @@ def main() -> int:
     except ValueError as exc:
         raise SystemExit(f"error: {exc}") from exc
     if args.format == "text":
-        print(format_correction_event_text(event, args.ledger_path, args.dry_run))
+        print(format_correction_event_text(event, args.queue_path, args.ledger_path, args.dry_run))
     else:
         print(json.dumps(event, indent=2, sort_keys=True))
     return 0

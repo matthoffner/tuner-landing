@@ -4,6 +4,10 @@ Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
 - lane: editor
+- status: made text-mode Dallas correction confirmations carry the next operator step; dry-run and record output now includes copyable ledger-validation, next-missing, and completion-gate commands
+- files: scripts/record_operator_correction.py, README.md, NEXT_TASK.md, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- next: run `python3 scripts/record_operator_correction.py --next-missing --format text`, capture the next reviewed accepted/rejected/edited Dallas decision, then follow the validation command printed by the confirmation output
+- lane: editor
 - status: tightened Dallas correction queue identity checks; duplicate `queue_item_id` values now fail ledger validation and correction dry-runs/appends before an operator decision can attach to an ambiguous queue row
 - files: scripts/operator_corrections.py, scripts/record_operator_correction.py, README.md, NEXT_TASK.md, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
 - next: run `python3 scripts/record_operator_correction.py --next-missing --format text`, capture the next reviewed accepted/rejected/edited Dallas decision, then finish with `python3 scripts/record_operator_correction.py --validate-ledger --require-complete --format text`
