@@ -5,15 +5,15 @@
   "source_eval_dir": "generated/evals/dallas-electrician-import-sample-v2",
   "workflow_type": "reviewed-inspection-action-queue",
   "summary": {
-    "queue_items": 45,
+    "queue_items": 46,
     "priority_counts": {
       "high": 6,
-      "medium": 39
+      "medium": 40
     },
     "trigger_result_counts": {
       "fail": 6,
       "not_ready": 4,
-      "partial": 35
+      "partial": 36
     },
     "recommended_action_counts": {
       "add_labels_or_documentation": 6,
@@ -21,16 +21,17 @@
       "correct_grounding_or_bonding": 4,
       "correct_panel_or_service": 2,
       "correct_wiring_or_devices": 12,
-      "ensure_site_access": 4,
-      "schedule_reinspection": 43
+      "ensure_site_access": 5,
+      "schedule_reinspection": 44
     }
   },
   "operator_correction_summary": {
     "ledger_path": "generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl",
-    "total_events": 45,
-    "queue_items_with_corrections": 45,
+    "total_events": 46,
+    "queue_items_with_corrections": 46,
     "decision_counts": {
-      "accepted": 45
+      "accepted": 45,
+      "edited": 1
     },
     "invalid_lines": 0,
     "latest_by_queue_item": {
@@ -438,6 +439,15 @@
         "correction_id": "operator-correction:20260523T193149000000Z:0045",
         "captured_at": "2026-05-23T19:31:49Z",
         "decision": "accepted",
+        "corrected_actions": [
+          "complete_remaining_work",
+          "schedule_reinspection"
+        ]
+      },
+      "workflow-item:dallas:next-action:0046": {
+        "correction_id": "operator-correction:20260523T194040000000Z:0046",
+        "captured_at": "2026-05-23T19:40:40Z",
+        "decision": "edited",
         "corrected_actions": [
           "complete_remaining_work",
           "schedule_reinspection"
@@ -2683,6 +2693,49 @@
       "evidence": [
         "Carport branch wiring repaired but replacement canopy lighting and cover trim remained incomplete before rough-in approval.",
         "2026-05-23 correction_followup -> pass: Replacement canopy lighting installed and cover trim completed for approval."
+      ]
+    },
+    {
+      "queue_item_id": "workflow-item:dallas:next-action:0046",
+      "permit_id": "permit:dallas:elz-2026-0247",
+      "source_permit_number": "ELZ-2026-0247",
+      "permit_status": "finaled",
+      "permit_type_normalized": "electrical_repair",
+      "property": {
+        "property_id": "property:3088-s-ewing-ave-dallas-tx-75216",
+        "normalized_address": "3088 S EWING AVE DALLAS TX 75216",
+        "zip_code": "75216"
+      },
+      "contractor": {
+        "contractor_id": "contractor:dallas:cedars-south-electric",
+        "name": "Cedars South Electric"
+      },
+      "trigger_inspection": {
+        "inspection_id": "inspection:dallas:elz-2026-0247:2026-05-22:rough_in",
+        "inspection_date": "2026-05-22",
+        "inspection_type_normalized": "rough_in",
+        "result_normalized": "partial",
+        "failure_reason_normalized": "access_or_scheduling_issue",
+        "notes_raw": "Rear entry branch wiring repaired but replacement step lighting and cover trim remained incomplete before rough-in approval."
+      },
+      "recommended_actions": [
+        "ensure_site_access",
+        "schedule_reinspection"
+      ],
+      "recommended_action_labels": [
+        "Ensure site access",
+        "Schedule reinspection"
+      ],
+      "priority": "medium",
+      "expected_followup": {
+        "inspection_date": "2026-05-23",
+        "inspection_type_normalized": "correction_followup",
+        "result_normalized": "pass",
+        "notes_raw": "Replacement step lighting installed and cover trim completed for approval."
+      },
+      "evidence": [
+        "Rear entry branch wiring repaired but replacement step lighting and cover trim remained incomplete before rough-in approval.",
+        "2026-05-23 correction_followup -> pass: Replacement step lighting installed and cover trim completed for approval."
       ]
     }
   ]
