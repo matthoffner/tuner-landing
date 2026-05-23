@@ -4,16 +4,27 @@ This artifact turns reviewed Dallas electrician inspection labels into a concret
 
 ## Summary
 
-- Queue items: `16`
-- Priority counts: `{"high": 6, "medium": 10}`
-- Trigger result counts: `{"fail": 6, "not_ready": 4, "partial": 6}`
-- Operator correction events: `16`
+- Queue items: `17`
+- Priority counts: `{"high": 6, "medium": 11}`
+- Trigger result counts: `{"fail": 6, "not_ready": 4, "partial": 7}`
+- Operator correction events: `17`
 - Operator correction ledger: `generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl`
 - Accepted correction patterns: `6`
 
 ## Accepted Operator Correction Patterns
 
 ### operator-pattern:accepted:0001
+
+- Queue items: `4`
+- Actions: `Correct wiring or devices, Schedule reinspection`
+- Action IDs: `correct_wiring_or_devices, schedule_reinspection`
+- Trigger results: `{"fail": 2, "partial": 2}`
+- Failure reasons: `{"wiring_or_device_issue": 4}`
+- Inspection types: `{"final": 2, "rough_in": 2}`
+- Follow-up results: `{"pass": 4}`
+- Example permits: `ELP-2026-0209, ELR-2026-0201, ELR-2026-0207, ELZ-2026-0218`
+
+### operator-pattern:accepted:0002
 
 - Queue items: `4`
 - Actions: `Ensure site access, Schedule reinspection`
@@ -24,7 +35,7 @@ This artifact turns reviewed Dallas electrician inspection labels into a concret
 - Follow-up results: `{"pass": 4}`
 - Example permits: `ELM-2026-0211, ELS-2026-0202, ELS-2026-0210, ELZ-2026-0217`
 
-### operator-pattern:accepted:0002
+### operator-pattern:accepted:0003
 
 - Queue items: `3`
 - Actions: `Complete remaining work, Schedule reinspection`
@@ -34,17 +45,6 @@ This artifact turns reviewed Dallas electrician inspection labels into a concret
 - Inspection types: `{"rough_in": 3}`
 - Follow-up results: `{"pass": 3}`
 - Example permits: `ELP-2026-0203, ELZ-2026-0215, ELZ-2026-0216`
-
-### operator-pattern:accepted:0003
-
-- Queue items: `3`
-- Actions: `Correct wiring or devices, Schedule reinspection`
-- Action IDs: `correct_wiring_or_devices, schedule_reinspection`
-- Trigger results: `{"fail": 2, "partial": 1}`
-- Failure reasons: `{"wiring_or_device_issue": 3}`
-- Inspection types: `{"final": 2, "rough_in": 1}`
-- Follow-up results: `{"pass": 3}`
-- Example permits: `ELP-2026-0209, ELR-2026-0201, ELR-2026-0207`
 
 ### operator-pattern:accepted:0004
 
@@ -240,3 +240,13 @@ This artifact turns reviewed Dallas electrician inspection labels into a concret
 - Recommended actions: `Ensure site access, Schedule reinspection`
 - Follow-up observed: `2026-05-03` `correction_followup` -> `pass`
 - Evidence: Locked gate blocked final inspection access for porch circuit trim verification.
+
+### ELZ-2026-0218 - 2740 S EWING AVE DALLAS TX 75216
+
+- Priority: `medium`
+- Contractor: `Cedars South Electric`
+- Trigger: `2026-05-01` `rough_in` -> `partial`
+- Failure reason: `wiring_or_device_issue`
+- Recommended actions: `Correct wiring or devices, Schedule reinspection`
+- Follow-up observed: `2026-05-06` `correction_followup` -> `pass`
+- Evidence: Kitchen branch wiring repaired but GFCI device and island receptacle trim remained incomplete.
