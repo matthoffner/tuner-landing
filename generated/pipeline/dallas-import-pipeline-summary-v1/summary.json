@@ -23,6 +23,37 @@
     "report_path": "generated/workflows/dallas-inspection-workflow-v1/action-queue.md"
   },
   "coverage": {
+    "latest_dataset_id": "dallas-electrician-import-sample-v2",
+    "repeated_support_threshold": 2,
+    "latest_counts": {
+      "result_states": 6,
+      "repeated_result_states": 6,
+      "failure_reasons": 5,
+      "repeated_failure_reasons": 5,
+      "pattern_slices": 5,
+      "repeated_pattern_slices": 5,
+      "next_action_groups": 6,
+      "repeated_next_action_groups": 6
+    },
+    "latest_repeated_counts": {
+      "result_states": 6,
+      "failure_reasons": 5,
+      "pattern_slices": 5,
+      "next_action_groups": 6
+    },
+    "latest_thin_counts": {
+      "result_states": 0,
+      "failure_reasons": 0,
+      "pattern_slices": 0,
+      "next_action_groups": 0
+    },
+    "thin_groups": {
+      "result_states": [],
+      "failure_reasons": [],
+      "pattern_slices": [],
+      "next_action_groups": []
+    },
+    "recommended_next_step": "All current latest-import edge-case sections have repeated support; keep this report current as imported Dallas data widens.",
     "json_path": "generated/coverage/dallas-electrician-edge-case-coverage-v1/coverage.json",
     "report_path": "generated/coverage/dallas-electrician-edge-case-coverage-v1/coverage.md"
   },

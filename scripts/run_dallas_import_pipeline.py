@@ -78,9 +78,54 @@ def load_json(path):
         return json.load(handle)
 
 
+def section_values(rows):
+    return [
+        row.get("value") or row.get("slice_id")
+        for row in rows
+        if row.get("value") or row.get("slice_id")
+    ]
+
+
+def summarize_coverage(coverage, dataset_id):
+    coverage_summary = coverage.get("summary", {})
+    latest_dataset_id = coverage_summary.get("latest_dataset_id", dataset_id)
+    latest_dataset = next(
+        (
+            dataset
+            for dataset in coverage.get("datasets", [])
+            if dataset.get("dataset_id") == latest_dataset_id
+        ),
+        {},
+    )
+    sections = {
+        "result_states": latest_dataset.get("result_states", []),
+        "failure_reasons": latest_dataset.get("failure_reasons", []),
+        "pattern_slices": latest_dataset.get("pattern_slices", []),
+        "next_action_groups": latest_dataset.get("next_action_groups", []),
+    }
+    thin_groups = {
+        section_name: section_values(
+            [row for row in rows if not row.get("repeated")]
+        )
+        for section_name, rows in sections.items()
+    }
+    return {
+        "latest_dataset_id": latest_dataset_id,
+        "repeated_support_threshold": coverage_summary.get("repeated_support_threshold"),
+        "latest_counts": latest_dataset.get("counts", {}),
+        "latest_repeated_counts": coverage_summary.get("latest_repeated_counts", {}),
+        "latest_thin_counts": coverage_summary.get("latest_thin_counts", {}),
+        "thin_groups": thin_groups,
+        "recommended_next_step": coverage_summary.get("recommended_next_step"),
+        "json_path": command_path(COVERAGE_JSON_PATH),
+        "report_path": command_path(COVERAGE_REPORT_PATH),
+    }
+
+
 def build_summary(args):
     contract = load_json(CONTRACT_PATH)
     workflow = load_json(WORKFLOW_PATH)
+    coverage = load_json(COVERAGE_JSON_PATH)
     contract_checks = contract.get("checks", [])
     workflow_summary = workflow.get("summary", {})
     correction_summary = workflow.get("operator_correction_summary", {})
@@ -113,10 +158,7 @@ def build_summary(args):
             "json_path": command_path(WORKFLOW_PATH),
             "report_path": command_path(WORKFLOW_REPORT_PATH),
         },
-        "coverage": {
-            "json_path": command_path(COVERAGE_JSON_PATH),
-            "report_path": command_path(COVERAGE_REPORT_PATH),
-        },
+        "coverage": summarize_coverage(coverage, args.dataset_id),
         "correction_gate": {
             "required": not args.skip_correction_gate,
             "status": "skipped" if args.skip_correction_gate else "passed",
@@ -142,10 +184,19 @@ def write_summary(summary):
 
     contract = summary["contract"]
     workflow = summary["workflow"]
+    coverage = summary["coverage"]
     follow_up = summary["follow_up"]
     correction_gate = summary["correction_gate"]
     contract_status = "PASS" if contract["overall_passed"] else "FAIL"
     gate_status = correction_gate["status"].upper()
+    coverage_repeated = coverage.get("latest_repeated_counts", {})
+    coverage_thin = coverage.get("latest_thin_counts", {})
+    thin_groups = coverage.get("thin_groups", {})
+    thin_labels = [
+        f"{section}: {', '.join(values)}"
+        for section, values in thin_groups.items()
+        if values
+    ]
     lines = [
         "# Dallas Import Pipeline Summary",
         "",
@@ -162,6 +213,27 @@ def write_summary(summary):
         f"- Accepted patterns: `{workflow['accepted_pattern_count']}`",
         f"- Correction gate: {gate_status}",
         f"- Next gap: {contract['next_gap']}",
+        "",
+        "## Coverage Snapshot",
+        "",
+        f"- Coverage dataset: `{coverage.get('latest_dataset_id')}`",
+        f"- Repeated support threshold: `{coverage.get('repeated_support_threshold')}` permits",
+        (
+            "- Repeated counts: "
+            f"`{coverage_repeated.get('result_states', 0)}` result states, "
+            f"`{coverage_repeated.get('failure_reasons', 0)}` failure reasons, "
+            f"`{coverage_repeated.get('pattern_slices', 0)}` pattern slices, "
+            f"`{coverage_repeated.get('next_action_groups', 0)}` next-action groups"
+        ),
+        (
+            "- Thin counts: "
+            f"`{coverage_thin.get('result_states', 0)}` result states, "
+            f"`{coverage_thin.get('failure_reasons', 0)}` failure reasons, "
+            f"`{coverage_thin.get('pattern_slices', 0)}` pattern slices, "
+            f"`{coverage_thin.get('next_action_groups', 0)}` next-action groups"
+        ),
+        f"- Thin groups: {'; '.join(thin_labels) if thin_labels else 'none'}",
+        f"- Coverage next step: {coverage.get('recommended_next_step')}",
         "",
         "## Follow-Up",
         "",
@@ -183,7 +255,10 @@ def write_summary(summary):
 def print_summary(summary):
     contract = summary["contract"]
     workflow = summary["workflow"]
+    coverage = summary["coverage"]
     follow_up = summary["follow_up"]
+    coverage_repeated = coverage.get("latest_repeated_counts", {})
+    coverage_thin = coverage.get("latest_thin_counts", {})
 
     print("==> Dallas import pipeline summary")
     print(f"dataset_id: {summary['dataset_id']}")
@@ -196,6 +271,21 @@ def print_summary(summary):
     )
     print(f"accepted_patterns: {workflow.get('accepted_pattern_count')}")
     print(f"next_gap: {contract.get('next_gap')}")
+    print(
+        "coverage_repeated_counts: "
+        f"result_states={coverage_repeated.get('result_states', 0)}, "
+        f"failure_reasons={coverage_repeated.get('failure_reasons', 0)}, "
+        f"pattern_slices={coverage_repeated.get('pattern_slices', 0)}, "
+        f"next_action_groups={coverage_repeated.get('next_action_groups', 0)}"
+    )
+    print(
+        "coverage_thin_counts: "
+        f"result_states={coverage_thin.get('result_states', 0)}, "
+        f"failure_reasons={coverage_thin.get('failure_reasons', 0)}, "
+        f"pattern_slices={coverage_thin.get('pattern_slices', 0)}, "
+        f"next_action_groups={coverage_thin.get('next_action_groups', 0)}"
+    )
+    print(f"coverage_next_step: {coverage.get('recommended_next_step')}")
     print("follow_up:")
     print(f"  patterns_command: {follow_up['patterns_command']}")
     print(f"  completion_gate: {follow_up['completion_gate']}")

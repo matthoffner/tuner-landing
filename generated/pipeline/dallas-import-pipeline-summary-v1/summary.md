@@ -8,6 +8,15 @@
 - Correction gate: PASSED
 - Next gap: All current latest-import result states, failure reasons, pattern slices, and expected next-action groups have repeated support; keep the action queue and coverage report current as real Dallas import records widen.
 
+## Coverage Snapshot
+
+- Coverage dataset: `dallas-electrician-import-sample-v2`
+- Repeated support threshold: `2` permits
+- Repeated counts: `6` result states, `5` failure reasons, `5` pattern slices, `6` next-action groups
+- Thin counts: `0` result states, `0` failure reasons, `0` pattern slices, `0` next-action groups
+- Thin groups: none
+- Coverage next step: All current latest-import edge-case sections have repeated support; keep this report current as imported Dallas data widens.
+
 ## Follow-Up
 
 - Pattern review: `python3 scripts/record_operator_correction.py --list-patterns --format text`
