@@ -147,6 +147,27 @@ def csv_header(path):
         return [cell.strip() for cell in header if cell.strip()]
 
 
+def csv_dict_data_rows(path):
+    resolved = repo_path(path)
+    if not resolved.exists():
+        return None
+    with resolved.open(newline="", encoding="utf-8") as handle:
+        reader = csv.DictReader(handle)
+        return [
+            row
+            for row in reader
+            if any((value or "").strip() for value in row.values())
+        ]
+
+
+def raw_cell(row, field):
+    return (row.get(field) or "").strip()
+
+
+def raw_cell_lower(row, field):
+    return raw_cell(row, field).lower()
+
+
 def raw_file_row_counts(raw_dir):
     resolved_raw_dir = repo_path(raw_dir)
     return {
@@ -168,6 +189,106 @@ def raw_file_required_fields():
         file_name: list(RAW_IMPORT_REQUIRED_FIELDS[file_name])
         for file_name in RAW_IMPORT_FILE_NAMES
     }
+
+
+def raw_file_import_scope_counts(raw_dir):
+    resolved_raw_dir = repo_path(raw_dir)
+    permit_rows = csv_dict_data_rows(resolved_raw_dir / "permits.csv")
+    inspection_rows = csv_dict_data_rows(resolved_raw_dir / "inspections.csv")
+    contractor_rows = csv_dict_data_rows(resolved_raw_dir / "contractors.csv")
+    rule_document_rows = csv_dict_data_rows(resolved_raw_dir / "rule_documents.csv")
+
+    counts = {}
+    in_scope_permit_numbers = set()
+    if permit_rows is None:
+        counts["permits.csv"] = None
+    else:
+        permit_scope = {
+            "rows_checked": len(permit_rows),
+            "importable_rows": 0,
+            "excluded_rows": 0,
+            "excluded_by_city": 0,
+            "excluded_by_trade": 0,
+            "excluded_by_work_class": 0,
+        }
+        for row in permit_rows:
+            if raw_cell_lower(row, "city") != "dallas":
+                permit_scope["excluded_by_city"] += 1
+                continue
+            if raw_cell_lower(row, "trade") != "electrical":
+                permit_scope["excluded_by_trade"] += 1
+                continue
+            if raw_cell_lower(row, "work_class") != "residential":
+                permit_scope["excluded_by_work_class"] += 1
+                continue
+            permit_scope["importable_rows"] += 1
+            permit_number = raw_cell(row, "permit_number")
+            if permit_number:
+                in_scope_permit_numbers.add(permit_number)
+        permit_scope["excluded_rows"] = (
+            permit_scope["rows_checked"] - permit_scope["importable_rows"]
+        )
+        counts["permits.csv"] = permit_scope
+
+    if inspection_rows is None:
+        counts["inspections.csv"] = None
+    else:
+        inspection_scope = {
+            "rows_checked": len(inspection_rows),
+            "importable_rows": 0,
+            "excluded_rows": 0,
+            "excluded_by_unimported_permit": 0,
+        }
+        for row in inspection_rows:
+            if raw_cell(row, "permit_number") in in_scope_permit_numbers:
+                inspection_scope["importable_rows"] += 1
+            else:
+                inspection_scope["excluded_by_unimported_permit"] += 1
+        inspection_scope["excluded_rows"] = (
+            inspection_scope["rows_checked"] - inspection_scope["importable_rows"]
+        )
+        counts["inspections.csv"] = inspection_scope
+
+    if contractor_rows is None:
+        counts["contractors.csv"] = None
+    else:
+        contractor_scope = {
+            "rows_checked": len(contractor_rows),
+            "importable_rows": 0,
+            "excluded_rows": 0,
+            "excluded_by_license_type": 0,
+        }
+        for row in contractor_rows:
+            if "electrical" in raw_cell_lower(row, "license_type"):
+                contractor_scope["importable_rows"] += 1
+            else:
+                contractor_scope["excluded_by_license_type"] += 1
+        contractor_scope["excluded_rows"] = (
+            contractor_scope["rows_checked"] - contractor_scope["importable_rows"]
+        )
+        counts["contractors.csv"] = contractor_scope
+
+    if rule_document_rows is None:
+        counts["rule_documents.csv"] = None
+    else:
+        rule_document_scope = {
+            "rows_checked": len(rule_document_rows),
+            "importable_rows": 0,
+            "excluded_rows": 0,
+            "excluded_by_missing_title": 0,
+        }
+        for row in rule_document_rows:
+            if raw_cell(row, "title"):
+                rule_document_scope["importable_rows"] += 1
+            else:
+                rule_document_scope["excluded_by_missing_title"] += 1
+        rule_document_scope["excluded_rows"] = (
+            rule_document_scope["rows_checked"]
+            - rule_document_scope["importable_rows"]
+        )
+        counts["rule_documents.csv"] = rule_document_scope
+
+    return counts
 
 
 def raw_file_optional_fields(headers_by_file, required_fields_by_file):
@@ -250,6 +371,7 @@ def next_import_record_handoff(raw_dir):
             f"{display_raw_dir}/{file_name}" for file_name in RAW_IMPORT_FILE_NAMES
         ],
         "raw_file_row_counts": raw_file_row_counts(raw_dir),
+        "raw_file_import_scope_counts": raw_file_import_scope_counts(raw_dir),
         "raw_file_headers": raw_headers,
         "raw_file_required_fields": raw_required_fields,
         "raw_file_optional_fields": raw_file_optional_fields(
@@ -531,6 +653,10 @@ def write_summary(summary):
         if values
     ]
     raw_row_counts = next_import_handoff.get("raw_file_row_counts", {})
+    raw_import_scope_counts = next_import_handoff.get(
+        "raw_file_import_scope_counts",
+        {},
+    )
     raw_headers = next_import_handoff.get("raw_file_headers", {})
     raw_required_fields = next_import_handoff.get("raw_file_required_fields", {})
     raw_optional_fields = next_import_handoff.get("raw_file_optional_fields", {})
@@ -556,6 +682,31 @@ def write_summary(summary):
                 f"`{file_name}`={count if isinstance(count, int) else 'missing'}"
             )
         return ", ".join(labels)
+
+    def inline_import_scope_counts(values):
+        if not isinstance(values, dict) or not values:
+            return ["- Raw CSV import scope counts: none"]
+        labels = []
+        for file_name in RAW_IMPORT_FILE_NAMES:
+            scope = values.get(file_name)
+            if not isinstance(scope, dict):
+                labels.append(f"- `{file_name}` import scope: missing")
+                continue
+            rows_checked = scope.get("rows_checked")
+            importable_rows = scope.get("importable_rows")
+            excluded_rows = scope.get("excluded_rows")
+            reason_counts = {
+                key: value
+                for key, value in scope.items()
+                if key.startswith("excluded_by_") and isinstance(value, int)
+            }
+            labels.append(
+                f"- `{file_name}` import scope: "
+                f"`{importable_rows}/{rows_checked}` importable, "
+                f"excluded: `{excluded_rows}`, "
+                f"reasons: {inline_counts(reason_counts)}"
+            )
+        return labels
 
     def inline_headers(values):
         if not isinstance(values, dict) or not values:
@@ -670,6 +821,7 @@ def write_summary(summary):
         f"- Next gap: {contract['next_gap']}",
         f"- Next raw import files: {inline_list(next_import_handoff['raw_files'])}",
         f"- Next raw import row counts: {inline_row_counts(raw_row_counts)}",
+        "- Next raw import scope counts: see Follow-Up",
         "- Next raw import headers: see Follow-Up",
         "- Next raw import required fields: see Follow-Up",
         "- Next raw import optional fields: see Follow-Up",
@@ -844,6 +996,8 @@ def write_summary(summary):
                 "- Raw CSV row counts: "
                 f"{inline_row_counts(raw_row_counts)}"
             ),
+            "- Raw CSV import scope counts:",
+            *inline_import_scope_counts(raw_import_scope_counts),
             "- Raw CSV headers:",
             *inline_headers(raw_headers),
             "- Raw CSV required fields:",
@@ -894,6 +1048,10 @@ def print_summary(summary, output_format="text"):
     coverage_repeated = coverage.get("latest_repeated_counts", {})
     coverage_thin = coverage.get("latest_thin_counts", {})
     raw_row_counts = next_import_handoff.get("raw_file_row_counts", {})
+    raw_import_scope_counts = next_import_handoff.get(
+        "raw_file_import_scope_counts",
+        {},
+    )
     raw_headers = next_import_handoff.get("raw_file_headers", {})
     raw_required_fields = next_import_handoff.get("raw_file_required_fields", {})
     raw_optional_fields = next_import_handoff.get("raw_file_optional_fields", {})
@@ -911,6 +1069,28 @@ def print_summary(summary, output_format="text"):
             count = values.get(file_name)
             labels.append(f"{file_name}={count if isinstance(count, int) else 'missing'}")
         return ", ".join(labels)
+
+    def format_import_scope_counts(values):
+        if not isinstance(values, dict) or not values:
+            return "none"
+        labels = []
+        for file_name in RAW_IMPORT_FILE_NAMES:
+            scope = values.get(file_name)
+            if not isinstance(scope, dict):
+                labels.append(f"{file_name}=missing")
+                continue
+            reason_counts = {
+                key: value
+                for key, value in scope.items()
+                if key.startswith("excluded_by_") and isinstance(value, int)
+            }
+            labels.append(
+                f"{file_name}={scope.get('importable_rows')}/{scope.get('rows_checked')} "
+                f"importable "
+                f"(excluded={scope.get('excluded_rows')}, "
+                f"reasons={json.dumps(reason_counts, sort_keys=True)})"
+            )
+        return "; ".join(labels)
 
     def format_headers(values):
         if not isinstance(values, dict) or not values:
@@ -1044,6 +1224,10 @@ def print_summary(summary, output_format="text"):
     print(f"  completion_gate: {follow_up['completion_gate']}")
     print(f"  raw_import_files: {', '.join(next_import_handoff['raw_files'])}")
     print(f"  raw_import_row_counts: {format_row_counts(raw_row_counts)}")
+    print(
+        "  raw_import_scope_counts: "
+        f"{format_import_scope_counts(raw_import_scope_counts)}"
+    )
     print(f"  raw_import_headers: {format_headers(raw_headers)}")
     print(f"  raw_import_required_fields: {format_required_fields(raw_required_fields)}")
     print(f"  raw_import_optional_fields: {format_optional_fields(raw_optional_fields)}")

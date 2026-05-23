@@ -21,6 +21,34 @@
       "contractors.csv": 6,
       "rule_documents.csv": 3
     },
+    "raw_file_import_scope_counts": {
+      "permits.csv": {
+        "rows_checked": 15,
+        "importable_rows": 14,
+        "excluded_rows": 1,
+        "excluded_by_city": 0,
+        "excluded_by_trade": 1,
+        "excluded_by_work_class": 0
+      },
+      "inspections.csv": {
+        "rows_checked": 41,
+        "importable_rows": 40,
+        "excluded_rows": 1,
+        "excluded_by_unimported_permit": 1
+      },
+      "contractors.csv": {
+        "rows_checked": 6,
+        "importable_rows": 5,
+        "excluded_rows": 1,
+        "excluded_by_license_type": 1
+      },
+      "rule_documents.csv": {
+        "rows_checked": 3,
+        "importable_rows": 3,
+        "excluded_rows": 0,
+        "excluded_by_missing_title": 0
+      }
+    },
     "raw_file_headers": {
       "permits.csv": [
         "permit_number",

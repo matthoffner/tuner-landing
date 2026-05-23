@@ -61,6 +61,7 @@ Latest bounded improvement completed:
 - `scripts/run_dallas_import_pipeline.py` and `scripts/record_operator_correction.py` now add raw CSV optional fields to the next-import handoff, so the next Dallas row-widening pass can see required and optional columns explicitly without recomputing the difference from headers
 - `scripts/run_dallas_import_pipeline.py` and `scripts/record_operator_correction.py` now add raw CSV append templates to the next-import handoff, so the next Dallas row-widening pass can copy a per-file row skeleton with importer-required cells marked before editing `permits.csv`, `inspections.csv`, `contractors.csv`, or `rule_documents.csv`
 - `scripts/run_dallas_import_pipeline.py` and `scripts/record_operator_correction.py` now add raw CSV required-field gaps to the next-import handoff, so the next Dallas row-widening pass can see missing required headers or required cells before running the full import pipeline
+- `scripts/run_dallas_import_pipeline.py` and `scripts/record_operator_correction.py` now add raw CSV import-scope counts to the next-import handoff, so the next Dallas row-widening pass can see which raw rows will import into the residential electrical MVP and which are intentionally excluded by city, trade, work class, permit linkage, license type, or missing rule title
 - `generated/normalized/dallas-electrician-sample-v1/` now provides row-shaped Dallas sample records
 - `scripts/generate_dallas_fixture_pack.py` now emits the Dallas fixture pack deterministically from normalized permit and inspection rows
 - `scripts/generate_dallas_label_reviews.py` now emits reviewed label rows directly from normalized Dallas permit and inspection records, and `scripts/generate_dallas_eval_artifacts.py` now uses that row-derived supervision path
@@ -166,6 +167,7 @@ Latest bounded improvement completed:
 - `scripts/run_dallas_import_pipeline.py` and `scripts/record_operator_correction.py` now add raw CSV row counts to that next-import handoff, so the next Dallas permit-data widening pass can see the current `permits.csv`, `inspections.csv`, `contractors.csv`, and `rule_documents.csv` volume before editing
 - `scripts/run_dallas_import_pipeline.py` and `scripts/record_operator_correction.py` now add raw CSV headers to that next-import handoff, so the next Dallas permit-data widening pass can add rows without opening each import file just to recover the column contract
 - `scripts/run_dallas_import_pipeline.py` and `scripts/record_operator_correction.py` now add raw CSV optional fields to that next-import handoff, so the next Dallas permit-data widening pass can see which non-required columns are still available for richer real import rows
+- `scripts/run_dallas_import_pipeline.py` and `scripts/record_operator_correction.py` now add raw CSV import-scope counts to that next-import handoff, so the next permit-data pass can reconcile raw row counts against imported Dallas electrician rows before widening the sample
 
 ## Constraints
 
