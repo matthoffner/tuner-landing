@@ -74,6 +74,10 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="with --decision, record against the first queue item missing a correction",
     )
+    parser.add_argument(
+        "--expected-next-missing-id",
+        help="with --use-next-missing, fail if the current first missing queue item has changed",
+    )
     parser.add_argument("--decision", choices=("accepted", "rejected", "edited"))
     parser.add_argument(
         "--corrected-actions",
@@ -103,6 +107,8 @@ def parse_args() -> argparse.Namespace:
         parser.error("--use-next-missing records a decision and cannot be combined with read-only modes")
     if args.use_next_missing and args.queue_item_id:
         parser.error("--use-next-missing cannot be combined with --queue-item-id")
+    if args.expected_next_missing_id and not args.use_next_missing:
+        parser.error("--expected-next-missing-id requires --use-next-missing")
     if not read_only_mode:
         if not args.queue_item_id and not args.use_next_missing:
             parser.error(
@@ -482,6 +488,7 @@ def record_command(
     corrected_actions: str | None = None,
     operator_note: str | None = None,
     use_next_missing: bool = False,
+    expected_next_missing_id: str | None = None,
     require_missing: bool = False,
     output_format: str = "json",
 ) -> str:
@@ -492,6 +499,8 @@ def record_command(
     ]
     if use_next_missing:
         args.append("--use-next-missing")
+        if expected_next_missing_id:
+            args.extend(["--expected-next-missing-id", expected_next_missing_id])
     else:
         if not queue_item_id:
             raise ValueError("queue_item_id is required unless use_next_missing is true")
@@ -536,6 +545,7 @@ def guarded_record_command_group(
     dry_run: bool = False,
     operator_note: str | None = None,
     use_next_missing: bool = False,
+    expected_next_missing_id: str | None = None,
     output_format: str = "json",
 ) -> dict[str, str]:
     return {
@@ -547,6 +557,7 @@ def guarded_record_command_group(
             dry_run=dry_run,
             operator_note=operator_note,
             use_next_missing=use_next_missing,
+            expected_next_missing_id=expected_next_missing_id,
             require_missing=True,
             output_format=output_format,
         ),
@@ -558,6 +569,7 @@ def guarded_record_command_group(
             dry_run=dry_run,
             operator_note=operator_note,
             use_next_missing=use_next_missing,
+            expected_next_missing_id=expected_next_missing_id,
             require_missing=True,
             output_format=output_format,
         ),
@@ -570,6 +582,7 @@ def guarded_record_command_group(
             corrected_actions="<comma-separated-action-ids>",
             operator_note=operator_note,
             use_next_missing=use_next_missing,
+            expected_next_missing_id=expected_next_missing_id,
             require_missing=True,
             output_format=output_format,
         ),
@@ -591,6 +604,7 @@ def suggested_record_commands(
             ledger_path,
             dry_run=True,
             use_next_missing=True,
+            expected_next_missing_id=queue_item_id,
             output_format=output_format,
         ),
         "append_next_missing": guarded_record_command_group(
@@ -598,6 +612,7 @@ def suggested_record_commands(
             queue_path,
             ledger_path,
             use_next_missing=True,
+            expected_next_missing_id=queue_item_id,
             output_format=output_format,
         ),
         "append_next_missing_with_note": guarded_record_command_group(
@@ -606,6 +621,7 @@ def suggested_record_commands(
             ledger_path,
             operator_note=operator_note,
             use_next_missing=True,
+            expected_next_missing_id=queue_item_id,
             output_format=output_format,
         ),
         "dry_run": guarded_record_command_group(
@@ -1021,6 +1037,13 @@ def main() -> int:
         if not isinstance(item, dict) or not isinstance(item.get("queue_item_id"), str):
             raise SystemExit("No queue items are missing corrections")
         queue_item_id = item["queue_item_id"]
+        expected_queue_item_id = str(args.expected_next_missing_id or "").strip()
+        if expected_queue_item_id and queue_item_id != expected_queue_item_id:
+            raise SystemExit(
+                "error: next missing queue item changed; "
+                f"expected {expected_queue_item_id}, found {queue_item_id}. "
+                "Regenerate the work order before recording a correction."
+            )
 
     if (
         args.require_missing

@@ -46,7 +46,7 @@ Updated next best artifacts:
 
 - keep the real MVP cockpit running with `python3 scripts/serve_mvp_cockpit.py --auto-start --port 4174`
 - expose the running cockpit to remote observers with `python3 scripts/bridge_mvp_cockpit.py` and share the read-only URL from `.automoat/state/mvp-bridge-status.json`
-- check correction capture progress with `python3 scripts/record_operator_correction.py --summary`, pick the next uncaptured queue item with `python3 scripts/record_operator_correction.py --next-missing --format text`, use its action catalog when an edited decision needs corrected action IDs, dry-run or record the first uncaptured item directly with one of the printed text-mode commands, run the printed ledger-validation command, use `python3 scripts/record_operator_correction.py --validate-ledger --require-complete --format text` as the final all-items gate, and summarize useful correction patterns back into the Dallas workflow artifact
+- check correction capture progress with `python3 scripts/record_operator_correction.py --summary`, pick the next uncaptured queue item with `python3 scripts/record_operator_correction.py --next-missing --format text`, use its action catalog when an edited decision needs corrected action IDs, dry-run or record the first uncaptured item directly with one of the printed text-mode commands, keep the printed `--expected-next-missing-id` guard on next-missing shortcuts, run the printed ledger-validation command, use `python3 scripts/record_operator_correction.py --validate-ledger --require-complete --format text` as the final all-items gate, and summarize useful correction patterns back into the Dallas workflow artifact
 - decide whether the remaining thin latest-import labels, `incomplete_work` and `complete_remaining_work|schedule_reinspection`, need another repeated sequence before real data import
 
 Latest bounded improvement completed:
@@ -98,6 +98,7 @@ Latest bounded improvement completed:
 - `scripts/record_operator_correction.py --validate-ledger` now reports duplicate queue item IDs, and correction dry-runs/appends reject duplicated queue IDs before an operator decision can attach to an ambiguous Dallas queue row
 - `scripts/record_operator_correction.py --format text` correction dry-runs and appends now print copyable ledger-validation, next-missing, and completion-gate commands so a non-server operator pass does not lose its next step after confirming a decision
 - `scripts/record_operator_correction.py --dry-run` now rejects duplicate `correction_id` values against the selected ledger, so deterministic replay checks catch timestamp collisions before an operator sees a reusable capture command
+- `scripts/record_operator_correction.py --next-missing` shortcut commands now include `--expected-next-missing-id`, and `--use-next-missing` refuses to record if the first missing queue item has changed since the work order was generated
 
 ## Constraints
 
