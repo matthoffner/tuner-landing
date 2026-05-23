@@ -96,11 +96,38 @@ def queue_item_index(queue_path: Path = DEFAULT_QUEUE_PATH) -> dict[str, dict[st
     queue = queue_payload.get("queue", [])
     if not isinstance(queue, list):
         return {}
+    duplicate_ids = duplicate_queue_item_ids(queue)
+    if duplicate_ids:
+        raise ValueError(
+            "queue file contains duplicate queue_item_id values: "
+            f"{', '.join(duplicate_ids)}"
+        )
     return {
         item["queue_item_id"]: item
         for item in queue
         if isinstance(item, dict) and isinstance(item.get("queue_item_id"), str)
     }
+
+
+def queue_item_id_counts(queue: object) -> Counter[str]:
+    counts: Counter[str] = Counter()
+    if not isinstance(queue, list):
+        return counts
+    for item in queue:
+        if not isinstance(item, dict):
+            continue
+        queue_item_id = item.get("queue_item_id")
+        if isinstance(queue_item_id, str) and queue_item_id:
+            counts[queue_item_id] += 1
+    return counts
+
+
+def duplicate_queue_item_ids(queue: object) -> list[str]:
+    return sorted(
+        queue_item_id
+        for queue_item_id, count in queue_item_id_counts(queue).items()
+        if count > 1
+    )
 
 
 def normalize_action_list(value: object) -> list[str]:

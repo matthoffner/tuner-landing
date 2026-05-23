@@ -4,6 +4,10 @@ Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
 - lane: editor
+- status: tightened Dallas correction queue identity checks; duplicate `queue_item_id` values now fail ledger validation and correction dry-runs/appends before an operator decision can attach to an ambiguous queue row
+- files: scripts/operator_corrections.py, scripts/record_operator_correction.py, README.md, NEXT_TASK.md, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- next: run `python3 scripts/record_operator_correction.py --next-missing --format text`, capture the next reviewed accepted/rejected/edited Dallas decision, then finish with `python3 scripts/record_operator_correction.py --validate-ledger --require-complete --format text`
+- lane: editor
 - status: tightened Dallas correction append safety; `scripts/operator_corrections.py` now rejects duplicate `correction_id` values before writing operator-correction events so deterministic replays fail before mutating the ledger
 - files: scripts/operator_corrections.py, README.md, NEXT_TASK.md, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
 - next: run `python3 scripts/record_operator_correction.py --next-missing --format text`, capture the next reviewed accepted/rejected/edited Dallas decision, then finish with `python3 scripts/record_operator_correction.py --validate-ledger --require-complete --format text`

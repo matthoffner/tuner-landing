@@ -95,6 +95,7 @@ Latest bounded improvement completed:
 - `scripts/record_operator_correction.py --validate-ledger --format text` now prints the next `--next-missing --format text` work-order command when queue items are still uncaptured, so validation output points directly back to the next operator pass
 - `scripts/record_operator_correction.py --validate-ledger` now rejects missing or duplicated `correction_id` values, so deterministic replays cannot silently leave ambiguous Dallas operator-correction events in the ledger
 - `scripts/operator_corrections.py` now rejects duplicate `correction_id` values before appending operator-correction events, so deterministic replays fail before mutating the Dallas correction ledger
+- `scripts/record_operator_correction.py --validate-ledger` now reports duplicate queue item IDs, and correction dry-runs/appends reject duplicated queue IDs before an operator decision can attach to an ambiguous Dallas queue row
 
 ## Constraints
 

@@ -16,6 +16,7 @@ from operator_corrections import (
     append_operator_correction,
     build_operator_correction_event,
     correction_summary,
+    duplicate_queue_item_ids,
     normalize_action_list,
     parse_captured_at,
     read_json,
@@ -215,6 +216,7 @@ def ledger_validation(queue_path: Path, ledger_path: Path, require_complete: boo
         for item in queue
         if isinstance(item, dict) and isinstance(item.get("queue_item_id"), str)
     ]
+    duplicate_queue_ids = duplicate_queue_item_ids(queue)
     queue_items = {
         item.get("queue_item_id"): item
         for item in queue
@@ -240,6 +242,20 @@ def ledger_validation(queue_path: Path, ledger_path: Path, require_complete: boo
         )
 
     seen_correction_ids: dict[str, int] = {}
+    for queue_item_id in duplicate_queue_ids:
+        issues.append(
+            {
+                "event_number": None,
+                "correction_id": None,
+                "queue_item_id": queue_item_id,
+                "field": "queue_item_id",
+                "message": (
+                    "queue file contains a duplicate queue_item_id; correction capture "
+                    "requires unique queue item IDs"
+                ),
+            }
+        )
+
     for event_number, event in enumerate(events, start=1):
         correction_id = event.get("correction_id")
         if not isinstance(correction_id, str) or not correction_id.strip():
@@ -352,6 +368,7 @@ def ledger_validation(queue_path: Path, ledger_path: Path, require_complete: boo
         "queue_items_with_corrections": len(corrected_queue_item_ids),
         "queue_items_missing_corrections": len(missing_queue_item_ids),
         "missing_queue_item_ids": missing_queue_item_ids,
+        "duplicate_queue_item_ids": duplicate_queue_ids,
         "known_action_ids": sorted(known_action_ids),
         "events_checked": len(events),
         "invalid_lines": invalid_lines,
@@ -870,6 +887,13 @@ def format_ledger_validation_text(validation: dict[str, Any]) -> str:
             lines.append(f"Next missing work order: {validation.get('next_missing_command')}")
     else:
         lines.append("Missing queue items: (none)")
+
+    duplicate_queue_ids = validation.get("duplicate_queue_item_ids", [])
+    if isinstance(duplicate_queue_ids, list) and duplicate_queue_ids:
+        lines.append("Duplicate queue item IDs:")
+        lines.extend(f"- {queue_item_id}" for queue_item_id in duplicate_queue_ids)
+    else:
+        lines.append("Duplicate queue item IDs: (none)")
 
     issues = validation.get("issues", [])
     if not isinstance(issues, list) or not issues:
