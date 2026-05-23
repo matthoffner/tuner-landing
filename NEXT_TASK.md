@@ -46,7 +46,7 @@ Updated next best artifacts:
 
 - keep the real MVP cockpit running with `python3 scripts/serve_mvp_cockpit.py --auto-start --port 4174`
 - expose the running cockpit to remote observers with `python3 scripts/bridge_mvp_cockpit.py` and share the read-only URL from `.automoat/state/mvp-bridge-status.json`
-- check correction capture progress with `python3 scripts/record_operator_correction.py --summary`, pick the next uncaptured queue item with `python3 scripts/record_operator_correction.py --next-missing --format text`, use its action catalog when an edited decision needs corrected action IDs, record real accepted/rejected/edited queue decisions plus an operator note when useful, validate the ledger with `python3 scripts/record_operator_correction.py --validate-ledger`, and summarize useful correction patterns back into the Dallas workflow artifact
+- check correction capture progress with `python3 scripts/record_operator_correction.py --summary`, pick the next uncaptured queue item with `python3 scripts/record_operator_correction.py --next-missing --format text`, use its action catalog when an edited decision needs corrected action IDs, dry-run or record the first uncaptured item directly with `python3 scripts/record_operator_correction.py --use-next-missing --decision accepted --dry-run`, validate the ledger with `python3 scripts/record_operator_correction.py --validate-ledger`, and summarize useful correction patterns back into the Dallas workflow artifact
 - decide whether the remaining thin latest-import labels, `incomplete_work` and `complete_remaining_work|schedule_reinspection`, need another repeated sequence before real data import
 
 Latest bounded improvement completed:
@@ -83,6 +83,7 @@ Latest bounded improvement completed:
 - `scripts/record_operator_correction.py --next-missing` now prints the next uncaptured Dallas queue item plus dry-run and append commands for accepted/rejected decisions, edited-action templates, optional `--operator-note` variants, and a current action ID catalog for edited decisions
 - `scripts/record_operator_correction.py --format text` now gives `--summary`, `--list-queue-items`, and `--next-missing` readable operator work orders while keeping JSON as the default for automation
 - `scripts/record_operator_correction.py --validate-ledger` now gives the non-server correction path a deterministic check that captured Dallas correction events still reference current queue items, valid decisions, known action IDs, and expected accepted/rejected/edited action shapes
+- `scripts/record_operator_correction.py --use-next-missing --decision accepted --dry-run` now validates or records the first uncaptured Dallas queue item directly, so an operator does not need to copy the queue item ID before each accepted/rejected/edited capture
 
 ## Constraints
 

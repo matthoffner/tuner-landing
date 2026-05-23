@@ -59,6 +59,11 @@ def parse_args() -> argparse.Namespace:
         help="output format for --summary, --list-queue-items, --next-missing, or --validate-ledger",
     )
     parser.add_argument("--queue-item-id")
+    parser.add_argument(
+        "--use-next-missing",
+        action="store_true",
+        help="with --decision, record against the first queue item missing a correction",
+    )
     parser.add_argument("--decision", choices=("accepted", "rejected", "edited"))
     parser.add_argument(
         "--corrected-actions",
@@ -74,13 +79,18 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--dry-run", action="store_true", help="validate and print the event without appending")
     args = parser.parse_args()
+    read_only_mode = args.list_queue_items or args.next_missing or args.summary or args.validate_ledger
     if args.missing_only and not args.list_queue_items:
         parser.error("--missing-only requires --list-queue-items")
-    if not args.list_queue_items and not args.next_missing and not args.summary and not args.validate_ledger:
-        if not args.queue_item_id:
+    if args.use_next_missing and read_only_mode:
+        parser.error("--use-next-missing records a decision and cannot be combined with read-only modes")
+    if args.use_next_missing and args.queue_item_id:
+        parser.error("--use-next-missing cannot be combined with --queue-item-id")
+    if not read_only_mode:
+        if not args.queue_item_id and not args.use_next_missing:
             parser.error(
-                "--queue-item-id is required unless --list-queue-items, --next-missing, --summary, "
-                "or --validate-ledger is used"
+                "--queue-item-id or --use-next-missing is required unless --list-queue-items, "
+                "--next-missing, --summary, or --validate-ledger is used"
             )
         if not args.decision:
             parser.error(
@@ -346,23 +356,27 @@ def command_path_args(queue_path: Path, ledger_path: Path) -> list[str]:
 
 
 def record_command(
-    queue_item_id: str,
+    queue_item_id: str | None,
     decision: str,
     queue_path: Path,
     ledger_path: Path,
     dry_run: bool = False,
     corrected_actions: str | None = None,
     operator_note: str | None = None,
+    use_next_missing: bool = False,
 ) -> str:
     args = [
         "python3",
         "scripts/record_operator_correction.py",
         *command_path_args(queue_path, ledger_path),
-        "--queue-item-id",
-        queue_item_id,
-        "--decision",
-        decision,
     ]
+    if use_next_missing:
+        args.append("--use-next-missing")
+    else:
+        if not queue_item_id:
+            raise ValueError("queue_item_id is required unless use_next_missing is true")
+        args.extend(["--queue-item-id", queue_item_id])
+    args.extend(["--decision", decision])
     if corrected_actions is not None:
         args.extend(["--corrected-actions", corrected_actions])
     if operator_note is not None:
@@ -376,6 +390,58 @@ def suggested_record_commands(item: dict[str, Any], queue_path: Path, ledger_pat
     queue_item_id = str(item.get("queue_item_id", ""))
     operator_note = "<operator-note>"
     return {
+        "dry_run_next_missing": {
+            "accepted": record_command(None, "accepted", queue_path, ledger_path, dry_run=True, use_next_missing=True),
+            "rejected": record_command(None, "rejected", queue_path, ledger_path, dry_run=True, use_next_missing=True),
+            "edited_template": record_command(
+                None,
+                "edited",
+                queue_path,
+                ledger_path,
+                dry_run=True,
+                corrected_actions="<comma-separated-action-ids>",
+                use_next_missing=True,
+            ),
+        },
+        "append_next_missing": {
+            "accepted": record_command(None, "accepted", queue_path, ledger_path, use_next_missing=True),
+            "rejected": record_command(None, "rejected", queue_path, ledger_path, use_next_missing=True),
+            "edited_template": record_command(
+                None,
+                "edited",
+                queue_path,
+                ledger_path,
+                corrected_actions="<comma-separated-action-ids>",
+                use_next_missing=True,
+            ),
+        },
+        "append_next_missing_with_note": {
+            "accepted": record_command(
+                None,
+                "accepted",
+                queue_path,
+                ledger_path,
+                operator_note=operator_note,
+                use_next_missing=True,
+            ),
+            "rejected": record_command(
+                None,
+                "rejected",
+                queue_path,
+                ledger_path,
+                operator_note=operator_note,
+                use_next_missing=True,
+            ),
+            "edited_template": record_command(
+                None,
+                "edited",
+                queue_path,
+                ledger_path,
+                corrected_actions="<comma-separated-action-ids>",
+                operator_note=operator_note,
+                use_next_missing=True,
+            ),
+        },
         "dry_run": {
             "accepted": record_command(queue_item_id, "accepted", queue_path, ledger_path, dry_run=True),
             "rejected": record_command(queue_item_id, "rejected", queue_path, ledger_path, dry_run=True),
@@ -622,11 +688,17 @@ def format_next_missing_text(next_missing: dict[str, Any]) -> str:
     commands = next_missing.get("suggested_commands", {})
     if not isinstance(commands, dict):
         commands = {}
-    lines.extend(format_command_group(commands.get("dry_run"), "Dry-run commands"))
+    lines.extend(format_command_group(commands.get("dry_run_next_missing"), "Dry-run next-missing shortcut"))
     lines.append("")
-    lines.extend(format_command_group(commands.get("append"), "Append commands"))
+    lines.extend(format_command_group(commands.get("append_next_missing"), "Append next-missing shortcut"))
     lines.append("")
-    lines.extend(format_command_group(commands.get("append_with_note"), "Append commands with note"))
+    lines.extend(format_command_group(commands.get("append_next_missing_with_note"), "Append next-missing shortcut with note"))
+    lines.append("")
+    lines.extend(format_command_group(commands.get("dry_run"), "Dry-run fixed-item commands"))
+    lines.append("")
+    lines.extend(format_command_group(commands.get("append"), "Append fixed-item commands"))
+    lines.append("")
+    lines.extend(format_command_group(commands.get("append_with_note"), "Append fixed-item commands with note"))
     return "\n".join(lines)
 
 
@@ -707,8 +779,16 @@ def main() -> int:
             print(json.dumps(validation, indent=2, sort_keys=True))
         return 0 if validation["status"] == "pass" else 1
 
+    queue_item_id = args.queue_item_id
+    if args.use_next_missing:
+        next_missing = next_missing_correction(args.queue_path, args.ledger_path)
+        item = next_missing.get("item")
+        if not isinstance(item, dict) or not isinstance(item.get("queue_item_id"), str):
+            raise SystemExit("No queue items are missing corrections")
+        queue_item_id = item["queue_item_id"]
+
     payload = {
-        "queue_item_id": args.queue_item_id,
+        "queue_item_id": queue_item_id,
         "decision": args.decision,
         "corrected_actions": args.corrected_actions,
         "operator_note": args.operator_note,

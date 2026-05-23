@@ -4,6 +4,10 @@ Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
 - lane: editor
+- status: made the non-server Dallas correction pass less copy-paste dependent; `scripts/record_operator_correction.py --use-next-missing` now dry-runs or records the first uncaptured queue item directly, and `--next-missing --format text` prints shortcut commands alongside fixed queue-item commands
+- files: scripts/record_operator_correction.py, README.md, NEXT_TASK.md, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- next: run `python3 scripts/record_operator_correction.py --use-next-missing --decision accepted --dry-run`, then append a real accepted/rejected/edited Dallas operator decision when the recommendation has been reviewed and validate with `python3 scripts/record_operator_correction.py --validate-ledger --format text`
+- lane: editor
 - status: added read-only Dallas correction ledger validation; `scripts/record_operator_correction.py --validate-ledger` now checks captured events against the current queue, valid decisions, known action IDs, and accepted/rejected/edited action shapes
 - files: scripts/record_operator_correction.py, README.md, NEXT_TASK.md, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
 - next: after recording real Dallas corrections, run `python3 scripts/record_operator_correction.py --validate-ledger --format text`, then use `python3 scripts/record_operator_correction.py --next-missing --format text` for the next uncaptured decision
