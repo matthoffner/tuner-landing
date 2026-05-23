@@ -28,6 +28,9 @@ COMPLETION_GATE_COMMAND = (
     "python3 scripts/record_operator_correction.py --validate-ledger --require-complete --format text"
 )
 REQUIRE_READY_COMMAND = "python3 scripts/run_dallas_import_pipeline.py --require-ready"
+SUMMARY_ONLY_REQUIRE_READY_COMMAND = (
+    "python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready"
+)
 
 
 def parse_args():
@@ -51,6 +54,15 @@ def parse_args():
         "--require-ready",
         action="store_true",
         help="Exit nonzero if the generated execution_readiness gate is blocked.",
+    )
+    parser.add_argument(
+        "--summary-only",
+        action="store_true",
+        help=(
+            "Skip artifact regeneration and rebuild the durable pipeline summary from "
+            "current generated outputs; still runs the correction gate unless "
+            "--skip-correction-gate is set."
+        ),
     )
     return parser.parse_args()
 
@@ -221,6 +233,7 @@ def build_execution_readiness(contract, workflow, coverage, correction_gate):
         "next_step": next_step,
         "run_command": "python3 scripts/run_dallas_import_pipeline.py",
         "require_ready_command": REQUIRE_READY_COMMAND,
+        "summary_only_require_ready_command": SUMMARY_ONLY_REQUIRE_READY_COMMAND,
     }
 
 
@@ -289,6 +302,7 @@ def build_summary(args):
             "summary_json": command_path(SUMMARY_JSON_PATH),
             "summary_report": command_path(SUMMARY_REPORT_PATH),
             "require_ready_pipeline": REQUIRE_READY_COMMAND,
+            "summary_only_require_ready_pipeline": SUMMARY_ONLY_REQUIRE_READY_COMMAND,
         },
         "latest_import": summarize_contract_dataset(contract, args.dataset_id),
     }
@@ -381,6 +395,10 @@ def write_summary(summary):
         f"- Next step: {execution_readiness['next_step']}",
         f"- Run command: `{execution_readiness['run_command']}`",
         f"- Require-ready command: `{execution_readiness['require_ready_command']}`",
+        (
+            "- Summary-only require-ready command: "
+            f"`{execution_readiness['summary_only_require_ready_command']}`"
+        ),
         "",
         "## Import Artifact Snapshot",
         "",
@@ -499,6 +517,10 @@ def write_summary(summary):
             f"- Pattern review: `{follow_up['patterns_command']}`",
             f"- Completion gate: `{follow_up['completion_gate']}`",
             f"- Require-ready pipeline: `{follow_up['require_ready_pipeline']}`",
+            (
+                "- Summary-only require-ready pipeline: "
+                f"`{follow_up['summary_only_require_ready_pipeline']}`"
+            ),
             "",
             "## Reports",
             "",
@@ -584,11 +606,15 @@ def print_summary(summary):
     print(f"  summary_json: {follow_up['summary_json']}")
     print(f"  summary_report: {follow_up['summary_report']}")
     print(f"  require_ready_pipeline: {follow_up['require_ready_pipeline']}")
+    print(
+        "  summary_only_require_ready_pipeline: "
+        f"{follow_up['summary_only_require_ready_pipeline']}"
+    )
 
 
 def main():
     args = parse_args()
-    steps = [
+    artifact_steps = [
         (
             "Normalize Dallas import CSV rows",
             [
@@ -639,6 +665,7 @@ def main():
             [PYTHON, "scripts/generate_dallas_inspection_workflow.py"],
         ),
     ]
+    steps = [] if args.summary_only else artifact_steps
     if not args.skip_correction_gate:
         steps.append(
             (
@@ -654,6 +681,11 @@ def main():
             )
         )
 
+    if args.summary_only:
+        print(
+            "==> Summary-only mode: using current generated Dallas artifacts",
+            flush=True,
+        )
     for label, command in steps:
         run_step(label, command)
     summary = build_summary(args)

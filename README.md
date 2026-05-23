@@ -34,7 +34,7 @@ Created from Pixelbox.
 - Dallas discovery artifact writer: `python3 scripts/generate_dallas_discovery_artifacts.py`
 - Dallas discovery batch mode: `python3 scripts/generate_dallas_discovery_artifacts.py --batch-input-dir generated/intake --batch-output-dir generated/discovery`
 - Dallas extract importer: `python3 scripts/import_dallas_permit_extracts.py`
-- Dallas latest import pipeline: `python3 scripts/run_dallas_import_pipeline.py` prints the next-gap summary, copyable follow-up commands, generated report paths, and writes `generated/pipeline/dallas-import-pipeline-summary-v1/summary.json` plus `summary.md`; add `--require-ready` when automation should fail if the generated execution-readiness gate is blocked.
+- Dallas latest import pipeline: `python3 scripts/run_dallas_import_pipeline.py` prints the next-gap summary, copyable follow-up commands, generated report paths, and writes `generated/pipeline/dallas-import-pipeline-summary-v1/summary.json` plus `summary.md`; add `--require-ready` when automation should fail if the generated execution-readiness gate is blocked, or use `--summary-only --require-ready` to rebuild the durable summary and strict readiness result from current generated artifacts without rerunning every writer.
 - Dallas edge-case coverage writer: `python3 scripts/generate_dallas_edge_case_coverage.py`
 - Dallas inspection workflow writer: `python3 scripts/generate_dallas_inspection_workflow.py`
 - Dallas operator-correction queue listing: `python3 scripts/record_operator_correction.py --list-queue-items`

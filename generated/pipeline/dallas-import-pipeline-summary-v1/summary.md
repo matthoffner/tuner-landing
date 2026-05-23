@@ -19,6 +19,7 @@
 - Next step: Current Dallas permit-data MVP artifacts are executable; after adding or importing new Dallas rows, rerun the pipeline and inspect `workflow.accepted_patterns` plus `coverage.thin_groups` for new gaps.
 - Run command: `python3 scripts/run_dallas_import_pipeline.py`
 - Require-ready command: `python3 scripts/run_dallas_import_pipeline.py --require-ready`
+- Summary-only require-ready command: `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready`
 
 ## Import Artifact Snapshot
 
@@ -118,6 +119,7 @@ These are the reusable accepted correction patterns currently embedded in the Da
 - Pattern review: `python3 scripts/record_operator_correction.py --list-patterns --format text`
 - Completion gate: `python3 scripts/record_operator_correction.py --validate-ledger --require-complete --format text`
 - Require-ready pipeline: `python3 scripts/run_dallas_import_pipeline.py --require-ready`
+- Summary-only require-ready pipeline: `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready`
 
 ## Reports
 

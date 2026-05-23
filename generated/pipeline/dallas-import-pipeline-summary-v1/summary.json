@@ -20,7 +20,8 @@
     "blockers": [],
     "next_step": "Current Dallas permit-data MVP artifacts are executable; after adding or importing new Dallas rows, rerun the pipeline and inspect `workflow.accepted_patterns` plus `coverage.thin_groups` for new gaps.",
     "run_command": "python3 scripts/run_dallas_import_pipeline.py",
-    "require_ready_command": "python3 scripts/run_dallas_import_pipeline.py --require-ready"
+    "require_ready_command": "python3 scripts/run_dallas_import_pipeline.py --require-ready",
+    "summary_only_require_ready_command": "python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready"
   },
   "contract": {
     "overall_passed": true,
@@ -291,7 +292,8 @@
     "workflow_report": "generated/workflows/dallas-inspection-workflow-v1/action-queue.md",
     "summary_json": "generated/pipeline/dallas-import-pipeline-summary-v1/summary.json",
     "summary_report": "generated/pipeline/dallas-import-pipeline-summary-v1/summary.md",
-    "require_ready_pipeline": "python3 scripts/run_dallas_import_pipeline.py --require-ready"
+    "require_ready_pipeline": "python3 scripts/run_dallas_import_pipeline.py --require-ready",
+    "summary_only_require_ready_pipeline": "python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready"
   },
   "latest_import": {
     "dataset_id": "dallas-electrician-import-sample-v2",

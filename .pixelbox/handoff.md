@@ -4,6 +4,10 @@ Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
 - lane: editor
+- status: added a fast Dallas import readiness path; `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready` skips artifact regeneration, still validates the strict correction completion gate, rebuilds the durable summary from current generated artifacts, and exits nonzero if `execution_readiness.status` is blocked
+- files: scripts/run_dallas_import_pipeline.py, generated/pipeline/dallas-import-pipeline-summary-v1/summary.json, generated/pipeline/dallas-import-pipeline-summary-v1/summary.md, README.md, NEXT_TASK.md, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- next: use `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready` for a fast readiness recheck when generated Dallas artifacts already exist; use `python3 scripts/run_dallas_import_pipeline.py --require-ready` after changing raw rows or artifact writers
+- lane: editor
 - status: added a strict automation mode for Dallas import execution readiness; `python3 scripts/run_dallas_import_pipeline.py --require-ready` still refreshes imported `v2` through the strict correction ledger and durable summary, but now exits nonzero if `execution_readiness.status` is blocked
 - files: scripts/run_dallas_import_pipeline.py, generated/pipeline/dallas-import-pipeline-summary-v1/summary.json, generated/pipeline/dallas-import-pipeline-summary-v1/summary.md, README.md, NEXT_TASK.md, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
 - next: run `python3 scripts/run_dallas_import_pipeline.py --require-ready`, inspect `execution_readiness.blockers` only if the command fails, then widen or import new Dallas rows when the readiness gate stays green

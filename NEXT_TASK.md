@@ -49,6 +49,7 @@ Updated next best artifacts:
 - run `python3 scripts/record_operator_correction.py --smoke-check` for the default JSON contract and `python3 scripts/record_operator_correction.py --smoke-check --format text` for the readable operator contract, then verify the completed correction ledger with `python3 scripts/record_operator_correction.py --summary --format text` and `python3 scripts/record_operator_correction.py --validate-ledger --require-complete --format text` before widening fixture coverage
 - use `python3 scripts/record_operator_correction.py --list-patterns --format text` after capture to inspect reusable accepted operator patterns without opening generated JSON by hand
 - use `python3 scripts/run_dallas_import_pipeline.py --require-ready` to refresh the latest Dallas import sample from CSV through normalized rows, fixture pack, evals, coverage, contract summary, workflow, the strict correction-ledger gate, and a durable generated pipeline summary with embedded execution readiness, coverage counts, and accepted operator-pattern snapshots in one deterministic pass that exits nonzero if readiness is blocked
+- use `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready` when generated Dallas artifacts already exist and automation only needs to rebuild the durable summary plus strict readiness result without rerunning every artifact writer
 - keep `generated/workflows/dallas-inspection-workflow-v1/action-queue.json` `operator_correction_patterns` current as accepted operational patterns widen
 - use the now-repeated latest-import coverage to choose the next real Dallas import-readiness gap instead of adding more hidden fixture rows by default
 
@@ -144,6 +145,7 @@ Latest bounded improvement completed:
 - `scripts/run_dallas_import_pipeline.py` now embeds accepted operator-pattern details in the durable pipeline summary, so the next pass can see reusable action IDs, support counts, failure reasons, follow-up results, example permits, and queue IDs without running a separate pattern review first
 - `scripts/run_dallas_import_pipeline.py` now embeds an `execution_readiness` gate in the durable pipeline summary, combining contract pass state, complete operator corrections, strict correction-gate status, thin coverage groups, and accepted operator-pattern availability into one machine-readable readiness signal for the next Dallas import pass
 - `scripts/run_dallas_import_pipeline.py --require-ready` now refreshes the same Dallas import pipeline and exits nonzero if the generated `execution_readiness` gate is blocked, giving automation a strict command while preserving the default summary-only behavior
+- `scripts/run_dallas_import_pipeline.py --summary-only --require-ready` now skips artifact regeneration, validates the strict correction gate, rebuilds the durable pipeline summary from current generated Dallas artifacts, and exits nonzero if execution readiness is blocked
 
 ## Constraints
 
