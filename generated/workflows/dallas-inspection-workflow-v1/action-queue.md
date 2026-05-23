@@ -4,10 +4,10 @@ This artifact turns reviewed Dallas electrician inspection labels into a concret
 
 ## Summary
 
-- Queue items: `37`
-- Priority counts: `{"high": 6, "medium": 31}`
-- Trigger result counts: `{"fail": 6, "not_ready": 4, "partial": 27}`
-- Operator correction events: `37`
+- Queue items: `38`
+- Priority counts: `{"high": 6, "medium": 32}`
+- Trigger result counts: `{"fail": 6, "not_ready": 4, "partial": 28}`
+- Operator correction events: `38`
 - Operator correction ledger: `generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl`
 - Accepted correction patterns: `6`
 
@@ -15,14 +15,14 @@ This artifact turns reviewed Dallas electrician inspection labels into a concret
 
 ### operator-pattern:accepted:0001
 
-- Queue items: `15`
+- Queue items: `16`
 - Actions: `Complete remaining work, Schedule reinspection`
 - Action IDs: `complete_remaining_work, schedule_reinspection`
-- Trigger results: `{"partial": 15}`
-- Failure reasons: `{"incomplete_work": 15}`
-- Inspection types: `{"rough_in": 15}`
-- Follow-up results: `{"pass": 15}`
-- Example permits: `ELP-2026-0203, ELZ-2026-0215, ELZ-2026-0216, ELZ-2026-0225, ELZ-2026-0226, ELZ-2026-0227, ELZ-2026-0228, ELZ-2026-0231, ELZ-2026-0232, ELZ-2026-0233, ELZ-2026-0234, ELZ-2026-0235, ELZ-2026-0236, ELZ-2026-0237, ELZ-2026-0238`
+- Trigger results: `{"partial": 16}`
+- Failure reasons: `{"incomplete_work": 16}`
+- Inspection types: `{"rough_in": 16}`
+- Follow-up results: `{"pass": 16}`
+- Example permits: `ELP-2026-0203, ELZ-2026-0215, ELZ-2026-0216, ELZ-2026-0225, ELZ-2026-0226, ELZ-2026-0227, ELZ-2026-0228, ELZ-2026-0231, ELZ-2026-0232, ELZ-2026-0233, ELZ-2026-0234, ELZ-2026-0235, ELZ-2026-0236, ELZ-2026-0237, ELZ-2026-0238, ELZ-2026-0239`
 
 ### operator-pattern:accepted:0002
 
@@ -450,3 +450,13 @@ This artifact turns reviewed Dallas electrician inspection labels into a concret
 - Recommended actions: `Complete remaining work, Schedule reinspection`
 - Follow-up observed: `2026-05-23` `correction_followup` -> `pass`
 - Evidence: Dining room branch wiring repaired but replacement chandelier controls and cover trim remained incomplete before rough-in approval.
+
+### ELZ-2026-0239 - 2992 S EWING AVE DALLAS TX 75216
+
+- Priority: `medium`
+- Contractor: `Cedars South Electric`
+- Trigger: `2026-05-22` `rough_in` -> `partial`
+- Failure reason: `incomplete_work`
+- Recommended actions: `Complete remaining work, Schedule reinspection`
+- Follow-up observed: `2026-05-23` `correction_followup` -> `pass`
+- Evidence: Porch branch wiring repaired but replacement exterior coach lights and cover trim remained incomplete before rough-in approval.
