@@ -4,6 +4,10 @@ Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
 - lane: editor
+- status: captured the seventh Dallas operator correction through the non-server CLI; `workflow-item:dallas:next-action:0006` is accepted from fixture follow-up review, `operator-corrections.jsonl` has 7 events, and regenerated workflow artifacts now report 7 captured corrections with 6 remaining
+- files: generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl, generated/workflows/dallas-inspection-workflow-v1/action-queue.json, generated/workflows/dallas-inspection-workflow-v1/action-queue.md, generated/workflows/dallas-inspection-workflow-v1/index.html, README.md, NEXT_TASK.md, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- next: run `python3 scripts/record_operator_correction.py --smoke-check`, then `python3 scripts/record_operator_correction.py --smoke-check --format text`, then use `python3 scripts/record_operator_correction.py --next-missing --format text` to dry-run and append the reviewed decision for `workflow-item:dallas:next-action:0007`
+- lane: editor
 - status: captured the sixth Dallas operator correction through the non-server CLI; `workflow-item:dallas:next-action:0013` is accepted from fixture follow-up review, `operator-corrections.jsonl` has 6 events, and regenerated workflow artifacts now report 6 captured corrections with 7 remaining
 - files: generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl, generated/workflows/dallas-inspection-workflow-v1/action-queue.json, generated/workflows/dallas-inspection-workflow-v1/action-queue.md, generated/workflows/dallas-inspection-workflow-v1/index.html, README.md, NEXT_TASK.md, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
 - next: run `python3 scripts/record_operator_correction.py --smoke-check`, then `python3 scripts/record_operator_correction.py --smoke-check --format text`, then use `python3 scripts/record_operator_correction.py --next-missing --format text` to dry-run and append the reviewed decision for `workflow-item:dallas:next-action:0006`
