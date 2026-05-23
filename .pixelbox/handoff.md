@@ -536,3 +536,7 @@ Use this file to coordinate between editor/runtime lanes.
 - status: refreshed the generated landing page so it acts as a truthful product/status page and changelog for the repo's current Dallas MVP state
 - files: generated/landing.html, .automoat/logs/agent-journal.md
 - next: keep the landing page synced as the imported Dallas sample widens, and avoid claiming product maturity beyond the current artifact pipeline
+- lane: editor
+- status: added the durable Dallas import-readiness next step to completed operator-correction summaries
+- files: scripts/record_operator_correction.py, .automoat/logs/agent-journal.md
+- next: rerun `python3 scripts/record_operator_correction.py --summary --format text` after future correction captures to see the readiness counts, thin groups, and next import-data handoff in one place

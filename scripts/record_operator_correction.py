@@ -376,6 +376,7 @@ def import_readiness_snapshot(path: Path = IMPORT_READINESS_SUMMARY_PATH) -> dic
             "status": "missing",
             "ready_for_next_import_records": None,
             "blockers": [],
+            "next_step": None,
             "dataset_id": None,
             "summary_json_path": summary_path,
             "summary_report_path": report_path,
@@ -395,6 +396,7 @@ def import_readiness_snapshot(path: Path = IMPORT_READINESS_SUMMARY_PATH) -> dic
             "ready_for_next_import_records": None,
             "blockers": ["pipeline_summary_unreadable"],
             "error": str(exc),
+            "next_step": None,
             "dataset_id": None,
             "summary_json_path": summary_path,
             "summary_report_path": report_path,
@@ -413,6 +415,7 @@ def import_readiness_snapshot(path: Path = IMPORT_READINESS_SUMMARY_PATH) -> dic
             "status": "unavailable",
             "ready_for_next_import_records": None,
             "blockers": ["execution_readiness_missing"],
+            "next_step": None,
             "dataset_id": summary.get("dataset_id"),
             "summary_json_path": summary_path,
             "summary_report_path": report_path,
@@ -428,6 +431,7 @@ def import_readiness_snapshot(path: Path = IMPORT_READINESS_SUMMARY_PATH) -> dic
         "status": readiness.get("status"),
         "ready_for_next_import_records": readiness.get("ready_for_next_import_records"),
         "blockers": blockers,
+        "next_step": readiness.get("next_step"),
         "dataset_id": summary.get("dataset_id"),
         "summary_json_path": summary_path,
         "summary_report_path": report_path,
@@ -1116,6 +1120,9 @@ def format_progress_text(progress: dict[str, Any]) -> str:
             blockers = readiness.get("blockers", [])
             if isinstance(blockers, list) and blockers:
                 lines.append(f"Readiness blockers: {format_action_list(blockers)}")
+            next_step = readiness.get("next_step")
+            if isinstance(next_step, str) and next_step.strip():
+                lines.append(f"Last import readiness next step: {next_step}")
     lines.append(f"Validate ledger: {progress.get('validation_command')}")
     lines.append(f"Completion gate: {progress.get('completion_validation_command')}")
     return "\n".join(lines)
@@ -1758,6 +1765,8 @@ def operator_correction_smoke_check(
                     for values in coverage_thin_groups.values()
                 )
                 and isinstance(readiness_snapshot.get("accepted_pattern_count"), int)
+                and isinstance(readiness_snapshot.get("next_step"), str)
+                and bool(readiness_snapshot.get("next_step", "").strip())
             )
     readiness_snapshot_passed = (
         isinstance(readiness_snapshot, dict)
@@ -1773,7 +1782,7 @@ def operator_correction_smoke_check(
         "progress_import_readiness_snapshot",
         readiness_snapshot_passed,
         (
-            "summary includes the last durable import-readiness snapshot, import counts, and thin coverage groups after complete correction capture"
+            "summary includes the last durable import-readiness snapshot, import counts, thin coverage groups, and next step after complete correction capture"
             if missing_count == 0
             else "summary with missing corrections does not expose the last import-readiness snapshot"
         ),
