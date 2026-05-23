@@ -5,15 +5,15 @@
   "source_eval_dir": "generated/evals/dallas-electrician-import-sample-v2",
   "workflow_type": "reviewed-inspection-action-queue",
   "summary": {
-    "queue_items": 67,
+    "queue_items": 68,
     "priority_counts": {
       "high": 6,
-      "medium": 61
+      "medium": 62
     },
     "trigger_result_counts": {
       "fail": 6,
       "not_ready": 4,
-      "partial": 57
+      "partial": 58
     },
     "recommended_action_counts": {
       "add_labels_or_documentation": 6,
@@ -21,17 +21,17 @@
       "correct_grounding_or_bonding": 4,
       "correct_panel_or_service": 2,
       "correct_wiring_or_devices": 12,
-      "ensure_site_access": 6,
-      "schedule_reinspection": 65
+      "ensure_site_access": 7,
+      "schedule_reinspection": 66
     }
   },
   "operator_correction_summary": {
     "ledger_path": "generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl",
-    "total_events": 67,
-    "queue_items_with_corrections": 67,
+    "total_events": 68,
+    "queue_items_with_corrections": 68,
     "decision_counts": {
       "accepted": 65,
-      "edited": 2
+      "edited": 3
     },
     "invalid_lines": 0,
     "latest_by_queue_item": {
@@ -637,6 +637,15 @@
         "correction_id": "operator-correction:20260523T224616000000Z:0067",
         "captured_at": "2026-05-23T22:46:16Z",
         "decision": "accepted",
+        "corrected_actions": [
+          "complete_remaining_work",
+          "schedule_reinspection"
+        ]
+      },
+      "workflow-item:dallas:next-action:0068": {
+        "correction_id": "operator-correction:20260523T225518000000Z:0068",
+        "captured_at": "2026-05-23T22:55:18Z",
+        "decision": "edited",
         "corrected_actions": [
           "complete_remaining_work",
           "schedule_reinspection"
@@ -3868,6 +3877,49 @@
       "evidence": [
         "Foyer closet branch wiring repaired but replacement cove lighting and cover trim remained incomplete before rough-in approval.",
         "2026-05-23 correction_followup -> pass: Replacement cove lighting installed and cover trim completed for approval."
+      ]
+    },
+    {
+      "queue_item_id": "workflow-item:dallas:next-action:0068",
+      "permit_id": "permit:dallas:elz-2026-0269",
+      "source_permit_number": "ELZ-2026-0269",
+      "permit_status": "finaled",
+      "permit_type_normalized": "electrical_repair",
+      "property": {
+        "property_id": "property:3352-s-ewing-ave-dallas-tx-75216",
+        "normalized_address": "3352 S EWING AVE DALLAS TX 75216",
+        "zip_code": "75216"
+      },
+      "contractor": {
+        "contractor_id": "contractor:dallas:cedars-south-electric",
+        "name": "Cedars South Electric"
+      },
+      "trigger_inspection": {
+        "inspection_id": "inspection:dallas:elz-2026-0269:2026-05-22:rough_in",
+        "inspection_date": "2026-05-22",
+        "inspection_type_normalized": "rough_in",
+        "result_normalized": "partial",
+        "failure_reason_normalized": "access_or_scheduling_issue",
+        "notes_raw": "Entry closet branch wiring repaired but replacement valance lighting and cover trim remained incomplete before rough-in approval."
+      },
+      "recommended_actions": [
+        "ensure_site_access",
+        "schedule_reinspection"
+      ],
+      "recommended_action_labels": [
+        "Ensure site access",
+        "Schedule reinspection"
+      ],
+      "priority": "medium",
+      "expected_followup": {
+        "inspection_date": "2026-05-23",
+        "inspection_type_normalized": "correction_followup",
+        "result_normalized": "pass",
+        "notes_raw": "Replacement valance lighting installed and cover trim completed for approval."
+      },
+      "evidence": [
+        "Entry closet branch wiring repaired but replacement valance lighting and cover trim remained incomplete before rough-in approval.",
+        "2026-05-23 correction_followup -> pass: Replacement valance lighting installed and cover trim completed for approval."
       ]
     }
   ]

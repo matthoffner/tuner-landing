@@ -4,10 +4,10 @@ This artifact turns reviewed Dallas electrician inspection labels into a concret
 
 ## Summary
 
-- Queue items: `67`
-- Priority counts: `{"high": 6, "medium": 61}`
-- Trigger result counts: `{"fail": 6, "not_ready": 4, "partial": 57}`
-- Operator correction events: `67`
+- Queue items: `68`
+- Priority counts: `{"high": 6, "medium": 62}`
+- Trigger result counts: `{"fail": 6, "not_ready": 4, "partial": 58}`
+- Operator correction events: `68`
 - Operator correction ledger: `generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl`
 - Accepted correction patterns: `6`
 
@@ -750,3 +750,13 @@ This artifact turns reviewed Dallas electrician inspection labels into a concret
 - Recommended actions: `Complete remaining work, Schedule reinspection`
 - Follow-up observed: `2026-05-23` `correction_followup` -> `pass`
 - Evidence: Foyer closet branch wiring repaired but replacement cove lighting and cover trim remained incomplete before rough-in approval.
+
+### ELZ-2026-0269 - 3352 S EWING AVE DALLAS TX 75216
+
+- Priority: `medium`
+- Contractor: `Cedars South Electric`
+- Trigger: `2026-05-22` `rough_in` -> `partial`
+- Failure reason: `access_or_scheduling_issue`
+- Recommended actions: `Ensure site access, Schedule reinspection`
+- Follow-up observed: `2026-05-23` `correction_followup` -> `pass`
+- Evidence: Entry closet branch wiring repaired but replacement valance lighting and cover trim remained incomplete before rough-in approval.

@@ -106,15 +106,15 @@ This artifact makes edge-case support explicit across the Dallas electrician sca
 | cancelled | 2 | 2 | true |
 | fail | 6 | 6 | true |
 | not_ready | 4 | 4 | true |
-| partial | 57 | 57 | true |
-| pass | 75 | 67 | true |
+| partial | 58 | 58 | true |
+| pass | 76 | 68 | true |
 | unknown | 2 | 2 | true |
 
 ### Failure Reasons
 
 | reason | rows | permits | repeated |
 | --- | --- | --- | --- |
-| access_or_scheduling_issue | 6 | 6 | true |
+| access_or_scheduling_issue | 7 | 7 | true |
 | grounding_or_bonding_issue | 4 | 2 | true |
 | incomplete_work | 43 | 43 | true |
 | panel_or_service_issue | 2 | 2 | true |
@@ -127,7 +127,7 @@ This artifact makes edge-case support explicit across the Dallas electrician sca
 | slice:dallas:new:correction-followup:75214 | 2 | 2 | true |
 | slice:dallas:new:rough-in:75214 | 2 | 2 | true |
 | slice:dallas:remodel:final:75208 | 2 | 2 | true |
-| slice:dallas:repair:rough-in:75216 | 55 | 55 | true |
+| slice:dallas:repair:rough-in:75216 | 56 | 56 | true |
 | slice:dallas:service-upgrade:service-release:75228 | 2 | 2 | true |
 
 ### Next-Action Groups
@@ -139,4 +139,4 @@ This artifact makes edge-case support explicit across the Dallas electrician sca
 | correct_grounding_or_bonding\|add_labels_or_documentation\|schedule_reinspection | 2 | 2 | true |
 | correct_panel_or_service\|add_labels_or_documentation\|schedule_reinspection | 2 | 2 | true |
 | correct_wiring_or_devices\|schedule_reinspection | 12 | 12 | true |
-| ensure_site_access\|schedule_reinspection | 6 | 6 | true |
+| ensure_site_access\|schedule_reinspection | 7 | 7 | true |
