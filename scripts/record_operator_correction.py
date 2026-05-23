@@ -56,7 +56,10 @@ def parse_args() -> argparse.Namespace:
         "--format",
         choices=("json", "text"),
         default="json",
-        help="output format for --summary, --list-queue-items, --next-missing, or --validate-ledger",
+        help=(
+            "output format for read-only modes and correction dry-runs/appends; "
+            "JSON remains the default automation contract"
+        ),
     )
     parser.add_argument("--queue-item-id")
     parser.add_argument(
@@ -691,6 +694,27 @@ def format_ledger_validation_text(validation: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def format_correction_event_text(event: dict[str, Any], ledger_path: Path, dry_run: bool) -> str:
+    title = "Dallas operator correction dry run" if dry_run else "Dallas operator correction recorded"
+    ledger_line = "Ledger: not written (--dry-run)" if dry_run else f"Ledger: {display_path(ledger_path)}"
+    note = str(event.get("operator_note") or "").strip()
+    lines = [
+        title,
+        f"Correction: {event.get('correction_id')}",
+        f"Captured at: {event.get('captured_at')}",
+        f"Queue item: {event.get('queue_item_id')}",
+        f"Permit: {event.get('source_permit_number')}",
+        f"Inspection: {event.get('inspection_id')}",
+        f"Decision: {event.get('decision')}",
+        f"Reference actions: {format_action_list(event.get('reference_actions'))}",
+        f"Corrected actions: {format_action_list(event.get('corrected_actions'))}",
+        f"Operator note: {note if note else '(none)'}",
+        f"Source: {event.get('source')}",
+        ledger_line,
+    ]
+    return "\n".join(lines)
+
+
 def next_missing_correction(queue_path: Path, ledger_path: Path) -> dict[str, Any]:
     listing = queue_listing(queue_path, ledger_path, missing_only=True)
     items = listing["items"]
@@ -770,7 +794,10 @@ def main() -> int:
             event = append_operator_correction(payload, args.queue_path, args.ledger_path, args.captured_at)
     except ValueError as exc:
         raise SystemExit(f"error: {exc}") from exc
-    print(json.dumps(event, indent=2, sort_keys=True))
+    if args.format == "text":
+        print(format_correction_event_text(event, args.ledger_path, args.dry_run))
+    else:
+        print(json.dumps(event, indent=2, sort_keys=True))
     return 0
 
 

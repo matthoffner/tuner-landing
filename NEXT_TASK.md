@@ -86,6 +86,7 @@ Latest bounded improvement completed:
 - `scripts/record_operator_correction.py --use-next-missing --decision accepted --dry-run` now validates or records the first uncaptured Dallas queue item directly, so an operator does not need to copy the queue item ID before each accepted/rejected/edited capture
 - `scripts/operator_corrections.py` now rejects edited corrections that contain unknown action IDs before dry-run or append, keeping typos out of the Dallas correction ledger instead of only catching them in later validation
 - `scripts/record_operator_correction.py --require-missing` now refuses stale fixed-item capture commands when a queue item already has a captured correction, and `--next-missing --format text` includes that guard in its suggested commands
+- `scripts/record_operator_correction.py --format text` now also applies to correction dry-runs and appends, giving operators a readable event confirmation while keeping JSON as the default automation output
 
 ## Constraints
 
