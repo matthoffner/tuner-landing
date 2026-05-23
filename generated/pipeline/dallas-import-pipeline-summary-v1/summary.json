@@ -123,6 +123,52 @@
         "text_content"
       ]
     },
+    "raw_file_append_templates": {
+      "permits.csv": {
+        "permit_number": "<required>",
+        "address": "<required>",
+        "city": "<required>",
+        "state": "",
+        "zip_code": "",
+        "trade": "<required>",
+        "work_class": "<required>",
+        "property_type": "",
+        "permit_type": "",
+        "status": "",
+        "file_date": "",
+        "issue_date": "",
+        "final_date": "",
+        "declared_valuation": "",
+        "work_description": "",
+        "contractor_name": "",
+        "source_url": ""
+      },
+      "inspections.csv": {
+        "permit_number": "<required>",
+        "inspection_date": "<required>",
+        "inspection_type": "<required>",
+        "result": "<required>",
+        "notes": "",
+        "inspector_name": "",
+        "reinspection_flag": "",
+        "source_url": ""
+      },
+      "contractors.csv": {
+        "registration_id": "<required>",
+        "name": "<required>",
+        "license_type": "<required>",
+        "registration_status": "",
+        "city": "",
+        "state": ""
+      },
+      "rule_documents.csv": {
+        "title": "<required>",
+        "document_type": "",
+        "effective_date": "",
+        "source_url": "",
+        "text_content": ""
+      }
+    },
     "after_edit_command": "python3 scripts/run_dallas_import_pipeline.py --require-ready",
     "readiness_check_command": "python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json"
   },

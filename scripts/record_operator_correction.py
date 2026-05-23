@@ -413,6 +413,24 @@ def raw_import_file_optional_fields(
     return optional_fields
 
 
+def raw_import_file_append_templates(
+    headers_by_file: dict[str, list[str] | None],
+    required_fields_by_file: dict[str, list[str]],
+) -> dict[str, dict[str, str] | None]:
+    append_templates: dict[str, dict[str, str] | None] = {}
+    for file_name in RAW_IMPORT_FILE_NAMES:
+        headers = headers_by_file.get(file_name)
+        required_fields = set(required_fields_by_file.get(file_name, []))
+        if not isinstance(headers, list):
+            append_templates[file_name] = None
+            continue
+        append_templates[file_name] = {
+            header: "<required>" if header in required_fields else ""
+            for header in headers
+        }
+    return append_templates
+
+
 def raw_import_file_row_counts_are_valid(value: Any) -> bool:
     return (
         isinstance(value, dict)
@@ -467,6 +485,30 @@ def raw_import_file_optional_fields_are_valid(
         and all(
             isinstance(value.get(file_name), list)
             and value[file_name] == expected_fields[file_name]
+            for file_name in RAW_IMPORT_FILE_NAMES
+        )
+    )
+
+
+def raw_import_file_append_templates_are_valid(
+    value: Any,
+    headers_by_file: Any,
+    required_fields_by_file: Any,
+) -> bool:
+    if not isinstance(headers_by_file, dict) or not isinstance(
+        required_fields_by_file,
+        dict,
+    ):
+        return False
+    expected_templates = raw_import_file_append_templates(
+        headers_by_file,
+        required_fields_by_file,
+    )
+    return (
+        isinstance(value, dict)
+        and all(
+            isinstance(value.get(file_name), dict)
+            and value[file_name] == expected_templates[file_name]
             for file_name in RAW_IMPORT_FILE_NAMES
         )
     )
@@ -558,6 +600,16 @@ def next_import_record_handoff(summary: dict[str, Any] | None = None) -> dict[st
             raw_headers,
             raw_required_fields,
         )
+    raw_append_templates = summary_handoff.get("raw_file_append_templates")
+    if not raw_import_file_append_templates_are_valid(
+        raw_append_templates,
+        raw_headers,
+        raw_required_fields,
+    ):
+        raw_append_templates = raw_import_file_append_templates(
+            raw_headers,
+            raw_required_fields,
+        )
     return {
         "raw_dir": raw_dir,
         "raw_files": [f"{raw_dir}/{file_name}" for file_name in RAW_IMPORT_FILE_NAMES],
@@ -565,6 +617,7 @@ def next_import_record_handoff(summary: dict[str, Any] | None = None) -> dict[st
         "raw_file_headers": raw_headers,
         "raw_file_required_fields": raw_required_fields,
         "raw_file_optional_fields": raw_optional_fields,
+        "raw_file_append_templates": raw_append_templates,
         "after_edit_command": IMPORT_REFRESH_COMMAND,
         "readiness_check_command": IMPORT_READINESS_JSON_COMMAND,
     }
@@ -586,6 +639,11 @@ def next_import_record_handoff_is_valid(handoff: Any) -> bool:
         and raw_import_file_required_fields_are_valid(handoff.get("raw_file_required_fields"))
         and raw_import_file_optional_fields_are_valid(
             handoff.get("raw_file_optional_fields"),
+            handoff.get("raw_file_headers"),
+            handoff.get("raw_file_required_fields"),
+        )
+        and raw_import_file_append_templates_are_valid(
+            handoff.get("raw_file_append_templates"),
             handoff.get("raw_file_headers"),
             handoff.get("raw_file_required_fields"),
         )
@@ -1262,6 +1320,22 @@ def format_raw_import_optional_fields(handoff: Any) -> str:
     return "; ".join(labels) if labels else "(none)"
 
 
+def format_raw_import_append_templates(handoff: Any) -> str:
+    if not isinstance(handoff, dict):
+        return "(none)"
+    templates_by_file = handoff.get("raw_file_append_templates")
+    if not isinstance(templates_by_file, dict):
+        return "(none)"
+    labels = []
+    for file_name in RAW_IMPORT_FILE_NAMES:
+        template = templates_by_file.get(file_name)
+        if isinstance(template, dict):
+            labels.append(f"{file_name}={json.dumps(template, sort_keys=False)}")
+        else:
+            labels.append(f"{file_name}=missing")
+    return "; ".join(labels) if labels else "(none)"
+
+
 def format_decision_counts(counts: Any) -> str:
     if not isinstance(counts, dict) or not counts:
         return "(none)"
@@ -1453,6 +1527,10 @@ def format_progress_text(progress: dict[str, Any]) -> str:
                 lines.append(
                     "Next import raw optional fields: "
                     f"{format_raw_import_optional_fields(next_import_handoff)}"
+                )
+                lines.append(
+                    "Next import raw append templates: "
+                    f"{format_raw_import_append_templates(next_import_handoff)}"
                 )
                 after_edit_command = next_import_handoff.get("after_edit_command")
                 if isinstance(after_edit_command, str) and after_edit_command.strip():
@@ -2119,7 +2197,7 @@ def operator_correction_smoke_check(
         "progress_import_readiness_snapshot",
         readiness_snapshot_passed,
         (
-            "summary includes the last durable import-readiness snapshot, import counts, thin coverage groups, next step, and raw CSV handoff with row counts, headers, required fields, and optional fields after complete correction capture"
+            "summary includes the last durable import-readiness snapshot, import counts, thin coverage groups, next step, and raw CSV handoff with row counts, headers, required fields, optional fields, and append templates after complete correction capture"
             if missing_count == 0
             else "summary with missing corrections does not expose the last import-readiness snapshot"
         ),
@@ -2655,6 +2733,10 @@ def format_smoke_check_text(smoke_check: dict[str, Any]) -> str:
         lines.append(
             "Next import raw optional fields: "
             f"{format_raw_import_optional_fields(readiness.get('next_import_record_handoff'))}"
+        )
+        lines.append(
+            "Next import raw append templates: "
+            f"{format_raw_import_append_templates(readiness.get('next_import_record_handoff'))}"
         )
     lines.append(f"Validate ledger: {smoke_check.get('validation_command')}")
     lines.append(f"Completion gate: {smoke_check.get('completion_validation_command')}")

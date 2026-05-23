@@ -143,6 +143,11 @@ These are the reusable accepted correction patterns currently embedded in the Da
 - `inspections.csv` optional: `notes`, `inspector_name`, `reinspection_flag`, `source_url`
 - `contractors.csv` optional: `registration_status`, `city`, `state`
 - `rule_documents.csv` optional: `document_type`, `effective_date`, `source_url`, `text_content`
+- Raw CSV append templates:
+- `permits.csv` append template: `{"permit_number": "<required>", "address": "<required>", "city": "<required>", "state": "", "zip_code": "", "trade": "<required>", "work_class": "<required>", "property_type": "", "permit_type": "", "status": "", "file_date": "", "issue_date": "", "final_date": "", "declared_valuation": "", "work_description": "", "contractor_name": "", "source_url": ""}`
+- `inspections.csv` append template: `{"permit_number": "<required>", "inspection_date": "<required>", "inspection_type": "<required>", "result": "<required>", "notes": "", "inspector_name": "", "reinspection_flag": "", "source_url": ""}`
+- `contractors.csv` append template: `{"registration_id": "<required>", "name": "<required>", "license_type": "<required>", "registration_status": "", "city": "", "state": ""}`
+- `rule_documents.csv` append template: `{"title": "<required>", "document_type": "", "effective_date": "", "source_url": "", "text_content": ""}`
 - Require-ready pipeline: `python3 scripts/run_dallas_import_pipeline.py --require-ready`
 - Summary-only require-ready pipeline: `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready`
 - Summary-only require-ready JSON pipeline: `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json`

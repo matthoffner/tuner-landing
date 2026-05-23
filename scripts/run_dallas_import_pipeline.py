@@ -184,6 +184,21 @@ def raw_file_optional_fields(headers_by_file, required_fields_by_file):
     return optional_fields
 
 
+def raw_file_append_templates(headers_by_file, required_fields_by_file):
+    append_templates = {}
+    for file_name in RAW_IMPORT_FILE_NAMES:
+        headers = headers_by_file.get(file_name)
+        required_fields = set(required_fields_by_file.get(file_name, []))
+        if not isinstance(headers, list):
+            append_templates[file_name] = None
+            continue
+        append_templates[file_name] = {
+            header: "<required>" if header in required_fields else ""
+            for header in headers
+        }
+    return append_templates
+
+
 def next_import_record_handoff(raw_dir):
     display_raw_dir = command_path(raw_dir).rstrip("/")
     raw_headers = raw_file_headers(raw_dir)
@@ -197,6 +212,10 @@ def next_import_record_handoff(raw_dir):
         "raw_file_headers": raw_headers,
         "raw_file_required_fields": raw_required_fields,
         "raw_file_optional_fields": raw_file_optional_fields(
+            raw_headers,
+            raw_required_fields,
+        ),
+        "raw_file_append_templates": raw_file_append_templates(
             raw_headers,
             raw_required_fields,
         ),
@@ -470,6 +489,7 @@ def write_summary(summary):
     raw_headers = next_import_handoff.get("raw_file_headers", {})
     raw_required_fields = next_import_handoff.get("raw_file_required_fields", {})
     raw_optional_fields = next_import_handoff.get("raw_file_optional_fields", {})
+    raw_append_templates = next_import_handoff.get("raw_file_append_templates", {})
 
     def inline_list(values):
         return ", ".join(f"`{value}`" for value in values) if values else "none"
@@ -537,6 +557,21 @@ def write_summary(summary):
                 labels.append(f"- `{file_name}` optional: none")
             else:
                 labels.append(f"- `{file_name}` optional: missing")
+        return labels
+
+    def inline_append_templates(values):
+        if not isinstance(values, dict) or not values:
+            return ["- Raw CSV append templates: none"]
+        labels = []
+        for file_name in RAW_IMPORT_FILE_NAMES:
+            template = values.get(file_name)
+            if isinstance(template, dict):
+                labels.append(
+                    f"- `{file_name}` append template: "
+                    f"`{json.dumps(template, sort_keys=False)}`"
+                )
+            else:
+                labels.append(f"- `{file_name}` append template: missing")
         return labels
 
     lines = [
@@ -744,6 +779,8 @@ def write_summary(summary):
             *inline_required_fields(raw_required_fields),
             "- Raw CSV optional fields:",
             *inline_optional_fields(raw_optional_fields),
+            "- Raw CSV append templates:",
+            *inline_append_templates(raw_append_templates),
             f"- Require-ready pipeline: `{follow_up['require_ready_pipeline']}`",
             (
                 "- Summary-only require-ready pipeline: "
@@ -787,6 +824,7 @@ def print_summary(summary, output_format="text"):
     raw_headers = next_import_handoff.get("raw_file_headers", {})
     raw_required_fields = next_import_handoff.get("raw_file_required_fields", {})
     raw_optional_fields = next_import_handoff.get("raw_file_optional_fields", {})
+    raw_append_templates = next_import_handoff.get("raw_file_append_templates", {})
 
     def format_row_counts(values):
         if not isinstance(values, dict) or not values:
@@ -835,6 +873,20 @@ def print_summary(summary, output_format="text"):
                 labels.append(f"{file_name}={'|'.join(fields)}")
             elif isinstance(fields, list):
                 labels.append(f"{file_name}=none")
+            else:
+                labels.append(f"{file_name}=missing")
+        return "; ".join(labels)
+
+    def format_append_templates(values):
+        if not isinstance(values, dict) or not values:
+            return "none"
+        labels = []
+        for file_name in RAW_IMPORT_FILE_NAMES:
+            template = values.get(file_name)
+            if isinstance(template, dict):
+                labels.append(
+                    f"{file_name}={json.dumps(template, sort_keys=False)}"
+                )
             else:
                 labels.append(f"{file_name}=missing")
         return "; ".join(labels)
@@ -898,6 +950,7 @@ def print_summary(summary, output_format="text"):
     print(f"  raw_import_headers: {format_headers(raw_headers)}")
     print(f"  raw_import_required_fields: {format_required_fields(raw_required_fields)}")
     print(f"  raw_import_optional_fields: {format_optional_fields(raw_optional_fields)}")
+    print(f"  raw_import_append_templates: {format_append_templates(raw_append_templates)}")
     print(f"  after_raw_csv_edits: {next_import_handoff['after_edit_command']}")
     print(
         "  raw_csv_readiness_check: "
