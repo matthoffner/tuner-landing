@@ -26,6 +26,11 @@ from operator_corrections import (
 )
 
 
+IMPORT_READINESS_COMMAND = (
+    "python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready"
+)
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--queue-path", type=Path, default=DEFAULT_QUEUE_PATH)
@@ -204,6 +209,13 @@ def correction_progress(
             output_format=output_format,
             require_complete=True,
         ),
+        "patterns_command": read_only_command(
+            "--list-patterns",
+            queue_path,
+            ledger_path,
+            output_format=output_format,
+        ),
+        "import_readiness_command": IMPORT_READINESS_COMMAND if not missing_ids else None,
     }
 
 
@@ -896,6 +908,9 @@ def format_progress_text(progress: dict[str, Any]) -> str:
             lines.append(f"Next missing work order: {progress.get('next_missing_command')}")
     else:
         lines.append("Missing queue items: (none)")
+        lines.append(f"Pattern review: {progress.get('patterns_command')}")
+        if progress.get("import_readiness_command"):
+            lines.append(f"Import readiness gate: {progress.get('import_readiness_command')}")
     lines.append(f"Validate ledger: {progress.get('validation_command')}")
     lines.append(f"Completion gate: {progress.get('completion_validation_command')}")
     return "\n".join(lines)
@@ -1475,6 +1490,7 @@ def operator_correction_smoke_check(
         "next_missing_command": progress.get("next_missing_command"),
         "validation_command": progress.get("validation_command"),
         "completion_validation_command": progress.get("completion_validation_command"),
+        "patterns_command": progress.get("patterns_command"),
     }
     progress_command_failures = [
         name
@@ -1492,6 +1508,20 @@ def operator_correction_smoke_check(
                 "summary/progress commands changed output mode: "
                 f"{', '.join(progress_command_failures)}"
             )
+        ),
+    )
+    add_smoke_check(
+        checks,
+        "progress_import_readiness_command",
+        (
+            progress.get("import_readiness_command") == IMPORT_READINESS_COMMAND
+            if missing_count == 0
+            else progress.get("import_readiness_command") is None
+        ),
+        (
+            "summary points to the import-readiness gate after complete correction capture"
+            if missing_count == 0
+            else "summary with missing corrections does not advertise the import-readiness gate"
         ),
     )
 
@@ -1910,6 +1940,8 @@ def operator_correction_smoke_check(
         "next_missing_command": progress.get("next_missing_command"),
         "validation_command": progress.get("validation_command"),
         "completion_validation_command": progress.get("completion_validation_command"),
+        "patterns_command": progress.get("patterns_command"),
+        "import_readiness_command": progress.get("import_readiness_command"),
     }
     if temp_smoke_dir is not None:
         temp_smoke_dir.cleanup()
@@ -1963,6 +1995,10 @@ def format_smoke_check_text(smoke_check: dict[str, Any]) -> str:
 
     if smoke_check.get("next_missing_command"):
         lines.append(f"Next missing work order: {smoke_check.get('next_missing_command')}")
+    if smoke_check.get("patterns_command"):
+        lines.append(f"Pattern review: {smoke_check.get('patterns_command')}")
+    if smoke_check.get("import_readiness_command"):
+        lines.append(f"Import readiness gate: {smoke_check.get('import_readiness_command')}")
     lines.append(f"Validate ledger: {smoke_check.get('validation_command')}")
     lines.append(f"Completion gate: {smoke_check.get('completion_validation_command')}")
     return "\n".join(lines)

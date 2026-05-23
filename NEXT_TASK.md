@@ -152,6 +152,7 @@ Latest bounded improvement completed:
 - `scripts/run_mvp_loop.py` and `scripts/run_autonomous_agent_loop.py` now include the durable Dallas import pipeline summary under `artifacts.import_pipeline` in `.automoat/state/mvp-loop-status.json`, including execution-readiness status, blockers, gates, latest import counts, coverage thin groups, accepted pattern counts, and the JSON readiness command
 - `generated/landing.html` and `index.html` now render `artifacts.import_pipeline.execution_readiness.status` in both live cockpit panels, so the Dallas import-readiness gate is visible next to loop state, contract checks, and queue items
 - `scripts/run_mvp_loop.py` now refreshes the summary-only Dallas import readiness gate before writing cockpit status, and `scripts/run_autonomous_agent_loop.py` now runs the same gate after a bounded Codex edit before diff/publish checks, so `.automoat/state/mvp-loop-status.json` reads a current permit-data readiness summary instead of a stale generated file
+- `scripts/record_operator_correction.py --summary --format text` now points a completed Dallas correction pass directly to accepted-pattern review and the summary-only import-readiness gate, so an operator can move from `14/14` captured corrections to permit-data readiness verification without hunting through pipeline docs
 
 ## Constraints
 
