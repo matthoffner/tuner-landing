@@ -1204,6 +1204,11 @@ def raw_handoff_verification(raw_dir, summary_path=SUMMARY_JSON_PATH):
     current_row_counts = raw_file_row_counts(raw_dir)
     current_fingerprints = raw_file_fingerprints(raw_dir)
     current_headers = raw_file_headers(raw_dir)
+    current_next_append_rows = raw_file_next_append_rows(current_row_counts)
+    current_append_csv_templates = raw_file_append_csv_templates(
+        current_headers,
+        raw_file_required_fields(),
+    )
     checks = {
         "summary_available": False,
         "next_import_record_handoff_available": False,
@@ -1211,6 +1216,8 @@ def raw_handoff_verification(raw_dir, summary_path=SUMMARY_JSON_PATH):
         "raw_file_row_counts_match": False,
         "raw_file_headers_match": False,
         "raw_file_fingerprints_match": False,
+        "raw_file_next_append_rows_match": False,
+        "raw_file_append_csv_templates_match": False,
         "append_preflight_passed": False,
     }
     mismatches = []
@@ -1253,7 +1260,10 @@ def raw_handoff_verification(raw_dir, summary_path=SUMMARY_JSON_PATH):
         "current_raw_file_row_counts": current_row_counts,
         "current_raw_file_headers": current_headers,
         "current_raw_file_fingerprints": current_fingerprints,
+        "computed_raw_file_next_append_rows": current_next_append_rows,
+        "computed_raw_file_append_csv_templates": current_append_csv_templates,
         "expected_raw_file_next_append_rows": {},
+        "expected_raw_file_append_csv_templates": {},
         "after_edit_command": REQUIRE_READY_COMMAND,
         "next_step": (
             "Resolve raw handoff verification blockers or regenerate the summary-only "
@@ -1318,6 +1328,18 @@ def raw_handoff_verification(raw_dir, summary_path=SUMMARY_JSON_PATH):
         handoff.get("raw_file_fingerprints"),
         current_fingerprints,
     )
+    checks["raw_file_next_append_rows_match"] = compare_by_file(
+        "raw_file_next_append_rows_match",
+        "next append row",
+        handoff.get("raw_file_next_append_rows"),
+        current_next_append_rows,
+    )
+    checks["raw_file_append_csv_templates_match"] = compare_by_file(
+        "raw_file_append_csv_templates_match",
+        "append CSV template",
+        handoff.get("raw_file_append_csv_templates"),
+        current_append_csv_templates,
+    )
 
     append_preflight = handoff.get("raw_file_append_preflight")
     if (
@@ -1335,6 +1357,10 @@ def raw_handoff_verification(raw_dir, summary_path=SUMMARY_JSON_PATH):
 
     verification["expected_raw_file_next_append_rows"] = handoff.get(
         "raw_file_next_append_rows",
+        {},
+    )
+    verification["expected_raw_file_append_csv_templates"] = handoff.get(
+        "raw_file_append_csv_templates",
         {},
     )
     verification["after_edit_command"] = handoff.get(
@@ -2810,6 +2836,10 @@ def print_raw_handoff_verification(verification, output_format="text"):
     print(
         "expected_next_append_rows: "
         f"{json.dumps(verification.get('expected_raw_file_next_append_rows', {}), sort_keys=True)}"
+    )
+    print(
+        "expected_append_csv_templates: "
+        f"{json.dumps(verification.get('expected_raw_file_append_csv_templates', {}), sort_keys=True)}"
     )
     print(f"after_raw_csv_edits: {verification.get('after_edit_command')}")
     print(f"next_step: {verification.get('next_step')}")
