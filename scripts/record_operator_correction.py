@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import shlex
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -141,6 +142,14 @@ def queue_item_has_correction(ledger_path: Path, queue_item_id: str) -> bool:
     summary = correction_summary(ledger_path)
     latest_by_queue_item = summary.get("latest_by_queue_item", {})
     return isinstance(latest_by_queue_item, dict) and queue_item_id in latest_by_queue_item
+
+
+def require_queue_item_missing(ledger_path: Path, queue_item_id: str) -> None:
+    if queue_item_has_correction(ledger_path, queue_item_id):
+        raise ValueError(
+            f"queue_item_id already has a captured correction: {queue_item_id}; "
+            "omit --require-missing to append an intentional update"
+        )
 
 
 def correction_progress(
@@ -1472,6 +1481,35 @@ def operator_correction_smoke_check(
             "; ".join(event_failures) if event_failures else "accepted/rejected/edited events build",
         )
 
+        stale_guard_detail = "stale capture guard rejected a captured queue item"
+        stale_guard_passed = False
+        stale_guard_event = build_operator_correction_event(
+            {
+                "queue_item_id": queue_item_id,
+                "decision": "accepted",
+                "operator_note": "smoke check stale guard",
+                "source": "operator-correction-smoke-check",
+            },
+            queue_path,
+            captured_at="2026-01-01T00:00:09Z",
+        )
+        with tempfile.TemporaryDirectory(prefix="automoat-correction-smoke-") as tmpdir:
+            temp_ledger_path = Path(tmpdir) / "operator-corrections.jsonl"
+            temp_ledger_path.write_text(json.dumps(stale_guard_event, sort_keys=True) + "\n", encoding="utf-8")
+            try:
+                require_queue_item_missing(temp_ledger_path, queue_item_id)
+                stale_guard_detail = "stale capture guard allowed a captured queue item"
+            except ValueError as exc:
+                stale_guard_passed = "already has a captured correction" in str(exc)
+                if not stale_guard_passed:
+                    stale_guard_detail = str(exc)
+        add_smoke_check(
+            checks,
+            "stale_capture_guard",
+            stale_guard_passed,
+            stale_guard_detail,
+        )
+
     failed_checks = [check for check in checks if check.get("status") != "pass"]
     return {
         "workflow_id": progress.get("workflow_id"),
@@ -1607,15 +1645,11 @@ def main() -> int:
                 "Regenerate the work order before recording a correction."
             )
 
-    if (
-        args.require_missing
-        and queue_item_id
-        and queue_item_has_correction(args.ledger_path, queue_item_id)
-    ):
-        raise SystemExit(
-            f"error: queue_item_id already has a captured correction: {queue_item_id}; "
-            "omit --require-missing to append an intentional update"
-        )
+    if args.require_missing and queue_item_id:
+        try:
+            require_queue_item_missing(args.ledger_path, queue_item_id)
+        except ValueError as exc:
+            raise SystemExit(f"error: {exc}") from exc
 
     payload = {
         "queue_item_id": queue_item_id,

@@ -4,6 +4,10 @@ Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
 - lane: editor
+- status: tightened Dallas operator-correction smoke coverage for stale captures; `scripts/record_operator_correction.py --smoke-check` now writes a temporary correction ledger and verifies `--require-missing` rejects an already-captured queue item without mutating the real ledger
+- files: scripts/record_operator_correction.py, README.md, NEXT_TASK.md, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- next: run `python3 scripts/record_operator_correction.py --smoke-check`, then `python3 scripts/record_operator_correction.py --smoke-check --format text`, then use `python3 scripts/record_operator_correction.py --next-missing --format text` to dry-run and append the reviewed accepted/rejected/edited Dallas decision
+- lane: editor
 - status: tightened Dallas operator-correction smoke coverage for capture-mode identity; `scripts/record_operator_correction.py --smoke-check` now verifies shortcut command groups use `--use-next-missing` and fixed-item groups stay on `--queue-item-id`
 - files: scripts/record_operator_correction.py, README.md, NEXT_TASK.md, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
 - next: run `python3 scripts/record_operator_correction.py --smoke-check`, then `python3 scripts/record_operator_correction.py --smoke-check --format text`, then use `python3 scripts/record_operator_correction.py --next-missing --format text` to dry-run and append the reviewed accepted/rejected/edited Dallas decision
