@@ -37,6 +37,7 @@ Created from Pixelbox.
 - Dallas inspection workflow writer: `python3 scripts/generate_dallas_inspection_workflow.py`
 - Dallas operator-correction queue listing: `python3 scripts/record_operator_correction.py --list-queue-items`
 - Dallas missing-correction queue listing: `python3 scripts/record_operator_correction.py --list-queue-items --missing-only`
+- Dallas next missing correction: `python3 scripts/record_operator_correction.py --next-missing`
 - Dallas operator-correction progress summary: `python3 scripts/record_operator_correction.py --summary`
 - Dallas operator-correction recorder: `python3 scripts/record_operator_correction.py --queue-item-id workflow-item:dallas:next-action:0008 --decision accepted`
 - Imported-sample fixture pack: `python3 scripts/generate_dallas_fixture_pack.py --input-dir generated/normalized/dallas-electrician-import-sample-v1 --output-dir generated/fixtures/dallas-electrician-import-sequences-v1`
@@ -51,7 +52,7 @@ Created from Pixelbox.
 The eventual app shell can be React Server Components instead of an iframe. Use RSC for the initial cockpit snapshot from `/api/status` and whitelisted artifacts, then use a small client component with `EventSource('/events')` for the live terminal/log stream. Keep mutation endpoints local-only; remote bridges should stay read-only.
 
 Local operator corrections from the Dallas action queue post to `/api/operator-corrections` and append `generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl`. The read-only bridge can expose the ledger, but it rejects mutation requests.
-Use `python3 scripts/record_operator_correction.py --summary` to check capture progress, `python3 scripts/record_operator_correction.py --list-queue-items` to review all current queue item IDs, and `python3 scripts/record_operator_correction.py --list-queue-items --missing-only` to focus the next correction pass on uncaptured Dallas queue items.
+Use `python3 scripts/record_operator_correction.py --summary` to check capture progress, `python3 scripts/record_operator_correction.py --list-queue-items` to review all current queue item IDs, `python3 scripts/record_operator_correction.py --list-queue-items --missing-only` to list uncaptured Dallas queue items, and `python3 scripts/record_operator_correction.py --next-missing` to print the next uncaptured item with accept/reject commands and edited-action templates.
 
 ## Deploy
 

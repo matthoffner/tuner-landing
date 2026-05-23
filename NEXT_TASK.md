@@ -46,7 +46,7 @@ Updated next best artifacts:
 
 - keep the real MVP cockpit running with `python3 scripts/serve_mvp_cockpit.py --auto-start --port 4174`
 - expose the running cockpit to remote observers with `python3 scripts/bridge_mvp_cockpit.py` and share the read-only URL from `.automoat/state/mvp-bridge-status.json`
-- check correction capture progress with `python3 scripts/record_operator_correction.py --summary`, list uncaptured queue IDs with `python3 scripts/record_operator_correction.py --list-queue-items --missing-only`, then exercise the local operator-correction capture path with real accepted/rejected/edited queue decisions and summarize useful correction patterns back into the Dallas workflow artifact
+- check correction capture progress with `python3 scripts/record_operator_correction.py --summary`, pick the next uncaptured queue item with `python3 scripts/record_operator_correction.py --next-missing`, then exercise the local operator-correction capture path with real accepted/rejected/edited queue decisions and summarize useful correction patterns back into the Dallas workflow artifact
 - decide whether the remaining thin latest-import labels, `incomplete_work` and `complete_remaining_work|schedule_reinspection`, need another repeated sequence before real data import
 
 Latest bounded improvement completed:
@@ -80,6 +80,7 @@ Latest bounded improvement completed:
 - `scripts/record_operator_correction.py --list-queue-items` now prints the current Dallas action queue IDs, priorities, trigger context, and recommended action IDs so operators can capture corrections without opening the generated JSON by hand
 - `scripts/record_operator_correction.py --summary` now prints operator-correction capture progress, and `--list-queue-items` marks each Dallas queue item as captured or missing so operators can avoid duplicate correction passes
 - `scripts/record_operator_correction.py --list-queue-items --missing-only` now filters the Dallas queue listing to only items without captured corrections, making the next operator pass executable without manual JSON filtering
+- `scripts/record_operator_correction.py --next-missing` now prints the next uncaptured Dallas queue item plus dry-run and append commands for accepted/rejected decisions and edited-action templates
 
 ## Constraints
 

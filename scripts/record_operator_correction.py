@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import shlex
 from pathlib import Path
 from typing import Any
 
@@ -33,6 +34,11 @@ def parse_args() -> argparse.Namespace:
         help="with --list-queue-items, print only queue items that do not have a captured correction",
     )
     parser.add_argument(
+        "--next-missing",
+        action="store_true",
+        help="print the next queue item missing a correction plus accept/reject commands and edit templates",
+    )
+    parser.add_argument(
         "--summary",
         action="store_true",
         help="print correction ledger progress without appending corrections",
@@ -55,11 +61,11 @@ def parse_args() -> argparse.Namespace:
     args = parser.parse_args()
     if args.missing_only and not args.list_queue_items:
         parser.error("--missing-only requires --list-queue-items")
-    if not args.list_queue_items and not args.summary:
+    if not args.list_queue_items and not args.next_missing and not args.summary:
         if not args.queue_item_id:
-            parser.error("--queue-item-id is required unless --list-queue-items or --summary is used")
+            parser.error("--queue-item-id is required unless --list-queue-items, --next-missing, or --summary is used")
         if not args.decision:
-            parser.error("--decision is required unless --list-queue-items or --summary is used")
+            parser.error("--decision is required unless --list-queue-items, --next-missing, or --summary is used")
     return args
 
 
@@ -158,10 +164,90 @@ def queue_listing(queue_path: Path, ledger_path: Path, missing_only: bool = Fals
     }
 
 
+def command_path_args(queue_path: Path, ledger_path: Path) -> list[str]:
+    args = []
+    if queue_path != DEFAULT_QUEUE_PATH:
+        args.extend(["--queue-path", str(queue_path)])
+    if ledger_path != DEFAULT_LEDGER_PATH:
+        args.extend(["--ledger-path", str(ledger_path)])
+    return args
+
+
+def record_command(
+    queue_item_id: str,
+    decision: str,
+    queue_path: Path,
+    ledger_path: Path,
+    dry_run: bool = False,
+    corrected_actions: str | None = None,
+) -> str:
+    args = [
+        "python3",
+        "scripts/record_operator_correction.py",
+        *command_path_args(queue_path, ledger_path),
+        "--queue-item-id",
+        queue_item_id,
+        "--decision",
+        decision,
+    ]
+    if corrected_actions is not None:
+        args.extend(["--corrected-actions", corrected_actions])
+    if dry_run:
+        args.append("--dry-run")
+    return shlex.join(args)
+
+
+def suggested_record_commands(item: dict[str, Any], queue_path: Path, ledger_path: Path) -> dict[str, Any]:
+    queue_item_id = str(item.get("queue_item_id", ""))
+    return {
+        "dry_run": {
+            "accepted": record_command(queue_item_id, "accepted", queue_path, ledger_path, dry_run=True),
+            "rejected": record_command(queue_item_id, "rejected", queue_path, ledger_path, dry_run=True),
+            "edited_template": record_command(
+                queue_item_id,
+                "edited",
+                queue_path,
+                ledger_path,
+                dry_run=True,
+                corrected_actions="<comma-separated-action-ids>",
+            ),
+        },
+        "append": {
+            "accepted": record_command(queue_item_id, "accepted", queue_path, ledger_path),
+            "rejected": record_command(queue_item_id, "rejected", queue_path, ledger_path),
+            "edited_template": record_command(
+                queue_item_id,
+                "edited",
+                queue_path,
+                ledger_path,
+                corrected_actions="<comma-separated-action-ids>",
+            ),
+        },
+    }
+
+
+def next_missing_correction(queue_path: Path, ledger_path: Path) -> dict[str, Any]:
+    listing = queue_listing(queue_path, ledger_path, missing_only=True)
+    items = listing["items"]
+    item = items[0] if items else None
+    return {
+        "filter": "next_missing",
+        "workflow_id": listing["workflow_id"],
+        "queue_items": listing["queue_items"],
+        "queue_items_with_corrections": listing["queue_items_with_corrections"],
+        "queue_items_missing_corrections": listing["queue_items_missing_corrections"],
+        "item": item,
+        "suggested_commands": suggested_record_commands(item, queue_path, ledger_path) if item else {},
+    }
+
+
 def main() -> int:
     args = parse_args()
     if args.list_queue_items:
         print(json.dumps(queue_listing(args.queue_path, args.ledger_path, args.missing_only), indent=2, sort_keys=True))
+        return 0
+    if args.next_missing:
+        print(json.dumps(next_missing_correction(args.queue_path, args.ledger_path), indent=2, sort_keys=True))
         return 0
     if args.summary:
         print(json.dumps(correction_progress(args.queue_path, args.ledger_path), indent=2, sort_keys=True))
