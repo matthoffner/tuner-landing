@@ -37,6 +37,12 @@ IMPORT_READINESS_COMMAND = (
 IMPORT_READINESS_JSON_COMMAND = (
     "python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json"
 )
+IMPORT_RAW_HANDOFF_VERIFY_COMMAND = (
+    "python3 scripts/run_dallas_import_pipeline.py --verify-raw-handoff"
+)
+IMPORT_RAW_HANDOFF_VERIFY_JSON_COMMAND = (
+    "python3 scripts/run_dallas_import_pipeline.py --verify-raw-handoff --format json"
+)
 IMPORT_REFRESH_COMMAND = "python3 scripts/run_dallas_import_pipeline.py --require-ready"
 IMPORT_READINESS_SUMMARY_PATH = (
     ROOT / "generated" / "pipeline" / "dallas-import-pipeline-summary-v1" / "summary.json"
@@ -2264,6 +2270,8 @@ def next_import_record_handoff(summary: dict[str, Any] | None = None) -> dict[st
         "raw_file_append_preflight": raw_append_preflight,
         "after_edit_command": IMPORT_REFRESH_COMMAND,
         "readiness_check_command": IMPORT_READINESS_JSON_COMMAND,
+        "raw_handoff_verification_command": IMPORT_RAW_HANDOFF_VERIFY_COMMAND,
+        "raw_handoff_verification_json_command": IMPORT_RAW_HANDOFF_VERIFY_JSON_COMMAND,
     }
 
 
@@ -2336,6 +2344,14 @@ def next_import_record_handoff_is_valid(handoff: Any) -> bool:
         )
         and handoff.get("after_edit_command") == IMPORT_REFRESH_COMMAND
         and handoff.get("readiness_check_command") == IMPORT_READINESS_JSON_COMMAND
+        and (
+            handoff.get("raw_handoff_verification_command")
+            == IMPORT_RAW_HANDOFF_VERIFY_COMMAND
+        )
+        and (
+            handoff.get("raw_handoff_verification_json_command")
+            == IMPORT_RAW_HANDOFF_VERIFY_JSON_COMMAND
+        )
     )
 
 
@@ -2967,6 +2983,16 @@ def format_raw_import_append_preflight(handoff: Any) -> str:
     )
 
 
+def format_raw_import_handoff_verification(handoff: Any) -> str:
+    if not isinstance(handoff, dict):
+        return "(none)"
+    command = handoff.get("raw_handoff_verification_command")
+    json_command = handoff.get("raw_handoff_verification_json_command")
+    if not isinstance(command, str) or not isinstance(json_command, str):
+        return "(none)"
+    return f"text={command}; json={json_command}"
+
+
 def format_raw_import_fingerprints(handoff: Any) -> str:
     if not isinstance(handoff, dict):
         return "(none)"
@@ -3459,6 +3485,10 @@ def format_progress_text(progress: dict[str, Any]) -> str:
                 lines.append(
                     "Next import raw append preflight: "
                     f"{format_raw_import_append_preflight(next_import_handoff)}"
+                )
+                lines.append(
+                    "Next import raw handoff verification: "
+                    f"{format_raw_import_handoff_verification(next_import_handoff)}"
                 )
                 lines.append(
                     "Next import raw fingerprints: "
@@ -4195,8 +4225,8 @@ def operator_correction_smoke_check(
             "value profiles, date profiles, relationship checks, import scope "
             "counts, importable examples, exclusion examples, headers, required "
             "fields, optional fields, append templates, append CSV templates, "
-            "required-field gaps, append preflight, and file fingerprints after "
-            "complete correction capture"
+            "required-field gaps, append preflight, handoff verification commands, "
+            "and file fingerprints after complete correction capture"
             if missing_count == 0
             else "summary with missing corrections does not expose the last import-readiness snapshot"
         ),
@@ -4724,6 +4754,10 @@ def format_smoke_check_text(smoke_check: dict[str, Any]) -> str:
         lines.append(
             "Next import raw append preflight: "
             f"{format_raw_import_append_preflight(readiness.get('next_import_record_handoff'))}"
+        )
+        lines.append(
+            "Next import raw handoff verification: "
+            f"{format_raw_import_handoff_verification(readiness.get('next_import_record_handoff'))}"
         )
         lines.append(
             "Next import raw fingerprints: "

@@ -38,6 +38,12 @@ SUMMARY_ONLY_REQUIRE_READY_COMMAND = (
 SUMMARY_ONLY_REQUIRE_READY_JSON_COMMAND = (
     "python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json"
 )
+VERIFY_RAW_HANDOFF_COMMAND = (
+    "python3 scripts/run_dallas_import_pipeline.py --verify-raw-handoff"
+)
+VERIFY_RAW_HANDOFF_JSON_COMMAND = (
+    "python3 scripts/run_dallas_import_pipeline.py --verify-raw-handoff --format json"
+)
 RAW_IMPORT_FILE_NAMES = (
     "permits.csv",
     "inspections.csv",
@@ -223,6 +229,14 @@ def parse_args():
         help=(
             "stdout format for the final pipeline summary; JSON mode sends step logs "
             "and child command output to stderr so stdout stays machine-readable"
+        ),
+    )
+    parser.add_argument(
+        "--verify-raw-handoff",
+        action="store_true",
+        help=(
+            "Compare current raw CSV row counts, headers, and fingerprints with the "
+            "durable next-import handoff without regenerating artifacts."
         ),
     )
     return parser.parse_args()
@@ -1185,6 +1199,158 @@ def raw_file_append_preflight(
     }
 
 
+def raw_handoff_verification(raw_dir, summary_path=SUMMARY_JSON_PATH):
+    raw_dir_label = command_path(raw_dir).rstrip("/")
+    current_row_counts = raw_file_row_counts(raw_dir)
+    current_fingerprints = raw_file_fingerprints(raw_dir)
+    current_headers = raw_file_headers(raw_dir)
+    checks = {
+        "summary_available": False,
+        "next_import_record_handoff_available": False,
+        "raw_dir_matches_summary": False,
+        "raw_file_row_counts_match": False,
+        "raw_file_headers_match": False,
+        "raw_file_fingerprints_match": False,
+        "append_preflight_passed": False,
+    }
+    mismatches = []
+
+    def add_mismatch(check_name, message, **details):
+        mismatch = {"check": check_name, "message": message}
+        mismatch.update(details)
+        mismatches.append(mismatch)
+
+    def compare_by_file(check_name, field_name, expected_by_file, current_by_file):
+        if not isinstance(expected_by_file, dict):
+            add_mismatch(
+                check_name,
+                f"{field_name} is missing from the durable handoff",
+            )
+            return False
+        matched = True
+        for file_name in RAW_IMPORT_FILE_NAMES:
+            expected_value = expected_by_file.get(file_name)
+            current_value = current_by_file.get(file_name)
+            if expected_value != current_value:
+                matched = False
+                add_mismatch(
+                    check_name,
+                    f"{file_name} {field_name} changed since the durable handoff",
+                    file_name=file_name,
+                    expected=expected_value,
+                    current=current_value,
+                )
+        return matched
+
+    verification = {
+        "status": "blocked",
+        "ready_for_append": False,
+        "summary_json_path": command_path(summary_path),
+        "raw_dir": raw_dir_label,
+        "expected_raw_dir": None,
+        "checks": checks,
+        "mismatches": mismatches,
+        "current_raw_file_row_counts": current_row_counts,
+        "current_raw_file_headers": current_headers,
+        "current_raw_file_fingerprints": current_fingerprints,
+        "expected_raw_file_next_append_rows": {},
+        "after_edit_command": REQUIRE_READY_COMMAND,
+        "next_step": (
+            "Resolve raw handoff verification blockers or regenerate the summary-only "
+            "readiness handoff before appending Dallas raw CSV rows."
+        ),
+    }
+
+    if not summary_path.exists():
+        add_mismatch(
+            "summary_available",
+            "durable Dallas import pipeline summary is missing",
+        )
+        return verification
+
+    try:
+        summary = load_json(summary_path)
+    except (OSError, json.JSONDecodeError) as error:
+        add_mismatch(
+            "summary_available",
+            "durable Dallas import pipeline summary is unreadable",
+            error=str(error),
+        )
+        return verification
+
+    checks["summary_available"] = True
+    handoff = summary.get("next_import_record_handoff")
+    if not isinstance(handoff, dict):
+        add_mismatch(
+            "next_import_record_handoff_available",
+            "durable summary does not contain next_import_record_handoff",
+        )
+        return verification
+
+    checks["next_import_record_handoff_available"] = True
+    expected_raw_dir = handoff.get("raw_dir")
+    verification["expected_raw_dir"] = expected_raw_dir
+    if expected_raw_dir == raw_dir_label:
+        checks["raw_dir_matches_summary"] = True
+    else:
+        add_mismatch(
+            "raw_dir_matches_summary",
+            "raw directory differs from the durable handoff",
+            expected=expected_raw_dir,
+            current=raw_dir_label,
+        )
+
+    checks["raw_file_row_counts_match"] = compare_by_file(
+        "raw_file_row_counts_match",
+        "row count",
+        handoff.get("raw_file_row_counts"),
+        current_row_counts,
+    )
+    checks["raw_file_headers_match"] = compare_by_file(
+        "raw_file_headers_match",
+        "headers",
+        handoff.get("raw_file_headers"),
+        current_headers,
+    )
+    checks["raw_file_fingerprints_match"] = compare_by_file(
+        "raw_file_fingerprints_match",
+        "fingerprint",
+        handoff.get("raw_file_fingerprints"),
+        current_fingerprints,
+    )
+
+    append_preflight = handoff.get("raw_file_append_preflight")
+    if (
+        isinstance(append_preflight, dict)
+        and append_preflight.get("status") == "passed"
+        and append_preflight.get("ready_for_append") is True
+    ):
+        checks["append_preflight_passed"] = True
+    else:
+        add_mismatch(
+            "append_preflight_passed",
+            "durable raw CSV append preflight is not passed",
+            current=append_preflight,
+        )
+
+    verification["expected_raw_file_next_append_rows"] = handoff.get(
+        "raw_file_next_append_rows",
+        {},
+    )
+    verification["after_edit_command"] = handoff.get(
+        "after_edit_command",
+        REQUIRE_READY_COMMAND,
+    )
+    if all(checks.values()):
+        verification["status"] = "passed"
+        verification["ready_for_append"] = True
+        verification["next_step"] = (
+            "Raw CSV handoff matches the durable summary; append new Dallas rows at "
+            "`expected_raw_file_next_append_rows`, then run `after_edit_command`."
+        )
+    return verification
+
+
 def next_import_record_handoff(raw_dir):
     display_raw_dir = command_path(raw_dir).rstrip("/")
     raw_row_counts = raw_file_row_counts(raw_dir)
@@ -1244,6 +1410,8 @@ def next_import_record_handoff(raw_dir):
         ),
         "after_edit_command": REQUIRE_READY_COMMAND,
         "readiness_check_command": SUMMARY_ONLY_REQUIRE_READY_JSON_COMMAND,
+        "raw_handoff_verification_command": VERIFY_RAW_HANDOFF_COMMAND,
+        "raw_handoff_verification_json_command": VERIFY_RAW_HANDOFF_JSON_COMMAND,
     }
 
 
@@ -1903,6 +2071,10 @@ def write_summary(summary):
         f"- Next raw import files: {inline_list(next_import_handoff['raw_files'])}",
         f"- Next raw import row counts: {inline_row_counts(raw_row_counts)}",
         f"- Next raw import append preflight: `{raw_append_preflight.get('status')}`",
+        (
+            "- Next raw import handoff verification: "
+            f"`{next_import_handoff['raw_handoff_verification_command']}`"
+        ),
         "- Next raw import fingerprints: see Follow-Up",
         f"- Next raw import append rows: {inline_next_append_rows(raw_next_append_rows)}",
         "- Next raw import last data rows: see Follow-Up",
@@ -2079,6 +2251,14 @@ def write_summary(summary):
             (
                 "- Raw CSV readiness check: "
                 f"`{next_import_handoff['readiness_check_command']}`"
+            ),
+            (
+                "- Raw CSV handoff verification: "
+                f"`{next_import_handoff['raw_handoff_verification_command']}`"
+            ),
+            (
+                "- Raw CSV handoff verification JSON: "
+                f"`{next_import_handoff['raw_handoff_verification_json_command']}`"
             ),
             (
                 "- Raw CSV files: "
@@ -2537,6 +2717,14 @@ def print_summary(summary, output_format="text"):
     print(f"  raw_import_files: {', '.join(next_import_handoff['raw_files'])}")
     print(f"  raw_import_row_counts: {format_row_counts(raw_row_counts)}")
     print(f"  raw_import_append_preflight: {format_append_preflight(raw_append_preflight)}")
+    print(
+        "  raw_import_handoff_verification: "
+        f"{next_import_handoff['raw_handoff_verification_command']}"
+    )
+    print(
+        "  raw_import_handoff_verification_json: "
+        f"{next_import_handoff['raw_handoff_verification_json_command']}"
+    )
     print(f"  raw_import_fingerprints: {format_fingerprints(raw_fingerprints)}")
     print(f"  raw_import_next_append_rows: {format_next_append_rows(raw_next_append_rows)}")
     print(f"  raw_import_last_data_rows: {format_last_data_rows(raw_last_data_rows)}")
@@ -2601,8 +2789,41 @@ def print_summary(summary, output_format="text"):
     )
 
 
+def print_raw_handoff_verification(verification, output_format="text"):
+    if output_format == "json":
+        json.dump(verification, sys.stdout, indent=2)
+        sys.stdout.write("\n")
+        return
+
+    print("==> Dallas raw handoff verification")
+    print(f"status: {verification.get('status')}")
+    print(f"ready_for_append: {str(verification.get('ready_for_append')).lower()}")
+    print(f"summary_json: {verification.get('summary_json_path')}")
+    print(f"raw_dir: {verification.get('raw_dir')}")
+    print(f"expected_raw_dir: {verification.get('expected_raw_dir')}")
+    print(f"checks: {json.dumps(verification.get('checks', {}), sort_keys=True)}")
+    mismatches = verification.get("mismatches", [])
+    print(
+        "mismatches: "
+        f"{json.dumps(mismatches, sort_keys=False) if mismatches else 'none'}"
+    )
+    print(
+        "expected_next_append_rows: "
+        f"{json.dumps(verification.get('expected_raw_file_next_append_rows', {}), sort_keys=True)}"
+    )
+    print(f"after_raw_csv_edits: {verification.get('after_edit_command')}")
+    print(f"next_step: {verification.get('next_step')}")
+
+
 def main():
     args = parse_args()
+    if args.verify_raw_handoff:
+        verification = raw_handoff_verification(args.raw_dir)
+        print_raw_handoff_verification(verification, output_format=args.format)
+        if verification["status"] != "passed":
+            raise SystemExit("Dallas raw handoff verification blocked")
+        return
+
     artifact_steps = [
         (
             "Normalize Dallas import CSV rows",

@@ -1023,7 +1023,9 @@
       "next_step": "Raw CSV append preflight is clear; append new Dallas rows at `raw_file_next_append_rows`, then run `after_edit_command`."
     },
     "after_edit_command": "python3 scripts/run_dallas_import_pipeline.py --require-ready",
-    "readiness_check_command": "python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json"
+    "readiness_check_command": "python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json",
+    "raw_handoff_verification_command": "python3 scripts/run_dallas_import_pipeline.py --verify-raw-handoff",
+    "raw_handoff_verification_json_command": "python3 scripts/run_dallas_import_pipeline.py --verify-raw-handoff --format json"
   },
   "execution_readiness": {
     "status": "ready",
