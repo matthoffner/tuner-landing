@@ -1283,6 +1283,33 @@ def raw_import_file_append_csv_templates(
     return append_templates
 
 
+def raw_import_file_append_work_order(
+    raw_dir: str,
+    next_append_rows: dict[str, int | None],
+    append_csv_templates: dict[str, dict[str, str] | None],
+) -> dict[str, dict[str, Any] | None]:
+    raw_dir = raw_dir.rstrip("/")
+    work_order: dict[str, dict[str, Any] | None] = {}
+    for file_name in RAW_IMPORT_FILE_NAMES:
+        row_number = next_append_rows.get(file_name)
+        csv_template = append_csv_templates.get(file_name)
+        if not isinstance(row_number, int) or not isinstance(csv_template, dict):
+            work_order[file_name] = None
+            continue
+        header_line = csv_template.get("header_line")
+        template_line = csv_template.get("template_line")
+        if not isinstance(header_line, str) or not isinstance(template_line, str):
+            work_order[file_name] = None
+            continue
+        work_order[file_name] = {
+            "file_path": f"{raw_dir}/{file_name}",
+            "csv_row_number": row_number,
+            "header_line": header_line,
+            "template_line": template_line,
+        }
+    return work_order
+
+
 def raw_import_file_required_field_gaps(
     raw_dir: str,
     required_fields_by_file: dict[str, list[str]],
@@ -1980,6 +2007,44 @@ def raw_import_file_append_csv_templates_are_valid(
     )
 
 
+def raw_import_file_append_work_order_is_valid(
+    value: Any,
+    raw_dir: Any,
+    next_append_rows: Any,
+    append_csv_templates: Any,
+) -> bool:
+    if (
+        not isinstance(raw_dir, str)
+        or not raw_dir.strip()
+        or not isinstance(next_append_rows, dict)
+        or not isinstance(append_csv_templates, dict)
+    ):
+        return False
+    if not all(
+        isinstance(next_append_rows.get(file_name), int)
+        and next_append_rows[file_name] >= 2
+        for file_name in RAW_IMPORT_FILE_NAMES
+    ):
+        return False
+    expected_work_order = raw_import_file_append_work_order(
+        raw_dir,
+        next_append_rows,
+        append_csv_templates,
+    )
+    return (
+        isinstance(value, dict)
+        and all(
+            isinstance(value.get(file_name), dict)
+            and value[file_name] == expected_work_order[file_name]
+            and isinstance(value[file_name].get("file_path"), str)
+            and isinstance(value[file_name].get("csv_row_number"), int)
+            and isinstance(value[file_name].get("header_line"), str)
+            and isinstance(value[file_name].get("template_line"), str)
+            for file_name in RAW_IMPORT_FILE_NAMES
+        )
+    )
+
+
 def raw_import_file_required_field_gaps_are_valid(value: Any) -> bool:
     if not isinstance(value, dict):
         return False
@@ -2231,6 +2296,18 @@ def next_import_record_handoff(summary: dict[str, Any] | None = None) -> dict[st
             raw_headers,
             raw_required_fields,
         )
+    raw_append_work_order = summary_handoff.get("raw_file_append_work_order")
+    if not raw_import_file_append_work_order_is_valid(
+        raw_append_work_order,
+        raw_dir,
+        raw_next_append_rows,
+        raw_append_csv_templates,
+    ):
+        raw_append_work_order = raw_import_file_append_work_order(
+            raw_dir,
+            raw_next_append_rows,
+            raw_append_csv_templates,
+        )
     raw_required_field_gaps = summary_handoff.get("raw_file_required_field_gaps")
     if not raw_import_file_required_field_gaps_are_valid(raw_required_field_gaps):
         raw_required_field_gaps = raw_import_file_required_field_gaps(
@@ -2266,6 +2343,7 @@ def next_import_record_handoff(summary: dict[str, Any] | None = None) -> dict[st
         "raw_file_optional_fields": raw_optional_fields,
         "raw_file_append_templates": raw_append_templates,
         "raw_file_append_csv_templates": raw_append_csv_templates,
+        "raw_file_append_work_order": raw_append_work_order,
         "raw_file_required_field_gaps": raw_required_field_gaps,
         "raw_file_append_preflight": raw_append_preflight,
         "after_edit_command": IMPORT_REFRESH_COMMAND,
@@ -2335,6 +2413,12 @@ def next_import_record_handoff_is_valid(handoff: Any) -> bool:
             handoff.get("raw_file_append_csv_templates"),
             handoff.get("raw_file_headers"),
             handoff.get("raw_file_required_fields"),
+        )
+        and raw_import_file_append_work_order_is_valid(
+            handoff.get("raw_file_append_work_order"),
+            handoff.get("raw_dir"),
+            handoff.get("raw_file_next_append_rows"),
+            handoff.get("raw_file_append_csv_templates"),
         )
         and raw_import_file_required_field_gaps_are_valid(
             handoff.get("raw_file_required_field_gaps"),
@@ -3278,6 +3362,27 @@ def format_raw_import_append_csv_templates(handoff: Any) -> str:
     return "; ".join(labels) if labels else "(none)"
 
 
+def format_raw_import_append_work_order(handoff: Any) -> str:
+    if not isinstance(handoff, dict):
+        return "(none)"
+    work_order_by_file = handoff.get("raw_file_append_work_order")
+    if not isinstance(work_order_by_file, dict):
+        return "(none)"
+    labels = []
+    for file_name in RAW_IMPORT_FILE_NAMES:
+        item = work_order_by_file.get(file_name)
+        if isinstance(item, dict):
+            labels.append(
+                f"{file_name}=file:{item.get('file_path')} "
+                f"row:{item.get('csv_row_number')} "
+                f"header:{item.get('header_line')} "
+                f"template:{item.get('template_line')}"
+            )
+        else:
+            labels.append(f"{file_name}=missing")
+    return "; ".join(labels) if labels else "(none)"
+
+
 def format_raw_import_required_field_gaps(handoff: Any) -> str:
     if not isinstance(handoff, dict):
         return "(none)"
@@ -3549,6 +3654,10 @@ def format_progress_text(progress: dict[str, Any]) -> str:
                 lines.append(
                     "Next import raw append CSV templates: "
                     f"{format_raw_import_append_csv_templates(next_import_handoff)}"
+                )
+                lines.append(
+                    "Next import raw append work order: "
+                    f"{format_raw_import_append_work_order(next_import_handoff)}"
                 )
                 lines.append(
                     "Next import raw required-field gaps: "
@@ -4225,8 +4334,9 @@ def operator_correction_smoke_check(
             "value profiles, date profiles, relationship checks, import scope "
             "counts, importable examples, exclusion examples, headers, required "
             "fields, optional fields, append templates, append CSV templates, "
-            "required-field gaps, append preflight, handoff verification commands, "
-            "and file fingerprints after complete correction capture"
+            "append work order, required-field gaps, append preflight, handoff "
+            "verification commands, and file fingerprints after complete "
+            "correction capture"
             if missing_count == 0
             else "summary with missing corrections does not expose the last import-readiness snapshot"
         ),
@@ -4818,6 +4928,10 @@ def format_smoke_check_text(smoke_check: dict[str, Any]) -> str:
         lines.append(
             "Next import raw append CSV templates: "
             f"{format_raw_import_append_csv_templates(readiness.get('next_import_record_handoff'))}"
+        )
+        lines.append(
+            "Next import raw append work order: "
+            f"{format_raw_import_append_work_order(readiness.get('next_import_record_handoff'))}"
         )
         lines.append(
             "Next import raw required-field gaps: "

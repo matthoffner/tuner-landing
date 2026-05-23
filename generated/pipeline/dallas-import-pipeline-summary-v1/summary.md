@@ -27,6 +27,7 @@
 - Next raw import required fields: see Follow-Up
 - Next raw import optional fields: see Follow-Up
 - Next raw import append CSV templates: see Follow-Up
+- Next raw import append work order: see Follow-Up
 - Next raw import required-field gaps: see Follow-Up
 
 ## Execution Readiness
@@ -219,6 +220,11 @@ These are the reusable accepted correction patterns currently embedded in the Da
 - `inspections.csv` append CSV template: `{"header_line": "permit_number,inspection_date,inspection_type,result,notes,inspector_name,reinspection_flag,source_url", "template_line": "<required>,<required>,<required>,<required>,,,,"}`
 - `contractors.csv` append CSV template: `{"header_line": "registration_id,name,license_type,registration_status,city,state", "template_line": "<required>,<required>,<required>,,,"}`
 - `rule_documents.csv` append CSV template: `{"header_line": "title,document_type,effective_date,source_url,text_content", "template_line": "<required>,,,,"}`
+- Raw CSV append work order:
+- `permits.csv` append work order: path `generated/raw/dallas-electrician-import-sample-v2/permits.csv`, row `17`, header `permit_number,address,city,state,zip_code,trade,work_class,property_type,permit_type,status,file_date,issue_date,final_date,declared_valuation,work_description,contractor_name,source_url`, template `<required>,<required>,<required>,,,<required>,<required>,,,,,,,,,,`
+- `inspections.csv` append work order: path `generated/raw/dallas-electrician-import-sample-v2/inspections.csv`, row `43`, header `permit_number,inspection_date,inspection_type,result,notes,inspector_name,reinspection_flag,source_url`, template `<required>,<required>,<required>,<required>,,,,`
+- `contractors.csv` append work order: path `generated/raw/dallas-electrician-import-sample-v2/contractors.csv`, row `8`, header `registration_id,name,license_type,registration_status,city,state`, template `<required>,<required>,<required>,,,`
+- `rule_documents.csv` append work order: path `generated/raw/dallas-electrician-import-sample-v2/rule_documents.csv`, row `5`, header `title,document_type,effective_date,source_url,text_content`, template `<required>,,,,`
 - Raw CSV required-field gaps:
 - `permits.csv` required-field gaps: `0/15` rows, missing headers: none, field counts: `{"address": 0, "city": 0, "permit_number": 0, "trade": 0, "work_class": 0}`
 - `inspections.csv` required-field gaps: `0/41` rows, missing headers: none, field counts: `{"inspection_date": 0, "inspection_type": 0, "permit_number": 0, "result": 0}`

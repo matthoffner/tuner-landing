@@ -57,6 +57,7 @@ Updated next best artifacts:
 
 Latest bounded improvement completed:
 
+- `scripts/run_dallas_import_pipeline.py` now writes `next_import_record_handoff.raw_file_append_work_order`, and `--verify-raw-handoff` verifies and prints the same per-file append work order so the next Dallas raw-row edit has file path, CSV row number, header line, and required-cell template line grouped together; `scripts/record_operator_correction.py --summary` carries the same field after completed operator correction capture
 - `scripts/run_dallas_import_pipeline.py --verify-raw-handoff` now also validates the durable next append row numbers and append CSV templates against the current raw CSV row counts and headers, then prints the verified template lines so the next Dallas raw-row edit can start from one passed verification output
 - `scripts/run_dallas_import_pipeline.py --verify-raw-handoff` now compares the current Dallas raw CSV row counts, headers, fingerprints, and saved append preflight against the durable `next_import_record_handoff` before editing, while `scripts/record_operator_correction.py --summary` carries the same text/JSON verification commands into completed-correction handoffs
 - `scripts/run_dallas_import_pipeline.py` and `scripts/record_operator_correction.py` now add `raw_file_append_csv_templates` to the next-import handoff, so the next Dallas raw-row widening pass has copyable CSV header lines and required-cell template rows in exact file order before editing `permits.csv`, `inspections.csv`, `contractors.csv`, or `rule_documents.csv`
