@@ -145,6 +145,34 @@ def summarize_contract_dataset(contract, dataset_id):
     }
 
 
+def summarize_operator_patterns(pattern_summary):
+    patterns = pattern_summary.get("patterns", [])
+    if not isinstance(patterns, list):
+        return []
+
+    accepted_patterns = []
+    for pattern in patterns:
+        if not isinstance(pattern, dict):
+            continue
+        accepted_patterns.append(
+            {
+                "pattern_id": pattern.get("pattern_id"),
+                "corrected_actions": pattern.get("corrected_actions", []),
+                "corrected_action_labels": pattern.get("corrected_action_labels", []),
+                "queue_item_count": pattern.get("queue_item_count", 0),
+                "queue_item_ids": pattern.get("queue_item_ids", []),
+                "source_permit_numbers": pattern.get("source_permit_numbers", []),
+                "trigger_result_counts": pattern.get("trigger_result_counts", {}),
+                "failure_reason_counts": pattern.get("failure_reason_counts", {}),
+                "inspection_type_counts": pattern.get("inspection_type_counts", {}),
+                "observed_followup_result_counts": pattern.get(
+                    "observed_followup_result_counts", {}
+                ),
+            }
+        )
+    return accepted_patterns
+
+
 def build_summary(args):
     contract = load_json(CONTRACT_PATH)
     workflow = load_json(WORKFLOW_PATH)
@@ -177,7 +205,11 @@ def build_summary(args):
         "workflow": {
             "queue_items": queue_items,
             "operator_corrections_captured": correction_count,
+            "accepted_latest_corrections": pattern_summary.get(
+                "accepted_latest_corrections"
+            ),
             "accepted_pattern_count": pattern_summary.get("accepted_pattern_count"),
+            "accepted_patterns": summarize_operator_patterns(pattern_summary),
             "json_path": command_path(WORKFLOW_PATH),
             "report_path": command_path(WORKFLOW_REPORT_PATH),
         },
@@ -212,6 +244,7 @@ def write_summary(summary):
     follow_up = summary["follow_up"]
     correction_gate = summary["correction_gate"]
     latest_import = summary["latest_import"]
+    accepted_patterns = workflow.get("accepted_patterns", [])
     import_counts = latest_import.get("counts", {})
     task_family_counts = latest_import.get("task_family_counts", {})
     contract_status = "PASS" if contract["overall_passed"] else "FAIL"
@@ -224,6 +257,13 @@ def write_summary(summary):
         for section, values in thin_groups.items()
         if values
     ]
+
+    def inline_list(values):
+        return ", ".join(f"`{value}`" for value in values) if values else "none"
+
+    def inline_counts(values):
+        return f"`{json.dumps(values, sort_keys=True)}`" if values else "`{}`"
+
     lines = [
         "# Dallas Import Pipeline Summary",
         "",
@@ -284,39 +324,95 @@ def write_summary(summary):
             )
         ),
         "",
-        "## Coverage Snapshot",
+        "## Accepted Operator Pattern Snapshot",
         "",
-        f"- Coverage dataset: `{coverage.get('latest_dataset_id')}`",
-        f"- Repeated support threshold: `{coverage.get('repeated_support_threshold')}` permits",
         (
-            "- Repeated counts: "
-            f"`{coverage_repeated.get('result_states', 0)}` result states, "
-            f"`{coverage_repeated.get('failure_reasons', 0)}` failure reasons, "
-            f"`{coverage_repeated.get('pattern_slices', 0)}` pattern slices, "
-            f"`{coverage_repeated.get('next_action_groups', 0)}` next-action groups"
+            "These are the reusable accepted correction patterns currently embedded in "
+            "the Dallas action queue."
         ),
-        (
-            "- Thin counts: "
-            f"`{coverage_thin.get('result_states', 0)}` result states, "
-            f"`{coverage_thin.get('failure_reasons', 0)}` failure reasons, "
-            f"`{coverage_thin.get('pattern_slices', 0)}` pattern slices, "
-            f"`{coverage_thin.get('next_action_groups', 0)}` next-action groups"
-        ),
-        f"- Thin groups: {'; '.join(thin_labels) if thin_labels else 'none'}",
-        f"- Coverage next step: {coverage.get('recommended_next_step')}",
         "",
-        "## Follow-Up",
-        "",
-        f"- Pattern review: `{follow_up['patterns_command']}`",
-        f"- Completion gate: `{follow_up['completion_gate']}`",
-        "",
-        "## Reports",
-        "",
-        f"- Coverage: `{follow_up['coverage_report']}`",
-        f"- Contract: `{follow_up['contract_report']}`",
-        f"- Workflow: `{follow_up['workflow_report']}`",
-        f"- Summary JSON: `{follow_up['summary_json']}`",
     ]
+    if accepted_patterns:
+        for pattern in accepted_patterns:
+            lines.extend(
+                [
+                    f"### {pattern.get('pattern_id')}",
+                    "",
+                    f"- Queue items: `{pattern.get('queue_item_count', 0)}`",
+                    f"- Action IDs: {inline_list(pattern.get('corrected_actions', []))}",
+                    (
+                        "- Actions: "
+                        f"{inline_list(pattern.get('corrected_action_labels', []))}"
+                    ),
+                    (
+                        "- Trigger results: "
+                        f"{inline_counts(pattern.get('trigger_result_counts', {}))}"
+                    ),
+                    (
+                        "- Failure reasons: "
+                        f"{inline_counts(pattern.get('failure_reason_counts', {}))}"
+                    ),
+                    (
+                        "- Inspection types: "
+                        f"{inline_counts(pattern.get('inspection_type_counts', {}))}"
+                    ),
+                    (
+                        "- Follow-up results: "
+                        f"{inline_counts(pattern.get('observed_followup_result_counts', {}))}"
+                    ),
+                    (
+                        "- Example permits: "
+                        f"{inline_list(pattern.get('source_permit_numbers', []))}"
+                    ),
+                    (
+                        "- Queue IDs: "
+                        f"{inline_list(pattern.get('queue_item_ids', []))}"
+                    ),
+                    "",
+                ]
+            )
+    else:
+        lines.extend(["No accepted operator patterns are currently available.", ""])
+
+    lines.extend(
+        [
+            "## Coverage Snapshot",
+            "",
+            f"- Coverage dataset: `{coverage.get('latest_dataset_id')}`",
+            (
+                "- Repeated support threshold: "
+                f"`{coverage.get('repeated_support_threshold')}` permits"
+            ),
+            (
+                "- Repeated counts: "
+                f"`{coverage_repeated.get('result_states', 0)}` result states, "
+                f"`{coverage_repeated.get('failure_reasons', 0)}` failure reasons, "
+                f"`{coverage_repeated.get('pattern_slices', 0)}` pattern slices, "
+                f"`{coverage_repeated.get('next_action_groups', 0)}` next-action groups"
+            ),
+            (
+                "- Thin counts: "
+                f"`{coverage_thin.get('result_states', 0)}` result states, "
+                f"`{coverage_thin.get('failure_reasons', 0)}` failure reasons, "
+                f"`{coverage_thin.get('pattern_slices', 0)}` pattern slices, "
+                f"`{coverage_thin.get('next_action_groups', 0)}` next-action groups"
+            ),
+            f"- Thin groups: {'; '.join(thin_labels) if thin_labels else 'none'}",
+            f"- Coverage next step: {coverage.get('recommended_next_step')}",
+            "",
+            "## Follow-Up",
+            "",
+            f"- Pattern review: `{follow_up['patterns_command']}`",
+            f"- Completion gate: `{follow_up['completion_gate']}`",
+            "",
+            "## Reports",
+            "",
+            f"- Coverage: `{follow_up['coverage_report']}`",
+            f"- Contract: `{follow_up['contract_report']}`",
+            f"- Workflow: `{follow_up['workflow_report']}`",
+            f"- Summary JSON: `{follow_up['summary_json']}`",
+        ]
+    )
     with SUMMARY_REPORT_PATH.open("w") as handle:
         handle.write("\n".join(lines))
         handle.write("\n")
@@ -328,6 +424,7 @@ def print_summary(summary):
     coverage = summary["coverage"]
     follow_up = summary["follow_up"]
     import_counts = summary["latest_import"].get("counts", {})
+    accepted_patterns = workflow.get("accepted_patterns", [])
     coverage_repeated = coverage.get("latest_repeated_counts", {})
     coverage_thin = coverage.get("latest_thin_counts", {})
 
@@ -341,6 +438,16 @@ def print_summary(summary):
         f"{workflow.get('operator_corrections_captured')}/{workflow.get('queue_items')}"
     )
     print(f"accepted_patterns: {workflow.get('accepted_pattern_count')}")
+    if accepted_patterns:
+        print("accepted_pattern_actions:")
+        for pattern in accepted_patterns:
+            actions = "|".join(pattern.get("corrected_actions", []))
+            print(
+                "  "
+                f"{pattern.get('pattern_id')}: "
+                f"{actions} "
+                f"({pattern.get('queue_item_count', 0)} queue items)"
+            )
     print(
         "import_counts: "
         f"permits={import_counts.get('permits', 0)}, "

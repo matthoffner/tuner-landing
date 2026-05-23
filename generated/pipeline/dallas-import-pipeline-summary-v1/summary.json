@@ -18,7 +18,213 @@
   "workflow": {
     "queue_items": 14,
     "operator_corrections_captured": 14,
+    "accepted_latest_corrections": 14,
     "accepted_pattern_count": 6,
+    "accepted_patterns": [
+      {
+        "pattern_id": "operator-pattern:accepted:0001",
+        "corrected_actions": [
+          "correct_wiring_or_devices",
+          "schedule_reinspection"
+        ],
+        "corrected_action_labels": [
+          "Correct wiring or devices",
+          "Schedule reinspection"
+        ],
+        "queue_item_count": 3,
+        "queue_item_ids": [
+          "workflow-item:dallas:next-action:0007",
+          "workflow-item:dallas:next-action:0008",
+          "workflow-item:dallas:next-action:0009"
+        ],
+        "source_permit_numbers": [
+          "ELP-2026-0209",
+          "ELR-2026-0201",
+          "ELR-2026-0207"
+        ],
+        "trigger_result_counts": {
+          "fail": 2,
+          "partial": 1
+        },
+        "failure_reason_counts": {
+          "wiring_or_device_issue": 3
+        },
+        "inspection_type_counts": {
+          "final": 2,
+          "rough_in": 1
+        },
+        "observed_followup_result_counts": {
+          "pass": 3
+        }
+      },
+      {
+        "pattern_id": "operator-pattern:accepted:0002",
+        "corrected_actions": [
+          "ensure_site_access",
+          "schedule_reinspection"
+        ],
+        "corrected_action_labels": [
+          "Ensure site access",
+          "Schedule reinspection"
+        ],
+        "queue_item_count": 3,
+        "queue_item_ids": [
+          "workflow-item:dallas:next-action:0001",
+          "workflow-item:dallas:next-action:0010",
+          "workflow-item:dallas:next-action:0011"
+        ],
+        "source_permit_numbers": [
+          "ELM-2026-0211",
+          "ELS-2026-0202",
+          "ELS-2026-0210"
+        ],
+        "trigger_result_counts": {
+          "not_ready": 3
+        },
+        "failure_reason_counts": {
+          "access_or_scheduling_issue": 3
+        },
+        "inspection_type_counts": {
+          "final": 1,
+          "service_release": 2
+        },
+        "observed_followup_result_counts": {
+          "pass": 3
+        }
+      },
+      {
+        "pattern_id": "operator-pattern:accepted:0003",
+        "corrected_actions": [
+          "complete_remaining_work",
+          "schedule_reinspection"
+        ],
+        "corrected_action_labels": [
+          "Complete remaining work",
+          "Schedule reinspection"
+        ],
+        "queue_item_count": 2,
+        "queue_item_ids": [
+          "workflow-item:dallas:next-action:0006",
+          "workflow-item:dallas:next-action:0014"
+        ],
+        "source_permit_numbers": [
+          "ELP-2026-0203",
+          "ELZ-2026-0215"
+        ],
+        "trigger_result_counts": {
+          "partial": 2
+        },
+        "failure_reason_counts": {
+          "incomplete_work": 2
+        },
+        "inspection_type_counts": {
+          "rough_in": 2
+        },
+        "observed_followup_result_counts": {
+          "pass": 2
+        }
+      },
+      {
+        "pattern_id": "operator-pattern:accepted:0004",
+        "corrected_actions": [
+          "correct_grounding_or_bonding",
+          "add_labels_or_documentation"
+        ],
+        "corrected_action_labels": [
+          "Correct grounding or bonding",
+          "Add missing labels or documentation"
+        ],
+        "queue_item_count": 2,
+        "queue_item_ids": [
+          "workflow-item:dallas:next-action:0002",
+          "workflow-item:dallas:next-action:0004"
+        ],
+        "source_permit_numbers": [
+          "ELN-2026-0204",
+          "ELN-2026-0208"
+        ],
+        "trigger_result_counts": {
+          "fail": 2
+        },
+        "failure_reason_counts": {
+          "grounding_or_bonding_issue": 2
+        },
+        "inspection_type_counts": {
+          "rough_in": 2
+        },
+        "observed_followup_result_counts": {
+          "partial": 2
+        }
+      },
+      {
+        "pattern_id": "operator-pattern:accepted:0005",
+        "corrected_actions": [
+          "correct_grounding_or_bonding",
+          "add_labels_or_documentation",
+          "schedule_reinspection"
+        ],
+        "corrected_action_labels": [
+          "Correct grounding or bonding",
+          "Add missing labels or documentation",
+          "Schedule reinspection"
+        ],
+        "queue_item_count": 2,
+        "queue_item_ids": [
+          "workflow-item:dallas:next-action:0003",
+          "workflow-item:dallas:next-action:0005"
+        ],
+        "source_permit_numbers": [
+          "ELN-2026-0204",
+          "ELN-2026-0208"
+        ],
+        "trigger_result_counts": {
+          "partial": 2
+        },
+        "failure_reason_counts": {
+          "grounding_or_bonding_issue": 2
+        },
+        "inspection_type_counts": {
+          "correction_followup": 2
+        },
+        "observed_followup_result_counts": {
+          "pass": 2
+        }
+      },
+      {
+        "pattern_id": "operator-pattern:accepted:0006",
+        "corrected_actions": [
+          "correct_panel_or_service",
+          "add_labels_or_documentation",
+          "schedule_reinspection"
+        ],
+        "corrected_action_labels": [
+          "Correct panel or service issue",
+          "Add missing labels or documentation",
+          "Schedule reinspection"
+        ],
+        "queue_item_count": 2,
+        "queue_item_ids": [
+          "workflow-item:dallas:next-action:0012",
+          "workflow-item:dallas:next-action:0013"
+        ],
+        "source_permit_numbers": [
+          "ELS-2026-0213",
+          "ELS-2026-0214"
+        ],
+        "trigger_result_counts": {
+          "fail": 2
+        },
+        "failure_reason_counts": {
+          "panel_or_service_issue": 2
+        },
+        "inspection_type_counts": {
+          "service_release": 2
+        },
+        "observed_followup_result_counts": {
+          "pass": 2
+        }
+      }
+    ],
     "json_path": "generated/workflows/dallas-inspection-workflow-v1/action-queue.json",
     "report_path": "generated/workflows/dallas-inspection-workflow-v1/action-queue.md"
   },

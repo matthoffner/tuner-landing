@@ -4,6 +4,10 @@ Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
 - lane: editor
+- status: made the durable Dallas import pipeline summary operator-pattern aware; `python3 scripts/run_dallas_import_pipeline.py` still refreshes imported `v2` through the strict correction gate, and now writes all 6 accepted correction pattern snapshots into `generated/pipeline/dallas-import-pipeline-summary-v1/summary.json` plus `summary.md`
+- files: scripts/run_dallas_import_pipeline.py, generated/pipeline/dallas-import-pipeline-summary-v1/summary.json, generated/pipeline/dallas-import-pipeline-summary-v1/summary.md, NEXT_TASK.md, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- next: run `python3 scripts/run_dallas_import_pipeline.py`, inspect `workflow.accepted_patterns`, `latest_import`, and the coverage snapshot in `generated/pipeline/dallas-import-pipeline-summary-v1/summary.json`, then use the listed pattern-review command only when full operator-note examples are needed
+- lane: editor
 - status: made the durable Dallas import pipeline summary include imported artifact scale; `python3 scripts/run_dallas_import_pipeline.py` still refreshes imported `v2` through the strict correction gate, and now writes latest permit, inspection, source-record, eval-task, reviewed-label, task-family, and result-vocabulary counts into `generated/pipeline/dallas-import-pipeline-summary-v1/summary.json` plus `summary.md`
 - files: scripts/run_dallas_import_pipeline.py, generated/pipeline/dallas-import-pipeline-summary-v1/summary.json, generated/pipeline/dallas-import-pipeline-summary-v1/summary.md, NEXT_TASK.md, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
 - next: run `python3 scripts/run_dallas_import_pipeline.py`, inspect `latest_import` and the coverage snapshot in `generated/pipeline/dallas-import-pipeline-summary-v1/summary.json`, then use the listed pattern-review command only if the next Dallas import records change queue coverage or accepted action patterns

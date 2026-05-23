@@ -48,7 +48,7 @@ Updated next best artifacts:
 - expose the running cockpit to remote observers with `python3 scripts/bridge_mvp_cockpit.py` and share the read-only URL from `.automoat/state/mvp-bridge-status.json`
 - run `python3 scripts/record_operator_correction.py --smoke-check` for the default JSON contract and `python3 scripts/record_operator_correction.py --smoke-check --format text` for the readable operator contract, then verify the completed correction ledger with `python3 scripts/record_operator_correction.py --summary --format text` and `python3 scripts/record_operator_correction.py --validate-ledger --require-complete --format text` before widening fixture coverage
 - use `python3 scripts/record_operator_correction.py --list-patterns --format text` after capture to inspect reusable accepted operator patterns without opening generated JSON by hand
-- use `python3 scripts/run_dallas_import_pipeline.py` to refresh the latest Dallas import sample from CSV through normalized rows, fixture pack, evals, coverage, contract summary, workflow, the strict correction-ledger gate, and a durable generated pipeline summary with embedded coverage counts in one deterministic pass
+- use `python3 scripts/run_dallas_import_pipeline.py` to refresh the latest Dallas import sample from CSV through normalized rows, fixture pack, evals, coverage, contract summary, workflow, the strict correction-ledger gate, and a durable generated pipeline summary with embedded coverage counts and accepted operator-pattern snapshots in one deterministic pass
 - keep `generated/workflows/dallas-inspection-workflow-v1/action-queue.json` `operator_correction_patterns` current as accepted operational patterns widen
 - use the now-repeated latest-import coverage to choose the next real Dallas import-readiness gap instead of adding more hidden fixture rows by default
 
@@ -141,6 +141,7 @@ Latest bounded improvement completed:
 - `scripts/run_dallas_import_pipeline.py` now writes `generated/pipeline/dallas-import-pipeline-summary-v1/summary.json` and `summary.md`, giving the autonomous loop a durable machine-readable and operator-readable import-run result instead of relying only on terminal output
 - `scripts/run_dallas_import_pipeline.py` now embeds the latest coverage counts, thin counts, thin group names, and coverage next step in the durable pipeline summary so the next autonomous pass can choose Dallas import-readiness work without opening the full coverage report first
 - `scripts/run_dallas_import_pipeline.py` now embeds the latest imported artifact counts, task-family counts, and inspection result vocabulary in the durable pipeline summary so the next pass can see data volume and eval surface without opening the contract summary first
+- `scripts/run_dallas_import_pipeline.py` now embeds accepted operator-pattern details in the durable pipeline summary, so the next pass can see reusable action IDs, support counts, failure reasons, follow-up results, example permits, and queue IDs without running a separate pattern review first
 
 ## Constraints
 
