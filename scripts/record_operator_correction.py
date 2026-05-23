@@ -28,6 +28,11 @@ def parse_args() -> argparse.Namespace:
         help="print queue item IDs, recommended actions, and correction status without appending corrections",
     )
     parser.add_argument(
+        "--missing-only",
+        action="store_true",
+        help="with --list-queue-items, print only queue items that do not have a captured correction",
+    )
+    parser.add_argument(
         "--summary",
         action="store_true",
         help="print correction ledger progress without appending corrections",
@@ -48,6 +53,8 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--dry-run", action="store_true", help="validate and print the event without appending")
     args = parser.parse_args()
+    if args.missing_only and not args.list_queue_items:
+        parser.error("--missing-only requires --list-queue-items")
     if not args.list_queue_items and not args.summary:
         if not args.queue_item_id:
             parser.error("--queue-item-id is required unless --list-queue-items or --summary is used")
@@ -85,7 +92,7 @@ def correction_progress(queue_path: Path, ledger_path: Path) -> dict[str, Any]:
     }
 
 
-def queue_listing(queue_path: Path, ledger_path: Path) -> dict[str, Any]:
+def queue_listing(queue_path: Path, ledger_path: Path, missing_only: bool = False) -> dict[str, Any]:
     payload = read_json(queue_path)
     queue = payload.get("queue")
     if not isinstance(queue, list):
@@ -122,6 +129,8 @@ def queue_listing(queue_path: Path, ledger_path: Path) -> dict[str, Any]:
             }
         else:
             correction = {"status": "missing"}
+        if missing_only and correction["status"] != "missing":
+            continue
         items.append(
             {
                 "queue_item_id": queue_item_id,
@@ -139,8 +148,10 @@ def queue_listing(queue_path: Path, ledger_path: Path) -> dict[str, Any]:
         )
 
     return {
+        "filter": "missing" if missing_only else "all",
         "workflow_id": progress["workflow_id"],
-        "queue_items": len(items),
+        "queue_items": progress["queue_items"],
+        "listed_queue_items": len(items),
         "queue_items_with_corrections": progress["queue_items_with_corrections"],
         "queue_items_missing_corrections": progress["queue_items_missing_corrections"],
         "items": items,
@@ -150,7 +161,7 @@ def queue_listing(queue_path: Path, ledger_path: Path) -> dict[str, Any]:
 def main() -> int:
     args = parse_args()
     if args.list_queue_items:
-        print(json.dumps(queue_listing(args.queue_path, args.ledger_path), indent=2, sort_keys=True))
+        print(json.dumps(queue_listing(args.queue_path, args.ledger_path, args.missing_only), indent=2, sort_keys=True))
         return 0
     if args.summary:
         print(json.dumps(correction_progress(args.queue_path, args.ledger_path), indent=2, sort_keys=True))
