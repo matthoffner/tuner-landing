@@ -40,6 +40,7 @@ Created from Pixelbox.
 - Dallas next missing correction: `python3 scripts/record_operator_correction.py --next-missing`
 - Dallas next missing correction work order: `python3 scripts/record_operator_correction.py --next-missing --format text`
 - Dallas operator-correction progress summary: `python3 scripts/record_operator_correction.py --summary`
+- Dallas operator-correction ledger validation: `python3 scripts/record_operator_correction.py --validate-ledger`
 - Dallas operator-correction recorder: `python3 scripts/record_operator_correction.py --queue-item-id workflow-item:dallas:next-action:0008 --decision accepted`
 - Imported-sample fixture pack: `python3 scripts/generate_dallas_fixture_pack.py --input-dir generated/normalized/dallas-electrician-import-sample-v1 --output-dir generated/fixtures/dallas-electrician-import-sequences-v1`
 - Imported-sample eval scaffold: `python3 scripts/generate_dallas_eval_artifacts.py --fixture-dir generated/fixtures/dallas-electrician-import-sequences-v1 --normalized-dir generated/normalized/dallas-electrician-import-sample-v1 --output-dir generated/evals/dallas-electrician-import-sample-v1 --dataset-id dallas-electrician-import-sample-v1`
@@ -53,7 +54,7 @@ Created from Pixelbox.
 The eventual app shell can be React Server Components instead of an iframe. Use RSC for the initial cockpit snapshot from `/api/status` and whitelisted artifacts, then use a small client component with `EventSource('/events')` for the live terminal/log stream. Keep mutation endpoints local-only; remote bridges should stay read-only.
 
 Local operator corrections from the Dallas action queue post to `/api/operator-corrections` and append `generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl`. The read-only bridge can expose the ledger, but it rejects mutation requests.
-Use `python3 scripts/record_operator_correction.py --summary` to check capture progress, `python3 scripts/record_operator_correction.py --list-queue-items` to review all current queue item IDs, `python3 scripts/record_operator_correction.py --list-queue-items --missing-only` to list uncaptured Dallas queue items, and `python3 scripts/record_operator_correction.py --next-missing --format text` to print a readable work order for the next uncaptured item with accept/reject commands, edited-action templates, optional `--operator-note` variants, and the current known action ID catalog. Omit `--format text` when a machine-readable JSON response is needed.
+Use `python3 scripts/record_operator_correction.py --summary` to check capture progress, `python3 scripts/record_operator_correction.py --list-queue-items` to review all current queue item IDs, `python3 scripts/record_operator_correction.py --list-queue-items --missing-only` to list uncaptured Dallas queue items, `python3 scripts/record_operator_correction.py --next-missing --format text` to print a readable work order for the next uncaptured item with accept/reject commands, edited-action templates, optional `--operator-note` variants, and the current known action ID catalog, and `python3 scripts/record_operator_correction.py --validate-ledger` to verify captured events still match the current queue and action catalog. Omit `--format text` when a machine-readable JSON response is needed.
 
 ## Deploy
 
