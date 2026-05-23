@@ -4,10 +4,10 @@ This artifact turns reviewed Dallas electrician inspection labels into a concret
 
 ## Summary
 
-- Queue items: `17`
-- Priority counts: `{"high": 6, "medium": 11}`
-- Trigger result counts: `{"fail": 6, "not_ready": 4, "partial": 7}`
-- Operator correction events: `17`
+- Queue items: `18`
+- Priority counts: `{"high": 6, "medium": 12}`
+- Trigger result counts: `{"fail": 6, "not_ready": 4, "partial": 8}`
+- Operator correction events: `18`
 - Operator correction ledger: `generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl`
 - Accepted correction patterns: `6`
 
@@ -15,14 +15,14 @@ This artifact turns reviewed Dallas electrician inspection labels into a concret
 
 ### operator-pattern:accepted:0001
 
-- Queue items: `4`
+- Queue items: `5`
 - Actions: `Correct wiring or devices, Schedule reinspection`
 - Action IDs: `correct_wiring_or_devices, schedule_reinspection`
-- Trigger results: `{"fail": 2, "partial": 2}`
-- Failure reasons: `{"wiring_or_device_issue": 4}`
-- Inspection types: `{"final": 2, "rough_in": 2}`
-- Follow-up results: `{"pass": 4}`
-- Example permits: `ELP-2026-0209, ELR-2026-0201, ELR-2026-0207, ELZ-2026-0218`
+- Trigger results: `{"fail": 2, "partial": 3}`
+- Failure reasons: `{"wiring_or_device_issue": 5}`
+- Inspection types: `{"final": 2, "rough_in": 3}`
+- Follow-up results: `{"pass": 5}`
+- Example permits: `ELP-2026-0209, ELR-2026-0201, ELR-2026-0207, ELZ-2026-0218, ELZ-2026-0219`
 
 ### operator-pattern:accepted:0002
 
@@ -250,3 +250,13 @@ This artifact turns reviewed Dallas electrician inspection labels into a concret
 - Recommended actions: `Correct wiring or devices, Schedule reinspection`
 - Follow-up observed: `2026-05-06` `correction_followup` -> `pass`
 - Evidence: Kitchen branch wiring repaired but GFCI device and island receptacle trim remained incomplete.
+
+### ELZ-2026-0219 - 2752 S EWING AVE DALLAS TX 75216
+
+- Priority: `medium`
+- Contractor: `Cedars South Electric`
+- Trigger: `2026-05-03` `rough_in` -> `partial`
+- Failure reason: `wiring_or_device_issue`
+- Recommended actions: `Correct wiring or devices, Schedule reinspection`
+- Follow-up observed: `2026-05-08` `correction_followup` -> `pass`
+- Evidence: Bathroom branch wiring repaired but AFCI breaker and receptacle trim remained incomplete before rough-in approval.

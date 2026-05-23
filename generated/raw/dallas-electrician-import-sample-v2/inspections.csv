@@ -46,3 +46,5 @@ ELZ-2026-0217,2026-04-28,Final,Not Ready,Locked gate blocked final inspection ac
 ELZ-2026-0217,2026-05-03,Correction follow-up,Pass,Access confirmed and final trim verified for repair approval.,Inspector Rivera,true,https://example.local/dallas/inspections/ELZ-2026-0217/2
 ELZ-2026-0218,2026-05-01,Rough-in,Partial,Kitchen branch wiring repaired but GFCI device and island receptacle trim remained incomplete.,Inspector Patel,false,https://example.local/dallas/inspections/ELZ-2026-0218/1
 ELZ-2026-0218,2026-05-06,Correction follow-up,Pass,GFCI protection installed and missing device completed for approval.,Inspector Patel,true,https://example.local/dallas/inspections/ELZ-2026-0218/2
+ELZ-2026-0219,2026-05-03,Rough-in,Partial,Bathroom branch wiring repaired but AFCI breaker and receptacle trim remained incomplete before rough-in approval.,Inspector Patel,false,https://example.local/dallas/inspections/ELZ-2026-0219/1
+ELZ-2026-0219,2026-05-08,Correction follow-up,Pass,AFCI protection installed and receptacle trim completed for approval.,Inspector Patel,true,https://example.local/dallas/inspections/ELZ-2026-0219/2
