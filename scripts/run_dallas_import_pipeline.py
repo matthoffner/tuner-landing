@@ -1276,6 +1276,7 @@ def raw_handoff_verification(raw_dir, summary_path=SUMMARY_JSON_PATH):
         "raw_file_next_append_rows_match": False,
         "raw_file_append_csv_templates_match": False,
         "raw_file_append_work_order_match": False,
+        "raw_file_append_sequence_match": False,
         "append_preflight_passed": False,
     }
     mismatches = []
@@ -1408,6 +1409,16 @@ def raw_handoff_verification(raw_dir, summary_path=SUMMARY_JSON_PATH):
         handoff.get("raw_file_append_work_order"),
         current_append_work_order,
     )
+    expected_append_sequence = handoff.get("raw_file_append_sequence")
+    if expected_append_sequence == current_append_sequence:
+        checks["raw_file_append_sequence_match"] = True
+    else:
+        add_mismatch(
+            "raw_file_append_sequence_match",
+            "raw_file_append_sequence changed since the durable handoff",
+            expected=expected_append_sequence,
+            current=current_append_sequence,
+        )
 
     append_preflight = handoff.get("raw_file_append_preflight")
     if (
@@ -1435,8 +1446,8 @@ def raw_handoff_verification(raw_dir, summary_path=SUMMARY_JSON_PATH):
         "raw_file_append_work_order",
         {},
     )
-    verification["expected_raw_file_append_sequence"] = raw_file_append_sequence(
-        verification["expected_raw_file_append_work_order"],
+    verification["expected_raw_file_append_sequence"] = (
+        expected_append_sequence if isinstance(expected_append_sequence, list) else []
     )
     verification["after_edit_command"] = handoff.get(
         "after_edit_command",
@@ -1475,6 +1486,11 @@ def next_import_record_handoff(raw_dir):
         raw_headers,
         raw_required_fields,
     )
+    raw_append_work_order = raw_file_append_work_order(
+        raw_dir,
+        raw_next_append_rows,
+        raw_append_csv_templates,
+    )
     return {
         "raw_dir": display_raw_dir,
         "raw_files": [
@@ -1502,11 +1518,8 @@ def next_import_record_handoff(raw_dir):
             raw_required_fields,
         ),
         "raw_file_append_csv_templates": raw_append_csv_templates,
-        "raw_file_append_work_order": raw_file_append_work_order(
-            raw_dir,
-            raw_next_append_rows,
-            raw_append_csv_templates,
-        ),
+        "raw_file_append_work_order": raw_append_work_order,
+        "raw_file_append_sequence": raw_file_append_sequence(raw_append_work_order),
         "raw_file_required_field_gaps": raw_required_field_gaps,
         "raw_file_append_preflight": raw_file_append_preflight(
             raw_row_counts,
@@ -1828,6 +1841,10 @@ def write_summary(summary):
         "raw_file_append_work_order",
         {},
     )
+    raw_append_sequence = next_import_handoff.get(
+        "raw_file_append_sequence",
+        [],
+    )
     raw_required_field_gaps = next_import_handoff.get(
         "raw_file_required_field_gaps",
         {},
@@ -2130,6 +2147,26 @@ def write_summary(summary):
                 labels.append(f"- `{file_name}` append work order: missing")
         return labels
 
+    def inline_append_sequence(values):
+        if not isinstance(values, list) or not values:
+            return ["- Raw CSV append sequence: none"]
+        labels = []
+        for item in values:
+            if not isinstance(item, dict):
+                continue
+            file_name = item.get("file_name")
+            if item.get("status") != "ready":
+                labels.append(f"- `{file_name}` append sequence: {item.get('status')}")
+                continue
+            labels.append(
+                f"- `{file_name}` append sequence: "
+                f"path `{item.get('file_path')}`, "
+                f"row `{item.get('csv_row_number')}`, "
+                f"header `{item.get('header_line')}`, "
+                f"template `{item.get('template_line')}`"
+            )
+        return labels if labels else ["- Raw CSV append sequence: none"]
+
     def inline_required_field_gaps(values):
         if not isinstance(values, dict) or not values:
             return ["- Raw CSV required-field gaps: none"]
@@ -2220,6 +2257,7 @@ def write_summary(summary):
         "- Next raw import optional fields: see Follow-Up",
         "- Next raw import append CSV templates: see Follow-Up",
         "- Next raw import append work order: see Follow-Up",
+        "- Next raw import append sequence: see Follow-Up",
         "- Next raw import required-field gaps: see Follow-Up",
         "",
         "## Execution Readiness",
@@ -2435,6 +2473,8 @@ def write_summary(summary):
             *inline_append_csv_templates(raw_append_csv_templates),
             "- Raw CSV append work order:",
             *inline_append_work_order(raw_append_work_order),
+            "- Raw CSV append sequence:",
+            *inline_append_sequence(raw_append_sequence),
             "- Raw CSV required-field gaps:",
             *inline_required_field_gaps(raw_required_field_gaps),
             f"- Require-ready pipeline: `{follow_up['require_ready_pipeline']}`",
@@ -2519,6 +2559,10 @@ def print_summary(summary, output_format="text"):
     raw_append_work_order = next_import_handoff.get(
         "raw_file_append_work_order",
         {},
+    )
+    raw_append_sequence = next_import_handoff.get(
+        "raw_file_append_sequence",
+        [],
     )
     raw_required_field_gaps = next_import_handoff.get(
         "raw_file_required_field_gaps",
@@ -2782,6 +2826,25 @@ def print_summary(summary, output_format="text"):
                 labels.append(f"{file_name}=missing")
         return "; ".join(labels)
 
+    def format_append_sequence(values):
+        if not isinstance(values, list) or not values:
+            return "none"
+        labels = []
+        for item in values:
+            if not isinstance(item, dict):
+                continue
+            file_name = item.get("file_name")
+            if item.get("status") != "ready":
+                labels.append(f"{file_name}={item.get('status')}")
+                continue
+            labels.append(
+                f"{file_name}=file:{item.get('file_path')} "
+                f"row:{item.get('csv_row_number')} "
+                f"header:{item.get('header_line')} "
+                f"template:{item.get('template_line')}"
+            )
+        return "; ".join(labels) if labels else "none"
+
     def format_required_field_gaps(values):
         if not isinstance(values, dict) or not values:
             return "none"
@@ -2921,6 +2984,10 @@ def print_summary(summary, output_format="text"):
     print(
         "  raw_import_append_work_order: "
         f"{format_append_work_order(raw_append_work_order)}"
+    )
+    print(
+        "  raw_import_append_sequence: "
+        f"{format_append_sequence(raw_append_sequence)}"
     )
     print(
         "  raw_import_required_field_gaps: "

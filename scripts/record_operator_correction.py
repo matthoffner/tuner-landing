@@ -1310,6 +1310,36 @@ def raw_import_file_append_work_order(
     return work_order
 
 
+def raw_import_file_append_sequence(
+    append_work_order: dict[str, dict[str, Any] | None],
+) -> list[dict[str, Any]]:
+    if not isinstance(append_work_order, dict):
+        return []
+
+    sequence: list[dict[str, Any]] = []
+    for file_name in RAW_IMPORT_FILE_NAMES:
+        item = append_work_order.get(file_name)
+        if not isinstance(item, dict):
+            sequence.append(
+                {
+                    "file_name": file_name,
+                    "status": "missing",
+                }
+            )
+            continue
+        sequence.append(
+            {
+                "file_name": file_name,
+                "status": "ready",
+                "file_path": item.get("file_path"),
+                "csv_row_number": item.get("csv_row_number"),
+                "header_line": item.get("header_line"),
+                "template_line": item.get("template_line"),
+            }
+        )
+    return sequence
+
+
 def raw_import_file_required_field_gaps(
     raw_dir: str,
     required_fields_by_file: dict[str, list[str]],
@@ -2045,6 +2075,23 @@ def raw_import_file_append_work_order_is_valid(
     )
 
 
+def raw_import_file_append_sequence_is_valid(value: Any, append_work_order: Any) -> bool:
+    if not isinstance(append_work_order, dict):
+        return False
+    expected_sequence = raw_import_file_append_sequence(append_work_order)
+    return (
+        isinstance(value, list)
+        and value == expected_sequence
+        and len(value) == len(RAW_IMPORT_FILE_NAMES)
+        and all(
+            isinstance(item, dict)
+            and item.get("file_name") in RAW_IMPORT_FILE_NAMES
+            and item.get("status") in {"ready", "missing"}
+            for item in value
+        )
+    )
+
+
 def raw_import_file_required_field_gaps_are_valid(value: Any) -> bool:
     if not isinstance(value, dict):
         return False
@@ -2308,6 +2355,12 @@ def next_import_record_handoff(summary: dict[str, Any] | None = None) -> dict[st
             raw_next_append_rows,
             raw_append_csv_templates,
         )
+    raw_append_sequence = summary_handoff.get("raw_file_append_sequence")
+    if not raw_import_file_append_sequence_is_valid(
+        raw_append_sequence,
+        raw_append_work_order,
+    ):
+        raw_append_sequence = raw_import_file_append_sequence(raw_append_work_order)
     raw_required_field_gaps = summary_handoff.get("raw_file_required_field_gaps")
     if not raw_import_file_required_field_gaps_are_valid(raw_required_field_gaps):
         raw_required_field_gaps = raw_import_file_required_field_gaps(
@@ -2344,6 +2397,7 @@ def next_import_record_handoff(summary: dict[str, Any] | None = None) -> dict[st
         "raw_file_append_templates": raw_append_templates,
         "raw_file_append_csv_templates": raw_append_csv_templates,
         "raw_file_append_work_order": raw_append_work_order,
+        "raw_file_append_sequence": raw_append_sequence,
         "raw_file_required_field_gaps": raw_required_field_gaps,
         "raw_file_append_preflight": raw_append_preflight,
         "after_edit_command": IMPORT_REFRESH_COMMAND,
@@ -2419,6 +2473,10 @@ def next_import_record_handoff_is_valid(handoff: Any) -> bool:
             handoff.get("raw_dir"),
             handoff.get("raw_file_next_append_rows"),
             handoff.get("raw_file_append_csv_templates"),
+        )
+        and raw_import_file_append_sequence_is_valid(
+            handoff.get("raw_file_append_sequence"),
+            handoff.get("raw_file_append_work_order"),
         )
         and raw_import_file_required_field_gaps_are_valid(
             handoff.get("raw_file_required_field_gaps"),
@@ -3383,6 +3441,29 @@ def format_raw_import_append_work_order(handoff: Any) -> str:
     return "; ".join(labels) if labels else "(none)"
 
 
+def format_raw_import_append_sequence(handoff: Any) -> str:
+    if not isinstance(handoff, dict):
+        return "(none)"
+    sequence = handoff.get("raw_file_append_sequence")
+    if not isinstance(sequence, list):
+        return "(none)"
+    labels = []
+    for item in sequence:
+        if not isinstance(item, dict):
+            continue
+        file_name = item.get("file_name")
+        if item.get("status") != "ready":
+            labels.append(f"{file_name}={item.get('status')}")
+            continue
+        labels.append(
+            f"{file_name}=file:{item.get('file_path')} "
+            f"row:{item.get('csv_row_number')} "
+            f"header:{item.get('header_line')} "
+            f"template:{item.get('template_line')}"
+        )
+    return "; ".join(labels) if labels else "(none)"
+
+
 def format_raw_import_required_field_gaps(handoff: Any) -> str:
     if not isinstance(handoff, dict):
         return "(none)"
@@ -3658,6 +3739,10 @@ def format_progress_text(progress: dict[str, Any]) -> str:
                 lines.append(
                     "Next import raw append work order: "
                     f"{format_raw_import_append_work_order(next_import_handoff)}"
+                )
+                lines.append(
+                    "Next import raw append sequence: "
+                    f"{format_raw_import_append_sequence(next_import_handoff)}"
                 )
                 lines.append(
                     "Next import raw required-field gaps: "
@@ -4334,8 +4419,8 @@ def operator_correction_smoke_check(
             "value profiles, date profiles, relationship checks, import scope "
             "counts, importable examples, exclusion examples, headers, required "
             "fields, optional fields, append templates, append CSV templates, "
-            "append work order, required-field gaps, append preflight, handoff "
-            "verification commands, and file fingerprints after complete "
+            "append work order, append sequence, required-field gaps, append "
+            "preflight, handoff verification commands, and file fingerprints after complete "
             "correction capture"
             if missing_count == 0
             else "summary with missing corrections does not expose the last import-readiness snapshot"
@@ -4932,6 +5017,10 @@ def format_smoke_check_text(smoke_check: dict[str, Any]) -> str:
         lines.append(
             "Next import raw append work order: "
             f"{format_raw_import_append_work_order(readiness.get('next_import_record_handoff'))}"
+        )
+        lines.append(
+            "Next import raw append sequence: "
+            f"{format_raw_import_append_sequence(readiness.get('next_import_record_handoff'))}"
         )
         lines.append(
             "Next import raw required-field gaps: "
