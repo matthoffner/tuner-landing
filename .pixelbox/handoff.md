@@ -4,6 +4,11 @@ Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
 - lane: editor
+- status: added machine-readable stdout for Dallas import readiness; `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json` now emits the final durable summary as JSON on stdout while summary-only notices, step logs, and child command output go to stderr, and the generated pipeline summary advertises that JSON command
+- files: scripts/run_dallas_import_pipeline.py, generated/pipeline/dallas-import-pipeline-summary-v1/summary.json, generated/pipeline/dallas-import-pipeline-summary-v1/summary.md, README.md, NEXT_TASK.md, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- checks: `python3 -m py_compile scripts/run_dallas_import_pipeline.py`; `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json > /tmp/automoat-dallas-summary.json`; `python3 -m json.tool /tmp/automoat-dallas-summary.json > /tmp/automoat-dallas-summary.pretty.json`; `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready`; `git diff --check`
+- next: use `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json` when the autonomous supervisor needs parseable readiness stdout from current generated artifacts; use `python3 scripts/run_dallas_import_pipeline.py --require-ready` after changing raw rows or artifact writers
+- lane: editor
 - status: added a fast Dallas import readiness path; `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready` skips artifact regeneration, still validates the strict correction completion gate, rebuilds the durable summary from current generated artifacts, and exits nonzero if `execution_readiness.status` is blocked
 - files: scripts/run_dallas_import_pipeline.py, generated/pipeline/dallas-import-pipeline-summary-v1/summary.json, generated/pipeline/dallas-import-pipeline-summary-v1/summary.md, README.md, NEXT_TASK.md, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
 - next: use `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready` for a fast readiness recheck when generated Dallas artifacts already exist; use `python3 scripts/run_dallas_import_pipeline.py --require-ready` after changing raw rows or artifact writers

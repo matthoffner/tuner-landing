@@ -20,6 +20,7 @@
 - Run command: `python3 scripts/run_dallas_import_pipeline.py`
 - Require-ready command: `python3 scripts/run_dallas_import_pipeline.py --require-ready`
 - Summary-only require-ready command: `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready`
+- Summary-only require-ready JSON command: `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json`
 
 ## Import Artifact Snapshot
 
@@ -120,6 +121,7 @@ These are the reusable accepted correction patterns currently embedded in the Da
 - Completion gate: `python3 scripts/record_operator_correction.py --validate-ledger --require-complete --format text`
 - Require-ready pipeline: `python3 scripts/run_dallas_import_pipeline.py --require-ready`
 - Summary-only require-ready pipeline: `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready`
+- Summary-only require-ready JSON pipeline: `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json`
 
 ## Reports
 

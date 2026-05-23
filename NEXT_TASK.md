@@ -50,6 +50,7 @@ Updated next best artifacts:
 - use `python3 scripts/record_operator_correction.py --list-patterns --format text` after capture to inspect reusable accepted operator patterns without opening generated JSON by hand
 - use `python3 scripts/run_dallas_import_pipeline.py --require-ready` to refresh the latest Dallas import sample from CSV through normalized rows, fixture pack, evals, coverage, contract summary, workflow, the strict correction-ledger gate, and a durable generated pipeline summary with embedded execution readiness, coverage counts, and accepted operator-pattern snapshots in one deterministic pass that exits nonzero if readiness is blocked
 - use `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready` when generated Dallas artifacts already exist and automation only needs to rebuild the durable summary plus strict readiness result without rerunning every artifact writer
+- use `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json` when automation needs the final readiness summary on stdout with command logs kept off stdout
 - keep `generated/workflows/dallas-inspection-workflow-v1/action-queue.json` `operator_correction_patterns` current as accepted operational patterns widen
 - use the now-repeated latest-import coverage to choose the next real Dallas import-readiness gap instead of adding more hidden fixture rows by default
 
@@ -146,6 +147,7 @@ Latest bounded improvement completed:
 - `scripts/run_dallas_import_pipeline.py` now embeds an `execution_readiness` gate in the durable pipeline summary, combining contract pass state, complete operator corrections, strict correction-gate status, thin coverage groups, and accepted operator-pattern availability into one machine-readable readiness signal for the next Dallas import pass
 - `scripts/run_dallas_import_pipeline.py --require-ready` now refreshes the same Dallas import pipeline and exits nonzero if the generated `execution_readiness` gate is blocked, giving automation a strict command while preserving the default summary-only behavior
 - `scripts/run_dallas_import_pipeline.py --summary-only --require-ready` now skips artifact regeneration, validates the strict correction gate, rebuilds the durable pipeline summary from current generated Dallas artifacts, and exits nonzero if execution readiness is blocked
+- `scripts/run_dallas_import_pipeline.py --format json` now emits the final durable Dallas import summary as machine-readable stdout while routing step logs and child command output to stderr
 
 ## Constraints
 

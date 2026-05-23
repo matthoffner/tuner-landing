@@ -31,6 +31,9 @@ REQUIRE_READY_COMMAND = "python3 scripts/run_dallas_import_pipeline.py --require
 SUMMARY_ONLY_REQUIRE_READY_COMMAND = (
     "python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready"
 )
+SUMMARY_ONLY_REQUIRE_READY_JSON_COMMAND = (
+    "python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json"
+)
 
 
 def parse_args():
@@ -64,6 +67,15 @@ def parse_args():
             "--skip-correction-gate is set."
         ),
     )
+    parser.add_argument(
+        "--format",
+        choices=("text", "json"),
+        default="text",
+        help=(
+            "stdout format for the final pipeline summary; JSON mode sends step logs "
+            "and child command output to stderr so stdout stays machine-readable"
+        ),
+    )
     return parser.parse_args()
 
 
@@ -83,10 +95,15 @@ def command_path(path):
         return str(resolved)
 
 
-def run_step(label, command):
-    print(f"==> {label}", flush=True)
-    print(display_command(command), flush=True)
-    result = subprocess.run(command, cwd=ROOT)
+def run_step(label, command, output_format="text"):
+    log_stream = sys.stderr if output_format == "json" else sys.stdout
+    print(f"==> {label}", flush=True, file=log_stream)
+    print(display_command(command), flush=True, file=log_stream)
+    result = subprocess.run(
+        command,
+        cwd=ROOT,
+        stdout=sys.stderr if output_format == "json" else None,
+    )
     if result.returncode != 0:
         raise SystemExit(result.returncode)
 
@@ -234,6 +251,7 @@ def build_execution_readiness(contract, workflow, coverage, correction_gate):
         "run_command": "python3 scripts/run_dallas_import_pipeline.py",
         "require_ready_command": REQUIRE_READY_COMMAND,
         "summary_only_require_ready_command": SUMMARY_ONLY_REQUIRE_READY_COMMAND,
+        "summary_only_require_ready_json_command": SUMMARY_ONLY_REQUIRE_READY_JSON_COMMAND,
     }
 
 
@@ -303,6 +321,7 @@ def build_summary(args):
             "summary_report": command_path(SUMMARY_REPORT_PATH),
             "require_ready_pipeline": REQUIRE_READY_COMMAND,
             "summary_only_require_ready_pipeline": SUMMARY_ONLY_REQUIRE_READY_COMMAND,
+            "summary_only_require_ready_json_pipeline": SUMMARY_ONLY_REQUIRE_READY_JSON_COMMAND,
         },
         "latest_import": summarize_contract_dataset(contract, args.dataset_id),
     }
@@ -398,6 +417,10 @@ def write_summary(summary):
         (
             "- Summary-only require-ready command: "
             f"`{execution_readiness['summary_only_require_ready_command']}`"
+        ),
+        (
+            "- Summary-only require-ready JSON command: "
+            f"`{execution_readiness['summary_only_require_ready_json_command']}`"
         ),
         "",
         "## Import Artifact Snapshot",
@@ -521,6 +544,10 @@ def write_summary(summary):
                 "- Summary-only require-ready pipeline: "
                 f"`{follow_up['summary_only_require_ready_pipeline']}`"
             ),
+            (
+                "- Summary-only require-ready JSON pipeline: "
+                f"`{follow_up['summary_only_require_ready_json_pipeline']}`"
+            ),
             "",
             "## Reports",
             "",
@@ -535,7 +562,12 @@ def write_summary(summary):
         handle.write("\n")
 
 
-def print_summary(summary):
+def print_summary(summary, output_format="text"):
+    if output_format == "json":
+        json.dump(summary, sys.stdout, indent=2)
+        sys.stdout.write("\n")
+        return
+
     contract = summary["contract"]
     workflow = summary["workflow"]
     coverage = summary["coverage"]
@@ -609,6 +641,10 @@ def print_summary(summary):
     print(
         "  summary_only_require_ready_pipeline: "
         f"{follow_up['summary_only_require_ready_pipeline']}"
+    )
+    print(
+        "  summary_only_require_ready_json_pipeline: "
+        f"{follow_up['summary_only_require_ready_json_pipeline']}"
     )
 
 
@@ -685,12 +721,13 @@ def main():
         print(
             "==> Summary-only mode: using current generated Dallas artifacts",
             flush=True,
+            file=sys.stderr if args.format == "json" else sys.stdout,
         )
     for label, command in steps:
-        run_step(label, command)
+        run_step(label, command, output_format=args.format)
     summary = build_summary(args)
     write_summary(summary)
-    print_summary(summary)
+    print_summary(summary, output_format=args.format)
     if args.require_ready and summary["execution_readiness"]["status"] != "ready":
         blockers = ", ".join(summary["execution_readiness"]["blockers"]) or "unknown"
         raise SystemExit(f"Dallas import execution readiness blocked: {blockers}")
