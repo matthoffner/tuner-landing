@@ -169,6 +169,49 @@
         "text_content": ""
       }
     },
+    "raw_file_required_field_gaps": {
+      "permits.csv": {
+        "rows_checked": 15,
+        "rows_with_missing_required_fields": 0,
+        "missing_required_headers": [],
+        "missing_field_counts": {
+          "permit_number": 0,
+          "address": 0,
+          "city": 0,
+          "trade": 0,
+          "work_class": 0
+        }
+      },
+      "inspections.csv": {
+        "rows_checked": 41,
+        "rows_with_missing_required_fields": 0,
+        "missing_required_headers": [],
+        "missing_field_counts": {
+          "permit_number": 0,
+          "inspection_date": 0,
+          "inspection_type": 0,
+          "result": 0
+        }
+      },
+      "contractors.csv": {
+        "rows_checked": 6,
+        "rows_with_missing_required_fields": 0,
+        "missing_required_headers": [],
+        "missing_field_counts": {
+          "registration_id": 0,
+          "name": 0,
+          "license_type": 0
+        }
+      },
+      "rule_documents.csv": {
+        "rows_checked": 3,
+        "rows_with_missing_required_fields": 0,
+        "missing_required_headers": [],
+        "missing_field_counts": {
+          "title": 0
+        }
+      }
+    },
     "after_edit_command": "python3 scripts/run_dallas_import_pipeline.py --require-ready",
     "readiness_check_command": "python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json"
   },

@@ -14,6 +14,7 @@
 - Next raw import headers: see Follow-Up
 - Next raw import required fields: see Follow-Up
 - Next raw import optional fields: see Follow-Up
+- Next raw import required-field gaps: see Follow-Up
 
 ## Execution Readiness
 
@@ -148,6 +149,11 @@ These are the reusable accepted correction patterns currently embedded in the Da
 - `inspections.csv` append template: `{"permit_number": "<required>", "inspection_date": "<required>", "inspection_type": "<required>", "result": "<required>", "notes": "", "inspector_name": "", "reinspection_flag": "", "source_url": ""}`
 - `contractors.csv` append template: `{"registration_id": "<required>", "name": "<required>", "license_type": "<required>", "registration_status": "", "city": "", "state": ""}`
 - `rule_documents.csv` append template: `{"title": "<required>", "document_type": "", "effective_date": "", "source_url": "", "text_content": ""}`
+- Raw CSV required-field gaps:
+- `permits.csv` required-field gaps: `0/15` rows, missing headers: none, field counts: `{"address": 0, "city": 0, "permit_number": 0, "trade": 0, "work_class": 0}`
+- `inspections.csv` required-field gaps: `0/41` rows, missing headers: none, field counts: `{"inspection_date": 0, "inspection_type": 0, "permit_number": 0, "result": 0}`
+- `contractors.csv` required-field gaps: `0/6` rows, missing headers: none, field counts: `{"license_type": 0, "name": 0, "registration_id": 0}`
+- `rule_documents.csv` required-field gaps: `0/3` rows, missing headers: none, field counts: `{"title": 0}`
 - Require-ready pipeline: `python3 scripts/run_dallas_import_pipeline.py --require-ready`
 - Summary-only require-ready pipeline: `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready`
 - Summary-only require-ready JSON pipeline: `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json`

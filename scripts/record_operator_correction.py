@@ -431,6 +431,50 @@ def raw_import_file_append_templates(
     return append_templates
 
 
+def raw_import_file_required_field_gaps(
+    raw_dir: str,
+    required_fields_by_file: dict[str, list[str]],
+) -> dict[str, dict[str, Any] | None]:
+    resolved_raw_dir = repo_path(raw_dir)
+    gaps: dict[str, dict[str, Any] | None] = {}
+    for file_name in RAW_IMPORT_FILE_NAMES:
+        path = resolved_raw_dir / file_name
+        required_fields = list(required_fields_by_file.get(file_name, []))
+        if not path.exists():
+            gaps[file_name] = None
+            continue
+
+        with path.open(newline="", encoding="utf-8") as handle:
+            reader = csv.DictReader(handle)
+            headers = reader.fieldnames or []
+            missing_field_counts = {field: 0 for field in required_fields}
+            rows_checked = 0
+            rows_with_missing_required_fields = 0
+            for row in reader:
+                if not any((value or "").strip() for value in row.values()):
+                    continue
+                rows_checked += 1
+                missing_fields = [
+                    field
+                    for field in required_fields
+                    if not (row.get(field) or "").strip()
+                ]
+                if missing_fields:
+                    rows_with_missing_required_fields += 1
+                    for field in missing_fields:
+                        missing_field_counts[field] += 1
+
+        gaps[file_name] = {
+            "rows_checked": rows_checked,
+            "rows_with_missing_required_fields": rows_with_missing_required_fields,
+            "missing_required_headers": [
+                field for field in required_fields if field not in headers
+            ],
+            "missing_field_counts": missing_field_counts,
+        }
+    return gaps
+
+
 def raw_import_file_row_counts_are_valid(value: Any) -> bool:
     return (
         isinstance(value, dict)
@@ -512,6 +556,39 @@ def raw_import_file_append_templates_are_valid(
             for file_name in RAW_IMPORT_FILE_NAMES
         )
     )
+
+
+def raw_import_file_required_field_gaps_are_valid(value: Any) -> bool:
+    if not isinstance(value, dict):
+        return False
+
+    for file_name in RAW_IMPORT_FILE_NAMES:
+        gap = value.get(file_name)
+        required_fields = RAW_IMPORT_REQUIRED_FIELDS[file_name]
+        if not isinstance(gap, dict):
+            return False
+        rows_checked = gap.get("rows_checked")
+        rows_with_gaps = gap.get("rows_with_missing_required_fields")
+        missing_headers = gap.get("missing_required_headers")
+        missing_counts = gap.get("missing_field_counts")
+        if (
+            not isinstance(rows_checked, int)
+            or rows_checked < 0
+            or not isinstance(rows_with_gaps, int)
+            or rows_with_gaps < 0
+            or rows_with_gaps > rows_checked
+            or not isinstance(missing_headers, list)
+            or any(not isinstance(field, str) for field in missing_headers)
+            or not isinstance(missing_counts, dict)
+        ):
+            return False
+        for field in required_fields:
+            count = missing_counts.get(field)
+            if not isinstance(count, int) or count < 0 or count > rows_checked:
+                return False
+        if set(missing_counts) != set(required_fields):
+            return False
+    return True
 
 
 def count_snapshot(value: Any, fields: tuple[str, ...]) -> dict[str, int]:
@@ -610,6 +687,12 @@ def next_import_record_handoff(summary: dict[str, Any] | None = None) -> dict[st
             raw_headers,
             raw_required_fields,
         )
+    raw_required_field_gaps = summary_handoff.get("raw_file_required_field_gaps")
+    if not raw_import_file_required_field_gaps_are_valid(raw_required_field_gaps):
+        raw_required_field_gaps = raw_import_file_required_field_gaps(
+            raw_dir,
+            raw_required_fields,
+        )
     return {
         "raw_dir": raw_dir,
         "raw_files": [f"{raw_dir}/{file_name}" for file_name in RAW_IMPORT_FILE_NAMES],
@@ -618,6 +701,7 @@ def next_import_record_handoff(summary: dict[str, Any] | None = None) -> dict[st
         "raw_file_required_fields": raw_required_fields,
         "raw_file_optional_fields": raw_optional_fields,
         "raw_file_append_templates": raw_append_templates,
+        "raw_file_required_field_gaps": raw_required_field_gaps,
         "after_edit_command": IMPORT_REFRESH_COMMAND,
         "readiness_check_command": IMPORT_READINESS_JSON_COMMAND,
     }
@@ -646,6 +730,9 @@ def next_import_record_handoff_is_valid(handoff: Any) -> bool:
             handoff.get("raw_file_append_templates"),
             handoff.get("raw_file_headers"),
             handoff.get("raw_file_required_fields"),
+        )
+        and raw_import_file_required_field_gaps_are_valid(
+            handoff.get("raw_file_required_field_gaps"),
         )
         and handoff.get("after_edit_command") == IMPORT_REFRESH_COMMAND
         and handoff.get("readiness_check_command") == IMPORT_READINESS_JSON_COMMAND
@@ -1336,6 +1423,30 @@ def format_raw_import_append_templates(handoff: Any) -> str:
     return "; ".join(labels) if labels else "(none)"
 
 
+def format_raw_import_required_field_gaps(handoff: Any) -> str:
+    if not isinstance(handoff, dict):
+        return "(none)"
+    gaps_by_file = handoff.get("raw_file_required_field_gaps")
+    if not isinstance(gaps_by_file, dict):
+        return "(none)"
+    labels = []
+    for file_name in RAW_IMPORT_FILE_NAMES:
+        gap = gaps_by_file.get(file_name)
+        if not isinstance(gap, dict):
+            labels.append(f"{file_name}=missing")
+            continue
+        rows_checked = gap.get("rows_checked")
+        rows_with_gaps = gap.get("rows_with_missing_required_fields")
+        missing_headers = gap.get("missing_required_headers", [])
+        missing_counts = gap.get("missing_field_counts", {})
+        labels.append(
+            f"{file_name}={rows_with_gaps}/{rows_checked} rows "
+            f"(missing_headers={format_action_list(missing_headers)}, "
+            f"field_counts={json.dumps(missing_counts, sort_keys=True)})"
+        )
+    return "; ".join(labels) if labels else "(none)"
+
+
 def format_decision_counts(counts: Any) -> str:
     if not isinstance(counts, dict) or not counts:
         return "(none)"
@@ -1531,6 +1642,10 @@ def format_progress_text(progress: dict[str, Any]) -> str:
                 lines.append(
                     "Next import raw append templates: "
                     f"{format_raw_import_append_templates(next_import_handoff)}"
+                )
+                lines.append(
+                    "Next import raw required-field gaps: "
+                    f"{format_raw_import_required_field_gaps(next_import_handoff)}"
                 )
                 after_edit_command = next_import_handoff.get("after_edit_command")
                 if isinstance(after_edit_command, str) and after_edit_command.strip():
@@ -2197,7 +2312,7 @@ def operator_correction_smoke_check(
         "progress_import_readiness_snapshot",
         readiness_snapshot_passed,
         (
-            "summary includes the last durable import-readiness snapshot, import counts, thin coverage groups, next step, and raw CSV handoff with row counts, headers, required fields, optional fields, and append templates after complete correction capture"
+            "summary includes the last durable import-readiness snapshot, import counts, thin coverage groups, next step, and raw CSV handoff with row counts, headers, required fields, optional fields, append templates, and required-field gaps after complete correction capture"
             if missing_count == 0
             else "summary with missing corrections does not expose the last import-readiness snapshot"
         ),
@@ -2737,6 +2852,10 @@ def format_smoke_check_text(smoke_check: dict[str, Any]) -> str:
         lines.append(
             "Next import raw append templates: "
             f"{format_raw_import_append_templates(readiness.get('next_import_record_handoff'))}"
+        )
+        lines.append(
+            "Next import raw required-field gaps: "
+            f"{format_raw_import_required_field_gaps(readiness.get('next_import_record_handoff'))}"
         )
     lines.append(f"Validate ledger: {smoke_check.get('validation_command')}")
     lines.append(f"Completion gate: {smoke_check.get('completion_validation_command')}")

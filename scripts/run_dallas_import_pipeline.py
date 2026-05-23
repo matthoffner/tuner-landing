@@ -199,6 +199,47 @@ def raw_file_append_templates(headers_by_file, required_fields_by_file):
     return append_templates
 
 
+def raw_file_required_field_gaps(raw_dir, required_fields_by_file):
+    resolved_raw_dir = repo_path(raw_dir)
+    gaps = {}
+    for file_name in RAW_IMPORT_FILE_NAMES:
+        path = resolved_raw_dir / file_name
+        required_fields = list(required_fields_by_file.get(file_name, []))
+        if not path.exists():
+            gaps[file_name] = None
+            continue
+
+        with path.open(newline="", encoding="utf-8") as handle:
+            reader = csv.DictReader(handle)
+            headers = reader.fieldnames or []
+            missing_field_counts = {field: 0 for field in required_fields}
+            rows_checked = 0
+            rows_with_missing_required_fields = 0
+            for row in reader:
+                if not any((value or "").strip() for value in row.values()):
+                    continue
+                rows_checked += 1
+                missing_fields = [
+                    field
+                    for field in required_fields
+                    if not (row.get(field) or "").strip()
+                ]
+                if missing_fields:
+                    rows_with_missing_required_fields += 1
+                    for field in missing_fields:
+                        missing_field_counts[field] += 1
+
+        gaps[file_name] = {
+            "rows_checked": rows_checked,
+            "rows_with_missing_required_fields": rows_with_missing_required_fields,
+            "missing_required_headers": [
+                field for field in required_fields if field not in headers
+            ],
+            "missing_field_counts": missing_field_counts,
+        }
+    return gaps
+
+
 def next_import_record_handoff(raw_dir):
     display_raw_dir = command_path(raw_dir).rstrip("/")
     raw_headers = raw_file_headers(raw_dir)
@@ -217,6 +258,10 @@ def next_import_record_handoff(raw_dir):
         ),
         "raw_file_append_templates": raw_file_append_templates(
             raw_headers,
+            raw_required_fields,
+        ),
+        "raw_file_required_field_gaps": raw_file_required_field_gaps(
+            raw_dir,
             raw_required_fields,
         ),
         "after_edit_command": REQUIRE_READY_COMMAND,
@@ -490,6 +535,10 @@ def write_summary(summary):
     raw_required_fields = next_import_handoff.get("raw_file_required_fields", {})
     raw_optional_fields = next_import_handoff.get("raw_file_optional_fields", {})
     raw_append_templates = next_import_handoff.get("raw_file_append_templates", {})
+    raw_required_field_gaps = next_import_handoff.get(
+        "raw_file_required_field_gaps",
+        {},
+    )
 
     def inline_list(values):
         return ", ".join(f"`{value}`" for value in values) if values else "none"
@@ -574,6 +623,27 @@ def write_summary(summary):
                 labels.append(f"- `{file_name}` append template: missing")
         return labels
 
+    def inline_required_field_gaps(values):
+        if not isinstance(values, dict) or not values:
+            return ["- Raw CSV required-field gaps: none"]
+        labels = []
+        for file_name in RAW_IMPORT_FILE_NAMES:
+            gap = values.get(file_name)
+            if not isinstance(gap, dict):
+                labels.append(f"- `{file_name}` required-field gaps: missing")
+                continue
+            rows_checked = gap.get("rows_checked")
+            rows_with_gaps = gap.get("rows_with_missing_required_fields")
+            missing_headers = gap.get("missing_required_headers", [])
+            missing_counts = gap.get("missing_field_counts", {})
+            labels.append(
+                f"- `{file_name}` required-field gaps: "
+                f"`{rows_with_gaps}/{rows_checked}` rows, "
+                f"missing headers: {inline_list(missing_headers)}, "
+                f"field counts: {inline_counts(missing_counts)}"
+            )
+        return labels
+
     lines = [
         "# Dallas Import Pipeline Summary",
         "",
@@ -603,6 +673,7 @@ def write_summary(summary):
         "- Next raw import headers: see Follow-Up",
         "- Next raw import required fields: see Follow-Up",
         "- Next raw import optional fields: see Follow-Up",
+        "- Next raw import required-field gaps: see Follow-Up",
         "",
         "## Execution Readiness",
         "",
@@ -781,6 +852,8 @@ def write_summary(summary):
             *inline_optional_fields(raw_optional_fields),
             "- Raw CSV append templates:",
             *inline_append_templates(raw_append_templates),
+            "- Raw CSV required-field gaps:",
+            *inline_required_field_gaps(raw_required_field_gaps),
             f"- Require-ready pipeline: `{follow_up['require_ready_pipeline']}`",
             (
                 "- Summary-only require-ready pipeline: "
@@ -825,6 +898,10 @@ def print_summary(summary, output_format="text"):
     raw_required_fields = next_import_handoff.get("raw_file_required_fields", {})
     raw_optional_fields = next_import_handoff.get("raw_file_optional_fields", {})
     raw_append_templates = next_import_handoff.get("raw_file_append_templates", {})
+    raw_required_field_gaps = next_import_handoff.get(
+        "raw_file_required_field_gaps",
+        {},
+    )
 
     def format_row_counts(values):
         if not isinstance(values, dict) or not values:
@@ -891,6 +968,26 @@ def print_summary(summary, output_format="text"):
                 labels.append(f"{file_name}=missing")
         return "; ".join(labels)
 
+    def format_required_field_gaps(values):
+        if not isinstance(values, dict) or not values:
+            return "none"
+        labels = []
+        for file_name in RAW_IMPORT_FILE_NAMES:
+            gap = values.get(file_name)
+            if not isinstance(gap, dict):
+                labels.append(f"{file_name}=missing")
+                continue
+            rows_checked = gap.get("rows_checked")
+            rows_with_gaps = gap.get("rows_with_missing_required_fields")
+            missing_headers = gap.get("missing_required_headers", [])
+            missing_counts = gap.get("missing_field_counts", {})
+            labels.append(
+                f"{file_name}={rows_with_gaps}/{rows_checked} rows "
+                f"(missing_headers={','.join(missing_headers) if missing_headers else 'none'}, "
+                f"field_counts={json.dumps(missing_counts, sort_keys=True)})"
+            )
+        return "; ".join(labels)
+
     print("==> Dallas import pipeline summary")
     print(f"dataset_id: {summary['dataset_id']}")
     print(f"contract_passed: {str(contract.get('overall_passed')).lower()}")
@@ -951,6 +1048,10 @@ def print_summary(summary, output_format="text"):
     print(f"  raw_import_required_fields: {format_required_fields(raw_required_fields)}")
     print(f"  raw_import_optional_fields: {format_optional_fields(raw_optional_fields)}")
     print(f"  raw_import_append_templates: {format_append_templates(raw_append_templates)}")
+    print(
+        "  raw_import_required_field_gaps: "
+        f"{format_required_field_gaps(raw_required_field_gaps)}"
+    )
     print(f"  after_raw_csv_edits: {next_import_handoff['after_edit_command']}")
     print(
         "  raw_csv_readiness_check: "
