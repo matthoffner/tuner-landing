@@ -112,6 +112,284 @@
         "duplicate_identity_key_examples": []
       }
     },
+    "raw_file_value_profiles": {
+      "permits.csv": {
+        "rows_checked": 15,
+        "fields": {
+          "city": {
+            "distinct_value_count": 1,
+            "blank_count": 0,
+            "top_values": [
+              {
+                "value": "Dallas",
+                "count": 15
+              }
+            ]
+          },
+          "trade": {
+            "distinct_value_count": 2,
+            "blank_count": 0,
+            "top_values": [
+              {
+                "value": "electrical",
+                "count": 14
+              },
+              {
+                "value": "plumbing",
+                "count": 1
+              }
+            ]
+          },
+          "work_class": {
+            "distinct_value_count": 1,
+            "blank_count": 0,
+            "top_values": [
+              {
+                "value": "residential",
+                "count": 15
+              }
+            ]
+          },
+          "permit_type": {
+            "distinct_value_count": 5,
+            "blank_count": 0,
+            "top_values": [
+              {
+                "value": "Residential electrical remodel",
+                "count": 5
+              },
+              {
+                "value": "Electrical service upgrade",
+                "count": 4
+              },
+              {
+                "value": "Electrical repair",
+                "count": 3
+              },
+              {
+                "value": "New electrical install",
+                "count": 2
+              },
+              {
+                "value": "Residential plumbing repair",
+                "count": 1
+              }
+            ]
+          },
+          "status": {
+            "distinct_value_count": 3,
+            "blank_count": 0,
+            "top_values": [
+              {
+                "value": "Finaled",
+                "count": 10
+              },
+              {
+                "value": "Active",
+                "count": 4
+              },
+              {
+                "value": "Issued",
+                "count": 1
+              }
+            ]
+          },
+          "property_type": {
+            "distinct_value_count": 2,
+            "blank_count": 0,
+            "top_values": [
+              {
+                "value": "single_family",
+                "count": 13
+              },
+              {
+                "value": "duplex",
+                "count": 2
+              }
+            ]
+          },
+          "zip_code": {
+            "distinct_value_count": 5,
+            "blank_count": 0,
+            "top_values": [
+              {
+                "value": "75228",
+                "count": 4
+              },
+              {
+                "value": "75208",
+                "count": 3
+              },
+              {
+                "value": "75212",
+                "count": 3
+              },
+              {
+                "value": "75216",
+                "count": 3
+              },
+              {
+                "value": "75214",
+                "count": 2
+              }
+            ]
+          }
+        }
+      },
+      "inspections.csv": {
+        "rows_checked": 41,
+        "fields": {
+          "inspection_type": {
+            "distinct_value_count": 4,
+            "blank_count": 0,
+            "top_values": [
+              {
+                "value": "Correction follow-up",
+                "count": 14
+              },
+              {
+                "value": "Rough-in",
+                "count": 13
+              },
+              {
+                "value": "Final",
+                "count": 10
+              },
+              {
+                "value": "Service release",
+                "count": 4
+              }
+            ]
+          },
+          "result": {
+            "distinct_value_count": 6,
+            "blank_count": 0,
+            "top_values": [
+              {
+                "value": "Pass",
+                "count": 23
+              },
+              {
+                "value": "Fail",
+                "count": 6
+              },
+              {
+                "value": "Partial",
+                "count": 5
+              },
+              {
+                "value": "Not Ready",
+                "count": 3
+              },
+              {
+                "value": "Cancelled",
+                "count": 2
+              },
+              {
+                "value": "Pending",
+                "count": 2
+              }
+            ]
+          },
+          "reinspection_flag": {
+            "distinct_value_count": 2,
+            "blank_count": 0,
+            "top_values": [
+              {
+                "value": "false",
+                "count": 23
+              },
+              {
+                "value": "true",
+                "count": 18
+              }
+            ]
+          }
+        }
+      },
+      "contractors.csv": {
+        "rows_checked": 6,
+        "fields": {
+          "license_type": {
+            "distinct_value_count": 2,
+            "blank_count": 0,
+            "top_values": [
+              {
+                "value": "electrical_contractor",
+                "count": 5
+              },
+              {
+                "value": "plumbing_contractor",
+                "count": 1
+              }
+            ]
+          },
+          "registration_status": {
+            "distinct_value_count": 1,
+            "blank_count": 0,
+            "top_values": [
+              {
+                "value": "registered",
+                "count": 6
+              }
+            ]
+          },
+          "city": {
+            "distinct_value_count": 1,
+            "blank_count": 0,
+            "top_values": [
+              {
+                "value": "Dallas",
+                "count": 6
+              }
+            ]
+          },
+          "state": {
+            "distinct_value_count": 1,
+            "blank_count": 0,
+            "top_values": [
+              {
+                "value": "TX",
+                "count": 6
+              }
+            ]
+          }
+        }
+      },
+      "rule_documents.csv": {
+        "rows_checked": 3,
+        "fields": {
+          "document_type": {
+            "distinct_value_count": 3,
+            "blank_count": 0,
+            "top_values": [
+              {
+                "value": "faq",
+                "count": 1
+              },
+              {
+                "value": "guidance_page",
+                "count": 1
+              },
+              {
+                "value": "inspection_checklist",
+                "count": 1
+              }
+            ]
+          },
+          "effective_date": {
+            "distinct_value_count": 1,
+            "blank_count": 0,
+            "top_values": [
+              {
+                "value": "2025-01-01",
+                "count": 3
+              }
+            ]
+          }
+        }
+      }
+    },
     "raw_file_import_scope_counts": {
       "permits.csv": {
         "rows_checked": 15,

@@ -114,6 +114,33 @@ RAW_IMPORT_IDENTITY_FIELDS = {
     ],
 }
 RAW_IMPORT_IDENTITY_EXAMPLE_LIMIT = 5
+RAW_IMPORT_VALUE_PROFILE_FIELDS = {
+    "permits.csv": [
+        "city",
+        "trade",
+        "work_class",
+        "permit_type",
+        "status",
+        "property_type",
+        "zip_code",
+    ],
+    "inspections.csv": [
+        "inspection_type",
+        "result",
+        "reinspection_flag",
+    ],
+    "contractors.csv": [
+        "license_type",
+        "registration_status",
+        "city",
+        "state",
+    ],
+    "rule_documents.csv": [
+        "document_type",
+        "effective_date",
+    ],
+}
+RAW_IMPORT_VALUE_PROFILE_LIMIT = 10
 
 
 def parse_args():
@@ -306,6 +333,46 @@ def raw_file_identity_key_checks(raw_dir):
             "duplicate_identity_key_examples": duplicate_examples,
         }
     return checks
+
+
+def raw_file_value_profiles(raw_dir):
+    resolved_raw_dir = repo_path(raw_dir)
+    profiles = {}
+    for file_name in RAW_IMPORT_FILE_NAMES:
+        rows = csv_dict_data_rows(resolved_raw_dir / file_name)
+        if rows is None:
+            profiles[file_name] = None
+            continue
+
+        field_profiles = {}
+        for field in RAW_IMPORT_VALUE_PROFILE_FIELDS[file_name]:
+            counts = {}
+            blank_count = 0
+            for row in rows:
+                value = raw_cell(row, field)
+                if not value:
+                    blank_count += 1
+                    continue
+                counts[value] = counts.get(value, 0) + 1
+
+            top_values = [
+                {"value": value, "count": count}
+                for value, count in sorted(
+                    counts.items(),
+                    key=lambda item: (-item[1], item[0].lower()),
+                )[:RAW_IMPORT_VALUE_PROFILE_LIMIT]
+            ]
+            field_profiles[field] = {
+                "distinct_value_count": len(counts),
+                "blank_count": blank_count,
+                "top_values": top_values,
+            }
+
+        profiles[file_name] = {
+            "rows_checked": len(rows),
+            "fields": field_profiles,
+        }
+    return profiles
 
 
 def raw_file_import_scope_counts(raw_dir):
@@ -703,6 +770,7 @@ def next_import_record_handoff(raw_dir):
         "raw_file_next_append_rows": raw_file_next_append_rows(raw_row_counts),
         "raw_file_last_data_rows": raw_file_last_data_rows(raw_dir),
         "raw_file_identity_key_checks": raw_file_identity_key_checks(raw_dir),
+        "raw_file_value_profiles": raw_file_value_profiles(raw_dir),
         "raw_file_import_scope_counts": raw_file_import_scope_counts(raw_dir),
         "raw_file_importable_examples": raw_file_importable_examples(raw_dir),
         "raw_file_exclusion_examples": raw_file_exclusion_examples(raw_dir),
@@ -993,6 +1061,10 @@ def write_summary(summary):
         "raw_file_identity_key_checks",
         {},
     )
+    raw_value_profiles = next_import_handoff.get(
+        "raw_file_value_profiles",
+        {},
+    )
     raw_import_scope_counts = next_import_handoff.get(
         "raw_file_import_scope_counts",
         {},
@@ -1077,6 +1149,21 @@ def write_summary(summary):
                 f"missing identity rows `{check.get('rows_missing_identity')}`, "
                 "examples "
                 f"`{json.dumps(check.get('duplicate_identity_key_examples', []), sort_keys=False)}`"
+            )
+        return labels
+
+    def inline_value_profiles(values):
+        if not isinstance(values, dict) or not values:
+            return ["- Raw CSV value profiles: none"]
+        labels = []
+        for file_name in RAW_IMPORT_FILE_NAMES:
+            profile = values.get(file_name)
+            if not isinstance(profile, dict):
+                labels.append(f"- `{file_name}` value profiles: missing")
+                continue
+            labels.append(
+                f"- `{file_name}` value profiles: "
+                f"`{json.dumps(profile, sort_keys=False)}`"
             )
         return labels
 
@@ -1255,6 +1342,7 @@ def write_summary(summary):
         f"- Next raw import append rows: {inline_next_append_rows(raw_next_append_rows)}",
         "- Next raw import last data rows: see Follow-Up",
         "- Next raw import identity key checks: see Follow-Up",
+        "- Next raw import value profiles: see Follow-Up",
         "- Next raw import scope counts: see Follow-Up",
         "- Next raw importable examples: see Follow-Up",
         "- Next raw import exclusion examples: see Follow-Up",
@@ -1440,6 +1528,8 @@ def write_summary(summary):
             *inline_last_data_rows(raw_last_data_rows),
             "- Raw CSV identity key checks:",
             *inline_identity_key_checks(raw_identity_key_checks),
+            "- Raw CSV value profiles:",
+            *inline_value_profiles(raw_value_profiles),
             "- Raw CSV import scope counts:",
             *inline_import_scope_counts(raw_import_scope_counts),
             "- Raw CSV importable examples:",
@@ -1500,6 +1590,10 @@ def print_summary(summary, output_format="text"):
     raw_last_data_rows = next_import_handoff.get("raw_file_last_data_rows", {})
     raw_identity_key_checks = next_import_handoff.get(
         "raw_file_identity_key_checks",
+        {},
+    )
+    raw_value_profiles = next_import_handoff.get(
+        "raw_file_value_profiles",
         {},
     )
     raw_import_scope_counts = next_import_handoff.get(
@@ -1575,6 +1669,18 @@ def print_summary(summary, output_format="text"):
                 f"missing_identity_rows={check.get('rows_missing_identity')} "
                 f"examples={json.dumps(duplicate_examples, sort_keys=False)}"
             )
+        return "; ".join(labels)
+
+    def format_value_profiles(values):
+        if not isinstance(values, dict) or not values:
+            return "none"
+        labels = []
+        for file_name in RAW_IMPORT_FILE_NAMES:
+            profile = values.get(file_name)
+            if isinstance(profile, dict):
+                labels.append(f"{file_name}={json.dumps(profile, sort_keys=False)}")
+            else:
+                labels.append(f"{file_name}=missing")
         return "; ".join(labels)
 
     def format_import_scope_counts(values):
@@ -1764,6 +1870,10 @@ def print_summary(summary, output_format="text"):
     print(
         "  raw_import_identity_key_checks: "
         f"{format_identity_key_checks(raw_identity_key_checks)}"
+    )
+    print(
+        "  raw_import_value_profiles: "
+        f"{format_value_profiles(raw_value_profiles)}"
     )
     print(
         "  raw_import_scope_counts: "

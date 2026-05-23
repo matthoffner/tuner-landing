@@ -118,6 +118,33 @@ RAW_IMPORT_IDENTITY_FIELDS = {
     ],
 }
 RAW_IMPORT_IDENTITY_EXAMPLE_LIMIT = 5
+RAW_IMPORT_VALUE_PROFILE_FIELDS = {
+    "permits.csv": [
+        "city",
+        "trade",
+        "work_class",
+        "permit_type",
+        "status",
+        "property_type",
+        "zip_code",
+    ],
+    "inspections.csv": [
+        "inspection_type",
+        "result",
+        "reinspection_flag",
+    ],
+    "contractors.csv": [
+        "license_type",
+        "registration_status",
+        "city",
+        "state",
+    ],
+    "rule_documents.csv": [
+        "document_type",
+        "effective_date",
+    ],
+}
+RAW_IMPORT_VALUE_PROFILE_LIMIT = 10
 RAW_IMPORT_SCOPE_EXCLUSION_FIELDS = {
     "permits.csv": (
         "excluded_by_city",
@@ -546,6 +573,46 @@ def raw_import_file_identity_key_checks(raw_dir: str) -> dict[str, dict[str, Any
             "duplicate_identity_key_examples": duplicate_examples,
         }
     return checks
+
+
+def raw_import_file_value_profiles(raw_dir: str) -> dict[str, dict[str, Any] | None]:
+    resolved_raw_dir = repo_path(raw_dir)
+    profiles: dict[str, dict[str, Any] | None] = {}
+    for file_name in RAW_IMPORT_FILE_NAMES:
+        rows = csv_dict_data_rows(resolved_raw_dir / file_name)
+        if rows is None:
+            profiles[file_name] = None
+            continue
+
+        field_profiles: dict[str, dict[str, Any]] = {}
+        for field in RAW_IMPORT_VALUE_PROFILE_FIELDS[file_name]:
+            counts: dict[str, int] = {}
+            blank_count = 0
+            for row in rows:
+                value = raw_cell(row, field)
+                if not value:
+                    blank_count += 1
+                    continue
+                counts[value] = counts.get(value, 0) + 1
+
+            top_values = [
+                {"value": value, "count": count}
+                for value, count in sorted(
+                    counts.items(),
+                    key=lambda item: (-item[1], item[0].lower()),
+                )[:RAW_IMPORT_VALUE_PROFILE_LIMIT]
+            ]
+            field_profiles[field] = {
+                "distinct_value_count": len(counts),
+                "blank_count": blank_count,
+                "top_values": top_values,
+            }
+
+        profiles[file_name] = {
+            "rows_checked": len(rows),
+            "fields": field_profiles,
+        }
+    return profiles
 
 
 def raw_import_file_import_scope_counts(
@@ -1071,6 +1138,53 @@ def raw_import_file_identity_key_checks_are_valid(value: Any) -> bool:
     return True
 
 
+def raw_import_file_value_profiles_are_valid(value: Any) -> bool:
+    if not isinstance(value, dict):
+        return False
+
+    for file_name in RAW_IMPORT_FILE_NAMES:
+        profile = value.get(file_name)
+        if not isinstance(profile, dict):
+            return False
+        rows_checked = profile.get("rows_checked")
+        fields = profile.get("fields")
+        if not isinstance(rows_checked, int) or rows_checked < 0:
+            return False
+        if not isinstance(fields, dict):
+            return False
+        if set(fields) != set(RAW_IMPORT_VALUE_PROFILE_FIELDS[file_name]):
+            return False
+        for field_profile in fields.values():
+            if not isinstance(field_profile, dict):
+                return False
+            distinct_count = field_profile.get("distinct_value_count")
+            blank_count = field_profile.get("blank_count")
+            top_values = field_profile.get("top_values")
+            if (
+                not isinstance(distinct_count, int)
+                or distinct_count < 0
+                or not isinstance(blank_count, int)
+                or blank_count < 0
+                or blank_count > rows_checked
+                or not isinstance(top_values, list)
+                or len(top_values) > RAW_IMPORT_VALUE_PROFILE_LIMIT
+                or len(top_values) > distinct_count
+            ):
+                return False
+            for item in top_values:
+                if (
+                    not isinstance(item, dict)
+                    or set(item) != {"value", "count"}
+                    or not isinstance(item.get("value"), str)
+                    or not item["value"]
+                    or not isinstance(item.get("count"), int)
+                    or item["count"] <= 0
+                    or item["count"] > rows_checked
+                ):
+                    return False
+    return True
+
+
 def raw_import_file_import_scope_counts_are_valid(value: Any) -> bool:
     if not isinstance(value, dict):
         return False
@@ -1361,6 +1475,9 @@ def next_import_record_handoff(summary: dict[str, Any] | None = None) -> dict[st
     raw_identity_key_checks = summary_handoff.get("raw_file_identity_key_checks")
     if not raw_import_file_identity_key_checks_are_valid(raw_identity_key_checks):
         raw_identity_key_checks = raw_import_file_identity_key_checks(raw_dir)
+    raw_value_profiles = summary_handoff.get("raw_file_value_profiles")
+    if not raw_import_file_value_profiles_are_valid(raw_value_profiles):
+        raw_value_profiles = raw_import_file_value_profiles(raw_dir)
     raw_import_scope_counts = summary_handoff.get("raw_file_import_scope_counts")
     if not raw_import_file_import_scope_counts_are_valid(raw_import_scope_counts):
         raw_import_scope_counts = raw_import_file_import_scope_counts(raw_dir)
@@ -1409,6 +1526,7 @@ def next_import_record_handoff(summary: dict[str, Any] | None = None) -> dict[st
         "raw_file_next_append_rows": raw_next_append_rows,
         "raw_file_last_data_rows": raw_last_data_rows,
         "raw_file_identity_key_checks": raw_identity_key_checks,
+        "raw_file_value_profiles": raw_value_profiles,
         "raw_file_import_scope_counts": raw_import_scope_counts,
         "raw_file_importable_examples": raw_importable_examples,
         "raw_file_exclusion_examples": raw_exclusion_examples,
@@ -1444,6 +1562,9 @@ def next_import_record_handoff_is_valid(handoff: Any) -> bool:
         )
         and raw_import_file_identity_key_checks_are_valid(
             handoff.get("raw_file_identity_key_checks"),
+        )
+        and raw_import_file_value_profiles_are_valid(
+            handoff.get("raw_file_value_profiles"),
         )
         and raw_import_file_import_scope_counts_are_valid(
             handoff.get("raw_file_import_scope_counts"),
@@ -2143,6 +2264,22 @@ def format_raw_import_identity_key_checks(handoff: Any) -> str:
     return "; ".join(labels) if labels else "(none)"
 
 
+def format_raw_import_value_profiles(handoff: Any) -> str:
+    if not isinstance(handoff, dict):
+        return "(none)"
+    profiles_by_file = handoff.get("raw_file_value_profiles")
+    if not isinstance(profiles_by_file, dict):
+        return "(none)"
+    labels = []
+    for file_name in RAW_IMPORT_FILE_NAMES:
+        profile = profiles_by_file.get(file_name)
+        if isinstance(profile, dict):
+            labels.append(f"{file_name}={json.dumps(profile, sort_keys=False)}")
+        else:
+            labels.append(f"{file_name}=missing")
+    return "; ".join(labels) if labels else "(none)"
+
+
 def format_raw_import_scope_counts(handoff: Any) -> str:
     if not isinstance(handoff, dict):
         return "(none)"
@@ -2492,6 +2629,10 @@ def format_progress_text(progress: dict[str, Any]) -> str:
                 lines.append(
                     "Next import raw identity key checks: "
                     f"{format_raw_import_identity_key_checks(next_import_handoff)}"
+                )
+                lines.append(
+                    "Next import raw value profiles: "
+                    f"{format_raw_import_value_profiles(next_import_handoff)}"
                 )
                 lines.append(
                     "Next import raw scope counts: "
@@ -3193,9 +3334,9 @@ def operator_correction_smoke_check(
             "summary includes the last durable import-readiness snapshot, import "
             "counts, thin coverage groups, next step, and raw CSV handoff with "
             "row counts, next append rows, last data rows, identity key checks, "
-            "import scope counts, importable examples, exclusion examples, headers, "
-            "required fields, optional fields, append templates, and required-field "
-            "gaps after complete correction capture"
+            "value profiles, import scope counts, importable examples, exclusion "
+            "examples, headers, required fields, optional fields, append templates, "
+            "and required-field gaps after complete correction capture"
             if missing_count == 0
             else "summary with missing corrections does not expose the last import-readiness snapshot"
         ),
@@ -3731,6 +3872,10 @@ def format_smoke_check_text(smoke_check: dict[str, Any]) -> str:
         lines.append(
             "Next import raw identity key checks: "
             f"{format_raw_import_identity_key_checks(readiness.get('next_import_record_handoff'))}"
+        )
+        lines.append(
+            "Next import raw value profiles: "
+            f"{format_raw_import_value_profiles(readiness.get('next_import_record_handoff'))}"
         )
         lines.append(
             "Next import raw scope counts: "
