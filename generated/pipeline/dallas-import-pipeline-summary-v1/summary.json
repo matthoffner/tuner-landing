@@ -70,5 +70,51 @@
     "workflow_report": "generated/workflows/dallas-inspection-workflow-v1/action-queue.md",
     "summary_json": "generated/pipeline/dallas-import-pipeline-summary-v1/summary.json",
     "summary_report": "generated/pipeline/dallas-import-pipeline-summary-v1/summary.md"
+  },
+  "latest_import": {
+    "dataset_id": "dallas-electrician-import-sample-v2",
+    "label": "Imported sample v2",
+    "kind": "imported",
+    "project_name": "Dallas Electrician Import Sample V2",
+    "counts": {
+      "properties": 14,
+      "permits": 14,
+      "inspections": 40,
+      "contractors": 5,
+      "rule_documents": 3,
+      "source_records": 62,
+      "sequences": 14,
+      "pattern_slices": 5,
+      "tasks": 51,
+      "label_reviews": 20,
+      "dev_tasks": 46,
+      "test_tasks": 5,
+      "result_states": 6,
+      "repeated_result_states": 6,
+      "failure_reasons": 5,
+      "repeated_failure_reasons": 5,
+      "repeated_pattern_slices": 5,
+      "max_pattern_permit_support": 3,
+      "repeated_next_action_groups": 6
+    },
+    "task_family_counts": {
+      "next_inspection_outcome": 26,
+      "failure_reason_classification": 6,
+      "recommended_next_action": 14,
+      "pattern_extraction": 5
+    },
+    "inspection_result_vocabulary": [
+      "cancelled",
+      "fail",
+      "not_ready",
+      "partial",
+      "pass",
+      "unknown"
+    ],
+    "paths": {
+      "normalized_dir": "generated/normalized/dallas-electrician-import-sample-v2",
+      "fixture_dir": "generated/fixtures/dallas-electrician-import-sequences-v2",
+      "eval_dir": "generated/evals/dallas-electrician-import-sample-v2"
+    }
   }
 }

@@ -122,6 +122,29 @@ def summarize_coverage(coverage, dataset_id):
     }
 
 
+def summarize_contract_dataset(contract, dataset_id):
+    latest_dataset = next(
+        (
+            dataset
+            for dataset in contract.get("datasets", [])
+            if dataset.get("dataset_id") == dataset_id
+        ),
+        {},
+    )
+    return {
+        "dataset_id": latest_dataset.get("dataset_id", dataset_id),
+        "label": latest_dataset.get("label"),
+        "kind": latest_dataset.get("kind"),
+        "project_name": latest_dataset.get("project_name"),
+        "counts": latest_dataset.get("counts", {}),
+        "task_family_counts": latest_dataset.get("task_family_counts", {}),
+        "inspection_result_vocabulary": latest_dataset.get(
+            "inspection_result_vocabulary", []
+        ),
+        "paths": latest_dataset.get("paths", {}),
+    }
+
+
 def build_summary(args):
     contract = load_json(CONTRACT_PATH)
     workflow = load_json(WORKFLOW_PATH)
@@ -173,6 +196,7 @@ def build_summary(args):
             "summary_json": command_path(SUMMARY_JSON_PATH),
             "summary_report": command_path(SUMMARY_REPORT_PATH),
         },
+        "latest_import": summarize_contract_dataset(contract, args.dataset_id),
     }
 
 
@@ -187,6 +211,9 @@ def write_summary(summary):
     coverage = summary["coverage"]
     follow_up = summary["follow_up"]
     correction_gate = summary["correction_gate"]
+    latest_import = summary["latest_import"]
+    import_counts = latest_import.get("counts", {})
+    task_family_counts = latest_import.get("task_family_counts", {})
     contract_status = "PASS" if contract["overall_passed"] else "FAIL"
     gate_status = correction_gate["status"].upper()
     coverage_repeated = coverage.get("latest_repeated_counts", {})
@@ -211,8 +238,51 @@ def write_summary(summary):
             f"`{workflow['operator_corrections_captured']}/{workflow['queue_items']}`"
         ),
         f"- Accepted patterns: `{workflow['accepted_pattern_count']}`",
+        (
+            "- Import artifacts: "
+            f"`{import_counts.get('permits', 0)}` permits, "
+            f"`{import_counts.get('inspections', 0)}` inspections, "
+            f"`{import_counts.get('tasks', 0)}` eval tasks, "
+            f"`{import_counts.get('label_reviews', 0)}` reviewed labels"
+        ),
         f"- Correction gate: {gate_status}",
         f"- Next gap: {contract['next_gap']}",
+        "",
+        "## Import Artifact Snapshot",
+        "",
+        (
+            "- Normalized rows: "
+            f"`{import_counts.get('properties', 0)}` properties, "
+            f"`{import_counts.get('permits', 0)}` permits, "
+            f"`{import_counts.get('inspections', 0)}` inspections, "
+            f"`{import_counts.get('contractors', 0)}` contractors"
+        ),
+        (
+            "- Source support: "
+            f"`{import_counts.get('source_records', 0)}` source records, "
+            f"`{import_counts.get('rule_documents', 0)}` rule documents"
+        ),
+        (
+            "- Eval rows: "
+            f"`{import_counts.get('tasks', 0)}` tasks, "
+            f"`{import_counts.get('label_reviews', 0)}` reviewed labels, "
+            f"`{import_counts.get('dev_tasks', 0)}` dev tasks, "
+            f"`{import_counts.get('test_tasks', 0)}` test tasks"
+        ),
+        (
+            "- Task families: "
+            f"`{task_family_counts.get('next_inspection_outcome', 0)}` next-outcome, "
+            f"`{task_family_counts.get('failure_reason_classification', 0)}` failure-reason, "
+            f"`{task_family_counts.get('recommended_next_action', 0)}` next-action, "
+            f"`{task_family_counts.get('pattern_extraction', 0)}` pattern-extraction"
+        ),
+        (
+            "- Result vocabulary: "
+            + ", ".join(
+                f"`{value}`"
+                for value in latest_import.get("inspection_result_vocabulary", [])
+            )
+        ),
         "",
         "## Coverage Snapshot",
         "",
@@ -257,6 +327,7 @@ def print_summary(summary):
     workflow = summary["workflow"]
     coverage = summary["coverage"]
     follow_up = summary["follow_up"]
+    import_counts = summary["latest_import"].get("counts", {})
     coverage_repeated = coverage.get("latest_repeated_counts", {})
     coverage_thin = coverage.get("latest_thin_counts", {})
 
@@ -270,6 +341,14 @@ def print_summary(summary):
         f"{workflow.get('operator_corrections_captured')}/{workflow.get('queue_items')}"
     )
     print(f"accepted_patterns: {workflow.get('accepted_pattern_count')}")
+    print(
+        "import_counts: "
+        f"permits={import_counts.get('permits', 0)}, "
+        f"inspections={import_counts.get('inspections', 0)}, "
+        f"tasks={import_counts.get('tasks', 0)}, "
+        f"label_reviews={import_counts.get('label_reviews', 0)}, "
+        f"source_records={import_counts.get('source_records', 0)}"
+    )
     print(f"next_gap: {contract.get('next_gap')}")
     print(
         "coverage_repeated_counts: "

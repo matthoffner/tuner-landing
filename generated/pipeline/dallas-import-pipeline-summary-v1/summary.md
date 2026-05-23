@@ -5,8 +5,17 @@
 - Queue items: `14`
 - Operator corrections: `14/14`
 - Accepted patterns: `6`
+- Import artifacts: `14` permits, `40` inspections, `51` eval tasks, `20` reviewed labels
 - Correction gate: PASSED
 - Next gap: All current latest-import result states, failure reasons, pattern slices, and expected next-action groups have repeated support; keep the action queue and coverage report current as real Dallas import records widen.
+
+## Import Artifact Snapshot
+
+- Normalized rows: `14` properties, `14` permits, `40` inspections, `5` contractors
+- Source support: `62` source records, `3` rule documents
+- Eval rows: `51` tasks, `20` reviewed labels, `46` dev tasks, `5` test tasks
+- Task families: `26` next-outcome, `6` failure-reason, `14` next-action, `5` pattern-extraction
+- Result vocabulary: `cancelled`, `fail`, `not_ready`, `partial`, `pass`, `unknown`
 
 ## Coverage Snapshot
 

@@ -140,6 +140,7 @@ Latest bounded improvement completed:
 - `scripts/run_dallas_import_pipeline.py` now prints copyable pattern-review and completion-gate commands plus generated coverage, contract, and workflow report paths after the next-gap summary, so the next Dallas import-readiness pass can start from one command output
 - `scripts/run_dallas_import_pipeline.py` now writes `generated/pipeline/dallas-import-pipeline-summary-v1/summary.json` and `summary.md`, giving the autonomous loop a durable machine-readable and operator-readable import-run result instead of relying only on terminal output
 - `scripts/run_dallas_import_pipeline.py` now embeds the latest coverage counts, thin counts, thin group names, and coverage next step in the durable pipeline summary so the next autonomous pass can choose Dallas import-readiness work without opening the full coverage report first
+- `scripts/run_dallas_import_pipeline.py` now embeds the latest imported artifact counts, task-family counts, and inspection result vocabulary in the durable pipeline summary so the next pass can see data volume and eval surface without opening the contract summary first
 
 ## Constraints
 
