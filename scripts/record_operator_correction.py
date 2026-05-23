@@ -45,6 +45,29 @@ RAW_IMPORT_FILE_NAMES = (
     "contractors.csv",
     "rule_documents.csv",
 )
+RAW_IMPORT_REQUIRED_FIELDS = {
+    "permits.csv": [
+        "permit_number",
+        "address",
+        "city",
+        "trade",
+        "work_class",
+    ],
+    "inspections.csv": [
+        "permit_number",
+        "inspection_date",
+        "inspection_type",
+        "result",
+    ],
+    "contractors.csv": [
+        "registration_id",
+        "name",
+        "license_type",
+    ],
+    "rule_documents.csv": [
+        "title",
+    ],
+}
 IMPORT_COUNT_FIELDS = (
     "permits",
     "inspections",
@@ -366,6 +389,13 @@ def raw_import_file_headers(raw_dir: str) -> dict[str, list[str] | None]:
     }
 
 
+def raw_import_file_required_fields() -> dict[str, list[str]]:
+    return {
+        file_name: list(RAW_IMPORT_REQUIRED_FIELDS[file_name])
+        for file_name in RAW_IMPORT_FILE_NAMES
+    }
+
+
 def raw_import_file_row_counts_are_valid(value: Any) -> bool:
     return (
         isinstance(value, dict)
@@ -385,6 +415,17 @@ def raw_import_file_headers_are_valid(value: Any) -> bool:
                 isinstance(header, str) and header.strip()
                 for header in value[file_name]
             )
+            for file_name in RAW_IMPORT_FILE_NAMES
+        )
+    )
+
+
+def raw_import_file_required_fields_are_valid(value: Any) -> bool:
+    return (
+        isinstance(value, dict)
+        and all(
+            isinstance(value.get(file_name), list)
+            and value[file_name] == RAW_IMPORT_REQUIRED_FIELDS[file_name]
             for file_name in RAW_IMPORT_FILE_NAMES
         )
     )
@@ -463,11 +504,15 @@ def next_import_record_handoff(summary: dict[str, Any] | None = None) -> dict[st
     raw_headers = summary_handoff.get("raw_file_headers")
     if not raw_import_file_headers_are_valid(raw_headers):
         raw_headers = raw_import_file_headers(raw_dir)
+    raw_required_fields = summary_handoff.get("raw_file_required_fields")
+    if not raw_import_file_required_fields_are_valid(raw_required_fields):
+        raw_required_fields = raw_import_file_required_fields()
     return {
         "raw_dir": raw_dir,
         "raw_files": [f"{raw_dir}/{file_name}" for file_name in RAW_IMPORT_FILE_NAMES],
         "raw_file_row_counts": raw_row_counts,
         "raw_file_headers": raw_headers,
+        "raw_file_required_fields": raw_required_fields,
         "after_edit_command": IMPORT_REFRESH_COMMAND,
         "readiness_check_command": IMPORT_READINESS_JSON_COMMAND,
     }
@@ -486,6 +531,7 @@ def next_import_record_handoff_is_valid(handoff: Any) -> bool:
         and all(isinstance(raw_file, str) and raw_file.endswith(".csv") for raw_file in raw_files)
         and raw_import_file_row_counts_are_valid(handoff.get("raw_file_row_counts"))
         and raw_import_file_headers_are_valid(handoff.get("raw_file_headers"))
+        and raw_import_file_required_fields_are_valid(handoff.get("raw_file_required_fields"))
         and handoff.get("after_edit_command") == IMPORT_REFRESH_COMMAND
         and handoff.get("readiness_check_command") == IMPORT_READINESS_JSON_COMMAND
     )
@@ -1123,6 +1169,24 @@ def format_raw_import_headers(handoff: Any) -> str:
     return "; ".join(labels) if labels else "(none)"
 
 
+def format_raw_import_required_fields(handoff: Any) -> str:
+    if not isinstance(handoff, dict):
+        return "(none)"
+    fields_by_file = handoff.get("raw_file_required_fields")
+    if not isinstance(fields_by_file, dict):
+        return "(none)"
+    labels = []
+    for file_name in RAW_IMPORT_FILE_NAMES:
+        fields = fields_by_file.get(file_name)
+        if isinstance(fields, list) and fields:
+            labels.append(f"{file_name}={'|'.join(str(field) for field in fields)}")
+        elif isinstance(fields, list):
+            labels.append(f"{file_name}=none")
+        else:
+            labels.append(f"{file_name}=missing")
+    return "; ".join(labels) if labels else "(none)"
+
+
 def format_decision_counts(counts: Any) -> str:
     if not isinstance(counts, dict) or not counts:
         return "(none)"
@@ -1306,6 +1370,10 @@ def format_progress_text(progress: dict[str, Any]) -> str:
                 lines.append(
                     "Next import raw headers: "
                     f"{format_raw_import_headers(next_import_handoff)}"
+                )
+                lines.append(
+                    "Next import raw required fields: "
+                    f"{format_raw_import_required_fields(next_import_handoff)}"
                 )
                 after_edit_command = next_import_handoff.get("after_edit_command")
                 if isinstance(after_edit_command, str) and after_edit_command.strip():
@@ -1972,7 +2040,7 @@ def operator_correction_smoke_check(
         "progress_import_readiness_snapshot",
         readiness_snapshot_passed,
         (
-            "summary includes the last durable import-readiness snapshot, import counts, thin coverage groups, next step, and raw CSV handoff with row counts and headers after complete correction capture"
+            "summary includes the last durable import-readiness snapshot, import counts, thin coverage groups, next step, and raw CSV handoff with row counts, headers, and required fields after complete correction capture"
             if missing_count == 0
             else "summary with missing corrections does not expose the last import-readiness snapshot"
         ),
@@ -2500,6 +2568,10 @@ def format_smoke_check_text(smoke_check: dict[str, Any]) -> str:
         lines.append(
             "Next import raw headers: "
             f"{format_raw_import_headers(readiness.get('next_import_record_handoff'))}"
+        )
+        lines.append(
+            "Next import raw required fields: "
+            f"{format_raw_import_required_fields(readiness.get('next_import_record_handoff'))}"
         )
     lines.append(f"Validate ledger: {smoke_check.get('validation_command')}")
     lines.append(f"Completion gate: {smoke_check.get('completion_validation_command')}")

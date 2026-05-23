@@ -67,6 +67,29 @@
         "text_content"
       ]
     },
+    "raw_file_required_fields": {
+      "permits.csv": [
+        "permit_number",
+        "address",
+        "city",
+        "trade",
+        "work_class"
+      ],
+      "inspections.csv": [
+        "permit_number",
+        "inspection_date",
+        "inspection_type",
+        "result"
+      ],
+      "contractors.csv": [
+        "registration_id",
+        "name",
+        "license_type"
+      ],
+      "rule_documents.csv": [
+        "title"
+      ]
+    },
     "after_edit_command": "python3 scripts/run_dallas_import_pipeline.py --require-ready",
     "readiness_check_command": "python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json"
   },

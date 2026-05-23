@@ -12,6 +12,7 @@
 - Next raw import files: `generated/raw/dallas-electrician-import-sample-v2/permits.csv`, `generated/raw/dallas-electrician-import-sample-v2/inspections.csv`, `generated/raw/dallas-electrician-import-sample-v2/contractors.csv`, `generated/raw/dallas-electrician-import-sample-v2/rule_documents.csv`
 - Next raw import row counts: `permits.csv`=15, `inspections.csv`=41, `contractors.csv`=6, `rule_documents.csv`=3
 - Next raw import headers: see Follow-Up
+- Next raw import required fields: see Follow-Up
 
 ## Execution Readiness
 
@@ -131,6 +132,11 @@ These are the reusable accepted correction patterns currently embedded in the Da
 - `inspections.csv` headers: `permit_number`, `inspection_date`, `inspection_type`, `result`, `notes`, `inspector_name`, `reinspection_flag`, `source_url`
 - `contractors.csv` headers: `registration_id`, `name`, `license_type`, `registration_status`, `city`, `state`
 - `rule_documents.csv` headers: `title`, `document_type`, `effective_date`, `source_url`, `text_content`
+- Raw CSV required fields:
+- `permits.csv` required: `permit_number`, `address`, `city`, `trade`, `work_class`
+- `inspections.csv` required: `permit_number`, `inspection_date`, `inspection_type`, `result`
+- `contractors.csv` required: `registration_id`, `name`, `license_type`
+- `rule_documents.csv` required: `title`
 - Require-ready pipeline: `python3 scripts/run_dallas_import_pipeline.py --require-ready`
 - Summary-only require-ready pipeline: `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready`
 - Summary-only require-ready JSON pipeline: `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json`

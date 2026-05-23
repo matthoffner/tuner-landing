@@ -41,6 +41,29 @@ RAW_IMPORT_FILE_NAMES = (
     "contractors.csv",
     "rule_documents.csv",
 )
+RAW_IMPORT_REQUIRED_FIELDS = {
+    "permits.csv": [
+        "permit_number",
+        "address",
+        "city",
+        "trade",
+        "work_class",
+    ],
+    "inspections.csv": [
+        "permit_number",
+        "inspection_date",
+        "inspection_type",
+        "result",
+    ],
+    "contractors.csv": [
+        "registration_id",
+        "name",
+        "license_type",
+    ],
+    "rule_documents.csv": [
+        "title",
+    ],
+}
 
 
 def parse_args():
@@ -140,6 +163,13 @@ def raw_file_headers(raw_dir):
     }
 
 
+def raw_file_required_fields():
+    return {
+        file_name: list(RAW_IMPORT_REQUIRED_FIELDS[file_name])
+        for file_name in RAW_IMPORT_FILE_NAMES
+    }
+
+
 def next_import_record_handoff(raw_dir):
     display_raw_dir = command_path(raw_dir).rstrip("/")
     return {
@@ -149,6 +179,7 @@ def next_import_record_handoff(raw_dir):
         ],
         "raw_file_row_counts": raw_file_row_counts(raw_dir),
         "raw_file_headers": raw_file_headers(raw_dir),
+        "raw_file_required_fields": raw_file_required_fields(),
         "after_edit_command": REQUIRE_READY_COMMAND,
         "readiness_check_command": SUMMARY_ONLY_REQUIRE_READY_JSON_COMMAND,
     }
@@ -417,6 +448,7 @@ def write_summary(summary):
     ]
     raw_row_counts = next_import_handoff.get("raw_file_row_counts", {})
     raw_headers = next_import_handoff.get("raw_file_headers", {})
+    raw_required_fields = next_import_handoff.get("raw_file_required_fields", {})
 
     def inline_list(values):
         return ", ".join(f"`{value}`" for value in values) if values else "none"
@@ -452,6 +484,23 @@ def write_summary(summary):
                 labels.append(f"- `{file_name}` headers: missing")
         return labels
 
+    def inline_required_fields(values):
+        if not isinstance(values, dict) or not values:
+            return ["- Raw CSV required fields: none"]
+        labels = []
+        for file_name in RAW_IMPORT_FILE_NAMES:
+            fields = values.get(file_name)
+            if isinstance(fields, list) and fields:
+                labels.append(
+                    f"- `{file_name}` required: "
+                    + ", ".join(f"`{field}`" for field in fields)
+                )
+            elif isinstance(fields, list):
+                labels.append(f"- `{file_name}` required: none")
+            else:
+                labels.append(f"- `{file_name}` required: missing")
+        return labels
+
     lines = [
         "# Dallas Import Pipeline Summary",
         "",
@@ -479,6 +528,7 @@ def write_summary(summary):
         f"- Next raw import files: {inline_list(next_import_handoff['raw_files'])}",
         f"- Next raw import row counts: {inline_row_counts(raw_row_counts)}",
         "- Next raw import headers: see Follow-Up",
+        "- Next raw import required fields: see Follow-Up",
         "",
         "## Execution Readiness",
         "",
@@ -651,6 +701,8 @@ def write_summary(summary):
             ),
             "- Raw CSV headers:",
             *inline_headers(raw_headers),
+            "- Raw CSV required fields:",
+            *inline_required_fields(raw_required_fields),
             f"- Require-ready pipeline: `{follow_up['require_ready_pipeline']}`",
             (
                 "- Summary-only require-ready pipeline: "
@@ -692,6 +744,7 @@ def print_summary(summary, output_format="text"):
     coverage_thin = coverage.get("latest_thin_counts", {})
     raw_row_counts = next_import_handoff.get("raw_file_row_counts", {})
     raw_headers = next_import_handoff.get("raw_file_headers", {})
+    raw_required_fields = next_import_handoff.get("raw_file_required_fields", {})
 
     def format_row_counts(values):
         if not isinstance(values, dict) or not values:
@@ -711,6 +764,20 @@ def print_summary(summary, output_format="text"):
             if isinstance(headers, list) and headers:
                 labels.append(f"{file_name}={'|'.join(headers)}")
             elif isinstance(headers, list):
+                labels.append(f"{file_name}=none")
+            else:
+                labels.append(f"{file_name}=missing")
+        return "; ".join(labels)
+
+    def format_required_fields(values):
+        if not isinstance(values, dict) or not values:
+            return "none"
+        labels = []
+        for file_name in RAW_IMPORT_FILE_NAMES:
+            fields = values.get(file_name)
+            if isinstance(fields, list) and fields:
+                labels.append(f"{file_name}={'|'.join(fields)}")
+            elif isinstance(fields, list):
                 labels.append(f"{file_name}=none")
             else:
                 labels.append(f"{file_name}=missing")
@@ -773,6 +840,7 @@ def print_summary(summary, output_format="text"):
     print(f"  raw_import_files: {', '.join(next_import_handoff['raw_files'])}")
     print(f"  raw_import_row_counts: {format_row_counts(raw_row_counts)}")
     print(f"  raw_import_headers: {format_headers(raw_headers)}")
+    print(f"  raw_import_required_fields: {format_required_fields(raw_required_fields)}")
     print(f"  after_raw_csv_edits: {next_import_handoff['after_edit_command']}")
     print(
         "  raw_csv_readiness_check: "

@@ -57,6 +57,7 @@ Updated next best artifacts:
 
 Latest bounded improvement completed:
 
+- `scripts/run_dallas_import_pipeline.py` and `scripts/record_operator_correction.py` now add raw CSV required fields to the next-import handoff, so Dallas permit-data widening can distinguish all headers from the fields the importer depends on before editing `permits.csv`, `inspections.csv`, `contractors.csv`, or `rule_documents.csv`
 - `generated/normalized/dallas-electrician-sample-v1/` now provides row-shaped Dallas sample records
 - `scripts/generate_dallas_fixture_pack.py` now emits the Dallas fixture pack deterministically from normalized permit and inspection rows
 - `scripts/generate_dallas_label_reviews.py` now emits reviewed label rows directly from normalized Dallas permit and inspection records, and `scripts/generate_dallas_eval_artifacts.py` now uses that row-derived supervision path
