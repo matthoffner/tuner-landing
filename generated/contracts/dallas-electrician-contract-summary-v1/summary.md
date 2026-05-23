@@ -54,9 +54,9 @@ This artifact checks that the Dallas electricians MVP keeps one stable downstrea
 
 - Dataset id: `dallas-electrician-import-sample-v2`
 - Kind: `imported`
-- Normalized counts: `62` properties, `62` permits, `136` inspections, `5` contractors, `3` rule documents, `206` source records
-- Fixture counts: `62` sequences, `5` pattern slices, `5` repeated slices, max permit support `50`
-- Eval counts: `147` tasks, `68` reviewed label rows, `6` repeated next-action groups, `142` dev, `5` test
+- Normalized counts: `63` properties, `63` permits, `138` inspections, `5` contractors, `3` rule documents, `209` source records
+- Fixture counts: `63` sequences, `5` pattern slices, `5` repeated slices, max permit support `51`
+- Eval counts: `149` tasks, `69` reviewed label rows, `6` repeated next-action groups, `144` dev, `5` test
 - Edge-case counts: `6` repeated result states of `6`, `5` repeated failure reasons of `5`
 - Inspection result vocabulary: `cancelled, fail, not_ready, partial, pass, unknown`
 - Task families: `failure_reason_classification, next_inspection_outcome, pattern_extraction, recommended_next_action`
