@@ -531,7 +531,7 @@
 
       .bridge-metrics {
         display: grid;
-        grid-template-columns: repeat(5, minmax(0, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
         gap: 10px;
         padding: 16px;
       }
@@ -941,7 +941,7 @@
                 <p>
                   This deployed page reads the live agent loop through Vercel proxy endpoints first, then falls
                   back to the read-only bridge. The loop now runs bounded <code>codex exec</code> iterations,
-                  then syncs, verifies, commits, and pushes changes.
+                  then syncs, verifies, commits, and pushes changes while exposing Dallas import readiness.
                 </p>
               </div>
               <a class="bridge-url" href="https://5694-140-186-106-90.ngrok-free.app" target="_blank" rel="noreferrer">open bridge</a>
@@ -962,6 +962,10 @@
               <div class="bridge-metric">
                 <strong data-bridge-contract>...</strong>
                 <span>contract checks</span>
+              </div>
+              <div class="bridge-metric">
+                <strong data-bridge-import-readiness>...</strong>
+                <span>import readiness</span>
               </div>
               <div class="bridge-metric">
                 <strong data-bridge-queue>...</strong>
@@ -1118,7 +1122,7 @@
                   <h3>Embedded read-only loop feed</h3>
                   <p>
                     This panel fetches the local Codex loop through the read-only bridge as data, not as an
-                    iframe, so the landing page can render status, contract checks, queue state, and logs inline.
+                    iframe, so the landing page can render status, import readiness, contract checks, queue state, and logs inline.
                   </p>
                 </div>
                 <a class="bridge-url" href="https://5694-140-186-106-90.ngrok-free.app" target="_blank" rel="noreferrer">open bridge</a>
@@ -1139,6 +1143,10 @@
                 <div class="bridge-metric">
                   <strong data-bridge-contract>...</strong>
                   <span>contract checks</span>
+                </div>
+                <div class="bridge-metric">
+                  <strong data-bridge-import-readiness>...</strong>
+                  <span>import readiness</span>
                 </div>
                 <div class="bridge-metric">
                   <strong data-bridge-queue>...</strong>
@@ -1579,6 +1587,7 @@
             iteration: panel.querySelector("[data-bridge-iteration]"),
             running: panel.querySelector("[data-bridge-running]"),
             contract: panel.querySelector("[data-bridge-contract]"),
+            importReadiness: panel.querySelector("[data-bridge-import-readiness]"),
             queue: panel.querySelector("[data-bridge-queue]"),
             log: panel.querySelector("[data-bridge-log]"),
           };
@@ -1590,11 +1599,14 @@
             ], { headers });
             const status = await statusResponse.json();
             const contract = status.artifacts && status.artifacts.contract;
+            const importPipeline = status.artifacts && status.artifacts.import_pipeline;
+            const executionReadiness = importPipeline && importPipeline.execution_readiness;
             const workflow = status.artifacts && status.artifacts.workflow;
             fields.status.textContent = status.status || "unknown";
             fields.iteration.textContent = status.iteration || "0";
             fields.running.textContent = status.loop_running ? "running" : "stopped";
             fields.contract.textContent = contract ? `${contract.passed_checks}/${contract.total_checks}` : "...";
+            fields.importReadiness.textContent = executionReadiness && executionReadiness.status ? executionReadiness.status : "...";
             fields.queue.textContent = workflow && workflow.queue_items !== undefined ? workflow.queue_items : "...";
 
             const logResponse = await fetchFirst([

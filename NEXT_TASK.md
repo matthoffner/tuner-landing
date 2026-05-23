@@ -150,6 +150,7 @@ Latest bounded improvement completed:
 - `scripts/run_dallas_import_pipeline.py --summary-only --require-ready` now skips artifact regeneration, validates the strict correction gate, rebuilds the durable pipeline summary from current generated Dallas artifacts, and exits nonzero if execution readiness is blocked
 - `scripts/run_dallas_import_pipeline.py --format json` now emits the final durable Dallas import summary as machine-readable stdout while routing step logs and child command output to stderr
 - `scripts/run_mvp_loop.py` and `scripts/run_autonomous_agent_loop.py` now include the durable Dallas import pipeline summary under `artifacts.import_pipeline` in `.automoat/state/mvp-loop-status.json`, including execution-readiness status, blockers, gates, latest import counts, coverage thin groups, accepted pattern counts, and the JSON readiness command
+- `generated/landing.html` and `index.html` now render `artifacts.import_pipeline.execution_readiness.status` in both live cockpit panels, so the Dallas import-readiness gate is visible next to loop state, contract checks, and queue items
 
 ## Constraints
 
