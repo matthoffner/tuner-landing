@@ -1264,6 +1264,29 @@ def operator_correction_smoke_check(
         ),
     )
 
+    next_missing_followup_commands = {
+        "validation_command": next_missing.get("validation_command"),
+        "completion_validation_command": next_missing.get("completion_validation_command"),
+    }
+    next_missing_followup_failures = [
+        name
+        for name, command in next_missing_followup_commands.items()
+        if command is not None and not command_preserves_output_format(command, output_format)
+    ]
+    add_smoke_check(
+        checks,
+        "next_missing_followup_command_output_format",
+        not next_missing_followup_failures,
+        (
+            f"next-missing validation commands keep {expected_format_label}"
+            if not next_missing_followup_failures
+            else (
+                "next-missing validation commands changed output mode: "
+                f"{', '.join(next_missing_followup_failures)}"
+            )
+        ),
+    )
+
     dry_run_events: list[dict[str, Any]] = []
     if isinstance(item, dict) and isinstance(queue_item_id, str):
         commands = next_missing.get("suggested_commands", {})
