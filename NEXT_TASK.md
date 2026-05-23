@@ -105,6 +105,7 @@ Latest bounded improvement completed:
 - `scripts/record_operator_correction.py --smoke-check --format text` now verifies accepted/rejected/edited next-missing command guard groups, edited-action templates, and note dry-runs instead of only checking the accepted shortcut path
 - `scripts/record_operator_correction.py --smoke-check --format text` now also verifies fixed-item dry-run and append command groups keep the selected queue item ID, stale-capture guards, note placeholders, and edited-action templates
 - `scripts/record_operator_correction.py --smoke-check --format text` now verifies text-mode generated dry-run and append commands keep `--format text`, so operator work orders continue producing readable confirmations instead of silently falling back to JSON
+- `scripts/record_operator_correction.py --smoke-check --format text` now verifies note-bearing append shortcut and fixed-item command groups keep `--operator-note`, stale-capture guards, text output, and queue identity guards before capture
 
 ## Constraints
 

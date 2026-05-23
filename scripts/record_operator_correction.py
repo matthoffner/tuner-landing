@@ -1184,6 +1184,7 @@ def operator_correction_smoke_check(queue_path: Path, ledger_path: Path) -> dict
         dry_run_shortcut = commands.get("dry_run_next_missing", {})
         dry_run_with_note = commands.get("dry_run_next_missing_with_note", {})
         append_shortcut = commands.get("append_next_missing", {})
+        append_shortcut_with_note = commands.get("append_next_missing_with_note", {})
 
         dry_run_failures = command_group_failures(
             dry_run_shortcut,
@@ -1239,9 +1240,28 @@ def operator_correction_smoke_check(queue_path: Path, ledger_path: Path) -> dict
             ),
         )
 
+        note_append_failures = command_group_failures(
+            append_shortcut_with_note,
+            queue_item_id,
+            should_be_dry_run=False,
+            require_note=True,
+            expected_output_format="text",
+        )
+        add_smoke_check(
+            checks,
+            "note_append_shortcut",
+            not note_append_failures,
+            (
+                "accepted/rejected/edited note appends keep text output and operator-note placeholders"
+                if not note_append_failures
+                else "; ".join(note_append_failures)
+            ),
+        )
+
         dry_run_fixed = commands.get("dry_run", {})
         dry_run_fixed_with_note = commands.get("dry_run_with_note", {})
         append_fixed = commands.get("append", {})
+        append_fixed_with_note = commands.get("append_with_note", {})
 
         fixed_dry_run_failures = command_group_failures(
             dry_run_fixed,
@@ -1298,6 +1318,26 @@ def operator_correction_smoke_check(queue_path: Path, ledger_path: Path) -> dict
                 "require-missing guards, text output, and edited action template"
                 if not fixed_append_failures
                 else "; ".join(fixed_append_failures)
+            ),
+        )
+
+        note_fixed_append_failures = command_group_failures(
+            append_fixed_with_note,
+            None,
+            should_be_dry_run=False,
+            require_note=True,
+            expected_queue_item_id=queue_item_id,
+            expected_output_format="text",
+        )
+        add_smoke_check(
+            checks,
+            "note_append_fixed_item",
+            not note_fixed_append_failures,
+            (
+                "accepted/rejected/edited fixed-item note appends keep queue item ID, text output, "
+                "and operator-note placeholders"
+                if not note_fixed_append_failures
+                else "; ".join(note_fixed_append_failures)
             ),
         )
 
