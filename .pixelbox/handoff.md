@@ -4,6 +4,10 @@ Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
 - lane: editor
+- status: tightened completed-ledger Dallas correction smoke checks; `scripts/record_operator_correction.py --smoke-check` now creates a temporary incomplete ledger when the real ledger has 14/14 corrections, then verifies next-missing command guards, accepted/rejected/edited dry-run event shapes, stale guards, and completion-gate rejection without mutating `operator-corrections.jsonl`
+- files: scripts/record_operator_correction.py, README.md, NEXT_TASK.md, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- next: run `python3 scripts/record_operator_correction.py --smoke-check`, `python3 scripts/record_operator_correction.py --smoke-check --format text`, `python3 scripts/record_operator_correction.py --validate-ledger --require-complete --format text`, and `python3 scripts/record_operator_correction.py --list-patterns --format text`; then use the accepted patterns and repeated latest-import coverage to choose the next real Dallas import-readiness gap
+- lane: editor
 - status: added a non-server Dallas accepted-pattern listing; `scripts/record_operator_correction.py --list-patterns --format text` now prints the 6 reusable accepted correction patterns across 14 captured queue items, and the smoke check verifies the pattern payload plus completion-command output mode
 - files: scripts/record_operator_correction.py, README.md, NEXT_TASK.md, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
 - next: run `python3 scripts/record_operator_correction.py --list-patterns --format text`, `python3 scripts/record_operator_correction.py --smoke-check --format text`, and `python3 scripts/record_operator_correction.py --validate-ledger --require-complete --format text`; then use the accepted patterns with the repeated latest-import coverage to choose the next real Dallas import-readiness gap

@@ -1295,6 +1295,34 @@ def command_preserves_output_format(command: Any, output_format: str) -> bool:
     return actual_output_format is None
 
 
+def temporary_incomplete_ledger(
+    queue_path: Path,
+    ledger_path: Path,
+) -> tuple[tempfile.TemporaryDirectory[str], Path, str] | None:
+    payload = read_json(queue_path)
+    queue = payload.get("queue")
+    if not isinstance(queue, list):
+        return None
+
+    queue_item_id = None
+    for item in queue:
+        if isinstance(item, dict) and isinstance(item.get("queue_item_id"), str):
+            queue_item_id = item["queue_item_id"]
+            break
+    if queue_item_id is None:
+        return None
+
+    events, _invalid_lines = read_correction_events(ledger_path)
+    temp_dir = tempfile.TemporaryDirectory(prefix="automoat-incomplete-correction-smoke-")
+    temp_ledger_path = Path(temp_dir.name) / "operator-corrections.jsonl"
+    with temp_ledger_path.open("w", encoding="utf-8") as handle:
+        for event in events:
+            if event.get("queue_item_id") == queue_item_id:
+                continue
+            handle.write(json.dumps(event, sort_keys=True) + "\n")
+    return temp_dir, temp_ledger_path, queue_item_id
+
+
 def operator_correction_smoke_check(
     queue_path: Path,
     ledger_path: Path,
@@ -1491,8 +1519,77 @@ def operator_correction_smoke_check(
     )
 
     dry_run_events: list[dict[str, Any]] = []
-    if isinstance(item, dict) and isinstance(queue_item_id, str):
-        commands = next_missing.get("suggested_commands", {})
+    next_missing_for_checks = next_missing
+    ledger_path_for_checks = ledger_path
+    temp_smoke_dir: tempfile.TemporaryDirectory[str] | None = None
+    if not (isinstance(item, dict) and isinstance(queue_item_id, str)):
+        incomplete_fixture = temporary_incomplete_ledger(queue_path, ledger_path)
+        if incomplete_fixture is None:
+            add_smoke_check(
+                checks,
+                "temporary_next_missing_fixture",
+                False,
+                "could not build a temporary incomplete correction ledger",
+            )
+        else:
+            temp_smoke_dir, ledger_path_for_checks, expected_missing_id = incomplete_fixture
+            next_missing_for_checks = next_missing_correction(
+                queue_path,
+                ledger_path_for_checks,
+                output_format=output_format,
+            )
+            fixture_item = next_missing_for_checks.get("item")
+            fixture_queue_item_id = (
+                fixture_item.get("queue_item_id") if isinstance(fixture_item, dict) else None
+            )
+            fixture_completion = ledger_validation(
+                queue_path,
+                ledger_path_for_checks,
+                require_complete=True,
+                output_format=output_format,
+            )
+            fixture_issues = fixture_completion.get("issues", [])
+            fixture_issue_fields = (
+                [issue.get("field") for issue in fixture_issues if isinstance(issue, dict)]
+                if isinstance(fixture_issues, list)
+                else []
+            )
+            add_smoke_check(
+                checks,
+                "temporary_next_missing_fixture",
+                fixture_queue_item_id == expected_missing_id,
+                (
+                    f"temporary ledger exposes {expected_missing_id} as a next-missing work item"
+                    if fixture_queue_item_id == expected_missing_id
+                    else f"temporary ledger exposed {fixture_queue_item_id}, expected {expected_missing_id}"
+                ),
+            )
+            add_smoke_check(
+                checks,
+                "temporary_completion_gate",
+                (
+                    fixture_completion.get("status") == "fail"
+                    and "queue_correction_coverage" in fixture_issue_fields
+                ),
+                (
+                    "temporary incomplete ledger is rejected by the completion gate"
+                    if (
+                        fixture_completion.get("status") == "fail"
+                        and "queue_correction_coverage" in fixture_issue_fields
+                    )
+                    else (
+                        "temporary incomplete ledger was not rejected by the completion gate: "
+                        f"{fixture_completion.get('status')} with fields {fixture_issue_fields}"
+                    )
+                ),
+            )
+
+    item_for_checks = next_missing_for_checks.get("item")
+    queue_item_id_for_checks = (
+        item_for_checks.get("queue_item_id") if isinstance(item_for_checks, dict) else None
+    )
+    if isinstance(item_for_checks, dict) and isinstance(queue_item_id_for_checks, str):
+        commands = next_missing_for_checks.get("suggested_commands", {})
         if not isinstance(commands, dict):
             commands = {}
         dry_run_shortcut = commands.get("dry_run_next_missing", {})
@@ -1502,7 +1599,7 @@ def operator_correction_smoke_check(
 
         dry_run_failures = command_group_failures(
             dry_run_shortcut,
-            queue_item_id,
+            queue_item_id_for_checks,
             should_be_dry_run=True,
             expected_output_format=output_format,
         )
@@ -1520,7 +1617,7 @@ def operator_correction_smoke_check(
 
         note_dry_run_failures = command_group_failures(
             dry_run_with_note,
-            queue_item_id,
+            queue_item_id_for_checks,
             should_be_dry_run=True,
             require_note=True,
             expected_output_format=output_format,
@@ -1539,7 +1636,7 @@ def operator_correction_smoke_check(
 
         append_failures = command_group_failures(
             append_shortcut,
-            queue_item_id,
+            queue_item_id_for_checks,
             should_be_dry_run=False,
             expected_output_format=output_format,
         )
@@ -1557,7 +1654,7 @@ def operator_correction_smoke_check(
 
         note_append_failures = command_group_failures(
             append_shortcut_with_note,
-            queue_item_id,
+            queue_item_id_for_checks,
             should_be_dry_run=False,
             require_note=True,
             expected_output_format=output_format,
@@ -1583,7 +1680,7 @@ def operator_correction_smoke_check(
             dry_run_fixed,
             None,
             should_be_dry_run=True,
-            expected_queue_item_id=queue_item_id,
+            expected_queue_item_id=queue_item_id_for_checks,
             expected_output_format=output_format,
         )
         add_smoke_check(
@@ -1603,7 +1700,7 @@ def operator_correction_smoke_check(
             None,
             should_be_dry_run=True,
             require_note=True,
-            expected_queue_item_id=queue_item_id,
+            expected_queue_item_id=queue_item_id_for_checks,
             expected_output_format=output_format,
         )
         add_smoke_check(
@@ -1622,7 +1719,7 @@ def operator_correction_smoke_check(
             append_fixed,
             None,
             should_be_dry_run=False,
-            expected_queue_item_id=queue_item_id,
+            expected_queue_item_id=queue_item_id_for_checks,
             expected_output_format=output_format,
         )
         add_smoke_check(
@@ -1642,7 +1739,7 @@ def operator_correction_smoke_check(
             None,
             should_be_dry_run=False,
             require_note=True,
-            expected_queue_item_id=queue_item_id,
+            expected_queue_item_id=queue_item_id_for_checks,
             expected_output_format=output_format,
         )
         add_smoke_check(
@@ -1659,7 +1756,7 @@ def operator_correction_smoke_check(
 
         recommended_actions: list[str] = []
         try:
-            recommended_actions = normalize_action_list(item.get("recommended_actions"))
+            recommended_actions = normalize_action_list(item_for_checks.get("recommended_actions"))
         except ValueError:
             pass
         add_smoke_check(
@@ -1679,7 +1776,7 @@ def operator_correction_smoke_check(
             try:
                 event = build_operator_correction_event(
                     {
-                        "queue_item_id": queue_item_id,
+                        "queue_item_id": queue_item_id_for_checks,
                         "decision": decision,
                         "corrected_actions": corrected_actions,
                         "operator_note": "smoke check only",
@@ -1709,9 +1806,9 @@ def operator_correction_smoke_check(
 
         expected_guard_passed = False
         expected_guard_detail = "stale expected-ID guard rejected a changed next-missing item"
-        stale_expected_id = f"{queue_item_id}:stale"
+        stale_expected_id = f"{queue_item_id_for_checks}:stale"
         try:
-            resolve_next_missing_queue_item_id(queue_path, ledger_path, stale_expected_id)
+            resolve_next_missing_queue_item_id(queue_path, ledger_path_for_checks, stale_expected_id)
             expected_guard_detail = "stale expected-ID guard allowed a changed next-missing item"
         except ValueError as exc:
             expected_guard_passed = "next missing queue item changed" in str(exc)
@@ -1728,7 +1825,7 @@ def operator_correction_smoke_check(
         stale_guard_passed = False
         stale_guard_event = build_operator_correction_event(
             {
-                "queue_item_id": queue_item_id,
+                "queue_item_id": queue_item_id_for_checks,
                 "decision": "accepted",
                 "operator_note": "smoke check stale guard",
                 "source": "operator-correction-smoke-check",
@@ -1740,7 +1837,7 @@ def operator_correction_smoke_check(
             temp_ledger_path = Path(tmpdir) / "operator-corrections.jsonl"
             temp_ledger_path.write_text(json.dumps(stale_guard_event, sort_keys=True) + "\n", encoding="utf-8")
             try:
-                require_queue_item_missing(temp_ledger_path, queue_item_id)
+                require_queue_item_missing(temp_ledger_path, queue_item_id_for_checks)
                 stale_guard_detail = "stale capture guard allowed a captured queue item"
             except ValueError as exc:
                 stale_guard_passed = "already has a captured correction" in str(exc)
@@ -1757,7 +1854,7 @@ def operator_correction_smoke_check(
         context_guard_passed = False
         stale_context_event = build_operator_correction_event(
             {
-                "queue_item_id": queue_item_id,
+                "queue_item_id": queue_item_id_for_checks,
                 "decision": "accepted",
                 "operator_note": "smoke check stale context",
                 "source": "operator-correction-smoke-check",
@@ -1797,7 +1894,7 @@ def operator_correction_smoke_check(
         )
 
     failed_checks = [check for check in checks if check.get("status") != "pass"]
-    return {
+    result = {
         "workflow_id": progress.get("workflow_id"),
         "status": "fail" if failed_checks else "pass",
         "output_format": output_format,
@@ -1805,6 +1902,7 @@ def operator_correction_smoke_check(
         "queue_items_with_corrections": progress.get("queue_items_with_corrections"),
         "queue_items_missing_corrections": progress.get("queue_items_missing_corrections"),
         "next_missing_queue_item_id": queue_item_id,
+        "smoke_next_missing_queue_item_id": queue_item_id_for_checks,
         "completion_gate_status": completion_validation.get("status"),
         "completion_gate_issue_count": completion_validation.get("issue_count"),
         "checks": checks,
@@ -1813,6 +1911,9 @@ def operator_correction_smoke_check(
         "validation_command": progress.get("validation_command"),
         "completion_validation_command": progress.get("completion_validation_command"),
     }
+    if temp_smoke_dir is not None:
+        temp_smoke_dir.cleanup()
+    return result
 
 
 def format_smoke_check_text(smoke_check: dict[str, Any]) -> str:
