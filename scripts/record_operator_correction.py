@@ -1192,6 +1192,12 @@ def operator_correction_smoke_check(
 ) -> dict[str, Any]:
     progress = correction_progress(queue_path, ledger_path, output_format=output_format)
     validation = ledger_validation(queue_path, ledger_path, output_format=output_format)
+    completion_validation = ledger_validation(
+        queue_path,
+        ledger_path,
+        require_complete=True,
+        output_format=output_format,
+    )
     next_missing = next_missing_correction(queue_path, ledger_path, output_format=output_format)
     checks: list[dict[str, Any]] = []
     expected_format_label = output_format_label(output_format)
@@ -1209,6 +1215,38 @@ def operator_correction_smoke_check(
         "ledger_validation",
         validation.get("status") == "pass",
         f"{validation.get('issue_count')} issues, {validation.get('invalid_lines')} invalid lines",
+    )
+    completion_issues = completion_validation.get("issues", [])
+    completion_issue_fields = (
+        [issue.get("field") for issue in completion_issues if isinstance(issue, dict)]
+        if isinstance(completion_issues, list)
+        else []
+    )
+    if isinstance(missing_count, int) and missing_count > 0:
+        completion_gate_passed = (
+            completion_validation.get("status") == "fail"
+            and "queue_correction_coverage" in completion_issue_fields
+        )
+        completion_gate_detail = (
+            f"completion gate rejects {missing_count} missing queue items"
+            if completion_gate_passed
+            else (
+                "completion gate did not reject incomplete coverage: "
+                f"{completion_validation.get('status')} with fields {completion_issue_fields}"
+            )
+        )
+    else:
+        completion_gate_passed = completion_validation.get("status") == "pass"
+        completion_gate_detail = (
+            "completion gate passes with complete correction coverage"
+            if completion_gate_passed
+            else f"completion gate failed unexpectedly: {completion_validation.get('issue_count')} issues"
+        )
+    add_smoke_check(
+        checks,
+        "completion_gate",
+        completion_gate_passed,
+        completion_gate_detail,
     )
 
     catalog = action_catalog(queue_path)
@@ -1580,6 +1618,8 @@ def operator_correction_smoke_check(
         "queue_items_with_corrections": progress.get("queue_items_with_corrections"),
         "queue_items_missing_corrections": progress.get("queue_items_missing_corrections"),
         "next_missing_queue_item_id": queue_item_id,
+        "completion_gate_status": completion_validation.get("status"),
+        "completion_gate_issue_count": completion_validation.get("issue_count"),
         "checks": checks,
         "dry_run_events": dry_run_events,
         "next_missing_command": progress.get("next_missing_command"),
