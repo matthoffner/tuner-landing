@@ -15,6 +15,9 @@ DEFAULT_FIXTURE_DIR = ROOT / "generated" / "fixtures" / "dallas-electrician-impo
 DEFAULT_EVAL_DIR = ROOT / "generated" / "evals" / LATEST_IMPORT_DATASET_ID
 WORKFLOW_PATH = ROOT / "generated" / "workflows" / "dallas-inspection-workflow-v1" / "action-queue.json"
 CONTRACT_PATH = ROOT / "generated" / "contracts" / "dallas-electrician-contract-summary-v1" / "summary.json"
+COVERAGE_REPORT_PATH = ROOT / "generated" / "coverage" / "dallas-electrician-edge-case-coverage-v1" / "coverage.md"
+CONTRACT_REPORT_PATH = ROOT / "generated" / "contracts" / "dallas-electrician-contract-summary-v1" / "summary.md"
+WORKFLOW_REPORT_PATH = ROOT / "generated" / "workflows" / "dallas-inspection-workflow-v1" / "action-queue.md"
 PYTHON = sys.executable
 
 
@@ -86,6 +89,12 @@ def print_summary(dataset_id):
     )
     print(f"accepted_patterns: {pattern_summary.get('accepted_pattern_count')}")
     print(f"next_gap: {contract.get('next_gap')}")
+    print("follow_up:")
+    print("  patterns_command: python3 scripts/record_operator_correction.py --list-patterns --format text")
+    print("  completion_gate: python3 scripts/record_operator_correction.py --validate-ledger --require-complete --format text")
+    print(f"  coverage_report: {command_path(COVERAGE_REPORT_PATH)}")
+    print(f"  contract_report: {command_path(CONTRACT_REPORT_PATH)}")
+    print(f"  workflow_report: {command_path(WORKFLOW_REPORT_PATH)}")
 
 
 def main():

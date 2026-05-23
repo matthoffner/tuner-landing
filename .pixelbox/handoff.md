@@ -4,6 +4,10 @@ Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
 - lane: editor
+- status: made the Dallas import pipeline summary self-directing; `python3 scripts/run_dallas_import_pipeline.py` still refreshes imported `v2` through the strict correction gate, and now prints a `follow_up` block with the accepted-pattern review command, completion gate, and generated coverage, contract, and workflow report paths
+- files: scripts/run_dallas_import_pipeline.py, README.md, NEXT_TASK.md, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- next: run `python3 scripts/run_dallas_import_pipeline.py`, then use its printed `patterns_command` plus the coverage, contract, and workflow reports to choose the next real Dallas import-readiness gap as new records arrive
+- lane: editor
 - status: added a deterministic non-server Dallas import pipeline; `python3 scripts/run_dallas_import_pipeline.py` refreshes imported `v2` from raw CSV through normalized rows, fixture pack, evals, coverage, contract summary, workflow, and strict correction-ledger validation, while the importer now keeps the imported project timestamp stable across repeated runs
 - files: scripts/run_dallas_import_pipeline.py, scripts/import_dallas_permit_extracts.py, generated/normalized/dallas-electrician-import-sample-v2/projects.json, README.md, NEXT_TASK.md, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
 - next: run `python3 scripts/run_dallas_import_pipeline.py`, then use the reported `next_gap` plus `python3 scripts/record_operator_correction.py --list-patterns --format text` to choose the next real Dallas import-readiness gap before widening more fixture rows
