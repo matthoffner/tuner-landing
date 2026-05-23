@@ -239,7 +239,21 @@ def ledger_validation(queue_path: Path, ledger_path: Path, require_complete: boo
             }
         )
 
+    seen_correction_ids: dict[str, int] = {}
     for event_number, event in enumerate(events, start=1):
+        correction_id = event.get("correction_id")
+        if not isinstance(correction_id, str) or not correction_id.strip():
+            add_issue(event_number, event, "correction_id", "correction_id must be a non-empty string")
+        elif correction_id in seen_correction_ids:
+            add_issue(
+                event_number,
+                event,
+                "correction_id",
+                f"correction_id duplicates event {seen_correction_ids[correction_id]}",
+            )
+        else:
+            seen_correction_ids[correction_id] = event_number
+
         queue_item_id = event.get("queue_item_id")
         item = queue_items.get(queue_item_id) if isinstance(queue_item_id, str) else None
         if not isinstance(queue_item_id, str) or not queue_item_id:
