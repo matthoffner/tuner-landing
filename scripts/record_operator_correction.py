@@ -794,10 +794,13 @@ def main() -> int:
         "operator_note": args.operator_note,
         "source": args.source,
     }
-    if args.dry_run:
-        event = build_operator_correction_event(payload, args.queue_path, args.captured_at)
-    else:
-        event = append_operator_correction(payload, args.queue_path, args.ledger_path, args.captured_at)
+    try:
+        if args.dry_run:
+            event = build_operator_correction_event(payload, args.queue_path, args.captured_at)
+        else:
+            event = append_operator_correction(payload, args.queue_path, args.ledger_path, args.captured_at)
+    except ValueError as exc:
+        raise SystemExit(f"error: {exc}") from exc
     print(json.dumps(event, indent=2, sort_keys=True))
     return 0
 

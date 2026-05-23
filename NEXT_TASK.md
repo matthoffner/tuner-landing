@@ -84,6 +84,7 @@ Latest bounded improvement completed:
 - `scripts/record_operator_correction.py --format text` now gives `--summary`, `--list-queue-items`, and `--next-missing` readable operator work orders while keeping JSON as the default for automation
 - `scripts/record_operator_correction.py --validate-ledger` now gives the non-server correction path a deterministic check that captured Dallas correction events still reference current queue items, valid decisions, known action IDs, and expected accepted/rejected/edited action shapes
 - `scripts/record_operator_correction.py --use-next-missing --decision accepted --dry-run` now validates or records the first uncaptured Dallas queue item directly, so an operator does not need to copy the queue item ID before each accepted/rejected/edited capture
+- `scripts/operator_corrections.py` now rejects edited corrections that contain unknown action IDs before dry-run or append, keeping typos out of the Dallas correction ledger instead of only catching them in later validation
 
 ## Constraints
 

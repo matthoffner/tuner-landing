@@ -116,6 +116,14 @@ def normalize_action_list(value: object) -> list[str]:
     return actions
 
 
+def known_queue_action_ids(queue_path: Path = DEFAULT_QUEUE_PATH) -> set[str]:
+    action_ids: set[str] = set()
+    for item in queue_item_index(queue_path).values():
+        for action_id in normalize_action_list(item.get("recommended_actions")):
+            action_ids.add(action_id)
+    return action_ids
+
+
 def build_operator_correction_event(
     payload: object,
     queue_path: Path = DEFAULT_QUEUE_PATH,
@@ -146,6 +154,14 @@ def build_operator_correction_event(
     else:
         if not corrected_actions:
             raise ValueError("edited corrections require corrected_actions")
+        known_action_ids = known_queue_action_ids(queue_path)
+        unknown_actions = sorted(action for action in corrected_actions if action not in known_action_ids)
+        if unknown_actions:
+            known_actions = ", ".join(sorted(known_action_ids)) if known_action_ids else "(none)"
+            raise ValueError(
+                "edited corrections include unknown corrected_actions: "
+                f"{', '.join(unknown_actions)}; known action IDs: {known_actions}"
+            )
         outcome_actions = corrected_actions
 
     operator_note = str(payload.get("operator_note", "")).strip()
