@@ -16,21 +16,21 @@
       "generated/raw/dallas-electrician-import-sample-v2/rule_documents.csv"
     ],
     "raw_file_row_counts": {
-      "permits.csv": 15,
-      "inspections.csv": 41,
+      "permits.csv": 16,
+      "inspections.csv": 43,
       "contractors.csv": 6,
       "rule_documents.csv": 3
     },
     "raw_file_fingerprints": {
       "permits.csv": {
         "algorithm": "sha256",
-        "byte_count": 4670,
-        "sha256": "7863d3ac9b55dd4f2a604ea792b4ba5bb9c190bede768b0befe7612f2a24f1c1"
+        "byte_count": 4960,
+        "sha256": "adfed1662ac4d564f699e75d48cea11a74fd915aebda29bde392a12f1522ec5d"
       },
       "inspections.csv": {
         "algorithm": "sha256",
-        "byte_count": 8290,
-        "sha256": "292b83542ff6643692214f86e6f53f0c1070587c5a422e86352243f4750b6797"
+        "byte_count": 8682,
+        "sha256": "c89f99037353df7aecfba9efbd9d80768dfef0b1405226d4f9843c4e70bb6057"
       },
       "contractors.csv": {
         "algorithm": "sha256",
@@ -44,28 +44,28 @@
       }
     },
     "raw_file_next_append_rows": {
-      "permits.csv": 17,
-      "inspections.csv": 43,
+      "permits.csv": 18,
+      "inspections.csv": 45,
       "contractors.csv": 8,
       "rule_documents.csv": 5
     },
     "raw_file_last_data_rows": {
       "permits.csv": {
-        "csv_row_number": 16,
+        "csv_row_number": 17,
         "row": {
-          "permit_number": "PLM-2026-0206",
-          "address": "410 W Jefferson Blvd",
+          "permit_number": "ELZ-2026-0216",
+          "address": "2718 S Ewing Ave",
           "city": "Dallas",
-          "trade": "plumbing",
+          "trade": "electrical",
           "work_class": "residential"
         }
       },
       "inspections.csv": {
-        "csv_row_number": 42,
+        "csv_row_number": 44,
         "row": {
-          "permit_number": "PLM-2026-0206",
-          "inspection_date": "2026-04-11",
-          "inspection_type": "Final",
+          "permit_number": "ELZ-2026-0216",
+          "inspection_date": "2026-05-01",
+          "inspection_type": "Correction follow-up",
           "result": "Pass"
         }
       },
@@ -91,8 +91,8 @@
         "identity_fields": [
           "permit_number"
         ],
-        "rows_checked": 15,
-        "rows_with_identity": 15,
+        "rows_checked": 16,
+        "rows_with_identity": 16,
         "rows_missing_identity": 0,
         "duplicate_identity_key_count": 0,
         "rows_with_duplicate_identity": 0,
@@ -104,8 +104,8 @@
           "inspection_date",
           "inspection_type"
         ],
-        "rows_checked": 41,
-        "rows_with_identity": 41,
+        "rows_checked": 43,
+        "rows_with_identity": 43,
         "rows_missing_identity": 0,
         "duplicate_identity_key_count": 0,
         "rows_with_duplicate_identity": 0,
@@ -136,7 +136,7 @@
     },
     "raw_file_value_profiles": {
       "permits.csv": {
-        "rows_checked": 15,
+        "rows_checked": 16,
         "fields": {
           "city": {
             "distinct_value_count": 1,
@@ -144,7 +144,7 @@
             "top_values": [
               {
                 "value": "Dallas",
-                "count": 15
+                "count": 16
               }
             ]
           },
@@ -154,7 +154,7 @@
             "top_values": [
               {
                 "value": "electrical",
-                "count": 14
+                "count": 15
               },
               {
                 "value": "plumbing",
@@ -168,7 +168,7 @@
             "top_values": [
               {
                 "value": "residential",
-                "count": 15
+                "count": 16
               }
             ]
           },
@@ -181,12 +181,12 @@
                 "count": 5
               },
               {
-                "value": "Electrical service upgrade",
+                "value": "Electrical repair",
                 "count": 4
               },
               {
-                "value": "Electrical repair",
-                "count": 3
+                "value": "Electrical service upgrade",
+                "count": 4
               },
               {
                 "value": "New electrical install",
@@ -204,7 +204,7 @@
             "top_values": [
               {
                 "value": "Finaled",
-                "count": 10
+                "count": 11
               },
               {
                 "value": "Active",
@@ -222,7 +222,7 @@
             "top_values": [
               {
                 "value": "single_family",
-                "count": 13
+                "count": 14
               },
               {
                 "value": "duplex",
@@ -234,6 +234,10 @@
             "distinct_value_count": 5,
             "blank_count": 0,
             "top_values": [
+              {
+                "value": "75216",
+                "count": 4
+              },
               {
                 "value": "75228",
                 "count": 4
@@ -247,10 +251,6 @@
                 "count": 3
               },
               {
-                "value": "75216",
-                "count": 3
-              },
-              {
                 "value": "75214",
                 "count": 2
               }
@@ -259,7 +259,7 @@
         }
       },
       "inspections.csv": {
-        "rows_checked": 41,
+        "rows_checked": 43,
         "fields": {
           "inspection_type": {
             "distinct_value_count": 4,
@@ -267,11 +267,11 @@
             "top_values": [
               {
                 "value": "Correction follow-up",
-                "count": 14
+                "count": 15
               },
               {
                 "value": "Rough-in",
-                "count": 13
+                "count": 14
               },
               {
                 "value": "Final",
@@ -289,7 +289,7 @@
             "top_values": [
               {
                 "value": "Pass",
-                "count": 23
+                "count": 24
               },
               {
                 "value": "Fail",
@@ -297,7 +297,7 @@
               },
               {
                 "value": "Partial",
-                "count": 5
+                "count": 6
               },
               {
                 "value": "Not Ready",
@@ -319,11 +319,11 @@
             "top_values": [
               {
                 "value": "false",
-                "count": 23
+                "count": 24
               },
               {
                 "value": "true",
-                "count": 18
+                "count": 19
               }
             ]
           }
@@ -414,59 +414,59 @@
     },
     "raw_file_date_profiles": {
       "permits.csv": {
-        "rows_checked": 15,
+        "rows_checked": 16,
         "fields": {
           "file_date": {
             "field_present": true,
             "date_format": "YYYY-MM-DD",
             "blank_count": 0,
-            "valid_date_count": 15,
+            "valid_date_count": 16,
             "invalid_date_count": 0,
             "earliest_date": "2026-03-12",
             "earliest_csv_row_number": 5,
-            "latest_date": "2026-04-18",
-            "latest_csv_row_number": 15,
+            "latest_date": "2026-04-20",
+            "latest_csv_row_number": 17,
             "invalid_examples": []
           },
           "issue_date": {
             "field_present": true,
             "date_format": "YYYY-MM-DD",
             "blank_count": 0,
-            "valid_date_count": 15,
+            "valid_date_count": 16,
             "invalid_date_count": 0,
             "earliest_date": "2026-03-13",
             "earliest_csv_row_number": 5,
-            "latest_date": "2026-04-19",
-            "latest_csv_row_number": 15,
+            "latest_date": "2026-04-21",
+            "latest_csv_row_number": 17,
             "invalid_examples": []
           },
           "final_date": {
             "field_present": true,
             "date_format": "YYYY-MM-DD",
             "blank_count": 5,
-            "valid_date_count": 10,
+            "valid_date_count": 11,
             "invalid_date_count": 0,
             "earliest_date": "2026-03-22",
             "earliest_csv_row_number": 5,
-            "latest_date": "2026-04-27",
-            "latest_csv_row_number": 15,
+            "latest_date": "2026-05-01",
+            "latest_csv_row_number": 17,
             "invalid_examples": []
           }
         }
       },
       "inspections.csv": {
-        "rows_checked": 41,
+        "rows_checked": 43,
         "fields": {
           "inspection_date": {
             "field_present": true,
             "date_format": "YYYY-MM-DD",
             "blank_count": 0,
-            "valid_date_count": 41,
+            "valid_date_count": 43,
             "invalid_date_count": 0,
             "earliest_date": "2026-03-17",
             "earliest_csv_row_number": 11,
-            "latest_date": "2026-04-27",
-            "latest_csv_row_number": 41,
+            "latest_date": "2026-05-01",
+            "latest_csv_row_number": 44,
             "invalid_examples": []
           }
         }
@@ -500,8 +500,8 @@
         "target_file": "permits.csv",
         "target_field": "permit_number",
         "target_import_scope": "dallas_residential_electrical_permits",
-        "rows_checked": 41,
-        "matched_importable_target_rows": 40,
+        "rows_checked": 43,
+        "matched_importable_target_rows": 42,
         "matched_excluded_target_rows": 1,
         "unmatched_target_rows": 0,
         "missing_source_value_rows": 0,
@@ -525,8 +525,8 @@
         "target_file": "contractors.csv",
         "target_field": "name",
         "target_import_scope": "electrical_contractors",
-        "rows_checked": 15,
-        "matched_importable_target_rows": 14,
+        "rows_checked": 16,
+        "matched_importable_target_rows": 15,
         "matched_excluded_target_rows": 1,
         "unmatched_target_rows": 0,
         "missing_source_value_rows": 0,
@@ -548,16 +548,16 @@
     },
     "raw_file_import_scope_counts": {
       "permits.csv": {
-        "rows_checked": 15,
-        "importable_rows": 14,
+        "rows_checked": 16,
+        "importable_rows": 15,
         "excluded_rows": 1,
         "excluded_by_city": 0,
         "excluded_by_trade": 1,
         "excluded_by_work_class": 0
       },
       "inspections.csv": {
-        "rows_checked": 41,
-        "importable_rows": 40,
+        "rows_checked": 43,
+        "importable_rows": 42,
         "excluded_rows": 1,
         "excluded_by_unimported_permit": 1
       },
@@ -969,13 +969,13 @@
     "raw_file_append_work_order": {
       "permits.csv": {
         "file_path": "generated/raw/dallas-electrician-import-sample-v2/permits.csv",
-        "csv_row_number": 17,
+        "csv_row_number": 18,
         "header_line": "permit_number,address,city,state,zip_code,trade,work_class,property_type,permit_type,status,file_date,issue_date,final_date,declared_valuation,work_description,contractor_name,source_url",
         "template_line": "<required>,<required>,<required>,,,<required>,<required>,,,,,,,,,,"
       },
       "inspections.csv": {
         "file_path": "generated/raw/dallas-electrician-import-sample-v2/inspections.csv",
-        "csv_row_number": 43,
+        "csv_row_number": 45,
         "header_line": "permit_number,inspection_date,inspection_type,result,notes,inspector_name,reinspection_flag,source_url",
         "template_line": "<required>,<required>,<required>,<required>,,,,"
       },
@@ -997,7 +997,7 @@
         "file_name": "permits.csv",
         "status": "ready",
         "file_path": "generated/raw/dallas-electrician-import-sample-v2/permits.csv",
-        "csv_row_number": 17,
+        "csv_row_number": 18,
         "header_line": "permit_number,address,city,state,zip_code,trade,work_class,property_type,permit_type,status,file_date,issue_date,final_date,declared_valuation,work_description,contractor_name,source_url",
         "template_line": "<required>,<required>,<required>,,,<required>,<required>,,,,,,,,,,"
       },
@@ -1005,7 +1005,7 @@
         "file_name": "inspections.csv",
         "status": "ready",
         "file_path": "generated/raw/dallas-electrician-import-sample-v2/inspections.csv",
-        "csv_row_number": 43,
+        "csv_row_number": 45,
         "header_line": "permit_number,inspection_date,inspection_type,result,notes,inspector_name,reinspection_flag,source_url",
         "template_line": "<required>,<required>,<required>,<required>,,,,"
       },
@@ -1028,7 +1028,7 @@
     ],
     "raw_file_required_field_gaps": {
       "permits.csv": {
-        "rows_checked": 15,
+        "rows_checked": 16,
         "rows_with_missing_required_fields": 0,
         "missing_required_headers": [],
         "missing_field_counts": {
@@ -1040,7 +1040,7 @@
         }
       },
       "inspections.csv": {
-        "rows_checked": 41,
+        "rows_checked": 43,
         "rows_with_missing_required_fields": 0,
         "missing_required_headers": [],
         "missing_field_counts": {
@@ -1113,13 +1113,47 @@
     "report_path": "generated/contracts/dallas-electrician-contract-summary-v1/summary.md"
   },
   "workflow": {
-    "queue_items": 14,
-    "operator_corrections_captured": 14,
-    "accepted_latest_corrections": 14,
+    "queue_items": 15,
+    "operator_corrections_captured": 15,
+    "accepted_latest_corrections": 15,
     "accepted_pattern_count": 6,
     "accepted_patterns": [
       {
         "pattern_id": "operator-pattern:accepted:0001",
+        "corrected_actions": [
+          "complete_remaining_work",
+          "schedule_reinspection"
+        ],
+        "corrected_action_labels": [
+          "Complete remaining work",
+          "Schedule reinspection"
+        ],
+        "queue_item_count": 3,
+        "queue_item_ids": [
+          "workflow-item:dallas:next-action:0006",
+          "workflow-item:dallas:next-action:0014",
+          "workflow-item:dallas:next-action:0015"
+        ],
+        "source_permit_numbers": [
+          "ELP-2026-0203",
+          "ELZ-2026-0215",
+          "ELZ-2026-0216"
+        ],
+        "trigger_result_counts": {
+          "partial": 3
+        },
+        "failure_reason_counts": {
+          "incomplete_work": 3
+        },
+        "inspection_type_counts": {
+          "rough_in": 3
+        },
+        "observed_followup_result_counts": {
+          "pass": 3
+        }
+      },
+      {
+        "pattern_id": "operator-pattern:accepted:0002",
         "corrected_actions": [
           "correct_wiring_or_devices",
           "schedule_reinspection"
@@ -1155,7 +1189,7 @@
         }
       },
       {
-        "pattern_id": "operator-pattern:accepted:0002",
+        "pattern_id": "operator-pattern:accepted:0003",
         "corrected_actions": [
           "ensure_site_access",
           "schedule_reinspection"
@@ -1187,38 +1221,6 @@
         },
         "observed_followup_result_counts": {
           "pass": 3
-        }
-      },
-      {
-        "pattern_id": "operator-pattern:accepted:0003",
-        "corrected_actions": [
-          "complete_remaining_work",
-          "schedule_reinspection"
-        ],
-        "corrected_action_labels": [
-          "Complete remaining work",
-          "Schedule reinspection"
-        ],
-        "queue_item_count": 2,
-        "queue_item_ids": [
-          "workflow-item:dallas:next-action:0006",
-          "workflow-item:dallas:next-action:0014"
-        ],
-        "source_permit_numbers": [
-          "ELP-2026-0203",
-          "ELZ-2026-0215"
-        ],
-        "trigger_result_counts": {
-          "partial": 2
-        },
-        "failure_reason_counts": {
-          "incomplete_work": 2
-        },
-        "inspection_type_counts": {
-          "rough_in": 2
-        },
-        "observed_followup_result_counts": {
-          "pass": 2
         }
       },
       {
@@ -1383,30 +1385,30 @@
     "kind": "imported",
     "project_name": "Dallas Electrician Import Sample V2",
     "counts": {
-      "properties": 14,
-      "permits": 14,
-      "inspections": 40,
+      "properties": 15,
+      "permits": 15,
+      "inspections": 42,
       "contractors": 5,
       "rule_documents": 3,
-      "source_records": 62,
-      "sequences": 14,
+      "source_records": 65,
+      "sequences": 15,
       "pattern_slices": 5,
-      "tasks": 51,
-      "label_reviews": 20,
-      "dev_tasks": 46,
+      "tasks": 53,
+      "label_reviews": 21,
+      "dev_tasks": 48,
       "test_tasks": 5,
       "result_states": 6,
       "repeated_result_states": 6,
       "failure_reasons": 5,
       "repeated_failure_reasons": 5,
       "repeated_pattern_slices": 5,
-      "max_pattern_permit_support": 3,
+      "max_pattern_permit_support": 4,
       "repeated_next_action_groups": 6
     },
     "task_family_counts": {
-      "next_inspection_outcome": 26,
+      "next_inspection_outcome": 27,
       "failure_reason_classification": 6,
-      "recommended_next_action": 14,
+      "recommended_next_action": 15,
       "pattern_extraction": 5
     },
     "inspection_result_vocabulary": [

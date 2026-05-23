@@ -472,5 +472,30 @@
       "followup_result_normalized": "pass"
     },
     "reviewer_note": "Derived directly from normalized inspection progression and follow-up notes."
+  },
+  {
+    "review_id": "label-review:dallas:next-action:0015",
+    "task_id": "eval:dallas:next-action:0015",
+    "task_type": "recommended_next_action",
+    "permit_id": "permit:dallas:elz-2026-0216",
+    "inspection_id": "inspection:dallas:elz-2026-0216:2026-04-26:rough_in",
+    "review_status": "normalized_row_generated",
+    "label_source": "normalized_rows",
+    "label_payload": {
+      "reference_actions": [
+        "complete_remaining_work",
+        "schedule_reinspection"
+      ]
+    },
+    "evidence": [
+      "Remaining junction cover and hallway trim incomplete before repair rough-in approval.",
+      "2026-05-01 correction_followup -> pass: Remaining cover and trim completed for repair approval."
+    ],
+    "metadata": {
+      "permit_type_normalized": "electrical_repair",
+      "latest_result_normalized": "partial",
+      "followup_result_normalized": "pass"
+    },
+    "reviewer_note": "Derived directly from normalized inspection progression and follow-up notes."
   }
 ]

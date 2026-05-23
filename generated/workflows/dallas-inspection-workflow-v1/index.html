@@ -267,10 +267,10 @@
           <p>Generated from imported Dallas electrician permit and inspection rows. Each item shows the inspection event that needs operational follow-up, the recommended actions, and the observed next inspection outcome in the fixture.</p>
         </div>
         <div class="summary" aria-label="Queue summary">
-          <div class="metric"><strong>14</strong><span>items</span></div>
+          <div class="metric"><strong>15</strong><span>items</span></div>
           <div class="metric"><strong>6</strong><span>high priority</span></div>
-          <div class="metric"><strong>8</strong><span>medium priority</span></div>
-          <div class="metric"><strong>14</strong><span>corrections</span></div>
+          <div class="metric"><strong>9</strong><span>medium priority</span></div>
+          <div class="metric"><strong>15</strong><span>corrections</span></div>
           <div class="metric"><strong>6</strong><span>patterns</span></div>
         </div>
       </header>
@@ -281,6 +281,17 @@
         </div>
         <div class="pattern-grid">
                       <article class="pattern-card">
+              <h2>3x accepted</h2>
+              <p>Complete remaining work, Schedule reinspection</p>
+              <dl class="pattern-details">
+                <div><dt>Action IDs</dt><dd>complete_remaining_work, schedule_reinspection</dd></div>
+                <div><dt>Triggers</dt><dd>{&quot;partial&quot;: 3}</dd></div>
+                <div><dt>Reasons</dt><dd>{&quot;incomplete_work&quot;: 3}</dd></div>
+                <div><dt>Follow-up</dt><dd>{&quot;pass&quot;: 3}</dd></div>
+              </dl>
+              <p class="pattern-examples">ELP-2026-0203, ELZ-2026-0215, ELZ-2026-0216</p>
+            </article>
+            <article class="pattern-card">
               <h2>3x accepted</h2>
               <p>Correct wiring or devices, Schedule reinspection</p>
               <dl class="pattern-details">
@@ -301,17 +312,6 @@
                 <div><dt>Follow-up</dt><dd>{&quot;pass&quot;: 3}</dd></div>
               </dl>
               <p class="pattern-examples">ELM-2026-0211, ELS-2026-0202, ELS-2026-0210</p>
-            </article>
-            <article class="pattern-card">
-              <h2>2x accepted</h2>
-              <p>Complete remaining work, Schedule reinspection</p>
-              <dl class="pattern-details">
-                <div><dt>Action IDs</dt><dd>complete_remaining_work, schedule_reinspection</dd></div>
-                <div><dt>Triggers</dt><dd>{&quot;partial&quot;: 2}</dd></div>
-                <div><dt>Reasons</dt><dd>{&quot;incomplete_work&quot;: 2}</dd></div>
-                <div><dt>Follow-up</dt><dd>{&quot;pass&quot;: 2}</dd></div>
-              </dl>
-              <p class="pattern-examples">ELP-2026-0203, ELZ-2026-0215</p>
             </article>
             <article class="pattern-card">
               <h2>2x accepted</h2>
@@ -881,10 +881,48 @@
                 <p class="correction-status">Latest correction: accepted at 2026-05-23T13:05:00Z</p>
               </div>
             </article>
+
+            <article class="queue-item priority-medium" data-queue-item-id="workflow-item:dallas:next-action:0015">
+              <div class="queue-topline">
+                <div>
+                  <h2>ELZ-2026-0216</h2>
+                  <p>2718 S EWING AVE DALLAS TX 75216</p>
+                </div>
+                <span class="priority">medium</span>
+              </div>
+              <dl>
+                <div><dt>Contractor</dt><dd>Cedars South Electric</dd></div>
+                <div><dt>Trigger</dt><dd>2026-04-26 rough_in -> partial</dd></div>
+                <div><dt>Reason</dt><dd>incomplete_work</dd></div>
+                <div><dt>Follow-up</dt><dd>2026-05-01 correction_followup -> pass</dd></div>
+              </dl>
+              <div class="actions">
+                <h3>Recommended Actions</h3>
+                <ul><li>Complete remaining work</li><li>Schedule reinspection</li></ul>
+              </div>
+              <p class="evidence">Remaining junction cover and hallway trim incomplete before repair rough-in approval.</p>
+              <div class="correction">
+                <h3>Operator Correction</h3>
+                <div class="correction-buttons" aria-label="Correction decision">
+                  <button type="button" data-decision="accepted">Accept</button>
+                  <button type="button" data-decision="rejected">Reject</button>
+                  <button type="button" data-decision="edited">Save Edit</button>
+                </div>
+                <label>
+                  <span>Corrected action IDs</span>
+                  <input class="corrected-actions" value="complete_remaining_work, schedule_reinspection">
+                </label>
+                <label>
+                  <span>Operator note</span>
+                  <textarea class="operator-note" rows="2"></textarea>
+                </label>
+                <p class="correction-status">Latest correction: accepted at 2026-05-23T13:10:00Z</p>
+              </div>
+            </article>
       </section>
     </main>
     <script>
-      const queueItems = {"workflow-item:dallas:next-action:0001": {"recommended_actions": ["ensure_site_access", "schedule_reinspection"], "source_permit_number": "ELM-2026-0211"}, "workflow-item:dallas:next-action:0002": {"recommended_actions": ["correct_grounding_or_bonding", "add_labels_or_documentation"], "source_permit_number": "ELN-2026-0204"}, "workflow-item:dallas:next-action:0003": {"recommended_actions": ["correct_grounding_or_bonding", "add_labels_or_documentation", "schedule_reinspection"], "source_permit_number": "ELN-2026-0204"}, "workflow-item:dallas:next-action:0004": {"recommended_actions": ["correct_grounding_or_bonding", "add_labels_or_documentation"], "source_permit_number": "ELN-2026-0208"}, "workflow-item:dallas:next-action:0005": {"recommended_actions": ["correct_grounding_or_bonding", "add_labels_or_documentation", "schedule_reinspection"], "source_permit_number": "ELN-2026-0208"}, "workflow-item:dallas:next-action:0006": {"recommended_actions": ["complete_remaining_work", "schedule_reinspection"], "source_permit_number": "ELP-2026-0203"}, "workflow-item:dallas:next-action:0007": {"recommended_actions": ["correct_wiring_or_devices", "schedule_reinspection"], "source_permit_number": "ELP-2026-0209"}, "workflow-item:dallas:next-action:0008": {"recommended_actions": ["correct_wiring_or_devices", "schedule_reinspection"], "source_permit_number": "ELR-2026-0201"}, "workflow-item:dallas:next-action:0009": {"recommended_actions": ["correct_wiring_or_devices", "schedule_reinspection"], "source_permit_number": "ELR-2026-0207"}, "workflow-item:dallas:next-action:0010": {"recommended_actions": ["ensure_site_access", "schedule_reinspection"], "source_permit_number": "ELS-2026-0202"}, "workflow-item:dallas:next-action:0011": {"recommended_actions": ["ensure_site_access", "schedule_reinspection"], "source_permit_number": "ELS-2026-0210"}, "workflow-item:dallas:next-action:0012": {"recommended_actions": ["correct_panel_or_service", "add_labels_or_documentation", "schedule_reinspection"], "source_permit_number": "ELS-2026-0213"}, "workflow-item:dallas:next-action:0013": {"recommended_actions": ["correct_panel_or_service", "add_labels_or_documentation", "schedule_reinspection"], "source_permit_number": "ELS-2026-0214"}, "workflow-item:dallas:next-action:0014": {"recommended_actions": ["complete_remaining_work", "schedule_reinspection"], "source_permit_number": "ELZ-2026-0215"}};
+      const queueItems = {"workflow-item:dallas:next-action:0001": {"recommended_actions": ["ensure_site_access", "schedule_reinspection"], "source_permit_number": "ELM-2026-0211"}, "workflow-item:dallas:next-action:0002": {"recommended_actions": ["correct_grounding_or_bonding", "add_labels_or_documentation"], "source_permit_number": "ELN-2026-0204"}, "workflow-item:dallas:next-action:0003": {"recommended_actions": ["correct_grounding_or_bonding", "add_labels_or_documentation", "schedule_reinspection"], "source_permit_number": "ELN-2026-0204"}, "workflow-item:dallas:next-action:0004": {"recommended_actions": ["correct_grounding_or_bonding", "add_labels_or_documentation"], "source_permit_number": "ELN-2026-0208"}, "workflow-item:dallas:next-action:0005": {"recommended_actions": ["correct_grounding_or_bonding", "add_labels_or_documentation", "schedule_reinspection"], "source_permit_number": "ELN-2026-0208"}, "workflow-item:dallas:next-action:0006": {"recommended_actions": ["complete_remaining_work", "schedule_reinspection"], "source_permit_number": "ELP-2026-0203"}, "workflow-item:dallas:next-action:0007": {"recommended_actions": ["correct_wiring_or_devices", "schedule_reinspection"], "source_permit_number": "ELP-2026-0209"}, "workflow-item:dallas:next-action:0008": {"recommended_actions": ["correct_wiring_or_devices", "schedule_reinspection"], "source_permit_number": "ELR-2026-0201"}, "workflow-item:dallas:next-action:0009": {"recommended_actions": ["correct_wiring_or_devices", "schedule_reinspection"], "source_permit_number": "ELR-2026-0207"}, "workflow-item:dallas:next-action:0010": {"recommended_actions": ["ensure_site_access", "schedule_reinspection"], "source_permit_number": "ELS-2026-0202"}, "workflow-item:dallas:next-action:0011": {"recommended_actions": ["ensure_site_access", "schedule_reinspection"], "source_permit_number": "ELS-2026-0210"}, "workflow-item:dallas:next-action:0012": {"recommended_actions": ["correct_panel_or_service", "add_labels_or_documentation", "schedule_reinspection"], "source_permit_number": "ELS-2026-0213"}, "workflow-item:dallas:next-action:0013": {"recommended_actions": ["correct_panel_or_service", "add_labels_or_documentation", "schedule_reinspection"], "source_permit_number": "ELS-2026-0214"}, "workflow-item:dallas:next-action:0014": {"recommended_actions": ["complete_remaining_work", "schedule_reinspection"], "source_permit_number": "ELZ-2026-0215"}, "workflow-item:dallas:next-action:0015": {"recommended_actions": ["complete_remaining_work", "schedule_reinspection"], "source_permit_number": "ELZ-2026-0216"}};
       const pendingKey = "automoat.operator-corrections.pending";
 
       function parseActions(value) {
