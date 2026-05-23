@@ -4,10 +4,10 @@ This artifact turns reviewed Dallas electrician inspection labels into a concret
 
 ## Summary
 
-- Queue items: `21`
-- Priority counts: `{"high": 6, "medium": 15}`
-- Trigger result counts: `{"fail": 6, "not_ready": 4, "partial": 11}`
-- Operator correction events: `21`
+- Queue items: `22`
+- Priority counts: `{"high": 6, "medium": 16}`
+- Trigger result counts: `{"fail": 6, "not_ready": 4, "partial": 12}`
+- Operator correction events: `22`
 - Operator correction ledger: `generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl`
 - Accepted correction patterns: `6`
 
@@ -15,14 +15,14 @@ This artifact turns reviewed Dallas electrician inspection labels into a concret
 
 ### operator-pattern:accepted:0001
 
-- Queue items: `8`
+- Queue items: `9`
 - Actions: `Correct wiring or devices, Schedule reinspection`
 - Action IDs: `correct_wiring_or_devices, schedule_reinspection`
-- Trigger results: `{"fail": 2, "partial": 6}`
-- Failure reasons: `{"wiring_or_device_issue": 8}`
-- Inspection types: `{"final": 2, "rough_in": 6}`
-- Follow-up results: `{"pass": 8}`
-- Example permits: `ELP-2026-0209, ELR-2026-0201, ELR-2026-0207, ELZ-2026-0218, ELZ-2026-0219, ELZ-2026-0220, ELZ-2026-0221, ELZ-2026-0222`
+- Trigger results: `{"fail": 2, "partial": 7}`
+- Failure reasons: `{"wiring_or_device_issue": 9}`
+- Inspection types: `{"final": 2, "rough_in": 7}`
+- Follow-up results: `{"pass": 9}`
+- Example permits: `ELP-2026-0209, ELR-2026-0201, ELR-2026-0207, ELZ-2026-0218, ELZ-2026-0219, ELZ-2026-0220, ELZ-2026-0221, ELZ-2026-0222, ELZ-2026-0223`
 
 ### operator-pattern:accepted:0002
 
@@ -290,3 +290,13 @@ This artifact turns reviewed Dallas electrician inspection labels into a concret
 - Recommended actions: `Correct wiring or devices, Schedule reinspection`
 - Follow-up observed: `2026-05-14` `correction_followup` -> `pass`
 - Evidence: Pantry branch wiring repaired but replacement junction covers and device trim remained incomplete before rough-in approval.
+
+### ELZ-2026-0223 - 2800 S EWING AVE DALLAS TX 75216
+
+- Priority: `medium`
+- Contractor: `Cedars South Electric`
+- Trigger: `2026-05-11` `rough_in` -> `partial`
+- Failure reason: `wiring_or_device_issue`
+- Recommended actions: `Correct wiring or devices, Schedule reinspection`
+- Follow-up observed: `2026-05-16` `correction_followup` -> `pass`
+- Evidence: Closet branch wiring repaired but replacement switch boxes and device trim remained incomplete before rough-in approval.
