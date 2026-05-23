@@ -406,6 +406,18 @@ def record_command(
     return shlex.join(args)
 
 
+def validate_ledger_command(queue_path: Path, ledger_path: Path, output_format: str = "json") -> str:
+    args = [
+        "python3",
+        "scripts/record_operator_correction.py",
+        *command_path_args(queue_path, ledger_path),
+        "--validate-ledger",
+    ]
+    if output_format == "text":
+        args.extend(["--format", "text"])
+    return shlex.join(args)
+
+
 def guarded_record_command_group(
     queue_item_id: str | None,
     queue_path: Path,
@@ -660,6 +672,7 @@ def format_next_missing_text(next_missing: dict[str, Any]) -> str:
     ]
     if not isinstance(item, dict):
         lines.append("Next queue item: (none)")
+        lines.append(f"Validate ledger: {next_missing.get('validation_command')}")
         return "\n".join(lines)
 
     lines.extend(
@@ -696,6 +709,8 @@ def format_next_missing_text(next_missing: dict[str, Any]) -> str:
     lines.extend(format_command_group(commands.get("append"), "Append fixed-item commands"))
     lines.append("")
     lines.extend(format_command_group(commands.get("append_with_note"), "Append fixed-item commands with note"))
+    lines.append("")
+    lines.append(f"Validate ledger after capture: {next_missing.get('validation_command')}")
     return "\n".join(lines)
 
 
@@ -771,6 +786,7 @@ def next_missing_correction(
             if item
             else {}
         ),
+        "validation_command": validate_ledger_command(queue_path, ledger_path, output_format=output_format),
     }
 
 

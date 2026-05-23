@@ -46,7 +46,7 @@ Updated next best artifacts:
 
 - keep the real MVP cockpit running with `python3 scripts/serve_mvp_cockpit.py --auto-start --port 4174`
 - expose the running cockpit to remote observers with `python3 scripts/bridge_mvp_cockpit.py` and share the read-only URL from `.automoat/state/mvp-bridge-status.json`
-- check correction capture progress with `python3 scripts/record_operator_correction.py --summary`, pick the next uncaptured queue item with `python3 scripts/record_operator_correction.py --next-missing --format text`, use its action catalog when an edited decision needs corrected action IDs, dry-run or record the first uncaptured item directly with one of the printed text-mode commands, validate the ledger with `python3 scripts/record_operator_correction.py --validate-ledger`, and summarize useful correction patterns back into the Dallas workflow artifact
+- check correction capture progress with `python3 scripts/record_operator_correction.py --summary`, pick the next uncaptured queue item with `python3 scripts/record_operator_correction.py --next-missing --format text`, use its action catalog when an edited decision needs corrected action IDs, dry-run or record the first uncaptured item directly with one of the printed text-mode commands, run the printed ledger-validation command, and summarize useful correction patterns back into the Dallas workflow artifact
 - decide whether the remaining thin latest-import labels, `incomplete_work` and `complete_remaining_work|schedule_reinspection`, need another repeated sequence before real data import
 
 Latest bounded improvement completed:
@@ -88,6 +88,7 @@ Latest bounded improvement completed:
 - `scripts/record_operator_correction.py --require-missing` now refuses stale fixed-item capture commands when a queue item already has a captured correction, and `--next-missing --format text` includes that guard in its suggested commands
 - `scripts/record_operator_correction.py --format text` now also applies to correction dry-runs and appends, giving operators a readable event confirmation while keeping JSON as the default automation output
 - `scripts/record_operator_correction.py --next-missing --format text` now includes `--format text` in its copyable dry-run and append commands, so a text work order keeps the operator in readable confirmations while JSON work orders keep the default automation shape
+- `scripts/record_operator_correction.py --next-missing --format text` now also prints the matching text-mode ledger-validation command, so a non-server operator pass can finish with the same copyable work order instead of switching back to README instructions
 
 ## Constraints
 
