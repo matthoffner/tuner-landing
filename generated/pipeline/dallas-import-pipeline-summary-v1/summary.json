@@ -390,6 +390,59 @@
         }
       }
     },
+    "raw_file_relationship_checks": {
+      "inspections_to_permits": {
+        "source_file": "inspections.csv",
+        "source_field": "permit_number",
+        "target_file": "permits.csv",
+        "target_field": "permit_number",
+        "target_import_scope": "dallas_residential_electrical_permits",
+        "rows_checked": 41,
+        "matched_importable_target_rows": 40,
+        "matched_excluded_target_rows": 1,
+        "unmatched_target_rows": 0,
+        "missing_source_value_rows": 0,
+        "unresolved_rows": 0,
+        "unmatched_examples": [],
+        "excluded_target_examples": [
+          {
+            "csv_row_number": 42,
+            "row": {
+              "permit_number": "PLM-2026-0206",
+              "inspection_date": "2026-04-11",
+              "inspection_type": "Final",
+              "result": "Pass"
+            }
+          }
+        ]
+      },
+      "permits_to_contractors": {
+        "source_file": "permits.csv",
+        "source_field": "contractor_name",
+        "target_file": "contractors.csv",
+        "target_field": "name",
+        "target_import_scope": "electrical_contractors",
+        "rows_checked": 15,
+        "matched_importable_target_rows": 14,
+        "matched_excluded_target_rows": 1,
+        "unmatched_target_rows": 0,
+        "missing_source_value_rows": 0,
+        "unresolved_rows": 0,
+        "unmatched_examples": [],
+        "excluded_target_examples": [
+          {
+            "csv_row_number": 16,
+            "row": {
+              "permit_number": "PLM-2026-0206",
+              "address": "410 W Jefferson Blvd",
+              "city": "Dallas",
+              "trade": "plumbing",
+              "work_class": "residential"
+            }
+          }
+        ]
+      }
+    },
     "raw_file_import_scope_counts": {
       "permits.csv": {
         "rows_checked": 15,

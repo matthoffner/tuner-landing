@@ -141,6 +141,23 @@ RAW_IMPORT_VALUE_PROFILE_FIELDS = {
     ],
 }
 RAW_IMPORT_VALUE_PROFILE_LIMIT = 10
+RAW_IMPORT_RELATIONSHIP_EXAMPLE_LIMIT = 5
+RAW_IMPORT_RELATIONSHIP_CHECKS = {
+    "inspections_to_permits": {
+        "source_file": "inspections.csv",
+        "source_field": "permit_number",
+        "target_file": "permits.csv",
+        "target_field": "permit_number",
+        "target_import_scope": "dallas_residential_electrical_permits",
+    },
+    "permits_to_contractors": {
+        "source_file": "permits.csv",
+        "source_field": "contractor_name",
+        "target_file": "contractors.csv",
+        "target_field": "name",
+        "target_import_scope": "electrical_contractors",
+    },
+}
 
 
 def parse_args():
@@ -373,6 +390,143 @@ def raw_file_value_profiles(raw_dir):
             "fields": field_profiles,
         }
     return profiles
+
+
+def add_raw_relationship_example(examples, row_number, row, file_name):
+    if len(examples) >= RAW_IMPORT_RELATIONSHIP_EXAMPLE_LIMIT:
+        return
+    examples.append(
+        {
+            "csv_row_number": row_number,
+            "row": raw_row_snapshot(
+                row,
+                RAW_IMPORT_EXCLUSION_EXAMPLE_FIELDS[file_name],
+            ),
+        }
+    )
+
+
+def raw_file_relationship_checks(raw_dir):
+    resolved_raw_dir = repo_path(raw_dir)
+    permit_rows = csv_dict_data_rows_with_numbers(resolved_raw_dir / "permits.csv")
+    inspection_rows = csv_dict_data_rows_with_numbers(
+        resolved_raw_dir / "inspections.csv"
+    )
+    contractor_rows = csv_dict_data_rows_with_numbers(
+        resolved_raw_dir / "contractors.csv"
+    )
+
+    checks = {}
+    importable_permit_numbers = set()
+    all_permit_numbers = set()
+    if permit_rows is not None:
+        for _, row in permit_rows:
+            permit_number = raw_cell(row, "permit_number")
+            if permit_number:
+                all_permit_numbers.add(permit_number)
+            if (
+                permit_number
+                and raw_cell_lower(row, "city") == "dallas"
+                and raw_cell_lower(row, "trade") == "electrical"
+                and raw_cell_lower(row, "work_class") == "residential"
+            ):
+                importable_permit_numbers.add(permit_number)
+
+    importable_contractor_names = set()
+    all_contractor_names = set()
+    if contractor_rows is not None:
+        for _, row in contractor_rows:
+            contractor_name = raw_cell(row, "name").lower()
+            if contractor_name:
+                all_contractor_names.add(contractor_name)
+            if contractor_name and "electrical" in raw_cell_lower(row, "license_type"):
+                importable_contractor_names.add(contractor_name)
+
+    if inspection_rows is None or permit_rows is None:
+        checks["inspections_to_permits"] = None
+    else:
+        relationship = {
+            **RAW_IMPORT_RELATIONSHIP_CHECKS["inspections_to_permits"],
+            "rows_checked": len(inspection_rows),
+            "matched_importable_target_rows": 0,
+            "matched_excluded_target_rows": 0,
+            "unmatched_target_rows": 0,
+            "missing_source_value_rows": 0,
+            "unresolved_rows": 0,
+            "unmatched_examples": [],
+            "excluded_target_examples": [],
+        }
+        for row_number, row in inspection_rows:
+            permit_number = raw_cell(row, "permit_number")
+            if not permit_number:
+                relationship["missing_source_value_rows"] += 1
+            elif permit_number in importable_permit_numbers:
+                relationship["matched_importable_target_rows"] += 1
+            elif permit_number in all_permit_numbers:
+                relationship["matched_excluded_target_rows"] += 1
+                add_raw_relationship_example(
+                    relationship["excluded_target_examples"],
+                    row_number,
+                    row,
+                    "inspections.csv",
+                )
+            else:
+                relationship["unmatched_target_rows"] += 1
+                add_raw_relationship_example(
+                    relationship["unmatched_examples"],
+                    row_number,
+                    row,
+                    "inspections.csv",
+                )
+        relationship["unresolved_rows"] = (
+            relationship["missing_source_value_rows"]
+            + relationship["unmatched_target_rows"]
+        )
+        checks["inspections_to_permits"] = relationship
+
+    if permit_rows is None or contractor_rows is None:
+        checks["permits_to_contractors"] = None
+    else:
+        relationship = {
+            **RAW_IMPORT_RELATIONSHIP_CHECKS["permits_to_contractors"],
+            "rows_checked": len(permit_rows),
+            "matched_importable_target_rows": 0,
+            "matched_excluded_target_rows": 0,
+            "unmatched_target_rows": 0,
+            "missing_source_value_rows": 0,
+            "unresolved_rows": 0,
+            "unmatched_examples": [],
+            "excluded_target_examples": [],
+        }
+        for row_number, row in permit_rows:
+            contractor_name = raw_cell(row, "contractor_name").lower()
+            if not contractor_name:
+                relationship["missing_source_value_rows"] += 1
+            elif contractor_name in importable_contractor_names:
+                relationship["matched_importable_target_rows"] += 1
+            elif contractor_name in all_contractor_names:
+                relationship["matched_excluded_target_rows"] += 1
+                add_raw_relationship_example(
+                    relationship["excluded_target_examples"],
+                    row_number,
+                    row,
+                    "permits.csv",
+                )
+            else:
+                relationship["unmatched_target_rows"] += 1
+                add_raw_relationship_example(
+                    relationship["unmatched_examples"],
+                    row_number,
+                    row,
+                    "permits.csv",
+                )
+        relationship["unresolved_rows"] = (
+            relationship["missing_source_value_rows"]
+            + relationship["unmatched_target_rows"]
+        )
+        checks["permits_to_contractors"] = relationship
+
+    return checks
 
 
 def raw_file_import_scope_counts(raw_dir):
@@ -771,6 +925,7 @@ def next_import_record_handoff(raw_dir):
         "raw_file_last_data_rows": raw_file_last_data_rows(raw_dir),
         "raw_file_identity_key_checks": raw_file_identity_key_checks(raw_dir),
         "raw_file_value_profiles": raw_file_value_profiles(raw_dir),
+        "raw_file_relationship_checks": raw_file_relationship_checks(raw_dir),
         "raw_file_import_scope_counts": raw_file_import_scope_counts(raw_dir),
         "raw_file_importable_examples": raw_file_importable_examples(raw_dir),
         "raw_file_exclusion_examples": raw_file_exclusion_examples(raw_dir),
@@ -1065,6 +1220,10 @@ def write_summary(summary):
         "raw_file_value_profiles",
         {},
     )
+    raw_relationship_checks = next_import_handoff.get(
+        "raw_file_relationship_checks",
+        {},
+    )
     raw_import_scope_counts = next_import_handoff.get(
         "raw_file_import_scope_counts",
         {},
@@ -1164,6 +1323,28 @@ def write_summary(summary):
             labels.append(
                 f"- `{file_name}` value profiles: "
                 f"`{json.dumps(profile, sort_keys=False)}`"
+            )
+        return labels
+
+    def inline_relationship_checks(values):
+        if not isinstance(values, dict) or not values:
+            return ["- Raw CSV relationship checks: none"]
+        labels = []
+        for relationship_name in RAW_IMPORT_RELATIONSHIP_CHECKS:
+            check = values.get(relationship_name)
+            if not isinstance(check, dict):
+                labels.append(f"- `{relationship_name}` relationship: missing")
+                continue
+            labels.append(
+                f"- `{relationship_name}` relationship: "
+                f"`{check.get('matched_importable_target_rows')}/{check.get('rows_checked')}` "
+                "matched importable target rows, "
+                f"excluded target rows `{check.get('matched_excluded_target_rows')}`, "
+                f"unresolved rows `{check.get('unresolved_rows')}`, "
+                f"unmatched examples "
+                f"`{json.dumps(check.get('unmatched_examples', []), sort_keys=False)}`, "
+                f"excluded target examples "
+                f"`{json.dumps(check.get('excluded_target_examples', []), sort_keys=False)}`"
             )
         return labels
 
@@ -1343,6 +1524,7 @@ def write_summary(summary):
         "- Next raw import last data rows: see Follow-Up",
         "- Next raw import identity key checks: see Follow-Up",
         "- Next raw import value profiles: see Follow-Up",
+        "- Next raw import relationship checks: see Follow-Up",
         "- Next raw import scope counts: see Follow-Up",
         "- Next raw importable examples: see Follow-Up",
         "- Next raw import exclusion examples: see Follow-Up",
@@ -1530,6 +1712,8 @@ def write_summary(summary):
             *inline_identity_key_checks(raw_identity_key_checks),
             "- Raw CSV value profiles:",
             *inline_value_profiles(raw_value_profiles),
+            "- Raw CSV relationship checks:",
+            *inline_relationship_checks(raw_relationship_checks),
             "- Raw CSV import scope counts:",
             *inline_import_scope_counts(raw_import_scope_counts),
             "- Raw CSV importable examples:",
@@ -1594,6 +1778,10 @@ def print_summary(summary, output_format="text"):
     )
     raw_value_profiles = next_import_handoff.get(
         "raw_file_value_profiles",
+        {},
+    )
+    raw_relationship_checks = next_import_handoff.get(
+        "raw_file_relationship_checks",
         {},
     )
     raw_import_scope_counts = next_import_handoff.get(
@@ -1681,6 +1869,28 @@ def print_summary(summary, output_format="text"):
                 labels.append(f"{file_name}={json.dumps(profile, sort_keys=False)}")
             else:
                 labels.append(f"{file_name}=missing")
+        return "; ".join(labels)
+
+    def format_relationship_checks(values):
+        if not isinstance(values, dict) or not values:
+            return "none"
+        labels = []
+        for relationship_name in RAW_IMPORT_RELATIONSHIP_CHECKS:
+            check = values.get(relationship_name)
+            if not isinstance(check, dict):
+                labels.append(f"{relationship_name}=missing")
+                continue
+            labels.append(
+                f"{relationship_name}="
+                f"{check.get('matched_importable_target_rows')}/{check.get('rows_checked')} "
+                "matched_importable "
+                f"(excluded_target={check.get('matched_excluded_target_rows')}, "
+                f"unmatched={check.get('unmatched_target_rows')}, "
+                f"missing_source={check.get('missing_source_value_rows')}, "
+                f"unresolved={check.get('unresolved_rows')}, "
+                f"unmatched_examples={json.dumps(check.get('unmatched_examples', []), sort_keys=False)}, "
+                f"excluded_target_examples={json.dumps(check.get('excluded_target_examples', []), sort_keys=False)})"
+            )
         return "; ".join(labels)
 
     def format_import_scope_counts(values):
@@ -1874,6 +2084,10 @@ def print_summary(summary, output_format="text"):
     print(
         "  raw_import_value_profiles: "
         f"{format_value_profiles(raw_value_profiles)}"
+    )
+    print(
+        "  raw_import_relationship_checks: "
+        f"{format_relationship_checks(raw_relationship_checks)}"
     )
     print(
         "  raw_import_scope_counts: "
