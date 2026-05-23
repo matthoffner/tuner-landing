@@ -937,10 +937,11 @@
             <div class="bridge-header">
               <div>
                 <div class="kicker">Live Vercel Cockpit</div>
-                <h3>Codex loop running from the local machine</h3>
+                <h3>Autonomous Codex agent running from the local machine</h3>
                 <p>
-                  This deployed page reads the live MVP loop through Vercel proxy endpoints first, then falls
-                  back to the read-only bridge. It should show the actual loop, not a screenshot or iframe.
+                  This deployed page reads the live agent loop through Vercel proxy endpoints first, then falls
+                  back to the read-only bridge. The loop now runs bounded <code>codex exec</code> iterations,
+                  then syncs, verifies, commits, and pushes changes.
                 </p>
               </div>
               <a class="bridge-url" href="https://5694-140-186-106-90.ngrok-free.app" target="_blank" rel="noreferrer">open bridge</a>
@@ -1059,12 +1060,12 @@
             <div class="section-header">
               <div class="kicker">Agent Cockpit</div>
             </div>
-            <h2>A terminal tunnel to a Codex loop is the product surface</h2>
+            <h2>A terminal tunnel to an autonomous Codex loop is the product surface</h2>
             <p>
               The app now has a real local cockpit path: run
-              <code>python3 scripts/serve_mvp_cockpit.py --auto-start --port 4174</code> to start a
-              loop process, stream its terminal-style log, and watch the Dallas MVP regenerate contracts,
-              coverage, and the action queue. For remote viewing, run
+              <code>python3 scripts/start_autonomous_cockpit_bridge.py</code> to start a detached autonomous
+              Codex loop, stream its terminal-style log, and watch each bounded iteration publish to
+              <code>main</code>. For a read-only tunnel by itself, run
               <code>python3 scripts/bridge_mvp_cockpit.py</code>; it exposes a read-only tunnel so someone
               else can watch the local Codex loop without getting start/stop controls.
             </p>
@@ -1076,20 +1077,20 @@
                 </div>
                 <div class="terminal-body">
                   <span class="terminal-line">$ automoat loop --goal "create data moat from repeated workflow"</span>
-                  <span class="terminal-line dim">$ python3 scripts/serve_mvp_cockpit.py --auto-start --port 4174</span>
+                  <span class="terminal-line dim">$ python3 scripts/start_autonomous_cockpit_bridge.py</span>
                   <span class="terminal-line dim">$ python3 scripts/bridge_mvp_cockpit.py</span>
                   <span class="terminal-line dim">read .pixelbox/handoff.md</span>
                   <span class="terminal-line dim">inspect generated records, labels, evals, and action queue</span>
-                  <span class="terminal-line">derive next artifact: operator correction capture</span>
-                  <span class="terminal-line good">verify contract checks: 13/13 passing</span>
-                  <span class="terminal-line">write journal, update handoff, sync landing page</span>
-                  <span class="terminal-line good">commit and push to main</span>
+                  <span class="terminal-line">codex exec: make one bounded repo improvement</span>
+                  <span class="terminal-line good">verify, sync, commit, and push to main</span>
+                  <span class="terminal-line">sleep until the next autonomous iteration</span>
+                  <span class="terminal-line good">stream every step to the remote cockpit</span>
                 </div>
               </div>
               <div class="cockpit-list">
                 <div class="cockpit-step">
                   <strong>Loop runner</strong>
-                  <p>Codex works in explicit iterations with a goal, changed files, checks, commit, push, and next step.</p>
+                  <p>Codex now runs explicit autonomous iterations with a bounded prompt, changed files, checks, commit, push, and next step.</p>
                 </div>
                 <div class="cockpit-step">
                   <strong>Live terminal stream</strong>

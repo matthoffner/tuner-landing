@@ -24,7 +24,9 @@ Created from Pixelbox.
 - 24-hour supervisor runner: `./scripts/codex-day.sh [hours] [session-minutes]`
 - Auto-publish helper: `./scripts/codex-publish.sh ["commit message"]`
 - MVP loop runner: `python3 scripts/run_mvp_loop.py --iterations 3 --interval 5`
-- MVP cockpit server: `python3 scripts/serve_mvp_cockpit.py --auto-start --port 4174`
+- Autonomous Codex loop runner: `python3 scripts/run_autonomous_agent_loop.py --iterations 1 --interval 300`
+- MVP cockpit server: `python3 scripts/serve_mvp_cockpit.py --auto-start --loop-mode agent --interval 300 --port 4174`
+- Detached autonomous cockpit plus bridge: `python3 scripts/start_autonomous_cockpit_bridge.py`
 - Read-only remote bridge: `python3 scripts/bridge_mvp_cockpit.py`
 - Dallas eval artifact writer: `python3 scripts/generate_dallas_eval_artifacts.py`
 - Dallas label review writer: `python3 scripts/generate_dallas_label_reviews.py`

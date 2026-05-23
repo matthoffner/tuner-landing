@@ -4,6 +4,10 @@ Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
 - lane: editor
+- status: added a true autonomous Codex loop path: `scripts/run_autonomous_agent_loop.py` runs bounded `codex exec` iterations, syncs/verifies, commits, and pushes, while `scripts/serve_mvp_cockpit.py --loop-mode agent` and `scripts/start_autonomous_cockpit_bridge.py` expose it through the same cockpit/bridge
+- files: scripts/run_autonomous_agent_loop.py, scripts/start_autonomous_cockpit_bridge.py, scripts/serve_mvp_cockpit.py, README.md, generated/landing.html, index.html, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- next: restart the detached cockpit with `python3 scripts/start_autonomous_cockpit_bridge.py`, then watch the first real `codex exec` iteration and verify it commits/pushes safely
+- lane: editor
 - status: fixed the bridge again after the tool-session processes died; restarted the cockpit and bridge as detached OS-session processes parented to PID 1, confirmed the fresh bridge at `https://5694-140-186-106-90.ngrok-free.app`, and updated Vercel fallbacks to the new URL
 - files: .gitignore, api/cockpit-status.js, api/cockpit-log.js, generated/landing.html, index.html, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
 - next: create a stable tunnel or a small restart/sync command so the bridge URL updates automatically instead of requiring code commits when free ngrok rotates

@@ -25,7 +25,7 @@ PID_FILE = ROOT / ".automoat" / "state" / "mvp-loop.pid"
 
 LOOP_PROCESS: subprocess.Popen[str] | None = None
 LOOP_LOCK = threading.Lock()
-SERVER_CONFIG: dict[str, float | int] = {"iterations": 0, "interval": 8.0}
+SERVER_CONFIG: dict[str, float | int | str] = {"iterations": 0, "interval": 8.0, "loop_mode": "mvp"}
 SERVER_CONFIG["read_only"] = 0
 
 
@@ -67,9 +67,11 @@ def start_loop() -> tuple[bool, str]:
             return False, f"loop already running pid={LOOP_PROCESS.pid}"
         LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
         STATUS_FILE.parent.mkdir(parents=True, exist_ok=True)
+        loop_mode = str(SERVER_CONFIG.get("loop_mode", "mvp"))
+        script_name = "run_autonomous_agent_loop.py" if loop_mode == "agent" else "run_mvp_loop.py"
         command = [
             sys.executable,
-            str(ROOT / "scripts" / "run_mvp_loop.py"),
+            str(ROOT / "scripts" / script_name),
             "--iterations",
             str(int(SERVER_CONFIG["iterations"])),
             "--interval",
@@ -129,16 +131,28 @@ def cockpit_html() -> str:
     status = read_status()
     current_status = html.escape(str(status.get("status", "waiting")))
     read_only = bool(int(SERVER_CONFIG.get("read_only", 0)))
-    badge = "Read-Only Remote Bridge" if read_only else "Real MVP Loop"
+    status_mode = str(status.get("mode") or SERVER_CONFIG.get("loop_mode", "mvp"))
+    agent_mode = status_mode == "autonomous_codex" or str(SERVER_CONFIG.get("loop_mode")) == "agent"
+    badge = "Read-Only Remote Bridge" if read_only else ("Autonomous Codex Agent" if agent_mode else "Real MVP Loop")
     title = (
-        "Remote view of the local Autom oat loop."
+        "Remote view of the local Autom oat agent."
+        if read_only and agent_mode
+        else "Remote view of the local Autom oat loop."
         if read_only
+        else "Watch Codex make bounded autonomous improvements."
+        if agent_mode
         else "Watch Autom oat build the permit-data moat loop."
     )
     explainer = (
-        "This bridge exposes only the live loop status, log stream, and whitelisted MVP artifacts. "
+        "This bridge exposes only the live agent status, log stream, and whitelisted MVP artifacts. "
+        "Start/stop controls stay on the local cockpit."
+        if read_only and agent_mode
+        else "This bridge exposes only the live loop status, log stream, and whitelisted MVP artifacts. "
         "Start/stop controls stay on the local cockpit."
         if read_only
+        else "This page starts a real Codex process. Each iteration asks Codex to make one bounded repo improvement, "
+        "then the supervisor syncs, verifies, commits, and pushes to main before sleeping."
+        if agent_mode
         else "This page starts a real local process that regenerates the Dallas MVP contract, "
         "coverage, and action queue, then streams the loop log as it runs."
     )
@@ -523,6 +537,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--iterations", type=int, default=0)
     parser.add_argument("--interval", type=float, default=8.0)
     parser.add_argument("--read-only", action="store_true")
+    parser.add_argument("--loop-mode", choices=("mvp", "agent"), default="mvp")
+    parser.add_argument("--agent-loop", action="store_true", help="alias for --loop-mode agent")
     return parser.parse_args()
 
 
@@ -530,6 +546,7 @@ def main() -> int:
     args = parse_args()
     SERVER_CONFIG["iterations"] = args.iterations
     SERVER_CONFIG["interval"] = args.interval
+    SERVER_CONFIG["loop_mode"] = "agent" if args.agent_loop else args.loop_mode
     SERVER_CONFIG["read_only"] = 1 if args.read_only else 0
     if args.auto_start:
         started, message = start_loop()

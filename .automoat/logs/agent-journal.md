@@ -104,3 +104,6 @@ Use short dated entries. Focus on decisions, changes, blockers, and next steps.
 - Tightened the Vercel proxy handlers so stale upstream bridge URLs return explicit `502` bridge errors instead of passing ngrok's offline HTML through as cockpit JSON/text.
 - Fixed the repeated bridge failure by restarting the cockpit and bridge as detached OS-session processes instead of foreground tool sessions; the new processes are parented to PID 1 and should survive after this Codex turn ends.
 - Updated the Vercel cockpit bridge fallback to `https://5694-140-186-106-90.ngrok-free.app` and ignored the detached-process pid/log files under `.automoat/`.
+- Added `scripts/run_autonomous_agent_loop.py`, which writes the same cockpit status/log files but runs a real bounded `codex exec` iteration, then syncs landing output, checks the diff, commits changed paths except `.pxcode/preview.json`, and pushes to `main`.
+- Updated `scripts/serve_mvp_cockpit.py` with `--loop-mode agent` / `--agent-loop`, and added `scripts/start_autonomous_cockpit_bridge.py` so the autonomous cockpit plus read-only bridge can be restarted as detached processes with one command.
+- Refreshed the landing page and README copy so the cockpit is described as an autonomous Codex agent loop rather than only a deterministic Dallas artifact heartbeat.
