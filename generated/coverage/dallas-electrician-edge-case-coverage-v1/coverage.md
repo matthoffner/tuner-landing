@@ -7,10 +7,10 @@ This artifact makes edge-case support explicit across the Dallas electrician sca
 - Latest dataset: `dallas-electrician-import-sample-v2`
 - Repeated support threshold: `2` permits
 - Result states with repeated support: `6` of `6`
-- Failure reasons with repeated support: `4` of `5`
+- Failure reasons with repeated support: `5` of `5`
 - Pattern slices with repeated support: `5` of `5`
-- Next-action groups with repeated support: `5` of `6`
-- Recommended next step: Widen only the remaining thin incomplete-work support if that label family needs stronger supervision; otherwise keep this report current as the imported fixture grows.
+- Next-action groups with repeated support: `6` of `6`
+- Recommended next step: All current latest-import edge-case sections have repeated support; keep this report current as imported Dallas data widens.
 
 ## Synthetic sample v1
 
@@ -95,9 +95,9 @@ This artifact makes edge-case support explicit across the Dallas electrician sca
 
 - Dataset id: `dallas-electrician-import-sample-v2`
 - Result states: `6` repeated of `6`
-- Failure reasons: `4` repeated of `5`
+- Failure reasons: `5` repeated of `5`
 - Pattern slices: `5` repeated of `5`
-- Next-action groups: `5` repeated of `6`
+- Next-action groups: `6` repeated of `6`
 
 ### Result States
 
@@ -106,8 +106,8 @@ This artifact makes edge-case support explicit across the Dallas electrician sca
 | cancelled | 2 | 2 | true |
 | fail | 6 | 6 | true |
 | not_ready | 3 | 3 | true |
-| partial | 4 | 4 | true |
-| pass | 21 | 13 | true |
+| partial | 5 | 5 | true |
+| pass | 22 | 14 | true |
 | unknown | 2 | 2 | true |
 
 ### Failure Reasons
@@ -116,7 +116,7 @@ This artifact makes edge-case support explicit across the Dallas electrician sca
 | --- | --- | --- | --- |
 | access_or_scheduling_issue | 3 | 3 | true |
 | grounding_or_bonding_issue | 4 | 2 | true |
-| incomplete_work | 1 | 1 | false |
+| incomplete_work | 2 | 2 | true |
 | panel_or_service_issue | 2 | 2 | true |
 | wiring_or_device_issue | 3 | 3 | true |
 
@@ -127,14 +127,14 @@ This artifact makes edge-case support explicit across the Dallas electrician sca
 | slice:dallas:new:correction-followup:75214 | 2 | 2 | true |
 | slice:dallas:new:rough-in:75214 | 2 | 2 | true |
 | slice:dallas:remodel:final:75208 | 2 | 2 | true |
-| slice:dallas:repair:rough-in:75216 | 2 | 2 | true |
+| slice:dallas:repair:rough-in:75216 | 3 | 3 | true |
 | slice:dallas:service-upgrade:service-release:75228 | 2 | 2 | true |
 
 ### Next-Action Groups
 
 | actions | rows | permits | repeated |
 | --- | --- | --- | --- |
-| complete_remaining_work\|schedule_reinspection | 1 | 1 | false |
+| complete_remaining_work\|schedule_reinspection | 2 | 2 | true |
 | correct_grounding_or_bonding\|add_labels_or_documentation | 2 | 2 | true |
 | correct_grounding_or_bonding\|add_labels_or_documentation\|schedule_reinspection | 2 | 2 | true |
 | correct_panel_or_service\|add_labels_or_documentation\|schedule_reinspection | 2 | 2 | true |

@@ -997,7 +997,7 @@
                 <div class="metric-label">Contract checks passing in <code>generated/contracts/dallas-electrician-contract-summary-v1/</code></div>
               </div>
               <div class="metric">
-                <div class="metric-value">81 / 31</div>
+                <div class="metric-value">83 / 32</div>
                 <div class="metric-label">Generated eval tasks and reviewed label rows across the three Dallas scaffolds</div>
               </div>
               </div>
@@ -1005,7 +1005,7 @@
                 <li><strong>MVP wedge:</strong> Dallas, Texas permit and inspection data, currently narrowed to residential electrical records.</li>
                 <li><strong>What works:</strong> deterministic generation of discovery outputs, normalized rows, fixture packs, reviewed labels, eval scaffolds, contract checks, edge-case coverage, and a generated inspection action queue from repo-local inputs.</li>
                 <li><strong>Most current proof:</strong> <code>generated/contracts/dallas-electrician-contract-summary-v1/</code> passes <code>13/13</code> checks across one synthetic and two imported Dallas scaffolds.</li>
-                <li><strong>Current gap:</strong> the action queue is still a generated artifact, not a browser workflow or production app; the only visible thin latest-import support is <code>incomplete_work</code> and <code>complete_remaining_work|schedule_reinspection</code>.</li>
+                <li><strong>Current gap:</strong> the action queue is still a generated artifact, not a browser workflow or production app; the next import-readiness gap is moving from fixture-backed proof to real Dallas records.</li>
                 <li><strong>Operational note:</strong> the unattended loop has produced real artifacts, but the repo still needs a cleaner fail-closed supervisor path when child sessions break.</li>
               </ul>
             </div>
@@ -1172,8 +1172,8 @@
                 <code>generated/normalized/dallas-electrician-sample-v1/</code> plus imported CSV
                 normalization runs under <code>generated/normalized/dallas-electrician-import-sample-v1/</code>
                 and <code>generated/normalized/dallas-electrician-import-sample-v2/</code>. The wider
-                <code>v2</code> import currently carries <code>13</code> permits, <code>38</code> inspections,
-                <code>59</code> source-record lineage rows, <code>3</code> rule documents, and explicit coverage for
+                <code>v2</code> import currently carries <code>14</code> permits, <code>40</code> inspections,
+                <code>62</code> source-record lineage rows, <code>3</code> rule documents, and explicit coverage for
                 <code>pass</code>, <code>fail</code>, <code>partial</code>, <code>cancelled</code>,
                 <code>not_ready</code>, and <code>unknown</code> inspection outcomes.
               </div>
@@ -1182,7 +1182,7 @@
                 Three generated eval samples now exist. The synthetic scaffold has <code>14</code>
                 tasks and <code>5</code> reviewed label rows. The imported <code>v1</code> scaffold has
                 <code>18</code> tasks and <code>7</code> reviewed label rows, while imported <code>v2</code>
-                expands to <code>49</code> tasks and <code>19</code> reviewed label rows across
+                expands to <code>51</code> tasks and <code>20</code> reviewed label rows across
                 <code>next_inspection_outcome</code>, <code>failure_reason_classification</code>,
                 <code>recommended_next_action</code>, and <code>pattern_extraction</code>.
               </div>
@@ -1209,14 +1209,14 @@
                 <code>generated/coverage/dallas-electrician-edge-case-coverage-v1/</code> now makes
                 repeated support visible across result states, failure reasons, pattern slices, and
                 next-action groups. Imported <code>v2</code> has repeated support for <code>6/6</code>
-                result states, <code>4/5</code> failure reasons, <code>5/5</code> pattern slices, and
-                <code>5/6</code> next-action groups.
+                result states, <code>5/5</code> failure reasons, <code>5/5</code> pattern slices, and
+                <code>6/6</code> next-action groups.
               </div>
               <div class="artifact-card">
                 <span class="artifact-label">Inspection Workflow</span>
                 <code>generated/workflows/dallas-inspection-workflow-v1/</code> turns reviewed labels into
-                a concrete browser-readable action queue. The current queue has <code>13</code> items, including
-                <code>6</code> high-priority failed inspections and <code>7</code> medium-priority partial
+                a concrete browser-readable action queue. The current queue has <code>14</code> items, including
+                <code>6</code> high-priority failed inspections and <code>8</code> medium-priority partial
                 or not-ready inspections.
               </div>
             </div>
@@ -1233,7 +1233,7 @@
                 <p>
                   The freshest generated data artifacts are
                   <code>generated/contracts/dallas-electrician-contract-summary-v1/summary.md</code>
-                  and <code>summary.json</code>, written on May 17, 2026. They compare all three
+                  and <code>summary.json</code>, written on May 23, 2026. They compare all three
                   current Dallas scaffolds and confirm that the downstream contract still holds.
                 </p>
               </div>
@@ -1249,8 +1249,8 @@
                 <h3>Imported sample v2 is still the data frontier</h3>
                 <p>
                   The widest normalized dataset remains <code>dallas-electrician-import-sample-v2</code>:
-                  <code>13</code> permits, <code>38</code> inspections, <code>3</code> rule documents,
-                  <code>59</code> source-record lineage rows, <code>49</code> eval tasks, and coverage for
+                  <code>14</code> permits, <code>40</code> inspections, <code>3</code> rule documents,
+                  <code>62</code> source-record lineage rows, <code>51</code> eval tasks, and coverage for
                   <code>cancelled</code>, <code>fail</code>, <code>not_ready</code>, <code>partial</code>,
                   <code>pass</code>, and <code>unknown</code>.
                 </p>
@@ -1265,12 +1265,11 @@
                 </p>
               </div>
               <div class="card">
-                <h3>Coverage now names the thin spots</h3>
+                <h3>Coverage now closes the thin spots</h3>
                 <p>
-                  The edge-case coverage report shows only two thin latest-import supports:
-                  <code>incomplete_work</code> and
-                  <code>complete_remaining_work|schedule_reinspection</code>. The next contract step is
-                  promoting the most important coverage expectations into checks.
+                  The edge-case coverage report now shows repeated latest-import support for every
+                  current result state, failure reason, pattern slice, and next-action group, including
+                  <code>complete_remaining_work|schedule_reinspection</code>.
                 </p>
               </div>
               <div class="card">
@@ -1278,7 +1277,8 @@
                 <p>
                   <code>generated/workflows/dallas-inspection-workflow-v1/index.html</code>
                   shows the first operator-facing workflow: permit, address, contractor, inspection
-                  failure context, recommended actions, and observed follow-up.
+                  failure context, recommended actions, observed follow-up, and captured operator
+                  correction state for <code>14/14</code> queue items.
                 </p>
               </div>
             </div>
@@ -1290,6 +1290,18 @@
             </div>
             <h2>Current build log</h2>
             <div class="timeline">
+              <div class="timeline-item">
+                <div class="timeline-meta">2026-05-23</div>
+                <p>
+                  Widened imported <code>v2</code> with one more Dallas electrical repair sequence that
+                  repeats the incomplete-work rough-in path, captured the matching accepted operator
+                  correction, and regenerated the normalized, fixture, eval, coverage, contract, and
+                  workflow artifacts. The latest scaffold now has <code>14</code> permits,
+                  <code>40</code> inspections, <code>51</code> eval tasks, <code>20</code> reviewed label
+                  rows, <code>62</code> source lineage rows, and repeated support for
+                  <code>6/6</code> next-action groups.
+                </p>
+              </div>
               <div class="timeline-item">
                 <div class="timeline-meta">2026-05-17</div>
                 <p>
@@ -1317,8 +1329,9 @@
                   <code>generated/coverage/dallas-electrician-edge-case-coverage-v1/</code>. The report
                   makes repeated support visible across result states, failure reasons, pattern slices,
                   and next-action groups; latest imported <code>v2</code> now shows repeated support for
-                  <code>6/6</code> result states, <code>4/5</code> failure reasons,
-                  <code>5/5</code> pattern slices, and <code>5/6</code> next-action groups.
+                  <code>6/6</code> result states, <code>5/5</code> failure reasons,
+                  <code>5/5</code> pattern slices, and <code>6/6</code> next-action groups after the
+                  May 23 fixture-widening pass.
                 </p>
               </div>
               <div class="timeline-item">

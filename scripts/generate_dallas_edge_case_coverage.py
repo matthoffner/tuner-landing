@@ -191,15 +191,22 @@ def build_overall_summary(datasets):
         name: latest["counts"][name] - repeated_count
         for name, repeated_count in repeated_sections.items()
     }
+    if all(count == 0 for count in thin_sections.values()):
+        recommended_next_step = (
+            "All current latest-import edge-case sections have repeated support; keep this report "
+            "current as imported Dallas data widens."
+        )
+    else:
+        recommended_next_step = (
+            "Widen only the remaining thin support called out below if those label families need "
+            "stronger supervision; otherwise keep this report current as the imported fixture grows."
+        )
     return {
         "latest_dataset_id": latest["dataset_id"],
         "repeated_support_threshold": REPEATED_SUPPORT_THRESHOLD,
         "latest_repeated_counts": repeated_sections,
         "latest_thin_counts": thin_sections,
-        "recommended_next_step": (
-            "Widen only the remaining thin incomplete-work support if that label family needs stronger "
-            "supervision; otherwise keep this report current as the imported fixture grows."
-        ),
+        "recommended_next_step": recommended_next_step,
     }
 
 

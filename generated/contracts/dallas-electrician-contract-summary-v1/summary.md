@@ -6,7 +6,7 @@ This artifact checks that the Dallas electricians MVP keeps one stable downstrea
 
 - Overall passed: `true`
 - Datasets compared: `3`
-- Next gap: Keep the edge-case coverage report current and widen only the remaining thin incomplete-work support if that label family needs stronger supervision.
+- Next gap: All current latest-import result states, failure reasons, pattern slices, and expected next-action groups have repeated support; keep the action queue and coverage report current as real Dallas import records widen.
 
 ## Contract Checks
 
@@ -20,7 +20,7 @@ This artifact checks that the Dallas electricians MVP keeps one stable downstrea
 - `pass` `label-review-schema-stable`: Reviewed label rows keep one shared field contract across synthetic and imported scaffolds.
 - `pass` `latest-import-repeats-pattern-support`: The latest imported sample moves recurring pattern slices beyond one-off support.
 - `pass` `latest-import-repeats-result-state-support`: The latest imported sample has repeated permit support for every current inspection result state.
-- `pass` `latest-import-repeats-core-failure-reasons`: The latest imported sample has repeated support for the main normalized failure reasons while known thin labels stay visible in coverage.
+- `pass` `latest-import-repeats-core-failure-reasons`: The latest imported sample has repeated support for the main normalized failure reasons.
 - `pass` `latest-import-repeats-next-action-support`: The latest imported sample has repeated support for the key reviewed next-action groups.
 - `pass` `widening-counts-monotonic`: Imported samples widen the scaffold monotonically for permits, inspections, tasks, and source lineage.
 
@@ -54,10 +54,10 @@ This artifact checks that the Dallas electricians MVP keeps one stable downstrea
 
 - Dataset id: `dallas-electrician-import-sample-v2`
 - Kind: `imported`
-- Normalized counts: `13` properties, `13` permits, `38` inspections, `5` contractors, `3` rule documents, `59` source records
-- Fixture counts: `13` sequences, `5` pattern slices, `5` repeated slices, max permit support `2`
-- Eval counts: `49` tasks, `19` reviewed label rows, `5` repeated next-action groups, `44` dev, `5` test
-- Edge-case counts: `6` repeated result states of `6`, `4` repeated failure reasons of `5`
+- Normalized counts: `14` properties, `14` permits, `40` inspections, `5` contractors, `3` rule documents, `62` source records
+- Fixture counts: `14` sequences, `5` pattern slices, `5` repeated slices, max permit support `3`
+- Eval counts: `51` tasks, `20` reviewed label rows, `6` repeated next-action groups, `46` dev, `5` test
+- Edge-case counts: `6` repeated result states of `6`, `5` repeated failure reasons of `5`
 - Inspection result vocabulary: `cancelled, fail, not_ready, partial, pass, unknown`
 - Task families: `failure_reason_classification, next_inspection_outcome, pattern_extraction, recommended_next_action`
 - Paths: `generated/normalized/dallas-electrician-import-sample-v2`, `generated/fixtures/dallas-electrician-import-sequences-v2`, `generated/evals/dallas-electrician-import-sample-v2`

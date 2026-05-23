@@ -4,6 +4,26 @@
   "source_dataset_dir": "generated/normalized/dallas-electrician-import-sample-v2",
   "pattern_slices": [
     {
+      "slice_id": "slice:dallas:repair:rough-in:75216",
+      "group_by": "zip_code",
+      "filters": {
+        "permit_type_normalized": "electrical_repair",
+        "zip_code": "75216",
+        "inspection_type_normalized": "rough_in"
+      },
+      "support_summary": {
+        "permit_count": 3,
+        "inspection_count": 3,
+        "failed_or_partial_inspection_count": 3
+      },
+      "reference_pattern": {
+        "pattern_summary": "Electrical repair inspections in 75216 show a repeated pattern around incomplete work before final approval.",
+        "support_count": 3,
+        "why_it_matters": "This slice can drive Dallas-specific rough in prep and next-action guidance for electricians working similar jobs."
+      },
+      "task_type": "pattern_extraction"
+    },
+    {
       "slice_id": "slice:dallas:remodel:final:75208",
       "group_by": "zip_code",
       "filters": {
@@ -58,26 +78,6 @@
       },
       "reference_pattern": {
         "pattern_summary": "Electrical new inspections in 75214 show a repeated pattern around grounding and bonding corrections.",
-        "support_count": 2,
-        "why_it_matters": "This slice can drive Dallas-specific rough in prep and next-action guidance for electricians working similar jobs."
-      },
-      "task_type": "pattern_extraction"
-    },
-    {
-      "slice_id": "slice:dallas:repair:rough-in:75216",
-      "group_by": "zip_code",
-      "filters": {
-        "permit_type_normalized": "electrical_repair",
-        "zip_code": "75216",
-        "inspection_type_normalized": "rough_in"
-      },
-      "support_summary": {
-        "permit_count": 2,
-        "inspection_count": 2,
-        "failed_or_partial_inspection_count": 2
-      },
-      "reference_pattern": {
-        "pattern_summary": "Electrical repair inspections in 75216 show a repeated pattern around incomplete work before final approval.",
         "support_count": 2,
         "why_it_matters": "This slice can drive Dallas-specific rough in prep and next-action guidance for electricians working similar jobs."
       },

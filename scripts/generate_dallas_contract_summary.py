@@ -60,9 +60,10 @@ EXPECTED_REPEATED_RESULT_STATES = {
     "unknown",
 }
 
-MIN_REPEATED_FAILURE_REASONS = 4
+MIN_REPEATED_FAILURE_REASONS = 5
 
 EXPECTED_REPEATED_NEXT_ACTION_GROUPS = {
+    "complete_remaining_work|schedule_reinspection",
     "correct_grounding_or_bonding|add_labels_or_documentation",
     "correct_grounding_or_bonding|add_labels_or_documentation|schedule_reinspection",
     "correct_panel_or_service|add_labels_or_documentation|schedule_reinspection",
@@ -339,7 +340,7 @@ def build_checks(dataset_summaries):
     checks.append(
         {
             "check_id": "latest-import-repeats-core-failure-reasons",
-            "description": "The latest imported sample has repeated support for the main normalized failure reasons while known thin labels stay visible in coverage.",
+            "description": "The latest imported sample has repeated support for the main normalized failure reasons.",
             "passed": bool(latest_imported)
             and latest_imported["counts"]["repeated_failure_reasons"] >= MIN_REPEATED_FAILURE_REASONS,
         }
@@ -378,10 +379,21 @@ def build_summary(dataset_summaries, checks):
         (summary for summary in reversed(dataset_summaries) if summary["kind"] == "imported"),
         None,
     )
-    if latest_imported and latest_imported["counts"]["repeated_pattern_slices"] >= 3:
+    if latest_imported and (
+        latest_imported["counts"]["repeated_result_states"] == latest_imported["counts"]["result_states"]
+        and latest_imported["counts"]["repeated_failure_reasons"] == latest_imported["counts"]["failure_reasons"]
+        and latest_imported["counts"]["repeated_pattern_slices"] == latest_imported["counts"]["pattern_slices"]
+        and set(latest_imported["repeated_next_action_groups"]) >= EXPECTED_REPEATED_NEXT_ACTION_GROUPS
+    ):
         next_gap = (
-            "Keep the edge-case coverage report current and widen only the remaining thin incomplete-work "
-            "support if that label family needs stronger supervision."
+            "All current latest-import result states, failure reasons, pattern slices, and expected "
+            "next-action groups have repeated support; keep the action queue and coverage report "
+            "current as real Dallas import records widen."
+        )
+    elif latest_imported and latest_imported["counts"]["repeated_pattern_slices"] >= 3:
+        next_gap = (
+            "Keep the edge-case coverage report current and widen only the remaining thin imported "
+            "support if those label families need stronger supervision."
         )
     else:
         next_gap = (

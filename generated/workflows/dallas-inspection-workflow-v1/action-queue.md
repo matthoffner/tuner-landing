@@ -4,10 +4,10 @@ This artifact turns reviewed Dallas electrician inspection labels into a concret
 
 ## Summary
 
-- Queue items: `13`
-- Priority counts: `{"high": 6, "medium": 7}`
-- Trigger result counts: `{"fail": 6, "not_ready": 3, "partial": 4}`
-- Operator correction events: `13`
+- Queue items: `14`
+- Priority counts: `{"high": 6, "medium": 8}`
+- Trigger result counts: `{"fail": 6, "not_ready": 3, "partial": 5}`
+- Operator correction events: `14`
 - Operator correction ledger: `generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl`
 - Accepted correction patterns: `6`
 
@@ -38,6 +38,17 @@ This artifact turns reviewed Dallas electrician inspection labels into a concret
 ### operator-pattern:accepted:0003
 
 - Queue items: `2`
+- Actions: `Complete remaining work, Schedule reinspection`
+- Action IDs: `complete_remaining_work, schedule_reinspection`
+- Trigger results: `{"partial": 2}`
+- Failure reasons: `{"incomplete_work": 2}`
+- Inspection types: `{"rough_in": 2}`
+- Follow-up results: `{"pass": 2}`
+- Example permits: `ELP-2026-0203, ELZ-2026-0215`
+
+### operator-pattern:accepted:0004
+
+- Queue items: `2`
 - Actions: `Correct grounding or bonding, Add missing labels or documentation`
 - Action IDs: `correct_grounding_or_bonding, add_labels_or_documentation`
 - Trigger results: `{"fail": 2}`
@@ -46,7 +57,7 @@ This artifact turns reviewed Dallas electrician inspection labels into a concret
 - Follow-up results: `{"partial": 2}`
 - Example permits: `ELN-2026-0204, ELN-2026-0208`
 
-### operator-pattern:accepted:0004
+### operator-pattern:accepted:0005
 
 - Queue items: `2`
 - Actions: `Correct grounding or bonding, Add missing labels or documentation, Schedule reinspection`
@@ -57,7 +68,7 @@ This artifact turns reviewed Dallas electrician inspection labels into a concret
 - Follow-up results: `{"pass": 2}`
 - Example permits: `ELN-2026-0204, ELN-2026-0208`
 
-### operator-pattern:accepted:0005
+### operator-pattern:accepted:0006
 
 - Queue items: `2`
 - Actions: `Correct panel or service issue, Add missing labels or documentation, Schedule reinspection`
@@ -67,17 +78,6 @@ This artifact turns reviewed Dallas electrician inspection labels into a concret
 - Inspection types: `{"service_release": 2}`
 - Follow-up results: `{"pass": 2}`
 - Example permits: `ELS-2026-0213, ELS-2026-0214`
-
-### operator-pattern:accepted:0006
-
-- Queue items: `1`
-- Actions: `Complete remaining work, Schedule reinspection`
-- Action IDs: `complete_remaining_work, schedule_reinspection`
-- Trigger results: `{"partial": 1}`
-- Failure reasons: `{"incomplete_work": 1}`
-- Inspection types: `{"rough_in": 1}`
-- Follow-up results: `{"pass": 1}`
-- Example permits: `ELP-2026-0203`
 
 ## Action Queue
 
@@ -210,3 +210,13 @@ This artifact turns reviewed Dallas electrician inspection labels into a concret
 - Recommended actions: `Correct grounding or bonding, Add missing labels or documentation, Schedule reinspection`
 - Follow-up observed: `2026-04-21` `final` -> `pass`
 - Evidence: Grounding corrected but final trim and breaker labeling still incomplete at garage apartment panel.
+
+### ELZ-2026-0215 - 2702 S EWING AVE DALLAS TX 75216
+
+- Priority: `medium`
+- Contractor: `Cedars South Electric`
+- Trigger: `2026-04-22` `rough_in` -> `partial`
+- Failure reason: `incomplete_work`
+- Recommended actions: `Complete remaining work, Schedule reinspection`
+- Follow-up observed: `2026-04-27` `correction_followup` -> `pass`
+- Evidence: Ceiling junction cover and hallway trim incomplete before rough-in approval.

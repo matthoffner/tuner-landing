@@ -47,8 +47,8 @@ Updated next best artifacts:
 - keep the real MVP cockpit running with `python3 scripts/serve_mvp_cockpit.py --auto-start --port 4174`
 - expose the running cockpit to remote observers with `python3 scripts/bridge_mvp_cockpit.py` and share the read-only URL from `.automoat/state/mvp-bridge-status.json`
 - run `python3 scripts/record_operator_correction.py --smoke-check` for the default JSON contract and `python3 scripts/record_operator_correction.py --smoke-check --format text` for the readable operator contract, then verify the completed correction ledger with `python3 scripts/record_operator_correction.py --summary --format text` and `python3 scripts/record_operator_correction.py --validate-ledger --require-complete --format text` before widening fixture coverage
-- use `generated/workflows/dallas-inspection-workflow-v1/action-queue.json` `operator_correction_patterns` to choose the next Dallas import-fixture widening pass from the accepted operational patterns
-- decide whether the remaining thin latest-import labels, `incomplete_work` and `complete_remaining_work|schedule_reinspection`, need another repeated sequence before real data import
+- keep `generated/workflows/dallas-inspection-workflow-v1/action-queue.json` `operator_correction_patterns` current as accepted operational patterns widen
+- use the now-repeated latest-import coverage to choose the next real Dallas import-readiness gap instead of adding more hidden fixture rows by default
 
 Latest bounded improvement completed:
 
@@ -71,7 +71,7 @@ Latest bounded improvement completed:
 - regenerated imported `v2` artifacts now widen to `13` permits, `38` inspections, `49` eval tasks, `19` reviewed label rows, and `59` source-lineage rows while keeping the same downstream task families and split contract
 - the refreshed contract summary stays at `10/10` checks and now shows `5` repeated pattern slices plus `5` repeated next-action groups, including `correct_panel_or_service|add_labels_or_documentation|schedule_reinspection`
 - `scripts/generate_dallas_edge_case_coverage.py` now emits `generated/coverage/dallas-electrician-edge-case-coverage-v1/coverage.json` and `coverage.md`, making repeated support visible across result states, failure reasons, pattern slices, and next-action groups
-- the edge-case coverage report shows imported `v2` has repeated support for `6/6` result states, `4/5` failure reasons, `5/5` pattern slices, and `5/6` next-action groups; the remaining thin support is `incomplete_work` and `complete_remaining_work|schedule_reinspection`
+- the edge-case coverage report now shows imported `v2` has repeated support for `6/6` result states, `5/5` failure reasons, `5/5` pattern slices, and `6/6` next-action groups
 - `scripts/generate_dallas_contract_summary.py` now promotes the most important edge-case coverage expectations into contract checks, and `generated/contracts/dallas-electrician-contract-summary-v1/` passes `13/13`
 - `scripts/generate_dallas_inspection_workflow.py` now emits `generated/workflows/dallas-inspection-workflow-v1/action-queue.json`, `action-queue.md`, and `index.html`, turning reviewed inspection labels into a concrete browser-readable operator queue with `13` items, priority levels, addresses, contractors, recommended actions, and observed follow-ups
 - `scripts/run_mvp_loop.py` and `scripts/serve_mvp_cockpit.py` now provide a real local cockpit loop: the server starts a loop process, streams `.automoat/logs/mvp-loop.log`, exposes `.automoat/state/mvp-loop-status.json`, and repeatedly regenerates/verifies the Dallas contract, coverage, and action queue
@@ -130,6 +130,8 @@ Latest bounded improvement completed:
 - Captured the twelfth Dallas operator correction through the non-server CLI: `workflow-item:dallas:next-action:0003` is now accepted in `operator-corrections.jsonl`, the regenerated workflow reports `12` captured corrections, and the next missing work order advances to `workflow-item:dallas:next-action:0005`
 - Captured the thirteenth Dallas operator correction through the non-server CLI: `workflow-item:dallas:next-action:0005` is now accepted in `operator-corrections.jsonl`, and the regenerated workflow plus completion gate report all `13` current queue items captured
 - `scripts/generate_dallas_inspection_workflow.py` now groups the latest accepted operator corrections into `operator_correction_patterns`; regenerated workflow artifacts surface `6` reusable accepted action patterns across all `13` captured Dallas queue items
+- `generated/raw/dallas-electrician-import-sample-v2/` now includes one more CSV-backed Dallas electrical repair permit that repeats the incomplete-work rough-in path, and the regenerated imported `v2` artifacts now carry `14` permits, `40` inspections, `51` eval tasks, `20` reviewed label rows, and `62` source-lineage rows
+- Captured the fourteenth Dallas operator correction through the non-server CLI: `workflow-item:dallas:next-action:0014` is accepted from fixture follow-up evidence, and the regenerated workflow plus completion gate report all `14` current queue items captured with `complete_remaining_work|schedule_reinspection` backed by two accepted correction examples
 
 ## Constraints
 

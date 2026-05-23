@@ -5,32 +5,32 @@
   "source_eval_dir": "generated/evals/dallas-electrician-import-sample-v2",
   "workflow_type": "reviewed-inspection-action-queue",
   "summary": {
-    "queue_items": 13,
+    "queue_items": 14,
     "priority_counts": {
       "high": 6,
-      "medium": 7
+      "medium": 8
     },
     "trigger_result_counts": {
       "fail": 6,
       "not_ready": 3,
-      "partial": 4
+      "partial": 5
     },
     "recommended_action_counts": {
       "add_labels_or_documentation": 6,
-      "complete_remaining_work": 1,
+      "complete_remaining_work": 2,
       "correct_grounding_or_bonding": 4,
       "correct_panel_or_service": 2,
       "correct_wiring_or_devices": 3,
       "ensure_site_access": 3,
-      "schedule_reinspection": 11
+      "schedule_reinspection": 12
     }
   },
   "operator_correction_summary": {
     "ledger_path": "generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl",
-    "total_events": 13,
-    "queue_items_with_corrections": 13,
+    "total_events": 14,
+    "queue_items_with_corrections": 14,
     "decision_counts": {
-      "accepted": 13
+      "accepted": 14
     },
     "invalid_lines": 0,
     "latest_by_queue_item": {
@@ -154,12 +154,21 @@
           "add_labels_or_documentation",
           "schedule_reinspection"
         ]
+      },
+      "workflow-item:dallas:next-action:0014": {
+        "correction_id": "operator-correction:20260523T130500000000Z:0014",
+        "captured_at": "2026-05-23T13:05:00Z",
+        "decision": "accepted",
+        "corrected_actions": [
+          "complete_remaining_work",
+          "schedule_reinspection"
+        ]
       }
     }
   },
   "operator_correction_patterns": {
     "source": "latest accepted operator correction per current queue item",
-    "accepted_latest_corrections": 13,
+    "accepted_latest_corrections": 14,
     "accepted_pattern_count": 6,
     "patterns": [
       {
@@ -243,6 +252,42 @@
       },
       {
         "corrected_actions": [
+          "complete_remaining_work",
+          "schedule_reinspection"
+        ],
+        "corrected_action_labels": [
+          "Complete remaining work",
+          "Schedule reinspection"
+        ],
+        "queue_item_count": 2,
+        "queue_item_ids": [
+          "workflow-item:dallas:next-action:0006",
+          "workflow-item:dallas:next-action:0014"
+        ],
+        "source_permit_numbers": [
+          "ELP-2026-0203",
+          "ELZ-2026-0215"
+        ],
+        "trigger_result_counts": {
+          "partial": 2
+        },
+        "failure_reason_counts": {
+          "incomplete_work": 2
+        },
+        "inspection_type_counts": {
+          "rough_in": 2
+        },
+        "observed_followup_result_counts": {
+          "pass": 2
+        },
+        "operator_note_examples": [
+          "Accepted from fixture review: follow-up shows remaining trim complete and branch repairs accepted, matching the recommended remaining-work completion and reinspection actions.",
+          "Accepted from fixture follow-up evidence: remaining trim and junction cover were completed and the correction follow-up passed, matching complete_remaining_work plus schedule_reinspection."
+        ],
+        "pattern_id": "operator-pattern:accepted:0003"
+      },
+      {
+        "corrected_actions": [
           "correct_grounding_or_bonding",
           "add_labels_or_documentation"
         ],
@@ -275,7 +320,7 @@
           "Accepted from fixture review: follow-up corrected grounding and still exposed panel labeling work, matching the recommended grounding and documentation actions.",
           "Accepted from fixture review: follow-up corrected grounding and still exposed breaker labeling work, matching the recommended grounding and documentation actions."
         ],
-        "pattern_id": "operator-pattern:accepted:0003"
+        "pattern_id": "operator-pattern:accepted:0004"
       },
       {
         "corrected_actions": [
@@ -313,7 +358,7 @@
           "Accepted from fixture follow-up evidence: grounding was corrected, labeling verified, and the final inspection passed.",
           "Accepted from fixture follow-up evidence: grounding was corrected, labeling verified, and the final inspection passed, matching recommended grounding, documentation, and reinspection actions."
         ],
-        "pattern_id": "operator-pattern:accepted:0004"
+        "pattern_id": "operator-pattern:accepted:0005"
       },
       {
         "corrected_actions": [
@@ -350,39 +395,6 @@
         "operator_note_examples": [
           "Accepted from fixture review: follow-up shows disconnect labeling added and service panel deadfront secured for release approval, matching the recommended panel/service, documentation, and reinspection actions.",
           "Accepted from fixture review: follow-up shows the deadfront secured and exterior disconnect labels installed for release approval, matching the recommended panel/service, documentation, and reinspection actions."
-        ],
-        "pattern_id": "operator-pattern:accepted:0005"
-      },
-      {
-        "corrected_actions": [
-          "complete_remaining_work",
-          "schedule_reinspection"
-        ],
-        "corrected_action_labels": [
-          "Complete remaining work",
-          "Schedule reinspection"
-        ],
-        "queue_item_count": 1,
-        "queue_item_ids": [
-          "workflow-item:dallas:next-action:0006"
-        ],
-        "source_permit_numbers": [
-          "ELP-2026-0203"
-        ],
-        "trigger_result_counts": {
-          "partial": 1
-        },
-        "failure_reason_counts": {
-          "incomplete_work": 1
-        },
-        "inspection_type_counts": {
-          "rough_in": 1
-        },
-        "observed_followup_result_counts": {
-          "pass": 1
-        },
-        "operator_note_examples": [
-          "Accepted from fixture review: follow-up shows remaining trim complete and branch repairs accepted, matching the recommended remaining-work completion and reinspection actions."
         ],
         "pattern_id": "operator-pattern:accepted:0006"
       }
@@ -954,6 +966,49 @@
       "evidence": [
         "Grounding corrected but final trim and breaker labeling still incomplete at garage apartment panel.",
         "2026-04-21 final -> pass: Final trim completed and panel labeling verified for approval."
+      ]
+    },
+    {
+      "queue_item_id": "workflow-item:dallas:next-action:0014",
+      "permit_id": "permit:dallas:elz-2026-0215",
+      "source_permit_number": "ELZ-2026-0215",
+      "permit_status": "finaled",
+      "permit_type_normalized": "electrical_repair",
+      "property": {
+        "property_id": "property:2702-s-ewing-ave-dallas-tx-75216",
+        "normalized_address": "2702 S EWING AVE DALLAS TX 75216",
+        "zip_code": "75216"
+      },
+      "contractor": {
+        "contractor_id": "contractor:dallas:cedars-south-electric",
+        "name": "Cedars South Electric"
+      },
+      "trigger_inspection": {
+        "inspection_id": "inspection:dallas:elz-2026-0215:2026-04-22:rough_in",
+        "inspection_date": "2026-04-22",
+        "inspection_type_normalized": "rough_in",
+        "result_normalized": "partial",
+        "failure_reason_normalized": "incomplete_work",
+        "notes_raw": "Ceiling junction cover and hallway trim incomplete before rough-in approval."
+      },
+      "recommended_actions": [
+        "complete_remaining_work",
+        "schedule_reinspection"
+      ],
+      "recommended_action_labels": [
+        "Complete remaining work",
+        "Schedule reinspection"
+      ],
+      "priority": "medium",
+      "expected_followup": {
+        "inspection_date": "2026-04-27",
+        "inspection_type_normalized": "correction_followup",
+        "result_normalized": "pass",
+        "notes_raw": "Remaining trim and junction cover completed for approval."
+      },
+      "evidence": [
+        "Ceiling junction cover and hallway trim incomplete before rough-in approval.",
+        "2026-04-27 correction_followup -> pass: Remaining trim and junction cover completed for approval."
       ]
     }
   ]

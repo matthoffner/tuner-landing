@@ -510,6 +510,8 @@ def build_html(payload):
             """
         )
 
+    queue_rows = "\n".join(row.rstrip() for row in rows)
+
     return f"""<!doctype html>
 <html lang="en">
   <head>
@@ -796,7 +798,7 @@ def build_html(payload):
         </div>
       </section>
       <section class="queue" aria-label="Inspection action queue">
-        {''.join(rows)}
+        {queue_rows}
       </section>
     </main>
     <script>

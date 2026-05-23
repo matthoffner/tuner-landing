@@ -217,25 +217,25 @@
       "has_source_records": true,
       "has_rule_documents": true,
       "counts": {
-        "properties": 13,
-        "permits": 13,
-        "inspections": 38,
+        "properties": 14,
+        "permits": 14,
+        "inspections": 40,
         "contractors": 5,
         "rule_documents": 3,
-        "source_records": 59,
-        "sequences": 13,
+        "source_records": 62,
+        "sequences": 14,
         "pattern_slices": 5,
-        "tasks": 49,
-        "label_reviews": 19,
-        "dev_tasks": 44,
+        "tasks": 51,
+        "label_reviews": 20,
+        "dev_tasks": 46,
         "test_tasks": 5,
         "result_states": 6,
         "repeated_result_states": 6,
         "failure_reasons": 5,
-        "repeated_failure_reasons": 4,
+        "repeated_failure_reasons": 5,
         "repeated_pattern_slices": 5,
-        "max_pattern_permit_support": 2,
-        "repeated_next_action_groups": 5
+        "max_pattern_permit_support": 3,
+        "repeated_next_action_groups": 6
       },
       "inspection_result_vocabulary": [
         "cancelled",
@@ -252,9 +252,9 @@
         "recommended_next_action"
       ],
       "task_family_counts": {
-        "next_inspection_outcome": 25,
+        "next_inspection_outcome": 26,
         "failure_reason_classification": 6,
-        "recommended_next_action": 13,
+        "recommended_next_action": 14,
         "pattern_extraction": 5
       },
       "sequence_coverage_union": [
@@ -297,7 +297,8 @@
           "permit:dallas:els-2026-0202",
           "permit:dallas:els-2026-0210",
           "permit:dallas:els-2026-0213",
-          "permit:dallas:els-2026-0214"
+          "permit:dallas:els-2026-0214",
+          "permit:dallas:elz-2026-0215"
         ],
         "not_ready": [
           "permit:dallas:elm-2026-0211",
@@ -316,7 +317,8 @@
           "permit:dallas:eln-2026-0204",
           "permit:dallas:eln-2026-0208",
           "permit:dallas:elp-2026-0203",
-          "permit:dallas:elp-2026-0209"
+          "permit:dallas:elp-2026-0209",
+          "permit:dallas:elz-2026-0215"
         ]
       },
       "repeated_failure_reasons": {
@@ -328,6 +330,10 @@
         "grounding_or_bonding_issue": [
           "permit:dallas:eln-2026-0204",
           "permit:dallas:eln-2026-0208"
+        ],
+        "incomplete_work": [
+          "permit:dallas:elp-2026-0203",
+          "permit:dallas:elz-2026-0215"
         ],
         "wiring_or_device_issue": [
           "permit:dallas:elp-2026-0209",
@@ -352,6 +358,10 @@
         "correct_grounding_or_bonding|add_labels_or_documentation|schedule_reinspection": [
           "permit:dallas:eln-2026-0204",
           "permit:dallas:eln-2026-0208"
+        ],
+        "complete_remaining_work|schedule_reinspection": [
+          "permit:dallas:elp-2026-0203",
+          "permit:dallas:elz-2026-0215"
         ],
         "correct_wiring_or_devices|schedule_reinspection": [
           "permit:dallas:elp-2026-0209",
@@ -423,7 +433,7 @@
     },
     {
       "check_id": "latest-import-repeats-core-failure-reasons",
-      "description": "The latest imported sample has repeated support for the main normalized failure reasons while known thin labels stay visible in coverage.",
+      "description": "The latest imported sample has repeated support for the main normalized failure reasons.",
       "passed": true
     },
     {
@@ -444,5 +454,5 @@
     "Normalized row counts, eval task totals, and reviewed label totals grow across imported samples as the raw CSV fixtures widen.",
     "Inspection result vocabulary broadens in imported v2 to include cancelled, not_ready, and unknown without changing downstream task families or split shapes."
   ],
-  "next_gap": "Keep the edge-case coverage report current and widen only the remaining thin incomplete-work support if that label family needs stronger supervision."
+  "next_gap": "All current latest-import result states, failure reasons, pattern slices, and expected next-action groups have repeated support; keep the action queue and coverage report current as real Dallas import records widen."
 }
