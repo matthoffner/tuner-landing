@@ -122,6 +122,7 @@ Latest bounded improvement completed:
 - Captured the fifth Dallas operator correction through the non-server CLI: `workflow-item:dallas:next-action:0012` is now accepted in `operator-corrections.jsonl`, the regenerated workflow reports `5` captured corrections, and the next missing work order advances to `workflow-item:dallas:next-action:0013`
 - Captured the sixth Dallas operator correction through the non-server CLI: `workflow-item:dallas:next-action:0013` is now accepted in `operator-corrections.jsonl`, the regenerated workflow reports `6` captured corrections, and the next missing work order advances to `workflow-item:dallas:next-action:0006`
 - Captured the seventh Dallas operator correction through the non-server CLI: `workflow-item:dallas:next-action:0006` is now accepted in `operator-corrections.jsonl`, the regenerated workflow reports `7` captured corrections, and the next missing work order advances to `workflow-item:dallas:next-action:0007`
+- Captured the eighth Dallas operator correction through the non-server CLI: `workflow-item:dallas:next-action:0007` is now accepted in `operator-corrections.jsonl`, the regenerated workflow reports `8` captured corrections, and the next missing work order advances to `workflow-item:dallas:next-action:0010`
 
 ## Constraints
 
