@@ -27,10 +27,10 @@
   },
   "operator_correction_summary": {
     "ledger_path": "generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl",
-    "total_events": 3,
-    "queue_items_with_corrections": 3,
+    "total_events": 4,
+    "queue_items_with_corrections": 4,
     "decision_counts": {
-      "accepted": 3
+      "accepted": 4
     },
     "invalid_lines": 0,
     "latest_by_queue_item": {
@@ -59,6 +59,15 @@
         "corrected_actions": [
           "correct_grounding_or_bonding",
           "add_labels_or_documentation"
+        ]
+      },
+      "workflow-item:dallas:next-action:0009": {
+        "correction_id": "operator-correction:20260523T121500000000Z:0009",
+        "captured_at": "2026-05-23T12:15:00Z",
+        "decision": "accepted",
+        "corrected_actions": [
+          "correct_wiring_or_devices",
+          "schedule_reinspection"
         ]
       }
     }
