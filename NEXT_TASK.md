@@ -97,6 +97,7 @@ Latest bounded improvement completed:
 - `scripts/operator_corrections.py` now rejects duplicate `correction_id` values before appending operator-correction events, so deterministic replays fail before mutating the Dallas correction ledger
 - `scripts/record_operator_correction.py --validate-ledger` now reports duplicate queue item IDs, and correction dry-runs/appends reject duplicated queue IDs before an operator decision can attach to an ambiguous Dallas queue row
 - `scripts/record_operator_correction.py --format text` correction dry-runs and appends now print copyable ledger-validation, next-missing, and completion-gate commands so a non-server operator pass does not lose its next step after confirming a decision
+- `scripts/record_operator_correction.py --dry-run` now rejects duplicate `correction_id` values against the selected ledger, so deterministic replay checks catch timestamp collisions before an operator sees a reusable capture command
 
 ## Constraints
 

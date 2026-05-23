@@ -15,6 +15,7 @@ from operator_corrections import (
     VALID_CORRECTION_DECISIONS,
     append_operator_correction,
     build_operator_correction_event,
+    correction_id_exists,
     correction_summary,
     duplicate_queue_item_ids,
     normalize_action_list,
@@ -1041,6 +1042,9 @@ def main() -> int:
     try:
         if args.dry_run:
             event = build_operator_correction_event(payload, args.queue_path, args.captured_at)
+            correction_id = event.get("correction_id")
+            if isinstance(correction_id, str) and correction_id_exists(correction_id, args.ledger_path):
+                raise ValueError(f"duplicate correction_id: {correction_id}")
         else:
             event = append_operator_correction(payload, args.queue_path, args.ledger_path, args.captured_at)
     except ValueError as exc:
