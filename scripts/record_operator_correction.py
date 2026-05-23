@@ -736,6 +736,42 @@ def command_arg_value(command: Any, arg: str) -> str | None:
     return parts[value_index]
 
 
+def command_group_failures(
+    commands: Any,
+    expected_next_missing_id: str,
+    should_be_dry_run: bool,
+    require_note: bool = False,
+) -> list[str]:
+    if not isinstance(commands, dict):
+        return ["command group is missing"]
+
+    failures: list[str] = []
+    command_fields = {
+        "accepted": "accepted",
+        "rejected": "rejected",
+        "edited": "edited_template",
+    }
+    for decision, field in command_fields.items():
+        command = commands.get(field)
+        if not isinstance(command, str):
+            failures.append(f"{decision} command is missing")
+            continue
+        if command_arg_value(command, "--expected-next-missing-id") != expected_next_missing_id:
+            failures.append(f"{decision} command missing expected next-missing ID")
+        if not command_has_arg(command, "--require-missing"):
+            failures.append(f"{decision} command missing --require-missing")
+        has_dry_run = command_has_arg(command, "--dry-run")
+        if should_be_dry_run and not has_dry_run:
+            failures.append(f"{decision} command missing --dry-run")
+        if not should_be_dry_run and has_dry_run:
+            failures.append(f"{decision} append command should not include --dry-run")
+        if require_note and command_arg_value(command, "--operator-note") != "<operator-note>":
+            failures.append(f"{decision} command missing operator-note placeholder")
+        if decision == "edited" and command_arg_value(command, "--corrected-actions") != "<comma-separated-action-ids>":
+            failures.append("edited command missing corrected-actions template")
+    return failures
+
+
 def pluralize(value: Any, singular: str, plural: str) -> str:
     return singular if value == 1 else plural
 
@@ -1136,43 +1172,48 @@ def operator_correction_smoke_check(queue_path: Path, ledger_path: Path) -> dict
         dry_run_shortcut = commands.get("dry_run_next_missing", {})
         dry_run_with_note = commands.get("dry_run_next_missing_with_note", {})
         append_shortcut = commands.get("append_next_missing", {})
-        accepted_dry_run = dry_run_shortcut.get("accepted") if isinstance(dry_run_shortcut, dict) else None
-        accepted_note_dry_run = dry_run_with_note.get("accepted") if isinstance(dry_run_with_note, dict) else None
-        accepted_append = append_shortcut.get("accepted") if isinstance(append_shortcut, dict) else None
 
-        guarded_shortcut = (
-            command_arg_value(accepted_dry_run, "--expected-next-missing-id") == queue_item_id
-            and command_has_arg(accepted_dry_run, "--require-missing")
-            and command_has_arg(accepted_dry_run, "--dry-run")
-        )
+        dry_run_failures = command_group_failures(dry_run_shortcut, queue_item_id, should_be_dry_run=True)
         add_smoke_check(
             checks,
             "guarded_dry_run_shortcut",
-            guarded_shortcut,
-            "accepted next-missing dry-run includes expected-ID, require-missing, and dry-run guards",
+            not dry_run_failures,
+            (
+                "accepted/rejected/edited dry-runs include expected-ID, require-missing, "
+                "dry-run guards, and edited action template"
+                if not dry_run_failures
+                else "; ".join(dry_run_failures)
+            ),
         )
 
-        note_dry_run = (
-            command_arg_value(accepted_note_dry_run, "--operator-note") == "<operator-note>"
-            and command_has_arg(accepted_note_dry_run, "--dry-run")
+        note_dry_run_failures = command_group_failures(
+            dry_run_with_note,
+            queue_item_id,
+            should_be_dry_run=True,
+            require_note=True,
         )
         add_smoke_check(
             checks,
             "note_dry_run_shortcut",
-            note_dry_run,
-            "accepted note dry-run keeps operator-note and dry-run flags",
+            not note_dry_run_failures,
+            (
+                "accepted/rejected/edited note dry-runs keep operator-note and dry-run flags"
+                if not note_dry_run_failures
+                else "; ".join(note_dry_run_failures)
+            ),
         )
 
-        guarded_append = (
-            command_arg_value(accepted_append, "--expected-next-missing-id") == queue_item_id
-            and command_has_arg(accepted_append, "--require-missing")
-            and not command_has_arg(accepted_append, "--dry-run")
-        )
+        append_failures = command_group_failures(append_shortcut, queue_item_id, should_be_dry_run=False)
         add_smoke_check(
             checks,
             "guarded_append_shortcut",
-            guarded_append,
-            "accepted next-missing append includes expected-ID and require-missing guards",
+            not append_failures,
+            (
+                "accepted/rejected/edited appends include expected-ID, require-missing guards, "
+                "and edited action template"
+                if not append_failures
+                else "; ".join(append_failures)
+            ),
         )
 
         recommended_actions: list[str] = []
