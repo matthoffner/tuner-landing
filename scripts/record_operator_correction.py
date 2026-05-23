@@ -180,6 +180,7 @@ def record_command(
     ledger_path: Path,
     dry_run: bool = False,
     corrected_actions: str | None = None,
+    operator_note: str | None = None,
 ) -> str:
     args = [
         "python3",
@@ -192,6 +193,8 @@ def record_command(
     ]
     if corrected_actions is not None:
         args.extend(["--corrected-actions", corrected_actions])
+    if operator_note is not None:
+        args.extend(["--operator-note", operator_note])
     if dry_run:
         args.append("--dry-run")
     return shlex.join(args)
@@ -199,6 +202,7 @@ def record_command(
 
 def suggested_record_commands(item: dict[str, Any], queue_path: Path, ledger_path: Path) -> dict[str, Any]:
     queue_item_id = str(item.get("queue_item_id", ""))
+    operator_note = "<operator-note>"
     return {
         "dry_run": {
             "accepted": record_command(queue_item_id, "accepted", queue_path, ledger_path, dry_run=True),
@@ -212,6 +216,33 @@ def suggested_record_commands(item: dict[str, Any], queue_path: Path, ledger_pat
                 corrected_actions="<comma-separated-action-ids>",
             ),
         },
+        "dry_run_with_note": {
+            "accepted": record_command(
+                queue_item_id,
+                "accepted",
+                queue_path,
+                ledger_path,
+                dry_run=True,
+                operator_note=operator_note,
+            ),
+            "rejected": record_command(
+                queue_item_id,
+                "rejected",
+                queue_path,
+                ledger_path,
+                dry_run=True,
+                operator_note=operator_note,
+            ),
+            "edited_template": record_command(
+                queue_item_id,
+                "edited",
+                queue_path,
+                ledger_path,
+                dry_run=True,
+                corrected_actions="<comma-separated-action-ids>",
+                operator_note=operator_note,
+            ),
+        },
         "append": {
             "accepted": record_command(queue_item_id, "accepted", queue_path, ledger_path),
             "rejected": record_command(queue_item_id, "rejected", queue_path, ledger_path),
@@ -221,6 +252,30 @@ def suggested_record_commands(item: dict[str, Any], queue_path: Path, ledger_pat
                 queue_path,
                 ledger_path,
                 corrected_actions="<comma-separated-action-ids>",
+            ),
+        },
+        "append_with_note": {
+            "accepted": record_command(
+                queue_item_id,
+                "accepted",
+                queue_path,
+                ledger_path,
+                operator_note=operator_note,
+            ),
+            "rejected": record_command(
+                queue_item_id,
+                "rejected",
+                queue_path,
+                ledger_path,
+                operator_note=operator_note,
+            ),
+            "edited_template": record_command(
+                queue_item_id,
+                "edited",
+                queue_path,
+                ledger_path,
+                corrected_actions="<comma-separated-action-ids>",
+                operator_note=operator_note,
             ),
         },
     }
