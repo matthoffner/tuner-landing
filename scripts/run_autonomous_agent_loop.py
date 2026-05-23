@@ -326,12 +326,11 @@ def codex_command(prompt: str) -> list[str]:
     return [
         "codex",
         "exec",
-        "--cd",
+        "-C",
         str(ROOT),
-        "--ask-for-approval",
-        "never",
         "--sandbox",
         "danger-full-access",
+        "--dangerously-bypass-approvals-and-sandbox",
         prompt,
     ]
 
