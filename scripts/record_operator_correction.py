@@ -1138,6 +1138,15 @@ def output_format_label(output_format: str) -> str:
     return "text output" if output_format == "text" else "default JSON output"
 
 
+def command_preserves_output_format(command: Any, output_format: str) -> bool:
+    if not isinstance(command, str):
+        return False
+    actual_output_format = command_arg_value(command, "--format")
+    if output_format == "text":
+        return actual_output_format == "text"
+    return actual_output_format is None
+
+
 def operator_correction_smoke_check(
     queue_path: Path,
     ledger_path: Path,
@@ -1183,9 +1192,9 @@ def operator_correction_smoke_check(
             str(queue_item_id or "no next missing item"),
         )
         validation_next_missing_command = validation.get("next_missing_command")
-        validation_output_format = command_arg_value(validation_next_missing_command, "--format")
-        validation_command_passed = isinstance(validation_next_missing_command, str) and (
-            validation_output_format == "text" if output_format == "text" else validation_output_format is None
+        validation_command_passed = command_preserves_output_format(
+            validation_next_missing_command,
+            output_format,
         )
         add_smoke_check(
             checks,
@@ -1213,6 +1222,30 @@ def operator_correction_smoke_check(
             validation.get("next_missing_command") is None,
             "no next-missing command needed when every queue item is captured",
         )
+
+    progress_commands = {
+        "next_missing_command": progress.get("next_missing_command"),
+        "validation_command": progress.get("validation_command"),
+        "completion_validation_command": progress.get("completion_validation_command"),
+    }
+    progress_command_failures = [
+        name
+        for name, command in progress_commands.items()
+        if command is not None and not command_preserves_output_format(command, output_format)
+    ]
+    add_smoke_check(
+        checks,
+        "progress_command_output_format",
+        not progress_command_failures,
+        (
+            f"summary/progress commands keep {expected_format_label}"
+            if not progress_command_failures
+            else (
+                "summary/progress commands changed output mode: "
+                f"{', '.join(progress_command_failures)}"
+            )
+        ),
+    )
 
     dry_run_events: list[dict[str, Any]] = []
     if isinstance(item, dict) and isinstance(queue_item_id, str):
