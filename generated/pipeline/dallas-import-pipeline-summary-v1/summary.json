@@ -7,6 +7,20 @@
     "fixture_dir": "generated/fixtures/dallas-electrician-import-sequences-v2",
     "eval_dir": "generated/evals/dallas-electrician-import-sample-v2"
   },
+  "execution_readiness": {
+    "status": "ready",
+    "ready_for_next_import_records": true,
+    "gates": {
+      "contract_passed": true,
+      "operator_corrections_complete": true,
+      "correction_gate_passed": true,
+      "coverage_has_no_thin_groups": true,
+      "accepted_operator_patterns_present": true
+    },
+    "blockers": [],
+    "next_step": "Current Dallas permit-data MVP artifacts are executable; after adding or importing new Dallas rows, rerun the pipeline and inspect `workflow.accepted_patterns` plus `coverage.thin_groups` for new gaps.",
+    "run_command": "python3 scripts/run_dallas_import_pipeline.py"
+  },
   "contract": {
     "overall_passed": true,
     "checks_passed": 13,

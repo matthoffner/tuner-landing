@@ -4,6 +4,10 @@ Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
 - lane: editor
+- status: added a machine-readable Dallas import execution-readiness gate; `python3 scripts/run_dallas_import_pipeline.py` still refreshes imported `v2` through the strict correction ledger, and now writes `execution_readiness: ready` into `generated/pipeline/dallas-import-pipeline-summary-v1/summary.json` plus `summary.md` from contract pass state, complete operator corrections, correction-gate status, no thin coverage groups, and accepted pattern availability
+- files: scripts/run_dallas_import_pipeline.py, generated/pipeline/dallas-import-pipeline-summary-v1/summary.json, generated/pipeline/dallas-import-pipeline-summary-v1/summary.md, NEXT_TASK.md, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- next: run `python3 scripts/run_dallas_import_pipeline.py`, inspect `execution_readiness.status`, `execution_readiness.blockers`, `workflow.accepted_patterns`, and `coverage.thin_groups` in `generated/pipeline/dallas-import-pipeline-summary-v1/summary.json`, then widen or import new Dallas rows only when the readiness gate stays green
+- lane: editor
 - status: made the durable Dallas import pipeline summary operator-pattern aware; `python3 scripts/run_dallas_import_pipeline.py` still refreshes imported `v2` through the strict correction gate, and now writes all 6 accepted correction pattern snapshots into `generated/pipeline/dallas-import-pipeline-summary-v1/summary.json` plus `summary.md`
 - files: scripts/run_dallas_import_pipeline.py, generated/pipeline/dallas-import-pipeline-summary-v1/summary.json, generated/pipeline/dallas-import-pipeline-summary-v1/summary.md, NEXT_TASK.md, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
 - next: run `python3 scripts/run_dallas_import_pipeline.py`, inspect `workflow.accepted_patterns`, `latest_import`, and the coverage snapshot in `generated/pipeline/dallas-import-pipeline-summary-v1/summary.json`, then use the listed pattern-review command only when full operator-note examples are needed

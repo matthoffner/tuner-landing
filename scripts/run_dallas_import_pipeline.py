@@ -173,6 +173,50 @@ def summarize_operator_patterns(pattern_summary):
     return accepted_patterns
 
 
+def build_execution_readiness(contract, workflow, coverage, correction_gate):
+    queue_items = workflow.get("queue_items")
+    correction_count = workflow.get("operator_corrections_captured")
+    thin_counts = coverage.get("latest_thin_counts", {})
+
+    gates = {
+        "contract_passed": bool(contract.get("overall_passed")),
+        "operator_corrections_complete": (
+            isinstance(queue_items, int)
+            and isinstance(correction_count, int)
+            and queue_items > 0
+            and correction_count == queue_items
+        ),
+        "correction_gate_passed": correction_gate.get("status") == "passed",
+        "coverage_has_no_thin_groups": all(
+            count == 0 for count in thin_counts.values()
+        ),
+        "accepted_operator_patterns_present": (
+            (workflow.get("accepted_pattern_count") or 0) > 0
+        ),
+    }
+    blockers = [gate for gate, passed in gates.items() if not passed]
+    if blockers:
+        next_step = (
+            "Resolve the blocked readiness gates, then rerun "
+            "`python3 scripts/run_dallas_import_pipeline.py`."
+        )
+    else:
+        next_step = (
+            "Current Dallas permit-data MVP artifacts are executable; after adding "
+            "or importing new Dallas rows, rerun the pipeline and inspect "
+            "`workflow.accepted_patterns` plus `coverage.thin_groups` for new gaps."
+        )
+
+    return {
+        "status": "ready" if not blockers else "blocked",
+        "ready_for_next_import_records": not blockers,
+        "gates": gates,
+        "blockers": blockers,
+        "next_step": next_step,
+        "run_command": "python3 scripts/run_dallas_import_pipeline.py",
+    }
+
+
 def build_summary(args):
     contract = load_json(CONTRACT_PATH)
     workflow = load_json(WORKFLOW_PATH)
@@ -184,6 +228,31 @@ def build_summary(args):
     checks_passed = sum(1 for check in contract_checks if check.get("passed"))
     queue_items = workflow_summary.get("queue_items")
     correction_count = correction_summary.get("queue_items_with_corrections")
+    contract_summary = {
+        "overall_passed": contract.get("overall_passed"),
+        "checks_passed": checks_passed,
+        "checks_total": len(contract_checks),
+        "next_gap": contract.get("next_gap"),
+        "json_path": command_path(CONTRACT_PATH),
+        "report_path": command_path(CONTRACT_REPORT_PATH),
+    }
+    workflow_pipeline_summary = {
+        "queue_items": queue_items,
+        "operator_corrections_captured": correction_count,
+        "accepted_latest_corrections": pattern_summary.get(
+            "accepted_latest_corrections"
+        ),
+        "accepted_pattern_count": pattern_summary.get("accepted_pattern_count"),
+        "accepted_patterns": summarize_operator_patterns(pattern_summary),
+        "json_path": command_path(WORKFLOW_PATH),
+        "report_path": command_path(WORKFLOW_REPORT_PATH),
+    }
+    coverage_summary = summarize_coverage(coverage, args.dataset_id)
+    correction_gate = {
+        "required": not args.skip_correction_gate,
+        "status": "skipped" if args.skip_correction_gate else "passed",
+        "command": COMPLETION_GATE_COMMAND,
+    }
 
     return {
         "summary_id": "dallas-import-pipeline-summary-v1",
@@ -194,31 +263,16 @@ def build_summary(args):
             "fixture_dir": command_path(args.fixture_dir),
             "eval_dir": command_path(args.eval_dir),
         },
-        "contract": {
-            "overall_passed": contract.get("overall_passed"),
-            "checks_passed": checks_passed,
-            "checks_total": len(contract_checks),
-            "next_gap": contract.get("next_gap"),
-            "json_path": command_path(CONTRACT_PATH),
-            "report_path": command_path(CONTRACT_REPORT_PATH),
-        },
-        "workflow": {
-            "queue_items": queue_items,
-            "operator_corrections_captured": correction_count,
-            "accepted_latest_corrections": pattern_summary.get(
-                "accepted_latest_corrections"
-            ),
-            "accepted_pattern_count": pattern_summary.get("accepted_pattern_count"),
-            "accepted_patterns": summarize_operator_patterns(pattern_summary),
-            "json_path": command_path(WORKFLOW_PATH),
-            "report_path": command_path(WORKFLOW_REPORT_PATH),
-        },
-        "coverage": summarize_coverage(coverage, args.dataset_id),
-        "correction_gate": {
-            "required": not args.skip_correction_gate,
-            "status": "skipped" if args.skip_correction_gate else "passed",
-            "command": COMPLETION_GATE_COMMAND,
-        },
+        "execution_readiness": build_execution_readiness(
+            contract_summary,
+            workflow_pipeline_summary,
+            coverage_summary,
+            correction_gate,
+        ),
+        "contract": contract_summary,
+        "workflow": workflow_pipeline_summary,
+        "coverage": coverage_summary,
+        "correction_gate": correction_gate,
         "follow_up": {
             "patterns_command": PATTERNS_COMMAND,
             "completion_gate": COMPLETION_GATE_COMMAND,
@@ -244,11 +298,13 @@ def write_summary(summary):
     follow_up = summary["follow_up"]
     correction_gate = summary["correction_gate"]
     latest_import = summary["latest_import"]
+    execution_readiness = summary["execution_readiness"]
     accepted_patterns = workflow.get("accepted_patterns", [])
     import_counts = latest_import.get("counts", {})
     task_family_counts = latest_import.get("task_family_counts", {})
     contract_status = "PASS" if contract["overall_passed"] else "FAIL"
     gate_status = correction_gate["status"].upper()
+    readiness_status = execution_readiness["status"].upper()
     coverage_repeated = coverage.get("latest_repeated_counts", {})
     coverage_thin = coverage.get("latest_thin_counts", {})
     thin_groups = coverage.get("thin_groups", {})
@@ -285,8 +341,37 @@ def write_summary(summary):
             f"`{import_counts.get('tasks', 0)}` eval tasks, "
             f"`{import_counts.get('label_reviews', 0)}` reviewed labels"
         ),
+        f"- Execution readiness: {readiness_status}",
         f"- Correction gate: {gate_status}",
         f"- Next gap: {contract['next_gap']}",
+        "",
+        "## Execution Readiness",
+        "",
+        f"- Status: `{execution_readiness['status']}`",
+        (
+            "- Ready for next import records: "
+            f"`{str(execution_readiness['ready_for_next_import_records']).lower()}`"
+        ),
+        (
+            "- Passing gates: "
+            + ", ".join(
+                f"`{gate}`"
+                for gate, passed in execution_readiness["gates"].items()
+                if passed
+            )
+        ),
+        (
+            "- Blockers: "
+            + (
+                ", ".join(
+                    f"`{blocker}`" for blocker in execution_readiness["blockers"]
+                )
+                if execution_readiness["blockers"]
+                else "none"
+            )
+        ),
+        f"- Next step: {execution_readiness['next_step']}",
+        f"- Run command: `{execution_readiness['run_command']}`",
         "",
         "## Import Artifact Snapshot",
         "",
@@ -422,6 +507,7 @@ def print_summary(summary):
     contract = summary["contract"]
     workflow = summary["workflow"]
     coverage = summary["coverage"]
+    execution_readiness = summary["execution_readiness"]
     follow_up = summary["follow_up"]
     import_counts = summary["latest_import"].get("counts", {})
     accepted_patterns = workflow.get("accepted_patterns", [])
@@ -432,6 +518,13 @@ def print_summary(summary):
     print(f"dataset_id: {summary['dataset_id']}")
     print(f"contract_passed: {str(contract.get('overall_passed')).lower()}")
     print(f"contract_checks: {contract.get('checks_passed')}/{contract.get('checks_total')}")
+    print(f"execution_readiness: {execution_readiness.get('status')}")
+    print(
+        "ready_for_next_import_records: "
+        f"{str(execution_readiness.get('ready_for_next_import_records')).lower()}"
+    )
+    if execution_readiness.get("blockers"):
+        print(f"readiness_blockers: {', '.join(execution_readiness['blockers'])}")
     print(f"queue_items: {workflow.get('queue_items')}")
     print(
         "operator_corrections: "

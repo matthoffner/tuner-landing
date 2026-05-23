@@ -6,8 +6,18 @@
 - Operator corrections: `14/14`
 - Accepted patterns: `6`
 - Import artifacts: `14` permits, `40` inspections, `51` eval tasks, `20` reviewed labels
+- Execution readiness: READY
 - Correction gate: PASSED
 - Next gap: All current latest-import result states, failure reasons, pattern slices, and expected next-action groups have repeated support; keep the action queue and coverage report current as real Dallas import records widen.
+
+## Execution Readiness
+
+- Status: `ready`
+- Ready for next import records: `true`
+- Passing gates: `contract_passed`, `operator_corrections_complete`, `correction_gate_passed`, `coverage_has_no_thin_groups`, `accepted_operator_patterns_present`
+- Blockers: none
+- Next step: Current Dallas permit-data MVP artifacts are executable; after adding or importing new Dallas rows, rerun the pipeline and inspect `workflow.accepted_patterns` plus `coverage.thin_groups` for new gaps.
+- Run command: `python3 scripts/run_dallas_import_pipeline.py`
 
 ## Import Artifact Snapshot
 
