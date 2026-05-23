@@ -36,6 +36,19 @@ IMPORT_READINESS_JSON_COMMAND = (
 IMPORT_READINESS_SUMMARY_PATH = (
     ROOT / "generated" / "pipeline" / "dallas-import-pipeline-summary-v1" / "summary.json"
 )
+IMPORT_COUNT_FIELDS = (
+    "permits",
+    "inspections",
+    "tasks",
+    "label_reviews",
+    "source_records",
+)
+COVERAGE_THIN_COUNT_FIELDS = (
+    "result_states",
+    "failure_reasons",
+    "pattern_slices",
+    "next_action_groups",
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -301,6 +314,40 @@ def display_path(path: Path) -> str:
         return str(path)
 
 
+def count_snapshot(value: Any, fields: tuple[str, ...]) -> dict[str, int]:
+    if not isinstance(value, dict):
+        return {}
+    return {
+        field: raw_value
+        for field in fields
+        if isinstance((raw_value := value.get(field)), int)
+    }
+
+
+def import_readiness_snapshot_context(summary: dict[str, Any]) -> dict[str, Any]:
+    latest_import = summary.get("latest_import")
+    if not isinstance(latest_import, dict):
+        latest_import = {}
+    coverage = summary.get("coverage")
+    if not isinstance(coverage, dict):
+        coverage = {}
+    workflow = summary.get("workflow")
+    if not isinstance(workflow, dict):
+        workflow = {}
+
+    return {
+        "latest_import_counts": count_snapshot(
+            latest_import.get("counts"),
+            IMPORT_COUNT_FIELDS,
+        ),
+        "coverage_thin_counts": count_snapshot(
+            coverage.get("latest_thin_counts"),
+            COVERAGE_THIN_COUNT_FIELDS,
+        ),
+        "accepted_pattern_count": workflow.get("accepted_pattern_count"),
+    }
+
+
 def import_readiness_snapshot(path: Path = IMPORT_READINESS_SUMMARY_PATH) -> dict[str, Any]:
     summary_path = display_path(path)
     report_path = display_path(path.with_name("summary.md"))
@@ -314,6 +361,9 @@ def import_readiness_snapshot(path: Path = IMPORT_READINESS_SUMMARY_PATH) -> dic
             "summary_report_path": report_path,
             "refresh_command": IMPORT_READINESS_COMMAND,
             "refresh_json_command": IMPORT_READINESS_JSON_COMMAND,
+            "latest_import_counts": {},
+            "coverage_thin_counts": {},
+            "accepted_pattern_count": None,
         }
 
     try:
@@ -329,8 +379,12 @@ def import_readiness_snapshot(path: Path = IMPORT_READINESS_SUMMARY_PATH) -> dic
             "summary_report_path": report_path,
             "refresh_command": IMPORT_READINESS_COMMAND,
             "refresh_json_command": IMPORT_READINESS_JSON_COMMAND,
+            "latest_import_counts": {},
+            "coverage_thin_counts": {},
+            "accepted_pattern_count": None,
         }
 
+    snapshot_context = import_readiness_snapshot_context(summary)
     readiness = summary.get("execution_readiness")
     if not isinstance(readiness, dict):
         return {
@@ -342,6 +396,7 @@ def import_readiness_snapshot(path: Path = IMPORT_READINESS_SUMMARY_PATH) -> dic
             "summary_report_path": report_path,
             "refresh_command": IMPORT_READINESS_COMMAND,
             "refresh_json_command": IMPORT_READINESS_JSON_COMMAND,
+            **snapshot_context,
         }
 
     blockers = readiness.get("blockers", [])
@@ -358,6 +413,7 @@ def import_readiness_snapshot(path: Path = IMPORT_READINESS_SUMMARY_PATH) -> dic
         or IMPORT_READINESS_COMMAND,
         "refresh_json_command": readiness.get("summary_only_require_ready_json_command")
         or IMPORT_READINESS_JSON_COMMAND,
+        **snapshot_context,
     }
 
 
@@ -997,6 +1053,28 @@ def format_progress_text(progress: dict[str, Any]) -> str:
                 "Ready for next import records: "
                 f"{str(readiness.get('ready_for_next_import_records')).lower()}"
             )
+            latest_counts = readiness.get("latest_import_counts", {})
+            if isinstance(latest_counts, dict) and latest_counts:
+                lines.append(
+                    "Last import counts: "
+                    f"permits={latest_counts.get('permits', 0)}, "
+                    f"inspections={latest_counts.get('inspections', 0)}, "
+                    f"tasks={latest_counts.get('tasks', 0)}, "
+                    f"label_reviews={latest_counts.get('label_reviews', 0)}, "
+                    f"source_records={latest_counts.get('source_records', 0)}"
+                )
+            accepted_pattern_count = readiness.get("accepted_pattern_count")
+            if accepted_pattern_count is not None:
+                lines.append(f"Last accepted patterns: {accepted_pattern_count}")
+            coverage_thin_counts = readiness.get("coverage_thin_counts", {})
+            if isinstance(coverage_thin_counts, dict) and coverage_thin_counts:
+                lines.append(
+                    "Last coverage thin counts: "
+                    f"result_states={coverage_thin_counts.get('result_states', 0)}, "
+                    f"failure_reasons={coverage_thin_counts.get('failure_reasons', 0)}, "
+                    f"pattern_slices={coverage_thin_counts.get('pattern_slices', 0)}, "
+                    f"next_action_groups={coverage_thin_counts.get('next_action_groups', 0)}"
+                )
             blockers = readiness.get("blockers", [])
             if isinstance(blockers, list) and blockers:
                 lines.append(f"Readiness blockers: {format_action_list(blockers)}")
@@ -1618,11 +1696,30 @@ def operator_correction_smoke_check(
         ),
     )
     readiness_snapshot = progress.get("last_import_readiness_summary")
+    readiness_snapshot_counts_passed = False
+    if isinstance(readiness_snapshot, dict):
+        readiness_status = readiness_snapshot.get("status")
+        latest_import_counts = readiness_snapshot.get("latest_import_counts", {})
+        coverage_thin_counts = readiness_snapshot.get("coverage_thin_counts", {})
+        if readiness_status in {"missing", "unreadable", "unavailable"}:
+            readiness_snapshot_counts_passed = True
+        else:
+            readiness_snapshot_counts_passed = (
+                isinstance(latest_import_counts, dict)
+                and isinstance(latest_import_counts.get("permits"), int)
+                and isinstance(latest_import_counts.get("inspections"), int)
+                and isinstance(latest_import_counts.get("tasks"), int)
+                and isinstance(coverage_thin_counts, dict)
+                and isinstance(coverage_thin_counts.get("result_states"), int)
+                and isinstance(coverage_thin_counts.get("next_action_groups"), int)
+                and isinstance(readiness_snapshot.get("accepted_pattern_count"), int)
+            )
     readiness_snapshot_passed = (
         isinstance(readiness_snapshot, dict)
         and isinstance(readiness_snapshot.get("summary_json_path"), str)
         and readiness_snapshot.get("refresh_command") == IMPORT_READINESS_COMMAND
         and readiness_snapshot.get("refresh_json_command") == IMPORT_READINESS_JSON_COMMAND
+        and readiness_snapshot_counts_passed
         if missing_count == 0
         else readiness_snapshot is None
     )
@@ -1631,7 +1728,7 @@ def operator_correction_smoke_check(
         "progress_import_readiness_snapshot",
         readiness_snapshot_passed,
         (
-            "summary includes the last durable import-readiness snapshot after complete correction capture"
+            "summary includes the last durable import-readiness snapshot and import counts after complete correction capture"
             if missing_count == 0
             else "summary with missing corrections does not expose the last import-readiness snapshot"
         ),
