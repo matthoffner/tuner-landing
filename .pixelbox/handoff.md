@@ -4,6 +4,10 @@ Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
 - lane: editor
+- status: made non-server operator-correction capture easier to execute; `scripts/record_operator_correction.py --list-queue-items` now prints current Dallas queue IDs, priorities, trigger context, and recommended action IDs before an operator records a correction
+- files: scripts/record_operator_correction.py, README.md, NEXT_TASK.md, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- next: run `python3 scripts/record_operator_correction.py --list-queue-items`, choose a queue item, then dry-run or append an accepted/rejected/edited correction and regenerate the workflow summary
+- lane: editor
 - status: added a non-server operator-correction capture path; `scripts/operator_corrections.py` now centralizes Dallas correction validation/event writing and `scripts/record_operator_correction.py` can dry-run or append one accepted/rejected/edited queue decision against the same ledger used by the cockpit
 - files: scripts/operator_corrections.py, scripts/record_operator_correction.py, scripts/serve_mvp_cockpit.py, README.md, NEXT_TASK.md, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
 - next: use the browser queue or `python3 scripts/record_operator_correction.py --queue-item-id <id> --decision <accepted|rejected|edited>` to capture real Dallas operator decisions, then regenerate the workflow summary
