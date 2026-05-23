@@ -4,10 +4,10 @@ This artifact turns reviewed Dallas electrician inspection labels into a concret
 
 ## Summary
 
-- Queue items: `25`
-- Priority counts: `{"high": 6, "medium": 19}`
-- Trigger result counts: `{"fail": 6, "not_ready": 4, "partial": 15}`
-- Operator correction events: `25`
+- Queue items: `26`
+- Priority counts: `{"high": 6, "medium": 20}`
+- Trigger result counts: `{"fail": 6, "not_ready": 4, "partial": 16}`
+- Operator correction events: `26`
 - Operator correction ledger: `generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl`
 - Accepted correction patterns: `6`
 
@@ -26,14 +26,14 @@ This artifact turns reviewed Dallas electrician inspection labels into a concret
 
 ### operator-pattern:accepted:0002
 
-- Queue items: `5`
+- Queue items: `6`
 - Actions: `Complete remaining work, Schedule reinspection`
 - Action IDs: `complete_remaining_work, schedule_reinspection`
-- Trigger results: `{"partial": 5}`
-- Failure reasons: `{"incomplete_work": 5}`
-- Inspection types: `{"rough_in": 5}`
-- Follow-up results: `{"pass": 5}`
-- Example permits: `ELP-2026-0203, ELZ-2026-0215, ELZ-2026-0216, ELZ-2026-0225, ELZ-2026-0226`
+- Trigger results: `{"partial": 6}`
+- Failure reasons: `{"incomplete_work": 6}`
+- Inspection types: `{"rough_in": 6}`
+- Follow-up results: `{"pass": 6}`
+- Example permits: `ELP-2026-0203, ELZ-2026-0215, ELZ-2026-0216, ELZ-2026-0225, ELZ-2026-0226, ELZ-2026-0227`
 
 ### operator-pattern:accepted:0003
 
@@ -330,3 +330,13 @@ This artifact turns reviewed Dallas electrician inspection labels into a concret
 - Recommended actions: `Complete remaining work, Schedule reinspection`
 - Follow-up observed: `2026-05-22` `correction_followup` -> `pass`
 - Evidence: Stairwell branch wiring repaired but replacement smoke alarms and cover trim remained incomplete before rough-in approval.
+
+### ELZ-2026-0227 - 2848 S EWING AVE DALLAS TX 75216
+
+- Priority: `medium`
+- Contractor: `Cedars South Electric`
+- Trigger: `2026-05-18` `rough_in` -> `partial`
+- Failure reason: `incomplete_work`
+- Recommended actions: `Complete remaining work, Schedule reinspection`
+- Follow-up observed: `2026-05-23` `correction_followup` -> `pass`
+- Evidence: Attic branch wiring repaired but replacement light fixtures and cover trim remained incomplete before rough-in approval.
