@@ -13,6 +13,7 @@ from typing import Any
 from operator_corrections import (
     DEFAULT_LEDGER_PATH,
     DEFAULT_QUEUE_PATH,
+    ROOT,
     VALID_CORRECTION_DECISIONS,
     append_operator_correction,
     build_operator_correction_event,
@@ -31,6 +32,9 @@ IMPORT_READINESS_COMMAND = (
 )
 IMPORT_READINESS_JSON_COMMAND = (
     "python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json"
+)
+IMPORT_READINESS_SUMMARY_PATH = (
+    ROOT / "generated" / "pipeline" / "dallas-import-pipeline-summary-v1" / "summary.json"
 )
 
 
@@ -220,6 +224,9 @@ def correction_progress(
         ),
         "import_readiness_command": IMPORT_READINESS_COMMAND if not missing_ids else None,
         "import_readiness_json_command": IMPORT_READINESS_JSON_COMMAND if not missing_ids else None,
+        "last_import_readiness_summary": (
+            import_readiness_snapshot() if not missing_ids else None
+        ),
     }
 
 
@@ -292,6 +299,66 @@ def display_path(path: Path) -> str:
         return path.resolve().relative_to(Path.cwd().resolve()).as_posix()
     except ValueError:
         return str(path)
+
+
+def import_readiness_snapshot(path: Path = IMPORT_READINESS_SUMMARY_PATH) -> dict[str, Any]:
+    summary_path = display_path(path)
+    report_path = display_path(path.with_name("summary.md"))
+    if not path.exists():
+        return {
+            "status": "missing",
+            "ready_for_next_import_records": None,
+            "blockers": [],
+            "dataset_id": None,
+            "summary_json_path": summary_path,
+            "summary_report_path": report_path,
+            "refresh_command": IMPORT_READINESS_COMMAND,
+            "refresh_json_command": IMPORT_READINESS_JSON_COMMAND,
+        }
+
+    try:
+        summary = read_json(path)
+    except (OSError, json.JSONDecodeError, ValueError) as exc:
+        return {
+            "status": "unreadable",
+            "ready_for_next_import_records": None,
+            "blockers": ["pipeline_summary_unreadable"],
+            "error": str(exc),
+            "dataset_id": None,
+            "summary_json_path": summary_path,
+            "summary_report_path": report_path,
+            "refresh_command": IMPORT_READINESS_COMMAND,
+            "refresh_json_command": IMPORT_READINESS_JSON_COMMAND,
+        }
+
+    readiness = summary.get("execution_readiness")
+    if not isinstance(readiness, dict):
+        return {
+            "status": "unavailable",
+            "ready_for_next_import_records": None,
+            "blockers": ["execution_readiness_missing"],
+            "dataset_id": summary.get("dataset_id"),
+            "summary_json_path": summary_path,
+            "summary_report_path": report_path,
+            "refresh_command": IMPORT_READINESS_COMMAND,
+            "refresh_json_command": IMPORT_READINESS_JSON_COMMAND,
+        }
+
+    blockers = readiness.get("blockers", [])
+    if not isinstance(blockers, list):
+        blockers = []
+    return {
+        "status": readiness.get("status"),
+        "ready_for_next_import_records": readiness.get("ready_for_next_import_records"),
+        "blockers": blockers,
+        "dataset_id": summary.get("dataset_id"),
+        "summary_json_path": summary_path,
+        "summary_report_path": report_path,
+        "refresh_command": readiness.get("summary_only_require_ready_command")
+        or IMPORT_READINESS_COMMAND,
+        "refresh_json_command": readiness.get("summary_only_require_ready_json_command")
+        or IMPORT_READINESS_JSON_COMMAND,
+    }
 
 
 def read_only_command(
@@ -919,6 +986,20 @@ def format_progress_text(progress: dict[str, Any]) -> str:
             lines.append(
                 f"Import readiness JSON gate: {progress.get('import_readiness_json_command')}"
             )
+        readiness = progress.get("last_import_readiness_summary")
+        if isinstance(readiness, dict):
+            lines.append(
+                "Last import readiness summary: "
+                f"{readiness.get('status')} "
+                f"({readiness.get('summary_json_path')})"
+            )
+            lines.append(
+                "Ready for next import records: "
+                f"{str(readiness.get('ready_for_next_import_records')).lower()}"
+            )
+            blockers = readiness.get("blockers", [])
+            if isinstance(blockers, list) and blockers:
+                lines.append(f"Readiness blockers: {format_action_list(blockers)}")
     lines.append(f"Validate ledger: {progress.get('validation_command')}")
     lines.append(f"Completion gate: {progress.get('completion_validation_command')}")
     return "\n".join(lines)
@@ -1536,6 +1617,25 @@ def operator_correction_smoke_check(
             else "summary with missing corrections does not advertise import-readiness gates"
         ),
     )
+    readiness_snapshot = progress.get("last_import_readiness_summary")
+    readiness_snapshot_passed = (
+        isinstance(readiness_snapshot, dict)
+        and isinstance(readiness_snapshot.get("summary_json_path"), str)
+        and readiness_snapshot.get("refresh_command") == IMPORT_READINESS_COMMAND
+        and readiness_snapshot.get("refresh_json_command") == IMPORT_READINESS_JSON_COMMAND
+        if missing_count == 0
+        else readiness_snapshot is None
+    )
+    add_smoke_check(
+        checks,
+        "progress_import_readiness_snapshot",
+        readiness_snapshot_passed,
+        (
+            "summary includes the last durable import-readiness snapshot after complete correction capture"
+            if missing_count == 0
+            else "summary with missing corrections does not expose the last import-readiness snapshot"
+        ),
+    )
 
     next_missing_followup_commands = {
         "validation_command": next_missing.get("validation_command"),
@@ -1633,6 +1733,7 @@ def operator_correction_smoke_check(
             fixture_hides_readiness = (
                 fixture_progress.get("import_readiness_command") is None
                 and fixture_progress.get("import_readiness_json_command") is None
+                and fixture_progress.get("last_import_readiness_summary") is None
             )
             add_smoke_check(
                 checks,
@@ -1974,6 +2075,7 @@ def operator_correction_smoke_check(
         "patterns_command": progress.get("patterns_command"),
         "import_readiness_command": progress.get("import_readiness_command"),
         "import_readiness_json_command": progress.get("import_readiness_json_command"),
+        "last_import_readiness_summary": progress.get("last_import_readiness_summary"),
     }
     if temp_smoke_dir is not None:
         temp_smoke_dir.cleanup()
@@ -2034,6 +2136,13 @@ def format_smoke_check_text(smoke_check: dict[str, Any]) -> str:
     if smoke_check.get("import_readiness_json_command"):
         lines.append(
             f"Import readiness JSON gate: {smoke_check.get('import_readiness_json_command')}"
+        )
+    readiness = smoke_check.get("last_import_readiness_summary")
+    if isinstance(readiness, dict):
+        lines.append(
+            "Last import readiness summary: "
+            f"{readiness.get('status')} "
+            f"({readiness.get('summary_json_path')})"
         )
     lines.append(f"Validate ledger: {smoke_check.get('validation_command')}")
     lines.append(f"Completion gate: {smoke_check.get('completion_validation_command')}")
