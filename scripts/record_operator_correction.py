@@ -43,6 +43,12 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="print correction ledger progress without appending corrections",
     )
+    parser.add_argument(
+        "--format",
+        choices=("json", "text"),
+        default="json",
+        help="output format for --summary, --list-queue-items, or --next-missing",
+    )
     parser.add_argument("--queue-item-id")
     parser.add_argument("--decision", choices=("accepted", "rejected", "edited"))
     parser.add_argument(
@@ -312,6 +318,183 @@ def suggested_record_commands(item: dict[str, Any], queue_path: Path, ledger_pat
     }
 
 
+def format_action_list(actions: Any) -> str:
+    if not isinstance(actions, list) or not actions:
+        return "(none)"
+    return ", ".join(str(action) for action in actions)
+
+
+def format_decision_counts(counts: Any) -> str:
+    if not isinstance(counts, dict) or not counts:
+        return "(none)"
+    return ", ".join(f"{decision}={count}" for decision, count in sorted(counts.items()))
+
+
+def pluralize(value: Any, singular: str, plural: str) -> str:
+    return singular if value == 1 else plural
+
+
+def format_progress_text(progress: dict[str, Any]) -> str:
+    summary = progress.get("operator_correction_summary", {})
+    if not isinstance(summary, dict):
+        summary = {}
+    missing_ids = progress.get("missing_queue_item_ids", [])
+    if not isinstance(missing_ids, list):
+        missing_ids = []
+
+    lines = [
+        "Dallas operator-correction progress",
+        f"Workflow: {progress.get('workflow_id')}",
+        (
+            "Queue items: "
+            f"{progress.get('queue_items')} total, "
+            f"{progress.get('queue_items_with_corrections')} captured, "
+            f"{progress.get('queue_items_missing_corrections')} missing"
+        ),
+        f"Ledger: {summary.get('ledger_path')}",
+        f"Events: {summary.get('total_events', 0)}",
+        f"Decisions: {format_decision_counts(summary.get('decision_counts'))}",
+        f"Invalid ledger lines: {summary.get('invalid_lines', 0)}",
+    ]
+    if missing_ids:
+        lines.append("Missing queue items:")
+        lines.extend(f"- {queue_item_id}" for queue_item_id in missing_ids)
+    else:
+        lines.append("Missing queue items: (none)")
+    return "\n".join(lines)
+
+
+def format_action_catalog_text(catalog: Any) -> list[str]:
+    if not isinstance(catalog, dict):
+        return ["Known action IDs: (none)"]
+
+    actions = catalog.get("actions", [])
+    if not isinstance(actions, list) or not actions:
+        return ["Known action IDs: (none)"]
+
+    lines = ["Known action IDs for edited decisions:"]
+    for action in actions:
+        if not isinstance(action, dict):
+            continue
+        count = action.get("queue_item_count")
+        lines.append(f"- {action.get('action_id')} ({count} {pluralize(count, 'queue item', 'queue items')})")
+    return lines
+
+
+def format_queue_listing_text(listing: dict[str, Any]) -> str:
+    lines = [
+        f"Dallas correction queue ({listing.get('filter')})",
+        f"Workflow: {listing.get('workflow_id')}",
+        (
+            "Queue items: "
+            f"{listing.get('queue_items')} total, "
+            f"{listing.get('queue_items_with_corrections')} captured, "
+            f"{listing.get('queue_items_missing_corrections')} missing, "
+            f"{listing.get('listed_queue_items')} listed"
+        ),
+        "",
+        *format_action_catalog_text(listing.get("action_catalog")),
+        "",
+        "Queue items:",
+    ]
+
+    items = listing.get("items", [])
+    if not isinstance(items, list) or not items:
+        lines.append("- (none)")
+        return "\n".join(lines)
+
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        correction = item.get("correction", {})
+        if not isinstance(correction, dict):
+            correction = {}
+        correction_status = correction.get("status")
+        correction_detail = correction_status
+        if correction_status == "captured":
+            correction_detail = (
+                f"captured {correction.get('decision')} "
+                f"at {correction.get('captured_at')} "
+                f"as {format_action_list(correction.get('corrected_actions'))}"
+            )
+        lines.extend(
+            [
+                f"- {item.get('queue_item_id')} [{item.get('priority')}]",
+                f"  Permit: {item.get('source_permit_number')}",
+                f"  Address: {item.get('address')}",
+                f"  Contractor: {item.get('contractor')}",
+                (
+                    "  Trigger: "
+                    f"{item.get('trigger_date')} "
+                    f"{item.get('trigger_type')} "
+                    f"{item.get('trigger_result')} / "
+                    f"{item.get('failure_reason')}"
+                ),
+                f"  Recommended actions: {format_action_list(item.get('recommended_actions'))}",
+                f"  Correction: {correction_detail}",
+            ]
+        )
+    return "\n".join(lines)
+
+
+def format_command_group(commands: Any, group_name: str) -> list[str]:
+    if not isinstance(commands, dict):
+        return [f"{group_name}: (none)"]
+    return [
+        f"{group_name}:",
+        f"- accepted: {commands.get('accepted')}",
+        f"- rejected: {commands.get('rejected')}",
+        f"- edited: {commands.get('edited_template')}",
+    ]
+
+
+def format_next_missing_text(next_missing: dict[str, Any]) -> str:
+    item = next_missing.get("item")
+    lines = [
+        "Dallas next missing operator correction",
+        f"Workflow: {next_missing.get('workflow_id')}",
+        (
+            "Queue items: "
+            f"{next_missing.get('queue_items')} total, "
+            f"{next_missing.get('queue_items_with_corrections')} captured, "
+            f"{next_missing.get('queue_items_missing_corrections')} missing"
+        ),
+    ]
+    if not isinstance(item, dict):
+        lines.append("Next queue item: (none)")
+        return "\n".join(lines)
+
+    lines.extend(
+        [
+            f"Queue item: {item.get('queue_item_id')} [{item.get('priority')}]",
+            f"Permit: {item.get('source_permit_number')}",
+            f"Address: {item.get('address')}",
+            f"Contractor: {item.get('contractor')}",
+            (
+                "Trigger: "
+                f"{item.get('trigger_date')} "
+                f"{item.get('trigger_type')} "
+                f"{item.get('trigger_result')} / "
+                f"{item.get('failure_reason')}"
+            ),
+            f"Recommended actions: {format_action_list(item.get('recommended_actions'))}",
+            "",
+            *format_action_catalog_text(next_missing.get("action_catalog")),
+            "",
+        ]
+    )
+
+    commands = next_missing.get("suggested_commands", {})
+    if not isinstance(commands, dict):
+        commands = {}
+    lines.extend(format_command_group(commands.get("dry_run"), "Dry-run commands"))
+    lines.append("")
+    lines.extend(format_command_group(commands.get("append"), "Append commands"))
+    lines.append("")
+    lines.extend(format_command_group(commands.get("append_with_note"), "Append commands with note"))
+    return "\n".join(lines)
+
+
 def next_missing_correction(queue_path: Path, ledger_path: Path) -> dict[str, Any]:
     listing = queue_listing(queue_path, ledger_path, missing_only=True)
     items = listing["items"]
@@ -331,13 +514,25 @@ def next_missing_correction(queue_path: Path, ledger_path: Path) -> dict[str, An
 def main() -> int:
     args = parse_args()
     if args.list_queue_items:
-        print(json.dumps(queue_listing(args.queue_path, args.ledger_path, args.missing_only), indent=2, sort_keys=True))
+        listing = queue_listing(args.queue_path, args.ledger_path, args.missing_only)
+        if args.format == "text":
+            print(format_queue_listing_text(listing))
+        else:
+            print(json.dumps(listing, indent=2, sort_keys=True))
         return 0
     if args.next_missing:
-        print(json.dumps(next_missing_correction(args.queue_path, args.ledger_path), indent=2, sort_keys=True))
+        next_missing = next_missing_correction(args.queue_path, args.ledger_path)
+        if args.format == "text":
+            print(format_next_missing_text(next_missing))
+        else:
+            print(json.dumps(next_missing, indent=2, sort_keys=True))
         return 0
     if args.summary:
-        print(json.dumps(correction_progress(args.queue_path, args.ledger_path), indent=2, sort_keys=True))
+        progress = correction_progress(args.queue_path, args.ledger_path)
+        if args.format == "text":
+            print(format_progress_text(progress))
+        else:
+            print(json.dumps(progress, indent=2, sort_keys=True))
         return 0
 
     payload = {

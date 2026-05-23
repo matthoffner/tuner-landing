@@ -4,6 +4,10 @@ Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
 - lane: editor
+- status: made the non-server Dallas correction pass more operator-readable; `scripts/record_operator_correction.py --format text` now prints work-order style output for summary, queue listing, and next-missing flows while JSON remains the default
+- files: scripts/record_operator_correction.py, README.md, NEXT_TASK.md, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- next: run `python3 scripts/record_operator_correction.py --next-missing --format text`, dry-run the selected accepted/rejected/edited command, then append a real Dallas operator decision with `--operator-note` when useful
+- lane: editor
 - status: made edited Dallas correction capture more self-contained; `scripts/record_operator_correction.py --list-queue-items` and `--next-missing` now include the current action ID catalog with queue-item counts
 - files: scripts/record_operator_correction.py, README.md, NEXT_TASK.md, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
 - next: run `python3 scripts/record_operator_correction.py --next-missing`, use `action_catalog.action_ids` to fill edited corrections when needed, then append a real accepted/rejected/edited Dallas operator decision
