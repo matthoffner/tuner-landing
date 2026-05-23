@@ -73,6 +73,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--operator-note", default="")
     parser.add_argument("--source", default="operator-correction-cli")
     parser.add_argument(
+        "--require-missing",
+        action="store_true",
+        help="refuse to dry-run or append if the selected queue item already has a captured correction",
+    )
+    parser.add_argument(
         "--captured-at",
         default=None,
         help="optional ISO timestamp for deterministic replay, for example 2026-05-23T00:00:00Z",
@@ -98,6 +103,12 @@ def parse_args() -> argparse.Namespace:
                 "or --validate-ledger is used"
             )
     return args
+
+
+def queue_item_has_correction(ledger_path: Path, queue_item_id: str) -> bool:
+    summary = correction_summary(ledger_path)
+    latest_by_queue_item = summary.get("latest_by_queue_item", {})
+    return isinstance(latest_by_queue_item, dict) and queue_item_id in latest_by_queue_item
 
 
 def correction_progress(queue_path: Path, ledger_path: Path) -> dict[str, Any]:
@@ -364,6 +375,7 @@ def record_command(
     corrected_actions: str | None = None,
     operator_note: str | None = None,
     use_next_missing: bool = False,
+    require_missing: bool = False,
 ) -> str:
     args = [
         "python3",
@@ -381,141 +393,88 @@ def record_command(
         args.extend(["--corrected-actions", corrected_actions])
     if operator_note is not None:
         args.extend(["--operator-note", operator_note])
+    if require_missing:
+        args.append("--require-missing")
     if dry_run:
         args.append("--dry-run")
     return shlex.join(args)
+
+
+def guarded_record_command_group(
+    queue_item_id: str | None,
+    queue_path: Path,
+    ledger_path: Path,
+    dry_run: bool = False,
+    operator_note: str | None = None,
+    use_next_missing: bool = False,
+) -> dict[str, str]:
+    return {
+        "accepted": record_command(
+            queue_item_id,
+            "accepted",
+            queue_path,
+            ledger_path,
+            dry_run=dry_run,
+            operator_note=operator_note,
+            use_next_missing=use_next_missing,
+            require_missing=True,
+        ),
+        "rejected": record_command(
+            queue_item_id,
+            "rejected",
+            queue_path,
+            ledger_path,
+            dry_run=dry_run,
+            operator_note=operator_note,
+            use_next_missing=use_next_missing,
+            require_missing=True,
+        ),
+        "edited_template": record_command(
+            queue_item_id,
+            "edited",
+            queue_path,
+            ledger_path,
+            dry_run=dry_run,
+            corrected_actions="<comma-separated-action-ids>",
+            operator_note=operator_note,
+            use_next_missing=use_next_missing,
+            require_missing=True,
+        ),
+    }
 
 
 def suggested_record_commands(item: dict[str, Any], queue_path: Path, ledger_path: Path) -> dict[str, Any]:
     queue_item_id = str(item.get("queue_item_id", ""))
     operator_note = "<operator-note>"
     return {
-        "dry_run_next_missing": {
-            "accepted": record_command(None, "accepted", queue_path, ledger_path, dry_run=True, use_next_missing=True),
-            "rejected": record_command(None, "rejected", queue_path, ledger_path, dry_run=True, use_next_missing=True),
-            "edited_template": record_command(
-                None,
-                "edited",
-                queue_path,
-                ledger_path,
-                dry_run=True,
-                corrected_actions="<comma-separated-action-ids>",
-                use_next_missing=True,
-            ),
-        },
-        "append_next_missing": {
-            "accepted": record_command(None, "accepted", queue_path, ledger_path, use_next_missing=True),
-            "rejected": record_command(None, "rejected", queue_path, ledger_path, use_next_missing=True),
-            "edited_template": record_command(
-                None,
-                "edited",
-                queue_path,
-                ledger_path,
-                corrected_actions="<comma-separated-action-ids>",
-                use_next_missing=True,
-            ),
-        },
-        "append_next_missing_with_note": {
-            "accepted": record_command(
-                None,
-                "accepted",
-                queue_path,
-                ledger_path,
-                operator_note=operator_note,
-                use_next_missing=True,
-            ),
-            "rejected": record_command(
-                None,
-                "rejected",
-                queue_path,
-                ledger_path,
-                operator_note=operator_note,
-                use_next_missing=True,
-            ),
-            "edited_template": record_command(
-                None,
-                "edited",
-                queue_path,
-                ledger_path,
-                corrected_actions="<comma-separated-action-ids>",
-                operator_note=operator_note,
-                use_next_missing=True,
-            ),
-        },
-        "dry_run": {
-            "accepted": record_command(queue_item_id, "accepted", queue_path, ledger_path, dry_run=True),
-            "rejected": record_command(queue_item_id, "rejected", queue_path, ledger_path, dry_run=True),
-            "edited_template": record_command(
-                queue_item_id,
-                "edited",
-                queue_path,
-                ledger_path,
-                dry_run=True,
-                corrected_actions="<comma-separated-action-ids>",
-            ),
-        },
-        "dry_run_with_note": {
-            "accepted": record_command(
-                queue_item_id,
-                "accepted",
-                queue_path,
-                ledger_path,
-                dry_run=True,
-                operator_note=operator_note,
-            ),
-            "rejected": record_command(
-                queue_item_id,
-                "rejected",
-                queue_path,
-                ledger_path,
-                dry_run=True,
-                operator_note=operator_note,
-            ),
-            "edited_template": record_command(
-                queue_item_id,
-                "edited",
-                queue_path,
-                ledger_path,
-                dry_run=True,
-                corrected_actions="<comma-separated-action-ids>",
-                operator_note=operator_note,
-            ),
-        },
-        "append": {
-            "accepted": record_command(queue_item_id, "accepted", queue_path, ledger_path),
-            "rejected": record_command(queue_item_id, "rejected", queue_path, ledger_path),
-            "edited_template": record_command(
-                queue_item_id,
-                "edited",
-                queue_path,
-                ledger_path,
-                corrected_actions="<comma-separated-action-ids>",
-            ),
-        },
-        "append_with_note": {
-            "accepted": record_command(
-                queue_item_id,
-                "accepted",
-                queue_path,
-                ledger_path,
-                operator_note=operator_note,
-            ),
-            "rejected": record_command(
-                queue_item_id,
-                "rejected",
-                queue_path,
-                ledger_path,
-                operator_note=operator_note,
-            ),
-            "edited_template": record_command(
-                queue_item_id,
-                "edited",
-                queue_path,
-                ledger_path,
-                corrected_actions="<comma-separated-action-ids>",
-                operator_note=operator_note,
-            ),
-        },
+        "dry_run_next_missing": guarded_record_command_group(
+            None, queue_path, ledger_path, dry_run=True, use_next_missing=True
+        ),
+        "append_next_missing": guarded_record_command_group(
+            None, queue_path, ledger_path, use_next_missing=True
+        ),
+        "append_next_missing_with_note": guarded_record_command_group(
+            None,
+            queue_path,
+            ledger_path,
+            operator_note=operator_note,
+            use_next_missing=True,
+        ),
+        "dry_run": guarded_record_command_group(queue_item_id, queue_path, ledger_path, dry_run=True),
+        "dry_run_with_note": guarded_record_command_group(
+            queue_item_id,
+            queue_path,
+            ledger_path,
+            dry_run=True,
+            operator_note=operator_note,
+        ),
+        "append": guarded_record_command_group(queue_item_id, queue_path, ledger_path),
+        "append_with_note": guarded_record_command_group(
+            queue_item_id,
+            queue_path,
+            ledger_path,
+            operator_note=operator_note,
+        ),
     }
 
 
@@ -786,6 +745,16 @@ def main() -> int:
         if not isinstance(item, dict) or not isinstance(item.get("queue_item_id"), str):
             raise SystemExit("No queue items are missing corrections")
         queue_item_id = item["queue_item_id"]
+
+    if (
+        args.require_missing
+        and queue_item_id
+        and queue_item_has_correction(args.ledger_path, queue_item_id)
+    ):
+        raise SystemExit(
+            f"error: queue_item_id already has a captured correction: {queue_item_id}; "
+            "omit --require-missing to append an intentional update"
+        )
 
     payload = {
         "queue_item_id": queue_item_id,
