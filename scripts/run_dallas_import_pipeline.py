@@ -2,6 +2,7 @@
 
 import argparse
 import csv
+import hashlib
 import json
 import subprocess
 import sys
@@ -257,6 +258,24 @@ def csv_header(path):
         return [cell.strip() for cell in header if cell.strip()]
 
 
+def file_fingerprint(path):
+    resolved = repo_path(path)
+    if not resolved.exists():
+        return None
+
+    digest = hashlib.sha256()
+    byte_count = 0
+    with resolved.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(65536), b""):
+            digest.update(chunk)
+            byte_count += len(chunk)
+    return {
+        "algorithm": "sha256",
+        "byte_count": byte_count,
+        "sha256": digest.hexdigest(),
+    }
+
+
 def csv_dict_data_rows(path):
     resolved = repo_path(path)
     if not resolved.exists():
@@ -295,6 +314,14 @@ def raw_file_row_counts(raw_dir):
     resolved_raw_dir = repo_path(raw_dir)
     return {
         file_name: csv_data_row_count(resolved_raw_dir / file_name)
+        for file_name in RAW_IMPORT_FILE_NAMES
+    }
+
+
+def raw_file_fingerprints(raw_dir):
+    resolved_raw_dir = repo_path(raw_dir)
+    return {
+        file_name: file_fingerprint(resolved_raw_dir / file_name)
         for file_name in RAW_IMPORT_FILE_NAMES
     }
 
@@ -1008,6 +1035,7 @@ def next_import_record_handoff(raw_dir):
             f"{display_raw_dir}/{file_name}" for file_name in RAW_IMPORT_FILE_NAMES
         ],
         "raw_file_row_counts": raw_row_counts,
+        "raw_file_fingerprints": raw_file_fingerprints(raw_dir),
         "raw_file_next_append_rows": raw_file_next_append_rows(raw_row_counts),
         "raw_file_last_data_rows": raw_file_last_data_rows(raw_dir),
         "raw_file_identity_key_checks": raw_file_identity_key_checks(raw_dir),
@@ -1298,6 +1326,7 @@ def write_summary(summary):
         if values
     ]
     raw_row_counts = next_import_handoff.get("raw_file_row_counts", {})
+    raw_fingerprints = next_import_handoff.get("raw_file_fingerprints", {})
     raw_next_append_rows = next_import_handoff.get("raw_file_next_append_rows", {})
     raw_last_data_rows = next_import_handoff.get("raw_file_last_data_rows", {})
     raw_identity_key_checks = next_import_handoff.get(
@@ -1353,6 +1382,23 @@ def write_summary(summary):
                 f"`{file_name}`={count if isinstance(count, int) else 'missing'}"
             )
         return ", ".join(labels)
+
+    def inline_fingerprints(values):
+        if not isinstance(values, dict) or not values:
+            return ["- Raw CSV fingerprints: none"]
+        labels = []
+        for file_name in RAW_IMPORT_FILE_NAMES:
+            fingerprint = values.get(file_name)
+            if not isinstance(fingerprint, dict):
+                labels.append(f"- `{file_name}` fingerprint: missing")
+                continue
+            labels.append(
+                f"- `{file_name}` fingerprint: "
+                f"`{fingerprint.get('algorithm')}` "
+                f"`{fingerprint.get('sha256')}` "
+                f"({fingerprint.get('byte_count')} bytes)"
+            )
+        return labels
 
     def inline_next_append_rows(values):
         if not isinstance(values, dict) or not values:
@@ -1627,6 +1673,7 @@ def write_summary(summary):
         f"- Next gap: {contract['next_gap']}",
         f"- Next raw import files: {inline_list(next_import_handoff['raw_files'])}",
         f"- Next raw import row counts: {inline_row_counts(raw_row_counts)}",
+        "- Next raw import fingerprints: see Follow-Up",
         f"- Next raw import append rows: {inline_next_append_rows(raw_next_append_rows)}",
         "- Next raw import last data rows: see Follow-Up",
         "- Next raw import identity key checks: see Follow-Up",
@@ -1810,6 +1857,8 @@ def write_summary(summary):
                 "- Raw CSV row counts: "
                 f"{inline_row_counts(raw_row_counts)}"
             ),
+            "- Raw CSV fingerprints:",
+            *inline_fingerprints(raw_fingerprints),
             (
                 "- Raw CSV next append rows: "
                 f"{inline_next_append_rows(raw_next_append_rows)}"
@@ -1880,6 +1929,7 @@ def print_summary(summary, output_format="text"):
     coverage_repeated = coverage.get("latest_repeated_counts", {})
     coverage_thin = coverage.get("latest_thin_counts", {})
     raw_row_counts = next_import_handoff.get("raw_file_row_counts", {})
+    raw_fingerprints = next_import_handoff.get("raw_file_fingerprints", {})
     raw_next_append_rows = next_import_handoff.get("raw_file_next_append_rows", {})
     raw_last_data_rows = next_import_handoff.get("raw_file_last_data_rows", {})
     raw_identity_key_checks = next_import_handoff.get(
@@ -1927,6 +1977,22 @@ def print_summary(summary, output_format="text"):
             count = values.get(file_name)
             labels.append(f"{file_name}={count if isinstance(count, int) else 'missing'}")
         return ", ".join(labels)
+
+    def format_fingerprints(values):
+        if not isinstance(values, dict) or not values:
+            return "none"
+        labels = []
+        for file_name in RAW_IMPORT_FILE_NAMES:
+            fingerprint = values.get(file_name)
+            if not isinstance(fingerprint, dict):
+                labels.append(f"{file_name}=missing")
+                continue
+            labels.append(
+                f"{file_name}={fingerprint.get('algorithm')}:"
+                f"{fingerprint.get('sha256')}"
+                f" ({fingerprint.get('byte_count')} bytes)"
+            )
+        return "; ".join(labels)
 
     def format_next_append_rows(values):
         if not isinstance(values, dict) or not values:
@@ -2201,6 +2267,7 @@ def print_summary(summary, output_format="text"):
     print(f"  completion_gate: {follow_up['completion_gate']}")
     print(f"  raw_import_files: {', '.join(next_import_handoff['raw_files'])}")
     print(f"  raw_import_row_counts: {format_row_counts(raw_row_counts)}")
+    print(f"  raw_import_fingerprints: {format_fingerprints(raw_fingerprints)}")
     print(f"  raw_import_next_append_rows: {format_next_append_rows(raw_next_append_rows)}")
     print(f"  raw_import_last_data_rows: {format_last_data_rows(raw_last_data_rows)}")
     print(

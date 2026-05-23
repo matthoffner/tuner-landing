@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import json
 import shlex
 import tempfile
@@ -533,6 +534,32 @@ def raw_import_file_row_counts(raw_dir: str) -> dict[str, int | None]:
     resolved_raw_dir = repo_path(raw_dir)
     return {
         file_name: csv_data_row_count(resolved_raw_dir / file_name)
+        for file_name in RAW_IMPORT_FILE_NAMES
+    }
+
+
+def file_fingerprint(path: Path | str) -> dict[str, Any] | None:
+    resolved = repo_path(path)
+    if not resolved.exists():
+        return None
+
+    digest = hashlib.sha256()
+    byte_count = 0
+    with resolved.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(65536), b""):
+            digest.update(chunk)
+            byte_count += len(chunk)
+    return {
+        "algorithm": "sha256",
+        "byte_count": byte_count,
+        "sha256": digest.hexdigest(),
+    }
+
+
+def raw_import_file_fingerprints(raw_dir: str) -> dict[str, dict[str, Any] | None]:
+    resolved_raw_dir = repo_path(raw_dir)
+    return {
+        file_name: file_fingerprint(resolved_raw_dir / file_name)
         for file_name in RAW_IMPORT_FILE_NAMES
     }
 
@@ -1290,6 +1317,28 @@ def raw_import_file_row_counts_are_valid(value: Any) -> bool:
     )
 
 
+def raw_import_file_fingerprints_are_valid(value: Any) -> bool:
+    if not isinstance(value, dict):
+        return False
+
+    for file_name in RAW_IMPORT_FILE_NAMES:
+        fingerprint = value.get(file_name)
+        if not isinstance(fingerprint, dict):
+            return False
+        sha256 = fingerprint.get("sha256")
+        byte_count = fingerprint.get("byte_count")
+        if (
+            fingerprint.get("algorithm") != "sha256"
+            or not isinstance(byte_count, int)
+            or byte_count < 0
+            or not isinstance(sha256, str)
+            or len(sha256) != 64
+            or any(character not in "0123456789abcdef" for character in sha256)
+        ):
+            return False
+    return True
+
+
 def raw_import_file_next_append_rows_are_valid(
     value: Any,
     row_counts: Any,
@@ -1863,6 +1912,9 @@ def next_import_record_handoff(summary: dict[str, Any] | None = None) -> dict[st
     raw_row_counts = summary_handoff.get("raw_file_row_counts")
     if not raw_import_file_row_counts_are_valid(raw_row_counts):
         raw_row_counts = raw_import_file_row_counts(raw_dir)
+    raw_fingerprints = summary_handoff.get("raw_file_fingerprints")
+    if not raw_import_file_fingerprints_are_valid(raw_fingerprints):
+        raw_fingerprints = raw_import_file_fingerprints(raw_dir)
     raw_next_append_rows = summary_handoff.get("raw_file_next_append_rows")
     if not raw_import_file_next_append_rows_are_valid(
         raw_next_append_rows,
@@ -1932,6 +1984,7 @@ def next_import_record_handoff(summary: dict[str, Any] | None = None) -> dict[st
         "raw_dir": raw_dir,
         "raw_files": [f"{raw_dir}/{file_name}" for file_name in RAW_IMPORT_FILE_NAMES],
         "raw_file_row_counts": raw_row_counts,
+        "raw_file_fingerprints": raw_fingerprints,
         "raw_file_next_append_rows": raw_next_append_rows,
         "raw_file_last_data_rows": raw_last_data_rows,
         "raw_file_identity_key_checks": raw_identity_key_checks,
@@ -1963,6 +2016,9 @@ def next_import_record_handoff_is_valid(handoff: Any) -> bool:
         and len(raw_files) == len(RAW_IMPORT_FILE_NAMES)
         and all(isinstance(raw_file, str) and raw_file.endswith(".csv") for raw_file in raw_files)
         and raw_import_file_row_counts_are_valid(handoff.get("raw_file_row_counts"))
+        and raw_import_file_fingerprints_are_valid(
+            handoff.get("raw_file_fingerprints"),
+        )
         and raw_import_file_next_append_rows_are_valid(
             handoff.get("raw_file_next_append_rows"),
             handoff.get("raw_file_row_counts"),
@@ -2624,6 +2680,26 @@ def format_raw_import_row_counts(handoff: Any) -> str:
     return ", ".join(labels) if labels else "(none)"
 
 
+def format_raw_import_fingerprints(handoff: Any) -> str:
+    if not isinstance(handoff, dict):
+        return "(none)"
+    fingerprints = handoff.get("raw_file_fingerprints")
+    if not isinstance(fingerprints, dict):
+        return "(none)"
+    labels = []
+    for file_name in RAW_IMPORT_FILE_NAMES:
+        fingerprint = fingerprints.get(file_name)
+        if isinstance(fingerprint, dict):
+            labels.append(
+                f"{file_name}={fingerprint.get('algorithm')}:"
+                f"{fingerprint.get('sha256')}"
+                f" ({fingerprint.get('byte_count')} bytes)"
+            )
+        else:
+            labels.append(f"{file_name}=missing")
+    return "; ".join(labels) if labels else "(none)"
+
+
 def format_raw_import_next_append_rows(handoff: Any) -> str:
     if not isinstance(handoff, dict):
         return "(none)"
@@ -3076,6 +3152,10 @@ def format_progress_text(progress: dict[str, Any]) -> str:
                 lines.append(
                     "Next import raw row counts: "
                     f"{format_raw_import_row_counts(next_import_handoff)}"
+                )
+                lines.append(
+                    "Next import raw fingerprints: "
+                    f"{format_raw_import_fingerprints(next_import_handoff)}"
                 )
                 lines.append(
                     "Next import raw append rows: "
@@ -3803,8 +3883,8 @@ def operator_correction_smoke_check(
             "row counts, next append rows, last data rows, identity key checks, "
             "value profiles, date profiles, relationship checks, import scope "
             "counts, importable examples, exclusion examples, headers, required "
-            "fields, optional fields, append templates, and required-field gaps "
-            "after complete correction capture"
+            "fields, optional fields, append templates, required-field gaps, "
+            "and file fingerprints after complete correction capture"
             if missing_count == 0
             else "summary with missing corrections does not expose the last import-readiness snapshot"
         ),
@@ -4328,6 +4408,10 @@ def format_smoke_check_text(smoke_check: dict[str, Any]) -> str:
         lines.append(
             "Next import raw row counts: "
             f"{format_raw_import_row_counts(readiness.get('next_import_record_handoff'))}"
+        )
+        lines.append(
+            "Next import raw fingerprints: "
+            f"{format_raw_import_fingerprints(readiness.get('next_import_record_handoff'))}"
         )
         lines.append(
             "Next import raw append rows: "

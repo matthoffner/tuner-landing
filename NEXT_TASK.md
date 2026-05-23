@@ -57,6 +57,7 @@ Updated next best artifacts:
 
 Latest bounded improvement completed:
 
+- `scripts/run_dallas_import_pipeline.py` and `scripts/record_operator_correction.py` now add raw CSV SHA-256 fingerprints to the next-import handoff, so the next Dallas row-widening pass can verify it is editing the same `permits.csv`, `inspections.csv`, `contractors.csv`, and `rule_documents.csv` snapshot described by the readiness summary before appending records
 - `scripts/run_dallas_import_pipeline.py` and `scripts/record_operator_correction.py` now add raw CSV date profiles to the next-import handoff, so the next Dallas row-widening pass can see date-field coverage, earliest/latest dates, blank counts, and invalid date examples before appending permit, inspection, or rule-document rows
 - `scripts/run_dallas_import_pipeline.py` and `scripts/record_operator_correction.py` now add raw CSV relationship checks to the next-import handoff, so the next Dallas row-widening pass can confirm inspection permit numbers link to importable permit rows and permit contractor names link to importable contractor rows before appending new records
 - `scripts/run_dallas_import_pipeline.py` and `scripts/record_operator_correction.py` now add raw CSV value profiles to the next-import handoff, so the next Dallas row-widening pass can see current scope-driving field vocabularies such as trade, work class, inspection result, license type, permit status, and rule document type before appending new records
