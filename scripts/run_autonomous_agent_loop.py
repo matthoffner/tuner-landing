@@ -27,6 +27,7 @@ PID_FILE = STATE_DIR / "mvp-loop.pid"
 CONTRACT_PATH = ROOT / "generated/contracts/dallas-electrician-contract-summary-v1/summary.json"
 COVERAGE_PATH = ROOT / "generated/coverage/dallas-electrician-edge-case-coverage-v1/coverage.json"
 QUEUE_PATH = ROOT / "generated/workflows/dallas-inspection-workflow-v1/action-queue.json"
+PIPELINE_SUMMARY_PATH = ROOT / "generated/pipeline/dallas-import-pipeline-summary-v1/summary.json"
 HANDOFF_PATH = ROOT / ".pixelbox/handoff.md"
 PREVIEW_PATH = ".pxcode/preview.json"
 
@@ -110,6 +111,97 @@ def latest_handoff_status() -> str:
     return "handoff present"
 
 
+def repo_path(path: Path) -> str:
+    try:
+        return path.resolve().relative_to(ROOT).as_posix()
+    except ValueError:
+        return str(path)
+
+
+def import_pipeline_snapshot() -> dict[str, Any]:
+    if not PIPELINE_SUMMARY_PATH.exists():
+        return {
+            "status": "missing",
+            "summary_path": repo_path(PIPELINE_SUMMARY_PATH),
+            "execution_readiness": {
+                "status": "missing",
+                "ready_for_next_import_records": False,
+                "blockers": ["pipeline_summary_missing"],
+            },
+        }
+
+    try:
+        summary = read_json(PIPELINE_SUMMARY_PATH)
+    except (OSError, json.JSONDecodeError) as exc:
+        return {
+            "status": "invalid",
+            "summary_path": repo_path(PIPELINE_SUMMARY_PATH),
+            "error": str(exc),
+            "execution_readiness": {
+                "status": "blocked",
+                "ready_for_next_import_records": False,
+                "blockers": ["pipeline_summary_invalid"],
+            },
+        }
+
+    execution_readiness = summary.get("execution_readiness", {})
+    if not isinstance(execution_readiness, dict):
+        execution_readiness = {}
+    contract = summary.get("contract", {})
+    if not isinstance(contract, dict):
+        contract = {}
+    workflow = summary.get("workflow", {})
+    if not isinstance(workflow, dict):
+        workflow = {}
+    coverage = summary.get("coverage", {})
+    if not isinstance(coverage, dict):
+        coverage = {}
+    latest_import = summary.get("latest_import", {})
+    if not isinstance(latest_import, dict):
+        latest_import = {}
+
+    return {
+        "status": "loaded",
+        "summary_id": summary.get("summary_id"),
+        "dataset_id": summary.get("dataset_id"),
+        "summary_path": repo_path(PIPELINE_SUMMARY_PATH),
+        "execution_readiness": {
+            "status": execution_readiness.get("status"),
+            "ready_for_next_import_records": execution_readiness.get(
+                "ready_for_next_import_records"
+            ),
+            "blockers": execution_readiness.get("blockers", []),
+            "gates": execution_readiness.get("gates", {}),
+            "next_step": execution_readiness.get("next_step"),
+            "summary_only_require_ready_json_command": execution_readiness.get(
+                "summary_only_require_ready_json_command"
+            ),
+        },
+        "contract": {
+            "overall_passed": contract.get("overall_passed"),
+            "checks_passed": contract.get("checks_passed"),
+            "checks_total": contract.get("checks_total"),
+            "next_gap": contract.get("next_gap"),
+        },
+        "workflow": {
+            "queue_items": workflow.get("queue_items"),
+            "operator_corrections_captured": workflow.get(
+                "operator_corrections_captured"
+            ),
+            "accepted_pattern_count": workflow.get("accepted_pattern_count"),
+        },
+        "coverage": {
+            "latest_repeated_counts": coverage.get("latest_repeated_counts", {}),
+            "latest_thin_counts": coverage.get("latest_thin_counts", {}),
+            "thin_groups": coverage.get("thin_groups", {}),
+        },
+        "latest_import": {
+            "counts": latest_import.get("counts", {}),
+            "task_family_counts": latest_import.get("task_family_counts", {}),
+        },
+    }
+
+
 def inspect_artifacts() -> dict[str, Any]:
     contract = read_json(CONTRACT_PATH)
     coverage = read_json(COVERAGE_PATH)
@@ -136,6 +228,7 @@ def inspect_artifacts() -> dict[str, Any]:
             "priority_counts": queue_summary.get("priority_counts", {}),
             "recommended_action_counts": queue_summary.get("recommended_action_counts", {}),
         },
+        "import_pipeline": import_pipeline_snapshot(),
     }
 
 

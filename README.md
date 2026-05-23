@@ -26,6 +26,7 @@ Created from Pixelbox.
 - Auto-publish helper: `./scripts/codex-publish.sh ["commit message"]`
 - MVP loop runner: `python3 scripts/run_mvp_loop.py --iterations 3 --interval 5`
 - Autonomous Codex loop runner: `python3 scripts/run_autonomous_agent_loop.py --iterations 1 --interval 300`
+- Loop status JSON: `.automoat/state/mvp-loop-status.json` includes `artifacts.import_pipeline.execution_readiness` from `generated/pipeline/dallas-import-pipeline-summary-v1/summary.json`, so local cockpit readers can see Dallas import readiness without reparsing the pipeline artifact.
 - MVP cockpit server: `python3 scripts/serve_mvp_cockpit.py --auto-start --loop-mode agent --interval 300 --port 4174`
 - Detached autonomous cockpit plus bridge: `python3 scripts/start_autonomous_cockpit_bridge.py`
 - Read-only remote bridge: `python3 scripts/bridge_mvp_cockpit.py`
