@@ -7,6 +7,17 @@
     "fixture_dir": "generated/fixtures/dallas-electrician-import-sequences-v2",
     "eval_dir": "generated/evals/dallas-electrician-import-sample-v2"
   },
+  "next_import_record_handoff": {
+    "raw_dir": "generated/raw/dallas-electrician-import-sample-v2",
+    "raw_files": [
+      "generated/raw/dallas-electrician-import-sample-v2/permits.csv",
+      "generated/raw/dallas-electrician-import-sample-v2/inspections.csv",
+      "generated/raw/dallas-electrician-import-sample-v2/contractors.csv",
+      "generated/raw/dallas-electrician-import-sample-v2/rule_documents.csv"
+    ],
+    "after_edit_command": "python3 scripts/run_dallas_import_pipeline.py --require-ready",
+    "readiness_check_command": "python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json"
+  },
   "execution_readiness": {
     "status": "ready",
     "ready_for_next_import_records": true,

@@ -34,6 +34,12 @@ SUMMARY_ONLY_REQUIRE_READY_COMMAND = (
 SUMMARY_ONLY_REQUIRE_READY_JSON_COMMAND = (
     "python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json"
 )
+RAW_IMPORT_FILE_NAMES = (
+    "permits.csv",
+    "inspections.csv",
+    "contractors.csv",
+    "rule_documents.csv",
+)
 
 
 def parse_args():
@@ -93,6 +99,18 @@ def command_path(path):
         return str(resolved.relative_to(ROOT))
     except ValueError:
         return str(resolved)
+
+
+def next_import_record_handoff(raw_dir):
+    display_raw_dir = command_path(raw_dir).rstrip("/")
+    return {
+        "raw_dir": display_raw_dir,
+        "raw_files": [
+            f"{display_raw_dir}/{file_name}" for file_name in RAW_IMPORT_FILE_NAMES
+        ],
+        "after_edit_command": REQUIRE_READY_COMMAND,
+        "readiness_check_command": SUMMARY_ONLY_REQUIRE_READY_JSON_COMMAND,
+    }
 
 
 def run_step(label, command, output_format="text"):
@@ -301,6 +319,7 @@ def build_summary(args):
             "fixture_dir": command_path(args.fixture_dir),
             "eval_dir": command_path(args.eval_dir),
         },
+        "next_import_record_handoff": next_import_record_handoff(args.raw_dir),
         "execution_readiness": build_execution_readiness(
             contract_summary,
             workflow_pipeline_summary,
@@ -337,6 +356,7 @@ def write_summary(summary):
     workflow = summary["workflow"]
     coverage = summary["coverage"]
     follow_up = summary["follow_up"]
+    next_import_handoff = summary["next_import_record_handoff"]
     correction_gate = summary["correction_gate"]
     latest_import = summary["latest_import"]
     execution_readiness = summary["execution_readiness"]
@@ -385,6 +405,7 @@ def write_summary(summary):
         f"- Execution readiness: {readiness_status}",
         f"- Correction gate: {gate_status}",
         f"- Next gap: {contract['next_gap']}",
+        f"- Next raw import files: {inline_list(next_import_handoff['raw_files'])}",
         "",
         "## Execution Readiness",
         "",
@@ -539,6 +560,18 @@ def write_summary(summary):
             "",
             f"- Pattern review: `{follow_up['patterns_command']}`",
             f"- Completion gate: `{follow_up['completion_gate']}`",
+            (
+                "- After raw CSV edits: "
+                f"`{next_import_handoff['after_edit_command']}`"
+            ),
+            (
+                "- Raw CSV readiness check: "
+                f"`{next_import_handoff['readiness_check_command']}`"
+            ),
+            (
+                "- Raw CSV files: "
+                f"{inline_list(next_import_handoff['raw_files'])}"
+            ),
             f"- Require-ready pipeline: `{follow_up['require_ready_pipeline']}`",
             (
                 "- Summary-only require-ready pipeline: "
@@ -573,6 +606,7 @@ def print_summary(summary, output_format="text"):
     coverage = summary["coverage"]
     execution_readiness = summary["execution_readiness"]
     follow_up = summary["follow_up"]
+    next_import_handoff = summary["next_import_record_handoff"]
     import_counts = summary["latest_import"].get("counts", {})
     accepted_patterns = workflow.get("accepted_patterns", [])
     coverage_repeated = coverage.get("latest_repeated_counts", {})
@@ -632,6 +666,12 @@ def print_summary(summary, output_format="text"):
     print("follow_up:")
     print(f"  patterns_command: {follow_up['patterns_command']}")
     print(f"  completion_gate: {follow_up['completion_gate']}")
+    print(f"  raw_import_files: {', '.join(next_import_handoff['raw_files'])}")
+    print(f"  after_raw_csv_edits: {next_import_handoff['after_edit_command']}")
+    print(
+        "  raw_csv_readiness_check: "
+        f"{next_import_handoff['readiness_check_command']}"
+    )
     print(f"  coverage_report: {follow_up['coverage_report']}")
     print(f"  contract_report: {follow_up['contract_report']}")
     print(f"  workflow_report: {follow_up['workflow_report']}")

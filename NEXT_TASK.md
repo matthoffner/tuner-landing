@@ -50,7 +50,7 @@ Updated next best artifacts:
 - use `python3 scripts/record_operator_correction.py --list-patterns --format text` after capture to inspect reusable accepted operator patterns without opening generated JSON by hand
 - use `python3 scripts/run_dallas_import_pipeline.py --require-ready` to refresh the latest Dallas import sample from CSV through normalized rows, fixture pack, evals, coverage, contract summary, workflow, the strict correction-ledger gate, and a durable generated pipeline summary with embedded execution readiness, coverage counts, and accepted operator-pattern snapshots in one deterministic pass that exits nonzero if readiness is blocked
 - use `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready` when generated Dallas artifacts already exist and automation only needs to rebuild the durable summary plus strict readiness result without rerunning every artifact writer
-- use `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json` when automation needs the final readiness summary on stdout with command logs kept off stdout
+- use `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json` when automation needs the final readiness summary on stdout with command logs kept off stdout; the summary now includes `next_import_record_handoff` with the raw Dallas CSV files and the post-edit refresh command
 - read `.automoat/state/mvp-loop-status.json` `artifacts.import_pipeline.execution_readiness` when the cockpit or autonomous supervisor needs the current Dallas import readiness gate in the same status payload as contract, coverage, workflow, and git state
 - keep `generated/workflows/dallas-inspection-workflow-v1/action-queue.json` `operator_correction_patterns` current as accepted operational patterns widen
 - use the now-repeated latest-import coverage to choose the next real Dallas import-readiness gap instead of adding more hidden fixture rows by default
@@ -158,6 +158,7 @@ Latest bounded improvement completed:
 - `scripts/record_operator_correction.py --summary` now includes the last durable Dallas import counts, accepted pattern count, and coverage thin counts inside `last_import_readiness_summary`, and text summaries print those counts before the summary-only readiness rerun
 - `scripts/record_operator_correction.py --summary` now includes coverage thin group names inside `last_import_readiness_summary` and prints them in text summaries, so a completed Dallas correction pass can show exact import-readiness coverage gaps without opening the full coverage report
 - `scripts/record_operator_correction.py --summary` now includes a `next_import_record_handoff` with the raw Dallas CSV files to edit next plus the full `--require-ready` refresh command, so completed correction output points directly from operator capture to the next permit-data import pass
+- `scripts/run_dallas_import_pipeline.py` now writes the same raw Dallas CSV handoff directly into `generated/pipeline/dallas-import-pipeline-summary-v1/summary.json` and `summary.md`, so the import-readiness summary is self-contained before the next permit-data widening pass
 
 ## Constraints
 

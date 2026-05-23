@@ -9,6 +9,7 @@
 - Execution readiness: READY
 - Correction gate: PASSED
 - Next gap: All current latest-import result states, failure reasons, pattern slices, and expected next-action groups have repeated support; keep the action queue and coverage report current as real Dallas import records widen.
+- Next raw import files: `generated/raw/dallas-electrician-import-sample-v2/permits.csv`, `generated/raw/dallas-electrician-import-sample-v2/inspections.csv`, `generated/raw/dallas-electrician-import-sample-v2/contractors.csv`, `generated/raw/dallas-electrician-import-sample-v2/rule_documents.csv`
 
 ## Execution Readiness
 
@@ -119,6 +120,9 @@ These are the reusable accepted correction patterns currently embedded in the Da
 
 - Pattern review: `python3 scripts/record_operator_correction.py --list-patterns --format text`
 - Completion gate: `python3 scripts/record_operator_correction.py --validate-ledger --require-complete --format text`
+- After raw CSV edits: `python3 scripts/run_dallas_import_pipeline.py --require-ready`
+- Raw CSV readiness check: `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json`
+- Raw CSV files: `generated/raw/dallas-electrician-import-sample-v2/permits.csv`, `generated/raw/dallas-electrician-import-sample-v2/inspections.csv`, `generated/raw/dallas-electrician-import-sample-v2/contractors.csv`, `generated/raw/dallas-electrician-import-sample-v2/rule_documents.csv`
 - Require-ready pipeline: `python3 scripts/run_dallas_import_pipeline.py --require-ready`
 - Summary-only require-ready pipeline: `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready`
 - Summary-only require-ready JSON pipeline: `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json`
