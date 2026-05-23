@@ -763,13 +763,21 @@ def command_group_failures(
         if not isinstance(command, str):
             failures.append(f"{decision} command is missing")
             continue
+        uses_next_missing = command_has_arg(command, "--use-next-missing")
+        fixed_queue_item_id = command_arg_value(command, "--queue-item-id")
         if (
             expected_next_missing_id
             and command_arg_value(command, "--expected-next-missing-id") != expected_next_missing_id
         ):
             failures.append(f"{decision} command missing expected next-missing ID")
-        if expected_queue_item_id and command_arg_value(command, "--queue-item-id") != expected_queue_item_id:
+        if expected_next_missing_id and not uses_next_missing:
+            failures.append(f"{decision} shortcut command missing --use-next-missing")
+        if expected_next_missing_id and fixed_queue_item_id is not None:
+            failures.append(f"{decision} shortcut command should not include fixed queue item ID")
+        if expected_queue_item_id and fixed_queue_item_id != expected_queue_item_id:
             failures.append(f"{decision} command missing fixed queue item ID")
+        if expected_queue_item_id and uses_next_missing:
+            failures.append(f"{decision} fixed-item command should not use --use-next-missing")
         if not command_has_arg(command, "--require-missing"):
             failures.append(f"{decision} command missing --require-missing")
         actual_output_format = command_arg_value(command, "--format")
@@ -1268,7 +1276,7 @@ def operator_correction_smoke_check(
             "guarded_dry_run_shortcut",
             not dry_run_failures,
             (
-                "accepted/rejected/edited dry-runs include expected-ID, require-missing, "
+                "accepted/rejected/edited dry-run shortcuts use --use-next-missing and include expected-ID, require-missing, "
                 f"{expected_format_label}, dry-run guards, and edited action template"
                 if not dry_run_failures
                 else "; ".join(dry_run_failures)
@@ -1288,7 +1296,7 @@ def operator_correction_smoke_check(
             not note_dry_run_failures,
             (
                 "accepted/rejected/edited note dry-runs keep "
-                f"{expected_format_label}, operator-note, and dry-run flags"
+                f"--use-next-missing, {expected_format_label}, operator-note, and dry-run flags"
                 if not note_dry_run_failures
                 else "; ".join(note_dry_run_failures)
             ),
@@ -1305,7 +1313,7 @@ def operator_correction_smoke_check(
             "guarded_append_shortcut",
             not append_failures,
             (
-                "accepted/rejected/edited appends include expected-ID, require-missing guards, "
+                "accepted/rejected/edited append shortcuts use --use-next-missing and include expected-ID, require-missing guards, "
                 f"{expected_format_label}, and edited action template"
                 if not append_failures
                 else "; ".join(append_failures)
@@ -1325,7 +1333,7 @@ def operator_correction_smoke_check(
             not note_append_failures,
             (
                 "accepted/rejected/edited note appends keep "
-                f"{expected_format_label} and operator-note placeholders"
+                f"--use-next-missing, {expected_format_label}, and operator-note placeholders"
                 if not note_append_failures
                 else "; ".join(note_append_failures)
             ),
@@ -1349,7 +1357,7 @@ def operator_correction_smoke_check(
             not fixed_dry_run_failures,
             (
                 "accepted/rejected/edited fixed-item dry-runs include queue item ID, "
-                f"require-missing, {expected_format_label}, dry-run guards, and edited action template"
+                f"avoid shortcut mode, require-missing, {expected_format_label}, dry-run guards, and edited action template"
                 if not fixed_dry_run_failures
                 else "; ".join(fixed_dry_run_failures)
             ),
@@ -1369,7 +1377,7 @@ def operator_correction_smoke_check(
             not note_fixed_failures,
             (
                 "accepted/rejected/edited fixed-item note dry-runs keep queue item ID, "
-                f"{expected_format_label}, operator-note, and dry-run flags"
+                f"avoid shortcut mode, {expected_format_label}, operator-note, and dry-run flags"
                 if not note_fixed_failures
                 else "; ".join(note_fixed_failures)
             ),
@@ -1388,7 +1396,7 @@ def operator_correction_smoke_check(
             not fixed_append_failures,
             (
                 "accepted/rejected/edited fixed-item appends include queue item ID, "
-                f"require-missing guards, {expected_format_label}, and edited action template"
+                f"avoid shortcut mode, require-missing guards, {expected_format_label}, and edited action template"
                 if not fixed_append_failures
                 else "; ".join(fixed_append_failures)
             ),
@@ -1408,7 +1416,7 @@ def operator_correction_smoke_check(
             not note_fixed_append_failures,
             (
                 "accepted/rejected/edited fixed-item note appends keep queue item ID, "
-                f"{expected_format_label}, and operator-note placeholders"
+                f"avoid shortcut mode, {expected_format_label}, and operator-note placeholders"
                 if not note_fixed_append_failures
                 else "; ".join(note_fixed_append_failures)
             ),
