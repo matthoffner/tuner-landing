@@ -2,19 +2,19 @@
 
 - Dataset: `dallas-electrician-import-sample-v2`
 - Contract: PASS (`13/13` checks)
-- Queue items: `34`
-- Operator corrections: `34/34`
+- Queue items: `35`
+- Operator corrections: `35/35`
 - Accepted patterns: `6`
-- Import artifacts: `34` permits, `80` inspections, `91` eval tasks, `40` reviewed labels
+- Import artifacts: `35` permits, `82` inspections, `93` eval tasks, `41` reviewed labels
 - Execution readiness: READY
 - Correction gate: PASSED
 - Next gap: All current latest-import result states, failure reasons, pattern slices, and expected next-action groups have repeated support; keep the action queue and coverage report current as real Dallas import records widen.
 - Next raw import files: `generated/raw/dallas-electrician-import-sample-v2/permits.csv`, `generated/raw/dallas-electrician-import-sample-v2/inspections.csv`, `generated/raw/dallas-electrician-import-sample-v2/contractors.csv`, `generated/raw/dallas-electrician-import-sample-v2/rule_documents.csv`
-- Next raw import row counts: `permits.csv`=35, `inspections.csv`=81, `contractors.csv`=6, `rule_documents.csv`=3
+- Next raw import row counts: `permits.csv`=36, `inspections.csv`=83, `contractors.csv`=6, `rule_documents.csv`=3
 - Next raw import append preflight: `passed`
 - Next raw import handoff verification: `python3 scripts/run_dallas_import_pipeline.py --verify-raw-handoff`
 - Next raw import fingerprints: see Follow-Up
-- Next raw import append rows: `permits.csv` row 37, `inspections.csv` row 83, `contractors.csv` row 8, `rule_documents.csv` row 5
+- Next raw import append rows: `permits.csv` row 38, `inspections.csv` row 85, `contractors.csv` row 8, `rule_documents.csv` row 5
 - Next raw import last data rows: see Follow-Up
 - Next raw import identity key checks: see Follow-Up
 - Next raw import value profiles: see Follow-Up
@@ -45,10 +45,10 @@
 
 ## Import Artifact Snapshot
 
-- Normalized rows: `34` properties, `34` permits, `80` inspections, `5` contractors
-- Source support: `122` source records, `3` rule documents
-- Eval rows: `91` tasks, `40` reviewed labels, `86` dev tasks, `5` test tasks
-- Task families: `46` next-outcome, `6` failure-reason, `34` next-action, `5` pattern-extraction
+- Normalized rows: `35` properties, `35` permits, `82` inspections, `5` contractors
+- Source support: `125` source records, `3` rule documents
+- Eval rows: `93` tasks, `41` reviewed labels, `88` dev tasks, `5` test tasks
+- Task families: `47` next-outcome, `6` failure-reason, `35` next-action, `5` pattern-extraction
 - Result vocabulary: `cancelled`, `fail`, `not_ready`, `partial`, `pass`, `unknown`
 
 ## Accepted Operator Pattern Snapshot
@@ -57,15 +57,15 @@ These are the reusable accepted correction patterns currently embedded in the Da
 
 ### operator-pattern:accepted:0001
 
-- Queue items: `12`
+- Queue items: `13`
 - Action IDs: `complete_remaining_work`, `schedule_reinspection`
 - Actions: `Complete remaining work`, `Schedule reinspection`
-- Trigger results: `{"partial": 12}`
-- Failure reasons: `{"incomplete_work": 12}`
-- Inspection types: `{"rough_in": 12}`
-- Follow-up results: `{"pass": 12}`
-- Example permits: `ELP-2026-0203`, `ELZ-2026-0215`, `ELZ-2026-0216`, `ELZ-2026-0225`, `ELZ-2026-0226`, `ELZ-2026-0227`, `ELZ-2026-0228`, `ELZ-2026-0231`, `ELZ-2026-0232`, `ELZ-2026-0233`, `ELZ-2026-0234`, `ELZ-2026-0235`
-- Queue IDs: `workflow-item:dallas:next-action:0006`, `workflow-item:dallas:next-action:0014`, `workflow-item:dallas:next-action:0015`, `workflow-item:dallas:next-action:0024`, `workflow-item:dallas:next-action:0025`, `workflow-item:dallas:next-action:0026`, `workflow-item:dallas:next-action:0027`, `workflow-item:dallas:next-action:0030`, `workflow-item:dallas:next-action:0031`, `workflow-item:dallas:next-action:0032`, `workflow-item:dallas:next-action:0033`, `workflow-item:dallas:next-action:0034`
+- Trigger results: `{"partial": 13}`
+- Failure reasons: `{"incomplete_work": 13}`
+- Inspection types: `{"rough_in": 13}`
+- Follow-up results: `{"pass": 13}`
+- Example permits: `ELP-2026-0203`, `ELZ-2026-0215`, `ELZ-2026-0216`, `ELZ-2026-0225`, `ELZ-2026-0226`, `ELZ-2026-0227`, `ELZ-2026-0228`, `ELZ-2026-0231`, `ELZ-2026-0232`, `ELZ-2026-0233`, `ELZ-2026-0234`, `ELZ-2026-0235`, `ELZ-2026-0236`
+- Queue IDs: `workflow-item:dallas:next-action:0006`, `workflow-item:dallas:next-action:0014`, `workflow-item:dallas:next-action:0015`, `workflow-item:dallas:next-action:0024`, `workflow-item:dallas:next-action:0025`, `workflow-item:dallas:next-action:0026`, `workflow-item:dallas:next-action:0027`, `workflow-item:dallas:next-action:0030`, `workflow-item:dallas:next-action:0031`, `workflow-item:dallas:next-action:0032`, `workflow-item:dallas:next-action:0033`, `workflow-item:dallas:next-action:0034`, `workflow-item:dallas:next-action:0035`
 
 ### operator-pattern:accepted:0002
 
@@ -145,7 +145,7 @@ These are the reusable accepted correction patterns currently embedded in the Da
 - Raw CSV handoff verification: `python3 scripts/run_dallas_import_pipeline.py --verify-raw-handoff`
 - Raw CSV handoff verification JSON: `python3 scripts/run_dallas_import_pipeline.py --verify-raw-handoff --format json`
 - Raw CSV files: `generated/raw/dallas-electrician-import-sample-v2/permits.csv`, `generated/raw/dallas-electrician-import-sample-v2/inspections.csv`, `generated/raw/dallas-electrician-import-sample-v2/contractors.csv`, `generated/raw/dallas-electrician-import-sample-v2/rule_documents.csv`
-- Raw CSV row counts: `permits.csv`=35, `inspections.csv`=81, `contractors.csv`=6, `rule_documents.csv`=3
+- Raw CSV row counts: `permits.csv`=36, `inspections.csv`=83, `contractors.csv`=6, `rule_documents.csv`=3
 - Raw CSV append preflight:
 - Raw CSV append preflight status: `passed`
 - Raw CSV append preflight ready: `true`
@@ -153,14 +153,14 @@ These are the reusable accepted correction patterns currently embedded in the Da
 - Raw CSV append preflight blockers: none
 - Raw CSV append preflight next step: Raw CSV append preflight is clear; append new Dallas rows at `raw_file_next_append_rows`, then run `after_edit_command`.
 - Raw CSV fingerprints:
-- `permits.csv` fingerprint: `sha256` `4c0fd38d7c06beee00c5f0adda59065b0a0e9ed4ade45c5cc40c9276805f4121` (10838 bytes)
-- `inspections.csv` fingerprint: `sha256` `7b15ffb73648ea035056ec850a276aacc7c5ac3a2519d686035a00813a80d094` (17186 bytes)
+- `permits.csv` fingerprint: `sha256` `8b39911e72f7f673e226b97c09343ff64d741bc46004e420aa74701d236760f6` (11145 bytes)
+- `inspections.csv` fingerprint: `sha256` `726a31226fc186e9a0052d23194cb3e42a2801414cd743d08214e9af9e5090e4` (17633 bytes)
 - `contractors.csv` fingerprint: `sha256` `5ecf6f5e062bb09c3920616b1c7ed56e4a2789d3250da10a670b7eb80251f841` (498 bytes)
 - `rule_documents.csv` fingerprint: `sha256` `f0d1cbff37f9607f3b319e30d3323e132f70fc3770824ffea6a683ac439fde2f` (932 bytes)
-- Raw CSV next append rows: `permits.csv` row 37, `inspections.csv` row 83, `contractors.csv` row 8, `rule_documents.csv` row 5
+- Raw CSV next append rows: `permits.csv` row 38, `inspections.csv` row 85, `contractors.csv` row 8, `rule_documents.csv` row 5
 - Raw CSV last data rows:
-- `permits.csv` last data row: `{"csv_row_number": 36, "row": {"permit_number": "ELZ-2026-0235", "address": "2944 S Ewing Ave", "city": "Dallas", "trade": "electrical", "work_class": "residential"}}`
-- `inspections.csv` last data row: `{"csv_row_number": 82, "row": {"permit_number": "ELZ-2026-0235", "inspection_date": "2026-05-23", "inspection_type": "Correction follow-up", "result": "Pass"}}`
+- `permits.csv` last data row: `{"csv_row_number": 37, "row": {"permit_number": "ELZ-2026-0236", "address": "2956 S Ewing Ave", "city": "Dallas", "trade": "electrical", "work_class": "residential"}}`
+- `inspections.csv` last data row: `{"csv_row_number": 84, "row": {"permit_number": "ELZ-2026-0236", "inspection_date": "2026-05-23", "inspection_type": "Correction follow-up", "result": "Pass"}}`
 - `contractors.csv` last data row: `{"csv_row_number": 7, "row": {"registration_id": "REG-5206", "name": "Oak Lawn Plumbing", "license_type": "plumbing_contractor"}}`
 - `rule_documents.csv` last data row: `{"csv_row_number": 4, "row": {"title": "Dallas reinspection access note", "document_type": "faq", "effective_date": "2025-01-01"}}`
 - Raw CSV identity key checks:
@@ -169,21 +169,21 @@ These are the reusable accepted correction patterns currently embedded in the Da
 - `contractors.csv` identity keys: fields `registration_id`, duplicates `0`, rows with duplicate identity `0`, missing identity rows `0`, examples `[]`
 - `rule_documents.csv` identity keys: fields `title`, duplicates `0`, rows with duplicate identity `0`, missing identity rows `0`, examples `[]`
 - Raw CSV value profiles:
-- `permits.csv` value profiles: `{"rows_checked": 35, "fields": {"city": {"distinct_value_count": 1, "blank_count": 0, "top_values": [{"value": "Dallas", "count": 35}]}, "trade": {"distinct_value_count": 2, "blank_count": 0, "top_values": [{"value": "electrical", "count": 34}, {"value": "plumbing", "count": 1}]}, "work_class": {"distinct_value_count": 1, "blank_count": 0, "top_values": [{"value": "residential", "count": 35}]}, "permit_type": {"distinct_value_count": 5, "blank_count": 0, "top_values": [{"value": "Electrical repair", "count": 23}, {"value": "Residential electrical remodel", "count": 5}, {"value": "Electrical service upgrade", "count": 4}, {"value": "New electrical install", "count": 2}, {"value": "Residential plumbing repair", "count": 1}]}, "status": {"distinct_value_count": 3, "blank_count": 0, "top_values": [{"value": "Finaled", "count": 30}, {"value": "Active", "count": 4}, {"value": "Issued", "count": 1}]}, "property_type": {"distinct_value_count": 2, "blank_count": 0, "top_values": [{"value": "single_family", "count": 33}, {"value": "duplex", "count": 2}]}, "zip_code": {"distinct_value_count": 5, "blank_count": 0, "top_values": [{"value": "75216", "count": 23}, {"value": "75228", "count": 4}, {"value": "75208", "count": 3}, {"value": "75212", "count": 3}, {"value": "75214", "count": 2}]}}}`
-- `inspections.csv` value profiles: `{"rows_checked": 81, "fields": {"inspection_type": {"distinct_value_count": 4, "blank_count": 0, "top_values": [{"value": "Correction follow-up", "count": 34}, {"value": "Rough-in", "count": 32}, {"value": "Final", "count": 11}, {"value": "Service release", "count": 4}]}, "result": {"distinct_value_count": 6, "blank_count": 0, "top_values": [{"value": "Pass", "count": 43}, {"value": "Partial", "count": 24}, {"value": "Fail", "count": 6}, {"value": "Not Ready", "count": 4}, {"value": "Cancelled", "count": 2}, {"value": "Pending", "count": 2}]}, "reinspection_flag": {"distinct_value_count": 2, "blank_count": 0, "top_values": [{"value": "false", "count": 43}, {"value": "true", "count": 38}]}}}`
+- `permits.csv` value profiles: `{"rows_checked": 36, "fields": {"city": {"distinct_value_count": 1, "blank_count": 0, "top_values": [{"value": "Dallas", "count": 36}]}, "trade": {"distinct_value_count": 2, "blank_count": 0, "top_values": [{"value": "electrical", "count": 35}, {"value": "plumbing", "count": 1}]}, "work_class": {"distinct_value_count": 1, "blank_count": 0, "top_values": [{"value": "residential", "count": 36}]}, "permit_type": {"distinct_value_count": 5, "blank_count": 0, "top_values": [{"value": "Electrical repair", "count": 24}, {"value": "Residential electrical remodel", "count": 5}, {"value": "Electrical service upgrade", "count": 4}, {"value": "New electrical install", "count": 2}, {"value": "Residential plumbing repair", "count": 1}]}, "status": {"distinct_value_count": 3, "blank_count": 0, "top_values": [{"value": "Finaled", "count": 31}, {"value": "Active", "count": 4}, {"value": "Issued", "count": 1}]}, "property_type": {"distinct_value_count": 2, "blank_count": 0, "top_values": [{"value": "single_family", "count": 34}, {"value": "duplex", "count": 2}]}, "zip_code": {"distinct_value_count": 5, "blank_count": 0, "top_values": [{"value": "75216", "count": 24}, {"value": "75228", "count": 4}, {"value": "75208", "count": 3}, {"value": "75212", "count": 3}, {"value": "75214", "count": 2}]}}}`
+- `inspections.csv` value profiles: `{"rows_checked": 83, "fields": {"inspection_type": {"distinct_value_count": 4, "blank_count": 0, "top_values": [{"value": "Correction follow-up", "count": 35}, {"value": "Rough-in", "count": 33}, {"value": "Final", "count": 11}, {"value": "Service release", "count": 4}]}, "result": {"distinct_value_count": 6, "blank_count": 0, "top_values": [{"value": "Pass", "count": 44}, {"value": "Partial", "count": 25}, {"value": "Fail", "count": 6}, {"value": "Not Ready", "count": 4}, {"value": "Cancelled", "count": 2}, {"value": "Pending", "count": 2}]}, "reinspection_flag": {"distinct_value_count": 2, "blank_count": 0, "top_values": [{"value": "false", "count": 44}, {"value": "true", "count": 39}]}}}`
 - `contractors.csv` value profiles: `{"rows_checked": 6, "fields": {"license_type": {"distinct_value_count": 2, "blank_count": 0, "top_values": [{"value": "electrical_contractor", "count": 5}, {"value": "plumbing_contractor", "count": 1}]}, "registration_status": {"distinct_value_count": 1, "blank_count": 0, "top_values": [{"value": "registered", "count": 6}]}, "city": {"distinct_value_count": 1, "blank_count": 0, "top_values": [{"value": "Dallas", "count": 6}]}, "state": {"distinct_value_count": 1, "blank_count": 0, "top_values": [{"value": "TX", "count": 6}]}}}`
 - `rule_documents.csv` value profiles: `{"rows_checked": 3, "fields": {"document_type": {"distinct_value_count": 3, "blank_count": 0, "top_values": [{"value": "faq", "count": 1}, {"value": "guidance_page", "count": 1}, {"value": "inspection_checklist", "count": 1}]}, "effective_date": {"distinct_value_count": 1, "blank_count": 0, "top_values": [{"value": "2025-01-01", "count": 3}]}}}`
 - Raw CSV date profiles:
-- `permits.csv` date profiles: `{"rows_checked": 35, "fields": {"file_date": {"field_present": true, "date_format": "YYYY-MM-DD", "blank_count": 0, "valid_date_count": 35, "invalid_date_count": 0, "earliest_date": "2026-03-12", "earliest_csv_row_number": 5, "latest_date": "2026-05-20", "latest_csv_row_number": 36, "invalid_examples": []}, "issue_date": {"field_present": true, "date_format": "YYYY-MM-DD", "blank_count": 0, "valid_date_count": 35, "invalid_date_count": 0, "earliest_date": "2026-03-13", "earliest_csv_row_number": 5, "latest_date": "2026-05-21", "latest_csv_row_number": 36, "invalid_examples": []}, "final_date": {"field_present": true, "date_format": "YYYY-MM-DD", "blank_count": 5, "valid_date_count": 30, "invalid_date_count": 0, "earliest_date": "2026-03-22", "earliest_csv_row_number": 5, "latest_date": "2026-05-23", "latest_csv_row_number": 28, "invalid_examples": []}}}`
-- `inspections.csv` date profiles: `{"rows_checked": 81, "fields": {"inspection_date": {"field_present": true, "date_format": "YYYY-MM-DD", "blank_count": 0, "valid_date_count": 81, "invalid_date_count": 0, "earliest_date": "2026-03-17", "earliest_csv_row_number": 11, "latest_date": "2026-05-23", "latest_csv_row_number": 66, "invalid_examples": []}}}`
+- `permits.csv` date profiles: `{"rows_checked": 36, "fields": {"file_date": {"field_present": true, "date_format": "YYYY-MM-DD", "blank_count": 0, "valid_date_count": 36, "invalid_date_count": 0, "earliest_date": "2026-03-12", "earliest_csv_row_number": 5, "latest_date": "2026-05-21", "latest_csv_row_number": 37, "invalid_examples": []}, "issue_date": {"field_present": true, "date_format": "YYYY-MM-DD", "blank_count": 0, "valid_date_count": 36, "invalid_date_count": 0, "earliest_date": "2026-03-13", "earliest_csv_row_number": 5, "latest_date": "2026-05-22", "latest_csv_row_number": 37, "invalid_examples": []}, "final_date": {"field_present": true, "date_format": "YYYY-MM-DD", "blank_count": 5, "valid_date_count": 31, "invalid_date_count": 0, "earliest_date": "2026-03-22", "earliest_csv_row_number": 5, "latest_date": "2026-05-23", "latest_csv_row_number": 28, "invalid_examples": []}}}`
+- `inspections.csv` date profiles: `{"rows_checked": 83, "fields": {"inspection_date": {"field_present": true, "date_format": "YYYY-MM-DD", "blank_count": 0, "valid_date_count": 83, "invalid_date_count": 0, "earliest_date": "2026-03-17", "earliest_csv_row_number": 11, "latest_date": "2026-05-23", "latest_csv_row_number": 66, "invalid_examples": []}}}`
 - `contractors.csv` date profiles: `{"rows_checked": 6, "fields": {}}`
 - `rule_documents.csv` date profiles: `{"rows_checked": 3, "fields": {"effective_date": {"field_present": true, "date_format": "YYYY-MM-DD", "blank_count": 0, "valid_date_count": 3, "invalid_date_count": 0, "earliest_date": "2025-01-01", "earliest_csv_row_number": 2, "latest_date": "2025-01-01", "latest_csv_row_number": 2, "invalid_examples": []}}}`
 - Raw CSV relationship checks:
-- `inspections_to_permits` relationship: `80/81` matched importable target rows, excluded target rows `1`, unresolved rows `0`, unmatched examples `[]`, excluded target examples `[{"csv_row_number": 42, "row": {"permit_number": "PLM-2026-0206", "inspection_date": "2026-04-11", "inspection_type": "Final", "result": "Pass"}}]`
-- `permits_to_contractors` relationship: `34/35` matched importable target rows, excluded target rows `1`, unresolved rows `0`, unmatched examples `[]`, excluded target examples `[{"csv_row_number": 16, "row": {"permit_number": "PLM-2026-0206", "address": "410 W Jefferson Blvd", "city": "Dallas", "trade": "plumbing", "work_class": "residential"}}]`
+- `inspections_to_permits` relationship: `82/83` matched importable target rows, excluded target rows `1`, unresolved rows `0`, unmatched examples `[]`, excluded target examples `[{"csv_row_number": 42, "row": {"permit_number": "PLM-2026-0206", "inspection_date": "2026-04-11", "inspection_type": "Final", "result": "Pass"}}]`
+- `permits_to_contractors` relationship: `35/36` matched importable target rows, excluded target rows `1`, unresolved rows `0`, unmatched examples `[]`, excluded target examples `[{"csv_row_number": 16, "row": {"permit_number": "PLM-2026-0206", "address": "410 W Jefferson Blvd", "city": "Dallas", "trade": "plumbing", "work_class": "residential"}}]`
 - Raw CSV import scope counts:
-- `permits.csv` import scope: `34/35` importable, excluded: `1`, reasons: `{"excluded_by_city": 0, "excluded_by_trade": 1, "excluded_by_work_class": 0}`
-- `inspections.csv` import scope: `80/81` importable, excluded: `1`, reasons: `{"excluded_by_unimported_permit": 1}`
+- `permits.csv` import scope: `35/36` importable, excluded: `1`, reasons: `{"excluded_by_city": 0, "excluded_by_trade": 1, "excluded_by_work_class": 0}`
+- `inspections.csv` import scope: `82/83` importable, excluded: `1`, reasons: `{"excluded_by_unimported_permit": 1}`
 - `contractors.csv` import scope: `5/6` importable, excluded: `1`, reasons: `{"excluded_by_license_type": 1}`
 - `rule_documents.csv` import scope: `3/3` importable, excluded: `0`, reasons: `{"excluded_by_missing_title": 0}`
 - Raw CSV importable examples:
@@ -222,18 +222,18 @@ These are the reusable accepted correction patterns currently embedded in the Da
 - `contractors.csv` append CSV template: `{"header_line": "registration_id,name,license_type,registration_status,city,state", "template_line": "<required>,<required>,<required>,,,"}`
 - `rule_documents.csv` append CSV template: `{"header_line": "title,document_type,effective_date,source_url,text_content", "template_line": "<required>,,,,"}`
 - Raw CSV append work order:
-- `permits.csv` append work order: path `generated/raw/dallas-electrician-import-sample-v2/permits.csv`, row `37`, header `permit_number,address,city,state,zip_code,trade,work_class,property_type,permit_type,status,file_date,issue_date,final_date,declared_valuation,work_description,contractor_name,source_url`, template `<required>,<required>,<required>,,,<required>,<required>,,,,,,,,,,`
-- `inspections.csv` append work order: path `generated/raw/dallas-electrician-import-sample-v2/inspections.csv`, row `83`, header `permit_number,inspection_date,inspection_type,result,notes,inspector_name,reinspection_flag,source_url`, template `<required>,<required>,<required>,<required>,,,,`
+- `permits.csv` append work order: path `generated/raw/dallas-electrician-import-sample-v2/permits.csv`, row `38`, header `permit_number,address,city,state,zip_code,trade,work_class,property_type,permit_type,status,file_date,issue_date,final_date,declared_valuation,work_description,contractor_name,source_url`, template `<required>,<required>,<required>,,,<required>,<required>,,,,,,,,,,`
+- `inspections.csv` append work order: path `generated/raw/dallas-electrician-import-sample-v2/inspections.csv`, row `85`, header `permit_number,inspection_date,inspection_type,result,notes,inspector_name,reinspection_flag,source_url`, template `<required>,<required>,<required>,<required>,,,,`
 - `contractors.csv` append work order: path `generated/raw/dallas-electrician-import-sample-v2/contractors.csv`, row `8`, header `registration_id,name,license_type,registration_status,city,state`, template `<required>,<required>,<required>,,,`
 - `rule_documents.csv` append work order: path `generated/raw/dallas-electrician-import-sample-v2/rule_documents.csv`, row `5`, header `title,document_type,effective_date,source_url,text_content`, template `<required>,,,,`
 - Raw CSV append sequence:
-- `permits.csv` append sequence: path `generated/raw/dallas-electrician-import-sample-v2/permits.csv`, row `37`, header `permit_number,address,city,state,zip_code,trade,work_class,property_type,permit_type,status,file_date,issue_date,final_date,declared_valuation,work_description,contractor_name,source_url`, template `<required>,<required>,<required>,,,<required>,<required>,,,,,,,,,,`
-- `inspections.csv` append sequence: path `generated/raw/dallas-electrician-import-sample-v2/inspections.csv`, row `83`, header `permit_number,inspection_date,inspection_type,result,notes,inspector_name,reinspection_flag,source_url`, template `<required>,<required>,<required>,<required>,,,,`
+- `permits.csv` append sequence: path `generated/raw/dallas-electrician-import-sample-v2/permits.csv`, row `38`, header `permit_number,address,city,state,zip_code,trade,work_class,property_type,permit_type,status,file_date,issue_date,final_date,declared_valuation,work_description,contractor_name,source_url`, template `<required>,<required>,<required>,,,<required>,<required>,,,,,,,,,,`
+- `inspections.csv` append sequence: path `generated/raw/dallas-electrician-import-sample-v2/inspections.csv`, row `85`, header `permit_number,inspection_date,inspection_type,result,notes,inspector_name,reinspection_flag,source_url`, template `<required>,<required>,<required>,<required>,,,,`
 - `contractors.csv` append sequence: path `generated/raw/dallas-electrician-import-sample-v2/contractors.csv`, row `8`, header `registration_id,name,license_type,registration_status,city,state`, template `<required>,<required>,<required>,,,`
 - `rule_documents.csv` append sequence: path `generated/raw/dallas-electrician-import-sample-v2/rule_documents.csv`, row `5`, header `title,document_type,effective_date,source_url,text_content`, template `<required>,,,,`
 - Raw CSV required-field gaps:
-- `permits.csv` required-field gaps: `0/35` rows, missing headers: none, field counts: `{"address": 0, "city": 0, "permit_number": 0, "trade": 0, "work_class": 0}`
-- `inspections.csv` required-field gaps: `0/81` rows, missing headers: none, field counts: `{"inspection_date": 0, "inspection_type": 0, "permit_number": 0, "result": 0}`
+- `permits.csv` required-field gaps: `0/36` rows, missing headers: none, field counts: `{"address": 0, "city": 0, "permit_number": 0, "trade": 0, "work_class": 0}`
+- `inspections.csv` required-field gaps: `0/83` rows, missing headers: none, field counts: `{"inspection_date": 0, "inspection_type": 0, "permit_number": 0, "result": 0}`
 - `contractors.csv` required-field gaps: `0/6` rows, missing headers: none, field counts: `{"license_type": 0, "name": 0, "registration_id": 0}`
 - `rule_documents.csv` required-field gaps: `0/3` rows, missing headers: none, field counts: `{"title": 0}`
 - Require-ready pipeline: `python3 scripts/run_dallas_import_pipeline.py --require-ready`
