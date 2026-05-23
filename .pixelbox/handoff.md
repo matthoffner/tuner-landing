@@ -4,6 +4,10 @@ Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
 - lane: editor
+- status: summarized accepted Dallas operator corrections back into the generated workflow; `operator_correction_patterns` now groups the latest accepted correction per queue item into 6 reusable action patterns across all 13 captured items, and the workflow Markdown/static page surface those patterns before the queue
+- files: scripts/generate_dallas_inspection_workflow.py, generated/workflows/dallas-inspection-workflow-v1/action-queue.json, generated/workflows/dallas-inspection-workflow-v1/action-queue.md, generated/workflows/dallas-inspection-workflow-v1/index.html, NEXT_TASK.md, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- next: run `python3 scripts/record_operator_correction.py --smoke-check`, `python3 scripts/record_operator_correction.py --smoke-check --format text`, and `python3 scripts/record_operator_correction.py --validate-ledger --require-complete --format text`; then use `operator_correction_patterns` to decide whether to widen the thin `incomplete_work` / `complete_remaining_work|schedule_reinspection` Dallas fixture support
+- lane: editor
 - status: captured the thirteenth Dallas operator correction through the non-server CLI; `workflow-item:dallas:next-action:0005` is accepted from fixture follow-up evidence, `operator-corrections.jsonl` has 13 events, and regenerated workflow artifacts plus the completion gate now report 13 captured corrections with 0 remaining
 - files: generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl, generated/workflows/dallas-inspection-workflow-v1/action-queue.json, generated/workflows/dallas-inspection-workflow-v1/action-queue.md, generated/workflows/dallas-inspection-workflow-v1/index.html, README.md, NEXT_TASK.md, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
 - next: run `python3 scripts/record_operator_correction.py --summary --format text`, then `python3 scripts/record_operator_correction.py --validate-ledger --require-complete --format text`, then summarize the accepted correction patterns back into the Dallas workflow artifact before widening fixture coverage

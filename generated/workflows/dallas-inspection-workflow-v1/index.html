@@ -50,9 +50,9 @@
       }
       .summary {
         display: grid;
-        grid-template-columns: repeat(4, minmax(120px, 1fr));
+        grid-template-columns: repeat(5, minmax(110px, 1fr));
         gap: 10px;
-        min-width: min(540px, 100%);
+        min-width: min(640px, 100%);
       }
       .metric {
         border: 1px solid var(--line);
@@ -72,6 +72,59 @@
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
         gap: 14px;
+      }
+      .patterns {
+        margin: 0 0 24px;
+      }
+      .section-heading {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        align-items: end;
+        margin-bottom: 12px;
+      }
+      .section-heading h2 {
+        margin: 0;
+        font-size: 21px;
+      }
+      .section-heading p {
+        margin: 0;
+        max-width: 620px;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.45;
+      }
+      .pattern-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 12px;
+      }
+      .pattern-card {
+        border: 1px solid var(--line);
+        background: var(--panel);
+        padding: 14px;
+      }
+      .pattern-card h2 {
+        margin: 0 0 6px;
+        font-size: 17px;
+      }
+      .pattern-card p {
+        margin: 0;
+      }
+      .pattern-card > p {
+        color: var(--ink);
+        line-height: 1.35;
+      }
+      .pattern-details {
+        margin: 12px 0;
+      }
+      .pattern-details div {
+        grid-template-columns: 82px minmax(0, 1fr);
+      }
+      .pattern-examples {
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.4;
       }
       .queue-item {
         border: 1px solid var(--line);
@@ -197,6 +250,7 @@
       @media (max-width: 760px) {
         header { grid-template-columns: 1fr; }
         .summary { grid-template-columns: repeat(2, 1fr); }
+        .section-heading { align-items: start; flex-direction: column; }
       }
       @media (max-width: 520px) {
         main { padding: 22px 14px 40px; }
@@ -217,8 +271,83 @@
           <div class="metric"><strong>6</strong><span>high priority</span></div>
           <div class="metric"><strong>7</strong><span>medium priority</span></div>
           <div class="metric"><strong>13</strong><span>corrections</span></div>
+          <div class="metric"><strong>6</strong><span>patterns</span></div>
         </div>
       </header>
+      <section class="patterns" aria-label="Accepted operator correction patterns">
+        <div class="section-heading">
+          <h2>Accepted Operator Patterns</h2>
+          <p>Grouped from the latest accepted correction captured for each current Dallas queue item. These patterns are the reusable operational memory to carry forward before widening the fixture.</p>
+        </div>
+        <div class="pattern-grid">
+                      <article class="pattern-card">
+              <h2>3x accepted</h2>
+              <p>Correct wiring or devices, Schedule reinspection</p>
+              <dl class="pattern-details">
+                <div><dt>Action IDs</dt><dd>correct_wiring_or_devices, schedule_reinspection</dd></div>
+                <div><dt>Triggers</dt><dd>{&quot;fail&quot;: 2, &quot;partial&quot;: 1}</dd></div>
+                <div><dt>Reasons</dt><dd>{&quot;wiring_or_device_issue&quot;: 3}</dd></div>
+                <div><dt>Follow-up</dt><dd>{&quot;pass&quot;: 3}</dd></div>
+              </dl>
+              <p class="pattern-examples">ELP-2026-0209, ELR-2026-0201, ELR-2026-0207</p>
+            </article>
+            <article class="pattern-card">
+              <h2>3x accepted</h2>
+              <p>Ensure site access, Schedule reinspection</p>
+              <dl class="pattern-details">
+                <div><dt>Action IDs</dt><dd>ensure_site_access, schedule_reinspection</dd></div>
+                <div><dt>Triggers</dt><dd>{&quot;not_ready&quot;: 3}</dd></div>
+                <div><dt>Reasons</dt><dd>{&quot;access_or_scheduling_issue&quot;: 3}</dd></div>
+                <div><dt>Follow-up</dt><dd>{&quot;pass&quot;: 3}</dd></div>
+              </dl>
+              <p class="pattern-examples">ELM-2026-0211, ELS-2026-0202, ELS-2026-0210</p>
+            </article>
+            <article class="pattern-card">
+              <h2>2x accepted</h2>
+              <p>Correct grounding or bonding, Add missing labels or documentation</p>
+              <dl class="pattern-details">
+                <div><dt>Action IDs</dt><dd>correct_grounding_or_bonding, add_labels_or_documentation</dd></div>
+                <div><dt>Triggers</dt><dd>{&quot;fail&quot;: 2}</dd></div>
+                <div><dt>Reasons</dt><dd>{&quot;grounding_or_bonding_issue&quot;: 2}</dd></div>
+                <div><dt>Follow-up</dt><dd>{&quot;partial&quot;: 2}</dd></div>
+              </dl>
+              <p class="pattern-examples">ELN-2026-0204, ELN-2026-0208</p>
+            </article>
+            <article class="pattern-card">
+              <h2>2x accepted</h2>
+              <p>Correct grounding or bonding, Add missing labels or documentation, Schedule reinspection</p>
+              <dl class="pattern-details">
+                <div><dt>Action IDs</dt><dd>correct_grounding_or_bonding, add_labels_or_documentation, schedule_reinspection</dd></div>
+                <div><dt>Triggers</dt><dd>{&quot;partial&quot;: 2}</dd></div>
+                <div><dt>Reasons</dt><dd>{&quot;grounding_or_bonding_issue&quot;: 2}</dd></div>
+                <div><dt>Follow-up</dt><dd>{&quot;pass&quot;: 2}</dd></div>
+              </dl>
+              <p class="pattern-examples">ELN-2026-0204, ELN-2026-0208</p>
+            </article>
+            <article class="pattern-card">
+              <h2>2x accepted</h2>
+              <p>Correct panel or service issue, Add missing labels or documentation, Schedule reinspection</p>
+              <dl class="pattern-details">
+                <div><dt>Action IDs</dt><dd>correct_panel_or_service, add_labels_or_documentation, schedule_reinspection</dd></div>
+                <div><dt>Triggers</dt><dd>{&quot;fail&quot;: 2}</dd></div>
+                <div><dt>Reasons</dt><dd>{&quot;panel_or_service_issue&quot;: 2}</dd></div>
+                <div><dt>Follow-up</dt><dd>{&quot;pass&quot;: 2}</dd></div>
+              </dl>
+              <p class="pattern-examples">ELS-2026-0213, ELS-2026-0214</p>
+            </article>
+            <article class="pattern-card">
+              <h2>1x accepted</h2>
+              <p>Complete remaining work, Schedule reinspection</p>
+              <dl class="pattern-details">
+                <div><dt>Action IDs</dt><dd>complete_remaining_work, schedule_reinspection</dd></div>
+                <div><dt>Triggers</dt><dd>{&quot;partial&quot;: 1}</dd></div>
+                <div><dt>Reasons</dt><dd>{&quot;incomplete_work&quot;: 1}</dd></div>
+                <div><dt>Follow-up</dt><dd>{&quot;pass&quot;: 1}</dd></div>
+              </dl>
+              <p class="pattern-examples">ELP-2026-0203</p>
+            </article>
+        </div>
+      </section>
       <section class="queue" aria-label="Inspection action queue">
         
             <article class="queue-item priority-high" data-queue-item-id="workflow-item:dallas:next-action:0008">

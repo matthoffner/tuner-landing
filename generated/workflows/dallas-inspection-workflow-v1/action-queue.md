@@ -9,6 +9,75 @@ This artifact turns reviewed Dallas electrician inspection labels into a concret
 - Trigger result counts: `{"fail": 6, "not_ready": 3, "partial": 4}`
 - Operator correction events: `13`
 - Operator correction ledger: `generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl`
+- Accepted correction patterns: `6`
+
+## Accepted Operator Correction Patterns
+
+### operator-pattern:accepted:0001
+
+- Queue items: `3`
+- Actions: `Correct wiring or devices, Schedule reinspection`
+- Action IDs: `correct_wiring_or_devices, schedule_reinspection`
+- Trigger results: `{"fail": 2, "partial": 1}`
+- Failure reasons: `{"wiring_or_device_issue": 3}`
+- Inspection types: `{"final": 2, "rough_in": 1}`
+- Follow-up results: `{"pass": 3}`
+- Example permits: `ELP-2026-0209, ELR-2026-0201, ELR-2026-0207`
+
+### operator-pattern:accepted:0002
+
+- Queue items: `3`
+- Actions: `Ensure site access, Schedule reinspection`
+- Action IDs: `ensure_site_access, schedule_reinspection`
+- Trigger results: `{"not_ready": 3}`
+- Failure reasons: `{"access_or_scheduling_issue": 3}`
+- Inspection types: `{"final": 1, "service_release": 2}`
+- Follow-up results: `{"pass": 3}`
+- Example permits: `ELM-2026-0211, ELS-2026-0202, ELS-2026-0210`
+
+### operator-pattern:accepted:0003
+
+- Queue items: `2`
+- Actions: `Correct grounding or bonding, Add missing labels or documentation`
+- Action IDs: `correct_grounding_or_bonding, add_labels_or_documentation`
+- Trigger results: `{"fail": 2}`
+- Failure reasons: `{"grounding_or_bonding_issue": 2}`
+- Inspection types: `{"rough_in": 2}`
+- Follow-up results: `{"partial": 2}`
+- Example permits: `ELN-2026-0204, ELN-2026-0208`
+
+### operator-pattern:accepted:0004
+
+- Queue items: `2`
+- Actions: `Correct grounding or bonding, Add missing labels or documentation, Schedule reinspection`
+- Action IDs: `correct_grounding_or_bonding, add_labels_or_documentation, schedule_reinspection`
+- Trigger results: `{"partial": 2}`
+- Failure reasons: `{"grounding_or_bonding_issue": 2}`
+- Inspection types: `{"correction_followup": 2}`
+- Follow-up results: `{"pass": 2}`
+- Example permits: `ELN-2026-0204, ELN-2026-0208`
+
+### operator-pattern:accepted:0005
+
+- Queue items: `2`
+- Actions: `Correct panel or service issue, Add missing labels or documentation, Schedule reinspection`
+- Action IDs: `correct_panel_or_service, add_labels_or_documentation, schedule_reinspection`
+- Trigger results: `{"fail": 2}`
+- Failure reasons: `{"panel_or_service_issue": 2}`
+- Inspection types: `{"service_release": 2}`
+- Follow-up results: `{"pass": 2}`
+- Example permits: `ELS-2026-0213, ELS-2026-0214`
+
+### operator-pattern:accepted:0006
+
+- Queue items: `1`
+- Actions: `Complete remaining work, Schedule reinspection`
+- Action IDs: `complete_remaining_work, schedule_reinspection`
+- Trigger results: `{"partial": 1}`
+- Failure reasons: `{"incomplete_work": 1}`
+- Inspection types: `{"rough_in": 1}`
+- Follow-up results: `{"pass": 1}`
+- Example permits: `ELP-2026-0203`
 
 ## Action Queue
 

@@ -46,7 +46,8 @@ Updated next best artifacts:
 
 - keep the real MVP cockpit running with `python3 scripts/serve_mvp_cockpit.py --auto-start --port 4174`
 - expose the running cockpit to remote observers with `python3 scripts/bridge_mvp_cockpit.py` and share the read-only URL from `.automoat/state/mvp-bridge-status.json`
-- run `python3 scripts/record_operator_correction.py --smoke-check` for the default JSON contract and `python3 scripts/record_operator_correction.py --smoke-check --format text` for the readable operator contract, verify the completed correction ledger with `python3 scripts/record_operator_correction.py --summary --format text` and `python3 scripts/record_operator_correction.py --validate-ledger --require-complete --format text`, then summarize useful accepted-correction patterns back into the Dallas workflow artifact before widening fixture coverage
+- run `python3 scripts/record_operator_correction.py --smoke-check` for the default JSON contract and `python3 scripts/record_operator_correction.py --smoke-check --format text` for the readable operator contract, then verify the completed correction ledger with `python3 scripts/record_operator_correction.py --summary --format text` and `python3 scripts/record_operator_correction.py --validate-ledger --require-complete --format text` before widening fixture coverage
+- use `generated/workflows/dallas-inspection-workflow-v1/action-queue.json` `operator_correction_patterns` to choose the next Dallas import-fixture widening pass from the accepted operational patterns
 - decide whether the remaining thin latest-import labels, `incomplete_work` and `complete_remaining_work|schedule_reinspection`, need another repeated sequence before real data import
 
 Latest bounded improvement completed:
@@ -128,6 +129,7 @@ Latest bounded improvement completed:
 - Captured the eleventh Dallas operator correction through the non-server CLI: `workflow-item:dallas:next-action:0011` is now accepted in `operator-corrections.jsonl`, the regenerated workflow reports `11` captured corrections, and the next missing work order advances to `workflow-item:dallas:next-action:0003`
 - Captured the twelfth Dallas operator correction through the non-server CLI: `workflow-item:dallas:next-action:0003` is now accepted in `operator-corrections.jsonl`, the regenerated workflow reports `12` captured corrections, and the next missing work order advances to `workflow-item:dallas:next-action:0005`
 - Captured the thirteenth Dallas operator correction through the non-server CLI: `workflow-item:dallas:next-action:0005` is now accepted in `operator-corrections.jsonl`, and the regenerated workflow plus completion gate report all `13` current queue items captured
+- `scripts/generate_dallas_inspection_workflow.py` now groups the latest accepted operator corrections into `operator_correction_patterns`; regenerated workflow artifacts surface `6` reusable accepted action patterns across all `13` captured Dallas queue items
 
 ## Constraints
 

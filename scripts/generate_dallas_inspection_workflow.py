@@ -30,6 +30,10 @@ ACTION_LABELS = {
 }
 
 
+def action_labels(actions):
+    return [ACTION_LABELS.get(action, action.replace("_", " ")) for action in actions]
+
+
 def load_json(path: Path):
     with path.open() as handle:
         return json.load(handle)
@@ -118,7 +122,6 @@ def build_action_queue(normalized_dir, eval_dir):
             review["inspection_id"],
         )
         actions = review.get("label_payload", {}).get("reference_actions", [])
-        action_labels = [ACTION_LABELS.get(action, action.replace("_", " ")) for action in actions]
 
         items.append(
             {
@@ -145,7 +148,7 @@ def build_action_queue(normalized_dir, eval_dir):
                     "notes_raw": inspection.get("notes_raw"),
                 },
                 "recommended_actions": actions,
-                "recommended_action_labels": action_labels,
+                "recommended_action_labels": action_labels(actions),
                 "priority": PRIORITY_BY_RESULT.get(inspection["result_normalized"], "low"),
                 "expected_followup": {
                     "inspection_date": next_inspection.get("inspection_date") if next_inspection else None,
@@ -183,12 +186,10 @@ def build_summary(items):
 
 def build_correction_summary(events, invalid_lines):
     decision_counts = Counter(event.get("decision", "unknown") for event in events)
-    latest_by_queue_item = {}
-    for event in events:
-        queue_item_id = event.get("queue_item_id")
-        if not queue_item_id:
-            continue
-        latest_by_queue_item[queue_item_id] = {
+    latest_by_queue_item = latest_correction_events_by_queue_item(events)
+    latest_summary_by_queue_item = {}
+    for queue_item_id, event in latest_by_queue_item.items():
+        latest_summary_by_queue_item[queue_item_id] = {
             "correction_id": event.get("correction_id"),
             "captured_at": event.get("captured_at"),
             "decision": event.get("decision"),
@@ -197,10 +198,124 @@ def build_correction_summary(events, invalid_lines):
     return {
         "ledger_path": "generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl",
         "total_events": len(events),
-        "queue_items_with_corrections": len(latest_by_queue_item),
+        "queue_items_with_corrections": len(latest_summary_by_queue_item),
         "decision_counts": dict(sorted(decision_counts.items())),
         "invalid_lines": invalid_lines,
-        "latest_by_queue_item": latest_by_queue_item,
+        "latest_by_queue_item": latest_summary_by_queue_item,
+    }
+
+
+def latest_correction_events_by_queue_item(events):
+    latest_by_queue_item = {}
+    for event in events:
+        queue_item_id = event.get("queue_item_id")
+        if not queue_item_id:
+            continue
+        latest_by_queue_item[queue_item_id] = event
+    return latest_by_queue_item
+
+
+def count_if_present(counter, value):
+    if value is None:
+        return
+    text = str(value).strip()
+    if text:
+        counter[text] += 1
+
+
+def counter_payload(counter):
+    return dict(sorted(counter.items()))
+
+
+def build_operator_correction_patterns(events, items):
+    items_by_id = {item["queue_item_id"]: item for item in items}
+    latest_by_queue_item = latest_correction_events_by_queue_item(events)
+    grouped = {}
+
+    for queue_item_id, event in latest_by_queue_item.items():
+        if event.get("decision") != "accepted":
+            continue
+        item = items_by_id.get(queue_item_id)
+        if not item:
+            continue
+        corrected_actions = [
+            action for action in event.get("corrected_actions", [])
+            if isinstance(action, str) and action
+        ]
+        if not corrected_actions:
+            continue
+
+        key = tuple(corrected_actions)
+        group = grouped.setdefault(
+            key,
+            {
+                "corrected_actions": corrected_actions,
+                "queue_item_ids": [],
+                "source_permit_numbers": set(),
+                "trigger_result_counts": Counter(),
+                "failure_reason_counts": Counter(),
+                "inspection_type_counts": Counter(),
+                "observed_followup_result_counts": Counter(),
+                "operator_note_examples": [],
+            },
+        )
+        group["queue_item_ids"].append(queue_item_id)
+        group["source_permit_numbers"].add(item["source_permit_number"])
+
+        trigger = item.get("trigger_inspection", {})
+        followup = item.get("expected_followup", {})
+        count_if_present(group["trigger_result_counts"], trigger.get("result_normalized"))
+        count_if_present(group["failure_reason_counts"], trigger.get("failure_reason_normalized"))
+        count_if_present(group["inspection_type_counts"], trigger.get("inspection_type_normalized"))
+        count_if_present(group["observed_followup_result_counts"], followup.get("result_normalized"))
+
+        operator_note = event.get("operator_note")
+        if isinstance(operator_note, str) and operator_note.strip():
+            group["operator_note_examples"].append(operator_note.strip())
+
+    patterns = []
+    for group in grouped.values():
+        note_examples = []
+        seen_notes = set()
+        for note in group["operator_note_examples"]:
+            if note in seen_notes:
+                continue
+            seen_notes.add(note)
+            note_examples.append(note)
+            if len(note_examples) == 2:
+                break
+
+        patterns.append(
+            {
+                "corrected_actions": group["corrected_actions"],
+                "corrected_action_labels": action_labels(group["corrected_actions"]),
+                "queue_item_count": len(group["queue_item_ids"]),
+                "queue_item_ids": sorted(group["queue_item_ids"]),
+                "source_permit_numbers": sorted(group["source_permit_numbers"]),
+                "trigger_result_counts": counter_payload(group["trigger_result_counts"]),
+                "failure_reason_counts": counter_payload(group["failure_reason_counts"]),
+                "inspection_type_counts": counter_payload(group["inspection_type_counts"]),
+                "observed_followup_result_counts": counter_payload(
+                    group["observed_followup_result_counts"]
+                ),
+                "operator_note_examples": note_examples,
+            }
+        )
+
+    patterns.sort(
+        key=lambda pattern: (
+            -pattern["queue_item_count"],
+            pattern["corrected_actions"],
+        )
+    )
+    for index, pattern in enumerate(patterns, start=1):
+        pattern["pattern_id"] = f"operator-pattern:accepted:{index:04d}"
+
+    return {
+        "source": "latest accepted operator correction per current queue item",
+        "accepted_latest_corrections": sum(pattern["queue_item_count"] for pattern in patterns),
+        "accepted_pattern_count": len(patterns),
+        "patterns": patterns,
     }
 
 
@@ -217,11 +332,16 @@ def build_payload(items, correction_events=None, invalid_correction_lines=0):
             correction_events,
             invalid_correction_lines,
         ),
+        "operator_correction_patterns": build_operator_correction_patterns(
+            correction_events,
+            items,
+        ),
         "queue": items,
     }
 
 
 def build_markdown(payload):
+    pattern_summary = payload["operator_correction_patterns"]
     lines = [
         "# Dallas Inspection Workflow V1",
         "",
@@ -234,10 +354,37 @@ def build_markdown(payload):
         f"- Trigger result counts: `{json.dumps(payload['summary']['trigger_result_counts'], sort_keys=True)}`",
         f"- Operator correction events: `{payload['operator_correction_summary']['total_events']}`",
         f"- Operator correction ledger: `{payload['operator_correction_summary']['ledger_path']}`",
+        f"- Accepted correction patterns: `{pattern_summary['accepted_pattern_count']}`",
         "",
-        "## Action Queue",
+        "## Accepted Operator Correction Patterns",
         "",
     ]
+
+    if not pattern_summary["patterns"]:
+        lines.extend(["No accepted operator correction patterns have been captured yet.", ""])
+    for pattern in pattern_summary["patterns"]:
+        lines.extend(
+            [
+                f"### {pattern['pattern_id']}",
+                "",
+                f"- Queue items: `{pattern['queue_item_count']}`",
+                f"- Actions: `{', '.join(pattern['corrected_action_labels'])}`",
+                f"- Action IDs: `{', '.join(pattern['corrected_actions'])}`",
+                f"- Trigger results: `{json.dumps(pattern['trigger_result_counts'], sort_keys=True)}`",
+                f"- Failure reasons: `{json.dumps(pattern['failure_reason_counts'], sort_keys=True)}`",
+                f"- Inspection types: `{json.dumps(pattern['inspection_type_counts'], sort_keys=True)}`",
+                f"- Follow-up results: `{json.dumps(pattern['observed_followup_result_counts'], sort_keys=True)}`",
+                f"- Example permits: `{', '.join(pattern['source_permit_numbers'])}`",
+                "",
+            ]
+        )
+
+    lines.extend(
+        [
+            "## Action Queue",
+            "",
+        ]
+    )
 
     for item in payload["queue"]:
         trigger = item["trigger_inspection"]
@@ -267,6 +414,7 @@ def css_class(value):
 def build_html(payload):
     summary = payload["summary"]
     correction_summary = payload["operator_correction_summary"]
+    pattern_summary = payload["operator_correction_patterns"]
     latest_corrections = correction_summary.get("latest_by_queue_item", {})
     queue_state = json.dumps(
         {
@@ -278,6 +426,32 @@ def build_html(payload):
         },
         sort_keys=True,
     ).replace("<", "\\u003c")
+    pattern_cards = []
+    for pattern in pattern_summary.get("patterns", []):
+        actions_text = ", ".join(pattern.get("corrected_action_labels", []))
+        action_ids_text = ", ".join(pattern.get("corrected_actions", []))
+        source_text = ", ".join(pattern.get("source_permit_numbers", []))
+        trigger_text = json.dumps(pattern.get("trigger_result_counts", {}), sort_keys=True)
+        failure_text = json.dumps(pattern.get("failure_reason_counts", {}), sort_keys=True)
+        followup_text = json.dumps(pattern.get("observed_followup_result_counts", {}), sort_keys=True)
+        pattern_cards.append(
+            "\n".join(
+                [
+                    '            <article class="pattern-card">',
+                    f"              <h2>{escape(str(pattern.get('queue_item_count')))}x accepted</h2>",
+                    f"              <p>{escape(actions_text)}</p>",
+                    '              <dl class="pattern-details">',
+                    f"                <div><dt>Action IDs</dt><dd>{escape(action_ids_text)}</dd></div>",
+                    f"                <div><dt>Triggers</dt><dd>{escape(trigger_text)}</dd></div>",
+                    f"                <div><dt>Reasons</dt><dd>{escape(failure_text)}</dd></div>",
+                    f"                <div><dt>Follow-up</dt><dd>{escape(followup_text)}</dd></div>",
+                    "              </dl>",
+                    f"              <p class=\"pattern-examples\">{escape(source_text)}</p>",
+                    "            </article>",
+                ]
+            )
+        )
+    pattern_section = "\n".join(pattern_cards) if pattern_cards else "<p>No accepted patterns captured yet.</p>"
     rows = []
     for item in payload["queue"]:
         trigger = item["trigger_inspection"]
@@ -388,9 +562,9 @@ def build_html(payload):
       }}
       .summary {{
         display: grid;
-        grid-template-columns: repeat(4, minmax(120px, 1fr));
+        grid-template-columns: repeat(5, minmax(110px, 1fr));
         gap: 10px;
-        min-width: min(540px, 100%);
+        min-width: min(640px, 100%);
       }}
       .metric {{
         border: 1px solid var(--line);
@@ -410,6 +584,59 @@ def build_html(payload):
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
         gap: 14px;
+      }}
+      .patterns {{
+        margin: 0 0 24px;
+      }}
+      .section-heading {{
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        align-items: end;
+        margin-bottom: 12px;
+      }}
+      .section-heading h2 {{
+        margin: 0;
+        font-size: 21px;
+      }}
+      .section-heading p {{
+        margin: 0;
+        max-width: 620px;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.45;
+      }}
+      .pattern-grid {{
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 12px;
+      }}
+      .pattern-card {{
+        border: 1px solid var(--line);
+        background: var(--panel);
+        padding: 14px;
+      }}
+      .pattern-card h2 {{
+        margin: 0 0 6px;
+        font-size: 17px;
+      }}
+      .pattern-card p {{
+        margin: 0;
+      }}
+      .pattern-card > p {{
+        color: var(--ink);
+        line-height: 1.35;
+      }}
+      .pattern-details {{
+        margin: 12px 0;
+      }}
+      .pattern-details div {{
+        grid-template-columns: 82px minmax(0, 1fr);
+      }}
+      .pattern-examples {{
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.4;
       }}
       .queue-item {{
         border: 1px solid var(--line);
@@ -535,6 +762,7 @@ def build_html(payload):
       @media (max-width: 760px) {{
         header {{ grid-template-columns: 1fr; }}
         .summary {{ grid-template-columns: repeat(2, 1fr); }}
+        .section-heading {{ align-items: start; flex-direction: column; }}
       }}
       @media (max-width: 520px) {{
         main {{ padding: 22px 14px 40px; }}
@@ -555,8 +783,18 @@ def build_html(payload):
           <div class="metric"><strong>{summary['priority_counts'].get('high', 0)}</strong><span>high priority</span></div>
           <div class="metric"><strong>{summary['priority_counts'].get('medium', 0)}</strong><span>medium priority</span></div>
           <div class="metric"><strong>{correction_summary['total_events']}</strong><span>corrections</span></div>
+          <div class="metric"><strong>{pattern_summary['accepted_pattern_count']}</strong><span>patterns</span></div>
         </div>
       </header>
+      <section class="patterns" aria-label="Accepted operator correction patterns">
+        <div class="section-heading">
+          <h2>Accepted Operator Patterns</h2>
+          <p>Grouped from the latest accepted correction captured for each current Dallas queue item. These patterns are the reusable operational memory to carry forward before widening the fixture.</p>
+        </div>
+        <div class="pattern-grid">
+          {pattern_section}
+        </div>
+      </section>
       <section class="queue" aria-label="Inspection action queue">
         {''.join(rows)}
       </section>

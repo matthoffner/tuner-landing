@@ -157,6 +157,237 @@
       }
     }
   },
+  "operator_correction_patterns": {
+    "source": "latest accepted operator correction per current queue item",
+    "accepted_latest_corrections": 13,
+    "accepted_pattern_count": 6,
+    "patterns": [
+      {
+        "corrected_actions": [
+          "correct_wiring_or_devices",
+          "schedule_reinspection"
+        ],
+        "corrected_action_labels": [
+          "Correct wiring or devices",
+          "Schedule reinspection"
+        ],
+        "queue_item_count": 3,
+        "queue_item_ids": [
+          "workflow-item:dallas:next-action:0007",
+          "workflow-item:dallas:next-action:0008",
+          "workflow-item:dallas:next-action:0009"
+        ],
+        "source_permit_numbers": [
+          "ELP-2026-0209",
+          "ELR-2026-0201",
+          "ELR-2026-0207"
+        ],
+        "trigger_result_counts": {
+          "fail": 2,
+          "partial": 1
+        },
+        "failure_reason_counts": {
+          "wiring_or_device_issue": 3
+        },
+        "inspection_type_counts": {
+          "final": 2,
+          "rough_in": 1
+        },
+        "observed_followup_result_counts": {
+          "pass": 3
+        },
+        "operator_note_examples": [
+          "Accepted from fixture review: follow-up shows GFCI added and final trim completed for approval.",
+          "Accepted from fixture review: follow-up shows GFCI protection installed and device trim completed for approval, matching the recommended wiring/device correction and reinspection actions."
+        ],
+        "pattern_id": "operator-pattern:accepted:0001"
+      },
+      {
+        "corrected_actions": [
+          "ensure_site_access",
+          "schedule_reinspection"
+        ],
+        "corrected_action_labels": [
+          "Ensure site access",
+          "Schedule reinspection"
+        ],
+        "queue_item_count": 3,
+        "queue_item_ids": [
+          "workflow-item:dallas:next-action:0001",
+          "workflow-item:dallas:next-action:0010",
+          "workflow-item:dallas:next-action:0011"
+        ],
+        "source_permit_numbers": [
+          "ELM-2026-0211",
+          "ELS-2026-0202",
+          "ELS-2026-0210"
+        ],
+        "trigger_result_counts": {
+          "not_ready": 3
+        },
+        "failure_reason_counts": {
+          "access_or_scheduling_issue": 3
+        },
+        "inspection_type_counts": {
+          "final": 1,
+          "service_release": 2
+        },
+        "observed_followup_result_counts": {
+          "pass": 3
+        },
+        "operator_note_examples": [
+          "Follow-up passed after site access was cleared and the return visit was scheduled.",
+          "Accepted from fixture follow-up: site access was restored and the correction follow-up passed, matching ensure_site_access plus schedule_reinspection."
+        ],
+        "pattern_id": "operator-pattern:accepted:0002"
+      },
+      {
+        "corrected_actions": [
+          "correct_grounding_or_bonding",
+          "add_labels_or_documentation"
+        ],
+        "corrected_action_labels": [
+          "Correct grounding or bonding",
+          "Add missing labels or documentation"
+        ],
+        "queue_item_count": 2,
+        "queue_item_ids": [
+          "workflow-item:dallas:next-action:0002",
+          "workflow-item:dallas:next-action:0004"
+        ],
+        "source_permit_numbers": [
+          "ELN-2026-0204",
+          "ELN-2026-0208"
+        ],
+        "trigger_result_counts": {
+          "fail": 2
+        },
+        "failure_reason_counts": {
+          "grounding_or_bonding_issue": 2
+        },
+        "inspection_type_counts": {
+          "rough_in": 2
+        },
+        "observed_followup_result_counts": {
+          "partial": 2
+        },
+        "operator_note_examples": [
+          "Accepted from fixture review: follow-up corrected grounding and still exposed panel labeling work, matching the recommended grounding and documentation actions.",
+          "Accepted from fixture review: follow-up corrected grounding and still exposed breaker labeling work, matching the recommended grounding and documentation actions."
+        ],
+        "pattern_id": "operator-pattern:accepted:0003"
+      },
+      {
+        "corrected_actions": [
+          "correct_grounding_or_bonding",
+          "add_labels_or_documentation",
+          "schedule_reinspection"
+        ],
+        "corrected_action_labels": [
+          "Correct grounding or bonding",
+          "Add missing labels or documentation",
+          "Schedule reinspection"
+        ],
+        "queue_item_count": 2,
+        "queue_item_ids": [
+          "workflow-item:dallas:next-action:0003",
+          "workflow-item:dallas:next-action:0005"
+        ],
+        "source_permit_numbers": [
+          "ELN-2026-0204",
+          "ELN-2026-0208"
+        ],
+        "trigger_result_counts": {
+          "partial": 2
+        },
+        "failure_reason_counts": {
+          "grounding_or_bonding_issue": 2
+        },
+        "inspection_type_counts": {
+          "correction_followup": 2
+        },
+        "observed_followup_result_counts": {
+          "pass": 2
+        },
+        "operator_note_examples": [
+          "Accepted from fixture follow-up evidence: grounding was corrected, labeling verified, and the final inspection passed.",
+          "Accepted from fixture follow-up evidence: grounding was corrected, labeling verified, and the final inspection passed, matching recommended grounding, documentation, and reinspection actions."
+        ],
+        "pattern_id": "operator-pattern:accepted:0004"
+      },
+      {
+        "corrected_actions": [
+          "correct_panel_or_service",
+          "add_labels_or_documentation",
+          "schedule_reinspection"
+        ],
+        "corrected_action_labels": [
+          "Correct panel or service issue",
+          "Add missing labels or documentation",
+          "Schedule reinspection"
+        ],
+        "queue_item_count": 2,
+        "queue_item_ids": [
+          "workflow-item:dallas:next-action:0012",
+          "workflow-item:dallas:next-action:0013"
+        ],
+        "source_permit_numbers": [
+          "ELS-2026-0213",
+          "ELS-2026-0214"
+        ],
+        "trigger_result_counts": {
+          "fail": 2
+        },
+        "failure_reason_counts": {
+          "panel_or_service_issue": 2
+        },
+        "inspection_type_counts": {
+          "service_release": 2
+        },
+        "observed_followup_result_counts": {
+          "pass": 2
+        },
+        "operator_note_examples": [
+          "Accepted from fixture review: follow-up shows disconnect labeling added and service panel deadfront secured for release approval, matching the recommended panel/service, documentation, and reinspection actions.",
+          "Accepted from fixture review: follow-up shows the deadfront secured and exterior disconnect labels installed for release approval, matching the recommended panel/service, documentation, and reinspection actions."
+        ],
+        "pattern_id": "operator-pattern:accepted:0005"
+      },
+      {
+        "corrected_actions": [
+          "complete_remaining_work",
+          "schedule_reinspection"
+        ],
+        "corrected_action_labels": [
+          "Complete remaining work",
+          "Schedule reinspection"
+        ],
+        "queue_item_count": 1,
+        "queue_item_ids": [
+          "workflow-item:dallas:next-action:0006"
+        ],
+        "source_permit_numbers": [
+          "ELP-2026-0203"
+        ],
+        "trigger_result_counts": {
+          "partial": 1
+        },
+        "failure_reason_counts": {
+          "incomplete_work": 1
+        },
+        "inspection_type_counts": {
+          "rough_in": 1
+        },
+        "observed_followup_result_counts": {
+          "pass": 1
+        },
+        "operator_note_examples": [
+          "Accepted from fixture review: follow-up shows remaining trim complete and branch repairs accepted, matching the recommended remaining-work completion and reinspection actions."
+        ],
+        "pattern_id": "operator-pattern:accepted:0006"
+      }
+    ]
+  },
   "queue": [
     {
       "queue_item_id": "workflow-item:dallas:next-action:0008",
