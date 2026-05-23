@@ -4,10 +4,10 @@ This artifact turns reviewed Dallas electrician inspection labels into a concret
 
 ## Summary
 
-- Queue items: `29`
-- Priority counts: `{"high": 6, "medium": 23}`
-- Trigger result counts: `{"fail": 6, "not_ready": 4, "partial": 19}`
-- Operator correction events: `29`
+- Queue items: `30`
+- Priority counts: `{"high": 6, "medium": 24}`
+- Trigger result counts: `{"fail": 6, "not_ready": 4, "partial": 20}`
+- Operator correction events: `30`
 - Operator correction ledger: `generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl`
 - Accepted correction patterns: `6`
 
@@ -26,14 +26,14 @@ This artifact turns reviewed Dallas electrician inspection labels into a concret
 
 ### operator-pattern:accepted:0002
 
-- Queue items: `7`
+- Queue items: `8`
 - Actions: `Complete remaining work, Schedule reinspection`
 - Action IDs: `complete_remaining_work, schedule_reinspection`
-- Trigger results: `{"partial": 7}`
-- Failure reasons: `{"incomplete_work": 7}`
-- Inspection types: `{"rough_in": 7}`
-- Follow-up results: `{"pass": 7}`
-- Example permits: `ELP-2026-0203, ELZ-2026-0215, ELZ-2026-0216, ELZ-2026-0225, ELZ-2026-0226, ELZ-2026-0227, ELZ-2026-0228`
+- Trigger results: `{"partial": 8}`
+- Failure reasons: `{"incomplete_work": 8}`
+- Inspection types: `{"rough_in": 8}`
+- Follow-up results: `{"pass": 8}`
+- Example permits: `ELP-2026-0203, ELZ-2026-0215, ELZ-2026-0216, ELZ-2026-0225, ELZ-2026-0226, ELZ-2026-0227, ELZ-2026-0228, ELZ-2026-0231`
 
 ### operator-pattern:accepted:0003
 
@@ -370,3 +370,13 @@ This artifact turns reviewed Dallas electrician inspection labels into a concret
 - Recommended actions: `Correct wiring or devices, Schedule reinspection`
 - Follow-up observed: `2026-05-23` `correction_followup` -> `pass`
 - Evidence: Laundry branch wiring repaired but replacement exhaust fan timer devices and cover trim remained incomplete before rough-in approval.
+
+### ELZ-2026-0231 - 2896 S EWING AVE DALLAS TX 75216
+
+- Priority: `medium`
+- Contractor: `Cedars South Electric`
+- Trigger: `2026-05-22` `rough_in` -> `partial`
+- Failure reason: `incomplete_work`
+- Recommended actions: `Complete remaining work, Schedule reinspection`
+- Follow-up observed: `2026-05-23` `correction_followup` -> `pass`
+- Evidence: Pantry branch wiring repaired but replacement under-cabinet lighting and cover trim remained incomplete before rough-in approval.
