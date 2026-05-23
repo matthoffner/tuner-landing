@@ -390,6 +390,87 @@
         }
       }
     },
+    "raw_file_date_profiles": {
+      "permits.csv": {
+        "rows_checked": 15,
+        "fields": {
+          "file_date": {
+            "field_present": true,
+            "date_format": "YYYY-MM-DD",
+            "blank_count": 0,
+            "valid_date_count": 15,
+            "invalid_date_count": 0,
+            "earliest_date": "2026-03-12",
+            "earliest_csv_row_number": 5,
+            "latest_date": "2026-04-18",
+            "latest_csv_row_number": 15,
+            "invalid_examples": []
+          },
+          "issue_date": {
+            "field_present": true,
+            "date_format": "YYYY-MM-DD",
+            "blank_count": 0,
+            "valid_date_count": 15,
+            "invalid_date_count": 0,
+            "earliest_date": "2026-03-13",
+            "earliest_csv_row_number": 5,
+            "latest_date": "2026-04-19",
+            "latest_csv_row_number": 15,
+            "invalid_examples": []
+          },
+          "final_date": {
+            "field_present": true,
+            "date_format": "YYYY-MM-DD",
+            "blank_count": 5,
+            "valid_date_count": 10,
+            "invalid_date_count": 0,
+            "earliest_date": "2026-03-22",
+            "earliest_csv_row_number": 5,
+            "latest_date": "2026-04-27",
+            "latest_csv_row_number": 15,
+            "invalid_examples": []
+          }
+        }
+      },
+      "inspections.csv": {
+        "rows_checked": 41,
+        "fields": {
+          "inspection_date": {
+            "field_present": true,
+            "date_format": "YYYY-MM-DD",
+            "blank_count": 0,
+            "valid_date_count": 41,
+            "invalid_date_count": 0,
+            "earliest_date": "2026-03-17",
+            "earliest_csv_row_number": 11,
+            "latest_date": "2026-04-27",
+            "latest_csv_row_number": 41,
+            "invalid_examples": []
+          }
+        }
+      },
+      "contractors.csv": {
+        "rows_checked": 6,
+        "fields": {}
+      },
+      "rule_documents.csv": {
+        "rows_checked": 3,
+        "fields": {
+          "effective_date": {
+            "field_present": true,
+            "date_format": "YYYY-MM-DD",
+            "blank_count": 0,
+            "valid_date_count": 3,
+            "invalid_date_count": 0,
+            "earliest_date": "2025-01-01",
+            "earliest_csv_row_number": 2,
+            "latest_date": "2025-01-01",
+            "latest_csv_row_number": 2,
+            "invalid_examples": []
+          }
+        }
+      }
+    },
     "raw_file_relationship_checks": {
       "inspections_to_permits": {
         "source_file": "inspections.csv",

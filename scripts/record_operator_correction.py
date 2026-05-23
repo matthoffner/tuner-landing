@@ -8,6 +8,7 @@ import csv
 import json
 import shlex
 import tempfile
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -145,6 +146,21 @@ RAW_IMPORT_VALUE_PROFILE_FIELDS = {
     ],
 }
 RAW_IMPORT_VALUE_PROFILE_LIMIT = 10
+RAW_IMPORT_DATE_FIELDS = {
+    "permits.csv": [
+        "file_date",
+        "issue_date",
+        "final_date",
+    ],
+    "inspections.csv": [
+        "inspection_date",
+    ],
+    "contractors.csv": [],
+    "rule_documents.csv": [
+        "effective_date",
+    ],
+}
+RAW_IMPORT_DATE_EXAMPLE_LIMIT = 5
 RAW_IMPORT_RELATIONSHIP_EXAMPLE_LIMIT = 5
 RAW_IMPORT_RELATIONSHIP_CHECKS = {
     "inspections_to_permits": {
@@ -623,6 +639,77 @@ def raw_import_file_value_profiles(raw_dir: str) -> dict[str, dict[str, Any] | N
                 "distinct_value_count": len(counts),
                 "blank_count": blank_count,
                 "top_values": top_values,
+            }
+
+        profiles[file_name] = {
+            "rows_checked": len(rows),
+            "fields": field_profiles,
+        }
+    return profiles
+
+
+def parse_raw_import_date(value: str) -> str | None:
+    try:
+        return datetime.strptime(value, "%Y-%m-%d").date().isoformat()
+    except ValueError:
+        return None
+
+
+def raw_import_file_date_profiles(raw_dir: str) -> dict[str, dict[str, Any] | None]:
+    resolved_raw_dir = repo_path(raw_dir)
+    profiles: dict[str, dict[str, Any] | None] = {}
+    for file_name in RAW_IMPORT_FILE_NAMES:
+        path = resolved_raw_dir / file_name
+        rows = csv_dict_data_rows_with_numbers(path)
+        headers = csv_header(path)
+        if rows is None or headers is None:
+            profiles[file_name] = None
+            continue
+
+        field_profiles: dict[str, dict[str, Any]] = {}
+        for field in RAW_IMPORT_DATE_FIELDS[file_name]:
+            blank_count = 0
+            valid_date_count = 0
+            invalid_examples: list[dict[str, Any]] = []
+            earliest_date = None
+            earliest_csv_row_number = None
+            latest_date = None
+            latest_csv_row_number = None
+
+            for row_number, row in rows:
+                value = raw_cell(row, field)
+                if not value:
+                    blank_count += 1
+                    continue
+                parsed_date = parse_raw_import_date(value)
+                if parsed_date is None:
+                    if len(invalid_examples) < RAW_IMPORT_DATE_EXAMPLE_LIMIT:
+                        invalid_examples.append(
+                            {
+                                "csv_row_number": row_number,
+                                "value": value,
+                            }
+                        )
+                    continue
+                valid_date_count += 1
+                if earliest_date is None or parsed_date < earliest_date:
+                    earliest_date = parsed_date
+                    earliest_csv_row_number = row_number
+                if latest_date is None or parsed_date > latest_date:
+                    latest_date = parsed_date
+                    latest_csv_row_number = row_number
+
+            field_profiles[field] = {
+                "field_present": field in headers,
+                "date_format": "YYYY-MM-DD",
+                "blank_count": blank_count,
+                "valid_date_count": valid_date_count,
+                "invalid_date_count": len(rows) - blank_count - valid_date_count,
+                "earliest_date": earliest_date,
+                "earliest_csv_row_number": earliest_csv_row_number,
+                "latest_date": latest_date,
+                "latest_csv_row_number": latest_csv_row_number,
+                "invalid_examples": invalid_examples,
             }
 
         profiles[file_name] = {
@@ -1346,6 +1433,82 @@ def raw_import_file_value_profiles_are_valid(value: Any) -> bool:
     return True
 
 
+def raw_import_file_date_profiles_are_valid(value: Any) -> bool:
+    if not isinstance(value, dict):
+        return False
+
+    for file_name in RAW_IMPORT_FILE_NAMES:
+        profile = value.get(file_name)
+        if not isinstance(profile, dict):
+            return False
+        rows_checked = profile.get("rows_checked")
+        fields = profile.get("fields")
+        if not isinstance(rows_checked, int) or rows_checked < 0:
+            return False
+        if not isinstance(fields, dict):
+            return False
+        if set(fields) != set(RAW_IMPORT_DATE_FIELDS[file_name]):
+            return False
+        for field_profile in fields.values():
+            if not isinstance(field_profile, dict):
+                return False
+            field_present = field_profile.get("field_present")
+            date_format = field_profile.get("date_format")
+            blank_count = field_profile.get("blank_count")
+            valid_date_count = field_profile.get("valid_date_count")
+            invalid_date_count = field_profile.get("invalid_date_count")
+            earliest_date = field_profile.get("earliest_date")
+            earliest_row = field_profile.get("earliest_csv_row_number")
+            latest_date = field_profile.get("latest_date")
+            latest_row = field_profile.get("latest_csv_row_number")
+            invalid_examples = field_profile.get("invalid_examples")
+            if (
+                not isinstance(field_present, bool)
+                or date_format != "YYYY-MM-DD"
+                or not isinstance(blank_count, int)
+                or blank_count < 0
+                or not isinstance(valid_date_count, int)
+                or valid_date_count < 0
+                or not isinstance(invalid_date_count, int)
+                or invalid_date_count < 0
+                or blank_count + valid_date_count + invalid_date_count != rows_checked
+                or not isinstance(invalid_examples, list)
+                or len(invalid_examples) > RAW_IMPORT_DATE_EXAMPLE_LIMIT
+            ):
+                return False
+            if valid_date_count == 0:
+                if (
+                    earliest_date is not None
+                    or earliest_row is not None
+                    or latest_date is not None
+                    or latest_row is not None
+                ):
+                    return False
+            elif (
+                not isinstance(earliest_date, str)
+                or parse_raw_import_date(earliest_date) is None
+                or not isinstance(earliest_row, int)
+                or earliest_row < 2
+                or not isinstance(latest_date, str)
+                or parse_raw_import_date(latest_date) is None
+                or not isinstance(latest_row, int)
+                or latest_row < 2
+                or earliest_date > latest_date
+            ):
+                return False
+            for example in invalid_examples:
+                if (
+                    not isinstance(example, dict)
+                    or set(example) != {"csv_row_number", "value"}
+                    or not isinstance(example.get("csv_row_number"), int)
+                    or example["csv_row_number"] < 2
+                    or not isinstance(example.get("value"), str)
+                    or not example["value"]
+                ):
+                    return False
+    return True
+
+
 def raw_import_file_relationship_checks_are_valid(value: Any) -> bool:
     if not isinstance(value, dict):
         return False
@@ -1718,6 +1881,9 @@ def next_import_record_handoff(summary: dict[str, Any] | None = None) -> dict[st
     raw_value_profiles = summary_handoff.get("raw_file_value_profiles")
     if not raw_import_file_value_profiles_are_valid(raw_value_profiles):
         raw_value_profiles = raw_import_file_value_profiles(raw_dir)
+    raw_date_profiles = summary_handoff.get("raw_file_date_profiles")
+    if not raw_import_file_date_profiles_are_valid(raw_date_profiles):
+        raw_date_profiles = raw_import_file_date_profiles(raw_dir)
     raw_relationship_checks = summary_handoff.get("raw_file_relationship_checks")
     if not raw_import_file_relationship_checks_are_valid(raw_relationship_checks):
         raw_relationship_checks = raw_import_file_relationship_checks(raw_dir)
@@ -1770,6 +1936,7 @@ def next_import_record_handoff(summary: dict[str, Any] | None = None) -> dict[st
         "raw_file_last_data_rows": raw_last_data_rows,
         "raw_file_identity_key_checks": raw_identity_key_checks,
         "raw_file_value_profiles": raw_value_profiles,
+        "raw_file_date_profiles": raw_date_profiles,
         "raw_file_relationship_checks": raw_relationship_checks,
         "raw_file_import_scope_counts": raw_import_scope_counts,
         "raw_file_importable_examples": raw_importable_examples,
@@ -1809,6 +1976,9 @@ def next_import_record_handoff_is_valid(handoff: Any) -> bool:
         )
         and raw_import_file_value_profiles_are_valid(
             handoff.get("raw_file_value_profiles"),
+        )
+        and raw_import_file_date_profiles_are_valid(
+            handoff.get("raw_file_date_profiles"),
         )
         and raw_import_file_relationship_checks_are_valid(
             handoff.get("raw_file_relationship_checks"),
@@ -2527,6 +2697,22 @@ def format_raw_import_value_profiles(handoff: Any) -> str:
     return "; ".join(labels) if labels else "(none)"
 
 
+def format_raw_import_date_profiles(handoff: Any) -> str:
+    if not isinstance(handoff, dict):
+        return "(none)"
+    profiles_by_file = handoff.get("raw_file_date_profiles")
+    if not isinstance(profiles_by_file, dict):
+        return "(none)"
+    labels = []
+    for file_name in RAW_IMPORT_FILE_NAMES:
+        profile = profiles_by_file.get(file_name)
+        if isinstance(profile, dict):
+            labels.append(f"{file_name}={json.dumps(profile, sort_keys=False)}")
+        else:
+            labels.append(f"{file_name}=missing")
+    return "; ".join(labels) if labels else "(none)"
+
+
 def format_raw_import_relationship_checks(handoff: Any) -> str:
     if not isinstance(handoff, dict):
         return "(none)"
@@ -2906,6 +3092,10 @@ def format_progress_text(progress: dict[str, Any]) -> str:
                 lines.append(
                     "Next import raw value profiles: "
                     f"{format_raw_import_value_profiles(next_import_handoff)}"
+                )
+                lines.append(
+                    "Next import raw date profiles: "
+                    f"{format_raw_import_date_profiles(next_import_handoff)}"
                 )
                 lines.append(
                     "Next import raw relationship checks: "
@@ -3611,10 +3801,10 @@ def operator_correction_smoke_check(
             "summary includes the last durable import-readiness snapshot, import "
             "counts, thin coverage groups, next step, and raw CSV handoff with "
             "row counts, next append rows, last data rows, identity key checks, "
-            "value profiles, relationship checks, import scope counts, importable "
-            "examples, exclusion examples, headers, required fields, optional "
-            "fields, append templates, and required-field gaps after complete "
-            "correction capture"
+            "value profiles, date profiles, relationship checks, import scope "
+            "counts, importable examples, exclusion examples, headers, required "
+            "fields, optional fields, append templates, and required-field gaps "
+            "after complete correction capture"
             if missing_count == 0
             else "summary with missing corrections does not expose the last import-readiness snapshot"
         ),
@@ -4154,6 +4344,10 @@ def format_smoke_check_text(smoke_check: dict[str, Any]) -> str:
         lines.append(
             "Next import raw value profiles: "
             f"{format_raw_import_value_profiles(readiness.get('next_import_record_handoff'))}"
+        )
+        lines.append(
+            "Next import raw date profiles: "
+            f"{format_raw_import_date_profiles(readiness.get('next_import_record_handoff'))}"
         )
         lines.append(
             "Next import raw relationship checks: "
