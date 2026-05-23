@@ -4,10 +4,10 @@ This artifact turns reviewed Dallas electrician inspection labels into a concret
 
 ## Summary
 
-- Queue items: `61`
-- Priority counts: `{"high": 6, "medium": 55}`
-- Trigger result counts: `{"fail": 6, "not_ready": 4, "partial": 51}`
-- Operator correction events: `61`
+- Queue items: `62`
+- Priority counts: `{"high": 6, "medium": 56}`
+- Trigger result counts: `{"fail": 6, "not_ready": 4, "partial": 52}`
+- Operator correction events: `62`
 - Operator correction ledger: `generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl`
 - Accepted correction patterns: `6`
 
@@ -15,14 +15,14 @@ This artifact turns reviewed Dallas electrician inspection labels into a concret
 
 ### operator-pattern:accepted:0001
 
-- Queue items: `37`
+- Queue items: `38`
 - Actions: `Complete remaining work, Schedule reinspection`
 - Action IDs: `complete_remaining_work, schedule_reinspection`
-- Trigger results: `{"partial": 37}`
-- Failure reasons: `{"incomplete_work": 37}`
-- Inspection types: `{"rough_in": 37}`
-- Follow-up results: `{"pass": 37}`
-- Example permits: `ELP-2026-0203, ELZ-2026-0215, ELZ-2026-0216, ELZ-2026-0225, ELZ-2026-0226, ELZ-2026-0227, ELZ-2026-0228, ELZ-2026-0231, ELZ-2026-0232, ELZ-2026-0233, ELZ-2026-0234, ELZ-2026-0235, ELZ-2026-0236, ELZ-2026-0237, ELZ-2026-0238, ELZ-2026-0239, ELZ-2026-0240, ELZ-2026-0241, ELZ-2026-0242, ELZ-2026-0243, ELZ-2026-0244, ELZ-2026-0245, ELZ-2026-0246, ELZ-2026-0248, ELZ-2026-0249, ELZ-2026-0250, ELZ-2026-0251, ELZ-2026-0252, ELZ-2026-0253, ELZ-2026-0255, ELZ-2026-0256, ELZ-2026-0257, ELZ-2026-0258, ELZ-2026-0259, ELZ-2026-0260, ELZ-2026-0261, ELZ-2026-0262`
+- Trigger results: `{"partial": 38}`
+- Failure reasons: `{"incomplete_work": 38}`
+- Inspection types: `{"rough_in": 38}`
+- Follow-up results: `{"pass": 38}`
+- Example permits: `ELP-2026-0203, ELZ-2026-0215, ELZ-2026-0216, ELZ-2026-0225, ELZ-2026-0226, ELZ-2026-0227, ELZ-2026-0228, ELZ-2026-0231, ELZ-2026-0232, ELZ-2026-0233, ELZ-2026-0234, ELZ-2026-0235, ELZ-2026-0236, ELZ-2026-0237, ELZ-2026-0238, ELZ-2026-0239, ELZ-2026-0240, ELZ-2026-0241, ELZ-2026-0242, ELZ-2026-0243, ELZ-2026-0244, ELZ-2026-0245, ELZ-2026-0246, ELZ-2026-0248, ELZ-2026-0249, ELZ-2026-0250, ELZ-2026-0251, ELZ-2026-0252, ELZ-2026-0253, ELZ-2026-0255, ELZ-2026-0256, ELZ-2026-0257, ELZ-2026-0258, ELZ-2026-0259, ELZ-2026-0260, ELZ-2026-0261, ELZ-2026-0262, ELZ-2026-0263`
 
 ### operator-pattern:accepted:0002
 
@@ -690,3 +690,13 @@ This artifact turns reviewed Dallas electrician inspection labels into a concret
 - Recommended actions: `Complete remaining work, Schedule reinspection`
 - Follow-up observed: `2026-05-23` `correction_followup` -> `pass`
 - Evidence: Rear closet branch wiring repaired but replacement channel lighting and cover trim remained incomplete before rough-in approval.
+
+### ELZ-2026-0263 - 3280 S EWING AVE DALLAS TX 75216
+
+- Priority: `medium`
+- Contractor: `Cedars South Electric`
+- Trigger: `2026-05-22` `rough_in` -> `partial`
+- Failure reason: `incomplete_work`
+- Recommended actions: `Complete remaining work, Schedule reinspection`
+- Follow-up observed: `2026-05-23` `correction_followup` -> `pass`
+- Evidence: Hall closet branch wiring repaired but replacement rod lighting and cover trim remained incomplete before rough-in approval.
