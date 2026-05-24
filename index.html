@@ -1001,7 +1001,7 @@
                 <div class="metric-label">Contract checks passing in <code>generated/contracts/dallas-electrician-contract-summary-v1/</code></div>
               </div>
               <div class="metric">
-                  <div class="metric-value">375 / 178</div>
+                  <div class="metric-value">377 / 179</div>
                 <div class="metric-label">Generated eval tasks and reviewed label rows across the three Dallas scaffolds</div>
               </div>
               </div>
@@ -1180,8 +1180,8 @@
                 <code>generated/normalized/dallas-electrician-sample-v1/</code> plus imported CSV
                 normalization runs under <code>generated/normalized/dallas-electrician-import-sample-v1/</code>
                 and <code>generated/normalized/dallas-electrician-import-sample-v2/</code>. The wider
-                <code>v2</code> import currently carries <code>160</code> permits, <code>332</code> inspections,
-                <code>500</code> source-record lineage rows, <code>3</code> rule documents, and explicit coverage for
+                <code>v2</code> import currently carries <code>161</code> permits, <code>334</code> inspections,
+                <code>503</code> source-record lineage rows, <code>3</code> rule documents, and explicit coverage for
                 <code>pass</code>, <code>fail</code>, <code>partial</code>, <code>cancelled</code>,
                 <code>not_ready</code>, and <code>unknown</code> inspection outcomes.
               </div>
@@ -1190,7 +1190,7 @@
                 Three generated eval samples now exist. The synthetic scaffold has <code>14</code>
                 tasks and <code>5</code> reviewed label rows. The imported <code>v1</code> scaffold has
                 <code>18</code> tasks and <code>7</code> reviewed label rows, while imported <code>v2</code>
-                expands to <code>343</code> tasks and <code>166</code> reviewed label rows across
+                expands to <code>345</code> tasks and <code>167</code> reviewed label rows across
                 <code>next_inspection_outcome</code>, <code>failure_reason_classification</code>,
                 <code>recommended_next_action</code>, and <code>pattern_extraction</code>.
               </div>
@@ -1223,8 +1223,8 @@
               <div class="artifact-card">
                 <span class="artifact-label">Inspection Workflow</span>
                 <code>generated/workflows/dallas-inspection-workflow-v1/</code> turns reviewed labels into
-                a concrete browser-readable action queue. The current queue has <code>160</code> items, including
-                <code>6</code> high-priority failed inspections and <code>154</code> medium-priority partial
+                a concrete browser-readable action queue. The current queue has <code>161</code> items, including
+                <code>6</code> high-priority failed inspections and <code>155</code> medium-priority partial
                 or not-ready inspections.
               </div>
             </div>
@@ -1257,8 +1257,8 @@
                 <h3>Imported sample v2 is still the data frontier</h3>
                 <p>
                   The widest normalized dataset remains <code>dallas-electrician-import-sample-v2</code>:
-                  <code>160</code> permits, <code>332</code> inspections, <code>3</code> rule documents,
-                  <code>500</code> source-record lineage rows, <code>343</code> eval tasks, <code>166</code>
+                  <code>161</code> permits, <code>334</code> inspections, <code>3</code> rule documents,
+                  <code>503</code> source-record lineage rows, <code>345</code> eval tasks, <code>167</code>
                   reviewed label rows, and coverage for
                   <code>cancelled</code>, <code>fail</code>, <code>not_ready</code>, <code>partial</code>,
                   <code>pass</code>, and <code>unknown</code>.
@@ -1287,7 +1287,7 @@
                   <code>generated/workflows/dallas-inspection-workflow-v1/index.html</code>
                   shows the first operator-facing workflow: permit, address, contractor, inspection
                   failure context, recommended actions, observed follow-up, and captured operator
-                  correction state for <code>160/160</code> queue items.
+                  correction state for <code>161/161</code> queue items.
                 </p>
               </div>
             </div>
@@ -1302,12 +1302,12 @@
               <div class="timeline-item">
                 <div class="timeline-meta">2026-05-24</div>
                 <p>
-                  Widened imported <code>v2</code> with <code>ELZ-2026-0361</code>, one more Dallas electrical repair sequence that
-                  repeats the spandrel-bracket incomplete-work repair path, captured the matching accepted operator
+                  Widened imported <code>v2</code> with <code>ELZ-2026-0362</code>, one more Dallas electrical repair sequence that
+                  repeats the parapet-bracket incomplete-work repair path, captured the matching accepted operator
                   correction, and regenerated the normalized, fixture, eval, coverage, contract, and
-                  workflow artifacts. The latest scaffold now has <code>160</code> permits,
-                  <code>332</code> inspections, <code>343</code> eval tasks, <code>166</code> reviewed label
-                  rows, <code>500</code> source lineage rows, and repeated support for
+                  workflow artifacts. The latest scaffold now has <code>161</code> permits,
+                  <code>334</code> inspections, <code>345</code> eval tasks, <code>167</code> reviewed label
+                  rows, <code>503</code> source lineage rows, and repeated support for
                   <code>6/6</code> next-action groups.
                 </p>
               </div>
