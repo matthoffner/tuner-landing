@@ -5,5 +5,5 @@
   "trade": "electricians",
   "workflow": "residential electrical permits and inspections",
   "created_at": "2026-04-26T00:00:00Z",
-  "source_summary": "Imported Dallas residential electrical extract with 96 permits, 204 inspections, 3 rule documents normalized from CSV fixtures."
+  "source_summary": "Imported Dallas residential electrical extract with 97 permits, 206 inspections, 3 rule documents normalized from CSV fixtures."
 }
