@@ -378,8 +378,8 @@
         },
         {
           "value": "partial",
-          "row_count": 143,
-          "permit_count": 143,
+          "row_count": 144,
+          "permit_count": 144,
           "permit_ids": [
             "permit:dallas:eln-2026-0204",
             "permit:dallas:eln-2026-0208",
@@ -523,14 +523,15 @@
             "permit:dallas:elz-2026-0351",
             "permit:dallas:elz-2026-0352",
             "permit:dallas:elz-2026-0353",
-            "permit:dallas:elz-2026-0354"
+            "permit:dallas:elz-2026-0354",
+            "permit:dallas:elz-2026-0355"
           ],
           "repeated": true
         },
         {
           "value": "pass",
-          "row_count": 161,
-          "permit_count": 153,
+          "row_count": 162,
+          "permit_count": 154,
           "permit_ids": [
             "permit:dallas:elm-2026-0205",
             "permit:dallas:elm-2026-0211",
@@ -684,7 +685,8 @@
             "permit:dallas:elz-2026-0351",
             "permit:dallas:elz-2026-0352",
             "permit:dallas:elz-2026-0353",
-            "permit:dallas:elz-2026-0354"
+            "permit:dallas:elz-2026-0354",
+            "permit:dallas:elz-2026-0355"
           ],
           "repeated": true
         },
@@ -727,8 +729,8 @@
         },
         {
           "value": "incomplete_work",
-          "row_count": 128,
-          "permit_count": 128,
+          "row_count": 129,
+          "permit_count": 129,
           "permit_ids": [
             "permit:dallas:elp-2026-0203",
             "permit:dallas:elz-2026-0215",
@@ -857,7 +859,8 @@
             "permit:dallas:elz-2026-0351",
             "permit:dallas:elz-2026-0352",
             "permit:dallas:elz-2026-0353",
-            "permit:dallas:elz-2026-0354"
+            "permit:dallas:elz-2026-0354",
+            "permit:dallas:elz-2026-0355"
           ],
           "repeated": true
         },
@@ -939,10 +942,10 @@
             "zip_code": "75216",
             "inspection_type_normalized": "rough_in"
           },
-          "permit_count": 141,
-          "inspection_count": 141,
+          "permit_count": 142,
+          "inspection_count": 142,
           "failed_inspection_count": 0,
-          "failed_or_partial_inspection_count": 141,
+          "failed_or_partial_inspection_count": 142,
           "repeated": true
         },
         {
@@ -962,8 +965,8 @@
       "next_action_groups": [
         {
           "value": "complete_remaining_work|schedule_reinspection",
-          "row_count": 128,
-          "permit_count": 128,
+          "row_count": 129,
+          "permit_count": 129,
           "permit_ids": [
             "permit:dallas:elp-2026-0203",
             "permit:dallas:elz-2026-0215",
@@ -1092,7 +1095,8 @@
             "permit:dallas:elz-2026-0351",
             "permit:dallas:elz-2026-0352",
             "permit:dallas:elz-2026-0353",
-            "permit:dallas:elz-2026-0354"
+            "permit:dallas:elz-2026-0354",
+            "permit:dallas:elz-2026-0355"
           ],
           "repeated": true
         },
