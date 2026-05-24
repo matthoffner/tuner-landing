@@ -5147,5 +5147,30 @@
       "followup_result_normalized": "pass"
     },
     "reviewer_note": "Derived directly from normalized inspection progression and follow-up notes."
+  },
+  {
+    "review_id": "label-review:dallas:next-action:0202",
+    "task_id": "eval:dallas:next-action:0202",
+    "task_type": "recommended_next_action",
+    "permit_id": "permit:dallas:elz-2026-0403",
+    "inspection_id": "inspection:dallas:elz-2026-0403:2026-05-24:rough_in",
+    "review_status": "normalized_row_generated",
+    "label_source": "normalized_rows",
+    "label_payload": {
+      "reference_actions": [
+        "complete_remaining_work",
+        "schedule_reinspection"
+      ]
+    },
+    "evidence": [
+      "Upper ambulatory wing garden porch attic pantry closet branch wiring repaired but replacement ambulatory-bracket lighting and cover trim remained incomplete before rough-in approval.",
+      "2026-05-25 correction_followup -> pass: Replacement ambulatory-bracket lighting installed and cover trim completed for approval."
+    ],
+    "metadata": {
+      "permit_type_normalized": "electrical_repair",
+      "latest_result_normalized": "partial",
+      "followup_result_normalized": "pass"
+    },
+    "reviewer_note": "Derived directly from normalized inspection progression and follow-up notes."
   }
 ]
