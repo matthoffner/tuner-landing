@@ -4,10 +4,10 @@ This artifact turns reviewed Dallas electrician inspection labels into a concret
 
 ## Summary
 
-- Queue items: `119`
-- Priority counts: `{"high": 6, "medium": 113}`
-- Trigger result counts: `{"fail": 6, "not_ready": 4, "partial": 109}`
-- Operator correction events: `119`
+- Queue items: `120`
+- Priority counts: `{"high": 6, "medium": 114}`
+- Trigger result counts: `{"fail": 6, "not_ready": 4, "partial": 110}`
+- Operator correction events: `120`
 - Operator correction ledger: `generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl`
 - Accepted correction patterns: `6`
 
@@ -15,14 +15,14 @@ This artifact turns reviewed Dallas electrician inspection labels into a concret
 
 ### operator-pattern:accepted:0001
 
-- Queue items: `94`
+- Queue items: `95`
 - Actions: `Complete remaining work, Schedule reinspection`
 - Action IDs: `complete_remaining_work, schedule_reinspection`
-- Trigger results: `{"partial": 94}`
-- Failure reasons: `{"incomplete_work": 94}`
-- Inspection types: `{"rough_in": 94}`
-- Follow-up results: `{"pass": 94}`
-- Example permits: `ELP-2026-0203, ELZ-2026-0215, ELZ-2026-0216, ELZ-2026-0225, ELZ-2026-0226, ELZ-2026-0227, ELZ-2026-0228, ELZ-2026-0231, ELZ-2026-0232, ELZ-2026-0233, ELZ-2026-0234, ELZ-2026-0235, ELZ-2026-0236, ELZ-2026-0237, ELZ-2026-0238, ELZ-2026-0239, ELZ-2026-0240, ELZ-2026-0241, ELZ-2026-0242, ELZ-2026-0243, ELZ-2026-0244, ELZ-2026-0245, ELZ-2026-0246, ELZ-2026-0248, ELZ-2026-0249, ELZ-2026-0250, ELZ-2026-0251, ELZ-2026-0252, ELZ-2026-0253, ELZ-2026-0255, ELZ-2026-0256, ELZ-2026-0257, ELZ-2026-0258, ELZ-2026-0259, ELZ-2026-0260, ELZ-2026-0261, ELZ-2026-0262, ELZ-2026-0263, ELZ-2026-0264, ELZ-2026-0265, ELZ-2026-0266, ELZ-2026-0267, ELZ-2026-0268, ELZ-2026-0270, ELZ-2026-0271, ELZ-2026-0272, ELZ-2026-0273, ELZ-2026-0274, ELZ-2026-0275, ELZ-2026-0276, ELZ-2026-0277, ELZ-2026-0278, ELZ-2026-0279, ELZ-2026-0280, ELZ-2026-0281, ELZ-2026-0282, ELZ-2026-0283, ELZ-2026-0284, ELZ-2026-0285, ELZ-2026-0286, ELZ-2026-0287, ELZ-2026-0288, ELZ-2026-0289, ELZ-2026-0290, ELZ-2026-0291, ELZ-2026-0292, ELZ-2026-0293, ELZ-2026-0294, ELZ-2026-0295, ELZ-2026-0296, ELZ-2026-0297, ELZ-2026-0298, ELZ-2026-0299, ELZ-2026-0300, ELZ-2026-0301, ELZ-2026-0302, ELZ-2026-0303, ELZ-2026-0304, ELZ-2026-0305, ELZ-2026-0306, ELZ-2026-0307, ELZ-2026-0308, ELZ-2026-0309, ELZ-2026-0310, ELZ-2026-0311, ELZ-2026-0312, ELZ-2026-0313, ELZ-2026-0314, ELZ-2026-0315, ELZ-2026-0316, ELZ-2026-0317, ELZ-2026-0318, ELZ-2026-0319, ELZ-2026-0320`
+- Trigger results: `{"partial": 95}`
+- Failure reasons: `{"incomplete_work": 95}`
+- Inspection types: `{"rough_in": 95}`
+- Follow-up results: `{"pass": 95}`
+- Example permits: `ELP-2026-0203, ELZ-2026-0215, ELZ-2026-0216, ELZ-2026-0225, ELZ-2026-0226, ELZ-2026-0227, ELZ-2026-0228, ELZ-2026-0231, ELZ-2026-0232, ELZ-2026-0233, ELZ-2026-0234, ELZ-2026-0235, ELZ-2026-0236, ELZ-2026-0237, ELZ-2026-0238, ELZ-2026-0239, ELZ-2026-0240, ELZ-2026-0241, ELZ-2026-0242, ELZ-2026-0243, ELZ-2026-0244, ELZ-2026-0245, ELZ-2026-0246, ELZ-2026-0248, ELZ-2026-0249, ELZ-2026-0250, ELZ-2026-0251, ELZ-2026-0252, ELZ-2026-0253, ELZ-2026-0255, ELZ-2026-0256, ELZ-2026-0257, ELZ-2026-0258, ELZ-2026-0259, ELZ-2026-0260, ELZ-2026-0261, ELZ-2026-0262, ELZ-2026-0263, ELZ-2026-0264, ELZ-2026-0265, ELZ-2026-0266, ELZ-2026-0267, ELZ-2026-0268, ELZ-2026-0270, ELZ-2026-0271, ELZ-2026-0272, ELZ-2026-0273, ELZ-2026-0274, ELZ-2026-0275, ELZ-2026-0276, ELZ-2026-0277, ELZ-2026-0278, ELZ-2026-0279, ELZ-2026-0280, ELZ-2026-0281, ELZ-2026-0282, ELZ-2026-0283, ELZ-2026-0284, ELZ-2026-0285, ELZ-2026-0286, ELZ-2026-0287, ELZ-2026-0288, ELZ-2026-0289, ELZ-2026-0290, ELZ-2026-0291, ELZ-2026-0292, ELZ-2026-0293, ELZ-2026-0294, ELZ-2026-0295, ELZ-2026-0296, ELZ-2026-0297, ELZ-2026-0298, ELZ-2026-0299, ELZ-2026-0300, ELZ-2026-0301, ELZ-2026-0302, ELZ-2026-0303, ELZ-2026-0304, ELZ-2026-0305, ELZ-2026-0306, ELZ-2026-0307, ELZ-2026-0308, ELZ-2026-0309, ELZ-2026-0310, ELZ-2026-0311, ELZ-2026-0312, ELZ-2026-0313, ELZ-2026-0314, ELZ-2026-0315, ELZ-2026-0316, ELZ-2026-0317, ELZ-2026-0318, ELZ-2026-0319, ELZ-2026-0320, ELZ-2026-0321`
 
 ### operator-pattern:accepted:0002
 
@@ -1270,3 +1270,13 @@ This artifact turns reviewed Dallas electrician inspection labels into a concret
 - Recommended actions: `Complete remaining work, Schedule reinspection`
 - Follow-up observed: `2026-05-25` `correction_followup` -> `pass`
 - Evidence: West wing attic pantry closet branch wiring repaired but replacement cap-rail lighting and cover trim remained incomplete before rough-in approval.
+
+### ELZ-2026-0321 - 3976 S EWING AVE DALLAS TX 75216
+
+- Priority: `medium`
+- Contractor: `Cedars South Electric`
+- Trigger: `2026-05-24` `rough_in` -> `partial`
+- Failure reason: `incomplete_work`
+- Recommended actions: `Complete remaining work, Schedule reinspection`
+- Follow-up observed: `2026-05-25` `correction_followup` -> `pass`
+- Evidence: North porch attic pantry closet branch wiring repaired but replacement jamb-rail lighting and cover trim remained incomplete before rough-in approval.
