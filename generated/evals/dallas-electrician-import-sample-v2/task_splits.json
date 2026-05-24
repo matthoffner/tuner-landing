@@ -3,7 +3,7 @@
   "generated_by": "scripts/generate_dallas_eval_artifacts.py",
   "split_strategy": "all permit-sequence tasks in dev, all pattern slices in test",
   "counts": {
-    "dev": 332,
+    "dev": 334,
     "test": 5
   },
   "group_keys": {
@@ -164,7 +164,8 @@
       "sequence:dallas:elz-2026-0355",
       "sequence:dallas:elz-2026-0356",
       "sequence:dallas:elz-2026-0357",
-      "sequence:dallas:elz-2026-0358"
+      "sequence:dallas:elz-2026-0358",
+      "sequence:dallas:elz-2026-0359"
     ],
     "test": [
       "slice:dallas:repair:rough-in:75216",
