@@ -12,13 +12,13 @@
         "inspection_type_normalized": "rough_in"
       },
       "support_summary": {
-        "permit_count": 233,
-        "inspection_count": 233,
-        "failed_or_partial_inspection_count": 233
+        "permit_count": 234,
+        "inspection_count": 234,
+        "failed_or_partial_inspection_count": 234
       },
       "reference_pattern": {
         "pattern_summary": "Electrical repair inspections in 75216 show a repeated pattern around incomplete work before final approval.",
-        "support_count": 233,
+        "support_count": 234,
         "why_it_matters": "This slice can drive Dallas-specific rough in prep and next-action guidance for electricians working similar jobs."
       },
       "task_type": "pattern_extraction"
