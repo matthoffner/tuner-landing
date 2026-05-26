@@ -5,32 +5,32 @@
   "source_eval_dir": "generated/evals/dallas-electrician-import-sample-v2",
   "workflow_type": "reviewed-inspection-action-queue",
   "summary": {
-    "queue_items": 332,
+    "queue_items": 333,
     "priority_counts": {
       "high": 6,
-      "medium": 326
+      "medium": 327
     },
     "trigger_result_counts": {
       "fail": 6,
       "not_ready": 4,
-      "partial": 322
+      "partial": 323
     },
     "recommended_action_counts": {
       "add_labels_or_documentation": 6,
-      "complete_remaining_work": 307,
+      "complete_remaining_work": 308,
       "correct_grounding_or_bonding": 4,
       "correct_panel_or_service": 2,
       "correct_wiring_or_devices": 12,
       "ensure_site_access": 7,
-      "schedule_reinspection": 330
+      "schedule_reinspection": 331
     }
   },
   "operator_correction_summary": {
     "ledger_path": "generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl",
-    "total_events": 332,
-    "queue_items_with_corrections": 332,
+    "total_events": 333,
+    "queue_items_with_corrections": 333,
     "decision_counts": {
-      "accepted": 329,
+      "accepted": 330,
       "edited": 3
     },
     "invalid_lines": 0,
@@ -3026,12 +3026,21 @@
           "complete_remaining_work",
           "schedule_reinspection"
         ]
+      },
+      "workflow-item:dallas:next-action:0333": {
+        "correction_id": "operator-correction:20260526T101851000000Z:0333",
+        "captured_at": "2026-05-26T10:18:51Z",
+        "decision": "accepted",
+        "corrected_actions": [
+          "complete_remaining_work",
+          "schedule_reinspection"
+        ]
       }
     }
   },
   "operator_correction_patterns": {
     "source": "latest accepted operator correction per current queue item",
-    "accepted_latest_corrections": 329,
+    "accepted_latest_corrections": 330,
     "accepted_pattern_count": 6,
     "patterns": [
       {
@@ -3043,7 +3052,7 @@
           "Complete remaining work",
           "Schedule reinspection"
         ],
-        "queue_item_count": 307,
+        "queue_item_count": 308,
         "queue_item_ids": [
           "workflow-item:dallas:next-action:0006",
           "workflow-item:dallas:next-action:0014",
@@ -3351,7 +3360,8 @@
           "workflow-item:dallas:next-action:0329",
           "workflow-item:dallas:next-action:0330",
           "workflow-item:dallas:next-action:0331",
-          "workflow-item:dallas:next-action:0332"
+          "workflow-item:dallas:next-action:0332",
+          "workflow-item:dallas:next-action:0333"
         ],
         "source_permit_numbers": [
           "ELP-2026-0203",
@@ -3660,19 +3670,20 @@
           "ELZ-2026-0530",
           "ELZ-2026-0531",
           "ELZ-2026-0532",
-          "ELZ-2026-0533"
+          "ELZ-2026-0533",
+          "ELZ-2026-0534"
         ],
         "trigger_result_counts": {
-          "partial": 307
+          "partial": 308
         },
         "failure_reason_counts": {
-          "incomplete_work": 307
+          "incomplete_work": 308
         },
         "inspection_type_counts": {
-          "rough_in": 307
+          "rough_in": 308
         },
         "observed_followup_result_counts": {
-          "pass": 307
+          "pass": 308
         },
         "operator_note_examples": [
           "Accepted from fixture review: follow-up shows remaining trim complete and branch repairs accepted, matching the recommended remaining-work completion and reinspection actions.",
@@ -18176,6 +18187,49 @@
       "evidence": [
         "Upper tritriacontacentafoil wing garden porch attic pantry closet branch wiring repaired but replacement tritriacontacentafoil-bracket lighting and cover trim remained incomplete before rough-in approval.",
         "2026-05-25 correction_followup -> pass: Replacement tritriacontacentafoil-bracket lighting installed and cover trim completed for approval."
+      ]
+    },
+    {
+      "queue_item_id": "workflow-item:dallas:next-action:0333",
+      "permit_id": "permit:dallas:elz-2026-0534",
+      "source_permit_number": "ELZ-2026-0534",
+      "permit_status": "finaled",
+      "permit_type_normalized": "electrical_repair",
+      "property": {
+        "property_id": "property:6532-s-ewing-ave-dallas-tx-75216",
+        "normalized_address": "6532 S EWING AVE DALLAS TX 75216",
+        "zip_code": "75216"
+      },
+      "contractor": {
+        "contractor_id": "contractor:dallas:cedars-south-electric",
+        "name": "Cedars South Electric"
+      },
+      "trigger_inspection": {
+        "inspection_id": "inspection:dallas:elz-2026-0534:2026-05-24:rough_in",
+        "inspection_date": "2026-05-24",
+        "inspection_type_normalized": "rough_in",
+        "result_normalized": "partial",
+        "failure_reason_normalized": "incomplete_work",
+        "notes_raw": "Upper tetratriacontacentafoil wing garden porch attic pantry closet branch wiring repaired but replacement tetratriacontacentafoil-bracket lighting and cover trim remained incomplete before rough-in approval."
+      },
+      "recommended_actions": [
+        "complete_remaining_work",
+        "schedule_reinspection"
+      ],
+      "recommended_action_labels": [
+        "Complete remaining work",
+        "Schedule reinspection"
+      ],
+      "priority": "medium",
+      "expected_followup": {
+        "inspection_date": "2026-05-25",
+        "inspection_type_normalized": "correction_followup",
+        "result_normalized": "pass",
+        "notes_raw": "Replacement tetratriacontacentafoil-bracket lighting installed and cover trim completed for approval."
+      },
+      "evidence": [
+        "Upper tetratriacontacentafoil wing garden porch attic pantry closet branch wiring repaired but replacement tetratriacontacentafoil-bracket lighting and cover trim remained incomplete before rough-in approval.",
+        "2026-05-25 correction_followup -> pass: Replacement tetratriacontacentafoil-bracket lighting installed and cover trim completed for approval."
       ]
     }
   ]
