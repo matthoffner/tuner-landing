@@ -217,24 +217,24 @@
       "has_source_records": true,
       "has_rule_documents": true,
       "counts": {
-        "properties": 381,
-        "permits": 381,
-        "inspections": 774,
+        "properties": 382,
+        "permits": 382,
+        "inspections": 776,
         "contractors": 5,
         "rule_documents": 3,
-        "source_records": 1163,
-        "sequences": 381,
+        "source_records": 1166,
+        "sequences": 382,
         "pattern_slices": 5,
-        "tasks": 785,
-        "label_reviews": 387,
-        "dev_tasks": 780,
+        "tasks": 787,
+        "label_reviews": 388,
+        "dev_tasks": 782,
         "test_tasks": 5,
         "result_states": 6,
         "repeated_result_states": 6,
         "failure_reasons": 5,
         "repeated_failure_reasons": 5,
         "repeated_pattern_slices": 5,
-        "max_pattern_permit_support": 369,
+        "max_pattern_permit_support": 370,
         "repeated_next_action_groups": 6
       },
       "inspection_result_vocabulary": [
@@ -252,9 +252,9 @@
         "recommended_next_action"
       ],
       "task_family_counts": {
-        "next_inspection_outcome": 393,
+        "next_inspection_outcome": 394,
         "failure_reason_classification": 6,
-        "recommended_next_action": 381,
+        "recommended_next_action": 382,
         "pattern_extraction": 5
       },
       "sequence_coverage_union": [
@@ -665,7 +665,8 @@
           "permit:dallas:elz-2026-0579",
           "permit:dallas:elz-2026-0580",
           "permit:dallas:elz-2026-0581",
-          "permit:dallas:elz-2026-0582"
+          "permit:dallas:elz-2026-0582",
+          "permit:dallas:elz-2026-0583"
         ],
         "not_ready": [
           "permit:dallas:elm-2026-0211",
@@ -1052,7 +1053,8 @@
           "permit:dallas:elz-2026-0579",
           "permit:dallas:elz-2026-0580",
           "permit:dallas:elz-2026-0581",
-          "permit:dallas:elz-2026-0582"
+          "permit:dallas:elz-2026-0582",
+          "permit:dallas:elz-2026-0583"
         ]
       },
       "repeated_failure_reasons": {
@@ -1425,7 +1427,8 @@
           "permit:dallas:elz-2026-0579",
           "permit:dallas:elz-2026-0580",
           "permit:dallas:elz-2026-0581",
-          "permit:dallas:elz-2026-0582"
+          "permit:dallas:elz-2026-0582",
+          "permit:dallas:elz-2026-0583"
         ],
         "wiring_or_device_issue": [
           "permit:dallas:elp-2026-0209",
@@ -1820,7 +1823,8 @@
           "permit:dallas:elz-2026-0579",
           "permit:dallas:elz-2026-0580",
           "permit:dallas:elz-2026-0581",
-          "permit:dallas:elz-2026-0582"
+          "permit:dallas:elz-2026-0582",
+          "permit:dallas:elz-2026-0583"
         ],
         "correct_wiring_or_devices|schedule_reinspection": [
           "permit:dallas:elp-2026-0209",
