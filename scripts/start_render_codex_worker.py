@@ -233,6 +233,7 @@ def validate_worker_environment(
     )
     validate_git_branch_name(env.get("AUTOMOAT_GIT_BRANCH", "main"), errors)
     validate_workdir_path(WORKDIR, errors)
+    validate_codex_home_path(CODEX_HOME, WORKDIR, errors)
 
     if not env.get("AUTOMOAT_RELAY_TOKEN", "").strip():
         errors.append("AUTOMOAT_RELAY_TOKEN is required")
@@ -352,6 +353,49 @@ def validate_workdir_path(path: Path, errors: list[str]) -> None:
         errors.append("AUTOMOAT_WORKDIR must not equal CODEX_HOME")
 
 
+def validate_codex_home_path(path: Path, workdir: Path, errors: list[str]) -> None:
+    raw_path = str(path).strip()
+    if not raw_path:
+        errors.append("CODEX_HOME must not be empty")
+        return
+
+    expanded_path = path.expanduser()
+    if not expanded_path.is_absolute():
+        errors.append("CODEX_HOME must be an absolute path")
+        return
+
+    try:
+        resolved_path = expanded_path.resolve(strict=False)
+    except OSError as exc:
+        errors.append(f"CODEX_HOME could not be resolved: {exc}")
+        return
+
+    named_parts = [part for part in resolved_path.parts if part != resolved_path.anchor]
+    if len(named_parts) < 2:
+        errors.append("CODEX_HOME must not be filesystem root or a top-level directory")
+        return
+
+    expanded_workdir = workdir.expanduser()
+    workdir_named_parts = [
+        part for part in expanded_workdir.parts if part != expanded_workdir.anchor
+    ]
+    if not expanded_workdir.is_absolute() or len(workdir_named_parts) < 2:
+        return
+
+    try:
+        resolved_workdir = expanded_workdir.resolve(strict=False)
+    except OSError:
+        return
+
+    if resolved_path == resolved_workdir:
+        return
+    if resolved_path.is_relative_to(resolved_workdir):
+        errors.append("CODEX_HOME must not be inside AUTOMOAT_WORKDIR")
+        return
+    if resolved_workdir.is_relative_to(resolved_path):
+        errors.append("CODEX_HOME must not contain AUTOMOAT_WORKDIR")
+
+
 def emit_environment_preflight(
     env: os._Environ[str] | dict[str, str] | None = None,
     command_lookup: Callable[[str], str | None] | None = None,
@@ -369,6 +413,7 @@ def emit_environment_preflight(
         f"relay_url={env.get('AUTOMOAT_RELAY_URL', '').strip()} "
         f"git_repo={env.get('AUTOMOAT_GIT_REPO', DEFAULT_REPO).strip()} "
         f"workdir={WORKDIR} "
+        f"codex_home={CODEX_HOME} "
         f"git_auth={','.join(configured_names(env, GIT_AUTH_ENV_NAMES))} "
         f"codex_auth={','.join(configured_names(env, CODEX_AUTH_ENV_NAMES))} "
         f"agent_interval={env.get('AUTOMOAT_AGENT_INTERVAL', '300')} "

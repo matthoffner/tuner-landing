@@ -323,6 +323,31 @@ class RenderWorkerPreflightTest(unittest.TestCase):
 
                 self.assertEqual(errors, [expected_error])
 
+    def test_rejects_unsafe_codex_home_before_auth_setup(self) -> None:
+        base_env = {
+            "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            "GITHUB_TOKEN": "github-token",
+            "CODEX_ACCESS_TOKEN": "codex-token",
+        }
+        self.worker.WORKDIR = Path("/work/automoat/repo")
+        cases = {
+            Path("/"): "CODEX_HOME must not be filesystem root or a top-level directory",
+            Path("/tmp"): "CODEX_HOME must not be filesystem root or a top-level directory",
+            Path("relative/codex-home"): "CODEX_HOME must be an absolute path",
+            Path("/work/automoat/repo/.codex-home"): (
+                "CODEX_HOME must not be inside AUTOMOAT_WORKDIR"
+            ),
+            Path("/work/automoat"): "CODEX_HOME must not contain AUTOMOAT_WORKDIR",
+        }
+
+        for codex_home, expected_error in cases.items():
+            with self.subTest(codex_home=codex_home):
+                self.worker.CODEX_HOME = codex_home
+                errors = self.worker.validate_worker_environment(base_env, found_command)
+
+                self.assertEqual(errors, [expected_error])
+
     def test_passed_preflight_reports_safe_workdir(self) -> None:
         env = {
             "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
@@ -331,6 +356,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             "CODEX_ACCESS_TOKEN": "codex-token",
         }
         self.worker.WORKDIR = Path("/work/automoat")
+        self.worker.CODEX_HOME = Path("/tmp/codex-home")
         output = io.StringIO()
 
         with redirect_stdout(output):
@@ -338,6 +364,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
 
         self.assertEqual(errors, [])
         self.assertIn("workdir=/work/automoat", output.getvalue())
+        self.assertIn("codex_home=/tmp/codex-home", output.getvalue())
 
     def test_rejects_bad_codex_config_values_before_writing_config(self) -> None:
         base_env = {
