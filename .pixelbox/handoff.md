@@ -3988,3 +3988,8 @@ Use this file to coordinate between editor/runtime lanes.
 - files: api/cockpit-upstreams.js, api/cockpit-status.js, api/cockpit-log.js, tests/test_cockpit_api_proxy.py, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
 - checks: `python3 -m unittest tests.test_cockpit_api_proxy`; `node --check api/cockpit-upstreams.js`; `node --check api/cockpit-status.js`; `node --check api/cockpit-log.js`; `python3 -m unittest discover -s tests`; `python3 -m py_compile tests/test_cockpit_api_proxy.py`; `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready`; `git diff --check`
 - next: on Vercel, leave `AUTOMOAT_COCKPIT_UPSTREAM_TIMEOUT_MS` unset for the default 8s cap, or set it to a positive integer in milliseconds when tuning cockpit proxy failover latency
+- lane: editor
+- status: fixed Vercel cockpit proxy `HEAD` responses so `/api/cockpit-status` and `/api/cockpit-log` still run the same upstream validation/fallback path but return headers and status without a response body; no Dallas raw CSV rows were edited
+- files: api/cockpit-status.js, api/cockpit-log.js, tests/test_cockpit_api_proxy.py, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- checks: `python3 -m unittest tests.test_cockpit_api_proxy`; `node --check api/cockpit-status.js`; `node --check api/cockpit-log.js`; `node --check api/cockpit-upstreams.js`; `python3 -m unittest discover -s tests`; `python3 -m py_compile tests/test_cockpit_api_proxy.py`; `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready`; `git diff --check`; `cmp -s generated/landing.html index.html`
+- next: use `HEAD /api/cockpit-status` or `HEAD /api/cockpit-log` from uptime probes when only status and headers are needed; use `GET` for the cockpit JSON or log body

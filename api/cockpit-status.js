@@ -21,6 +21,15 @@ function setHeaders(response, contentType) {
   response.setHeader("Content-Type", contentType);
 }
 
+function sendResponse(request, response, statusCode, body) {
+  response.status(statusCode);
+  if (request.method === "HEAD") {
+    response.end();
+    return;
+  }
+  response.send(body);
+}
+
 module.exports = async function handler(request, response) {
   setHeaders(response, "application/json; charset=utf-8");
 
@@ -30,7 +39,7 @@ module.exports = async function handler(request, response) {
   }
 
   if (request.method !== "GET" && request.method !== "HEAD") {
-    response.status(405).send(JSON.stringify({ error: "method_not_allowed" }));
+    sendResponse(request, response, 405, JSON.stringify({ error: "method_not_allowed" }));
     return;
   }
 
@@ -39,14 +48,14 @@ module.exports = async function handler(request, response) {
     bridgePath: "/api/status",
   });
   if (invalid.length) {
-    response.status(503).send(JSON.stringify({
+    sendResponse(request, response, 503, JSON.stringify({
       error: "cockpit_relay_invalid_configuration",
       invalid,
     }));
     return;
   }
   if (!configured.length) {
-    response.status(503).send(JSON.stringify({
+    sendResponse(request, response, 503, JSON.stringify({
       error: "cockpit_relay_not_configured",
       message: "Set AUTOMOAT_RELAY_URL on Vercel, or AUTOMOAT_BRIDGE_URL for the legacy ngrok bridge.",
     }));
@@ -73,7 +82,7 @@ module.exports = async function handler(request, response) {
         });
         continue;
       }
-      response.status(upstream.status).send(parsed.body);
+      sendResponse(request, response, upstream.status, parsed.body);
       return;
     } catch (error) {
       attempts.push({
@@ -83,7 +92,7 @@ module.exports = async function handler(request, response) {
     }
   }
 
-  response.status(502).send(JSON.stringify({
+  sendResponse(request, response, 502, JSON.stringify({
     error: "cockpit_relay_unreachable",
     attempts,
   }));

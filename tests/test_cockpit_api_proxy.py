@@ -647,6 +647,89 @@ class CockpitApiProxyTest(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_head_handlers_return_status_without_body(self) -> None:
+        result = run_node(
+            """
+            const assert = require("assert");
+            const statusHandler = require("./api/cockpit-status");
+            const logHandler = require("./api/cockpit-log");
+
+            function response() {
+              return {
+                statusCode: null,
+                body: "unset",
+                headers: {},
+                setHeader(name, value) {
+                  this.headers[name] = value;
+                },
+                status(code) {
+                  this.statusCode = code;
+                  return this;
+                },
+                send(body) {
+                  this.body = String(body);
+                  return this;
+                },
+                end(body = "") {
+                  this.body = String(body);
+                  return this;
+                },
+              };
+            }
+
+            process.env.AUTOMOAT_RELAY_URL = "https://automoat-cockpit-relay.example";
+            process.env.AUTOMOAT_BRIDGE_URL = "";
+            process.env.AUTOMOAT_COCKPIT_UPSTREAM_TIMEOUT_MS = "";
+            global.fetch = async (url) => {
+              if (url.endsWith("/api/status")) {
+                return {
+                  ok: true,
+                  status: 200,
+                  text: async () => JSON.stringify({ status: "running", cockpit_ok: true }),
+                };
+              }
+              return {
+                ok: true,
+                status: 200,
+                text: async () => "relay log\\n",
+              };
+            };
+
+            (async () => {
+              const statusResponse = response();
+              await statusHandler({ method: "HEAD" }, statusResponse);
+              assert.strictEqual(statusResponse.statusCode, 200);
+              assert.strictEqual(statusResponse.body, "");
+              assert.strictEqual(
+                statusResponse.headers["Content-Type"],
+                "application/json; charset=utf-8",
+              );
+
+              const logResponse = response();
+              await logHandler({ method: "HEAD" }, logResponse);
+              assert.strictEqual(logResponse.statusCode, 200);
+              assert.strictEqual(logResponse.body, "");
+              assert.strictEqual(logResponse.headers["Content-Type"], "text/plain; charset=utf-8");
+
+              process.env.AUTOMOAT_COCKPIT_UPSTREAM_TIMEOUT_MS = "bad";
+              const invalidStatusResponse = response();
+              await statusHandler({ method: "HEAD" }, invalidStatusResponse);
+              assert.strictEqual(invalidStatusResponse.statusCode, 503);
+              assert.strictEqual(invalidStatusResponse.body, "");
+
+              const invalidLogResponse = response();
+              await logHandler({ method: "HEAD" }, invalidLogResponse);
+              assert.strictEqual(invalidLogResponse.statusCode, 503);
+              assert.strictEqual(invalidLogResponse.body, "");
+            })().catch((error) => {
+              console.error(error.stack || error);
+              process.exit(1);
+            });
+            """
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()

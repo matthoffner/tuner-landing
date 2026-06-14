@@ -25,6 +25,15 @@ function setHeaders(response, contentType) {
   response.setHeader("Content-Type", contentType);
 }
 
+function sendResponse(request, response, statusCode, body) {
+  response.status(statusCode);
+  if (request.method === "HEAD") {
+    response.end();
+    return;
+  }
+  response.send(body);
+}
+
 module.exports = async function handler(request, response) {
   setHeaders(response, "text/plain; charset=utf-8");
 
@@ -34,7 +43,7 @@ module.exports = async function handler(request, response) {
   }
 
   if (request.method !== "GET" && request.method !== "HEAD") {
-    response.status(405).send("method_not_allowed\n");
+    sendResponse(request, response, 405, "method_not_allowed\n");
     return;
   }
 
@@ -44,11 +53,16 @@ module.exports = async function handler(request, response) {
   });
   if (invalid.length) {
     const details = invalid.map((item) => `${item.kind}:${item.error}`).join(", ");
-    response.status(503).send(`cockpit_relay_invalid_configuration: ${details}\n`);
+    sendResponse(request, response, 503, `cockpit_relay_invalid_configuration: ${details}\n`);
     return;
   }
   if (!configured.length) {
-    response.status(503).send("cockpit_relay_not_configured: set AUTOMOAT_RELAY_URL on Vercel\n");
+    sendResponse(
+      request,
+      response,
+      503,
+      "cockpit_relay_not_configured: set AUTOMOAT_RELAY_URL on Vercel\n",
+    );
     return;
   }
 
@@ -65,14 +79,14 @@ module.exports = async function handler(request, response) {
         attempts.push(`${upstreamConfig.kind}:${upstream.status}:${parsed.error}`);
         continue;
       }
-      response.status(upstream.status).send(parsed.body);
+      sendResponse(request, response, upstream.status, parsed.body);
       return;
     } catch (error) {
       attempts.push(`${upstreamConfig.kind}:${error.message}`);
     }
   }
 
-  response.status(502).send(`cockpit_relay_unreachable: ${attempts.join(", ")}\n`);
+  sendResponse(request, response, 502, `cockpit_relay_unreachable: ${attempts.join(", ")}\n`);
 };
 
 module.exports.parseLogPayload = parseLogPayload;
