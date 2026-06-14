@@ -10,6 +10,7 @@ import subprocess
 import sys
 import time
 from pathlib import Path
+from urllib.parse import urlparse
 from urllib.request import urlopen
 
 
@@ -119,18 +120,81 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--token", default=os.environ.get("AUTOMOAT_RELAY_TOKEN", ""))
     parser.add_argument("--no-stop-existing", action="store_true")
     parser.add_argument("--keep-legacy-bridge", action="store_true")
+    parser.add_argument(
+        "--check-env",
+        action="store_true",
+        help="validate local relay launcher configuration without starting processes",
+    )
     return parser.parse_args()
+
+
+def normalized_relay_url(value: str) -> str:
+    stripped = value.strip()
+    parsed = urlparse(stripped)
+    if parsed.scheme in {"http", "https"} and parsed.netloc:
+        return stripped.rstrip("/")
+    return stripped
+
+
+def validate_startup_configuration(args: argparse.Namespace) -> list[str]:
+    errors: list[str] = []
+    relay_url = normalized_relay_url(str(args.relay_url))
+    if not relay_url:
+        errors.append("AUTOMOAT_RELAY_URL or --relay-url is required")
+    elif not relay_url.startswith(("http://", "https://")):
+        errors.append("--relay-url must start with http:// or https://")
+    else:
+        parsed_relay_url = urlparse(relay_url)
+        if not parsed_relay_url.netloc:
+            errors.append("--relay-url must include a host")
+        elif parsed_relay_url.username or parsed_relay_url.password:
+            errors.append("--relay-url must not include embedded credentials")
+        elif parsed_relay_url.query or parsed_relay_url.fragment:
+            errors.append("--relay-url must not include query strings or fragments")
+
+    if not str(args.token).strip():
+        errors.append("AUTOMOAT_RELAY_TOKEN or --token is required")
+    if args.interval <= 0:
+        errors.append("--interval must be greater than 0")
+    if args.publish_interval <= 0:
+        errors.append("--publish-interval must be greater than 0")
+    if args.port <= 0:
+        errors.append("--port must be greater than 0")
+    elif args.port > 65535:
+        errors.append("--port must be less than or equal to 65535")
+    return errors
+
+
+def emit_startup_preflight(args: argparse.Namespace) -> list[str]:
+    errors = validate_startup_configuration(args)
+    if errors:
+        print("autonomous relay startup preflight failed")
+        for error in errors:
+            print(f"  - {error}")
+        return errors
+
+    print(
+        "autonomous relay startup preflight passed: "
+        f"relay_url={normalized_relay_url(str(args.relay_url))} "
+        f"local_port={args.port} "
+        f"agent_interval={args.interval} "
+        f"publish_interval={args.publish_interval} "
+        f"keep_legacy_bridge={args.keep_legacy_bridge}"
+    )
+    return []
 
 
 def main() -> int:
     args = parse_args()
-    relay_url = args.relay_url.rstrip("/")
-    if not relay_url:
-        print("AUTOMOAT_RELAY_URL or --relay-url is required", file=sys.stderr)
+    errors = validate_startup_configuration(args)
+    if args.check_env:
+        return 0 if not emit_startup_preflight(args) else 2
+    if errors:
+        for error in errors:
+            print(error, file=sys.stderr)
         return 2
-    if not args.token:
-        print("AUTOMOAT_RELAY_TOKEN or --token is required", file=sys.stderr)
-        return 2
+    relay_url = normalized_relay_url(str(args.relay_url))
+    token = str(args.token).strip()
 
     LOG_DIR.mkdir(parents=True, exist_ok=True)
     STATE_DIR.mkdir(parents=True, exist_ok=True)
@@ -157,11 +221,11 @@ def main() -> int:
     )
     local_url = f"http://127.0.0.1:{args.port}"
     wait_http(f"{local_url}/api/status", 30)
-    publish_once(relay_url, args.token)
+    publish_once(relay_url, token)
 
     env = os.environ.copy()
     env["AUTOMOAT_RELAY_URL"] = relay_url
-    env["AUTOMOAT_RELAY_TOKEN"] = args.token
+    env["AUTOMOAT_RELAY_TOKEN"] = token
     publisher_pid = start_detached(
         [
             sys.executable,
