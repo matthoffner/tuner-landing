@@ -4,6 +4,12 @@ Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
 - lane: editor
+- status: added deterministic regression coverage for the autonomous-loop supervisor policy so green Dallas readiness plus zero thin groups keeps steering future runs toward autonomy, cockpit visibility, Render reliability, ingest, product, or tests instead of docs/status-only synthetic `example.local` Dallas fixture churn; no Dallas raw CSV rows were edited
+- files: tests/test_autonomous_agent_policy.py, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- checks: `python3 -m unittest tests/test_autonomous_agent_policy.py -v`; `python3 -m py_compile scripts/run_autonomous_agent_loop.py tests/test_autonomous_agent_policy.py`; `python3 -m unittest discover -s tests -v`; `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json > /tmp/automoat-policy-tests-ready.json`; JSON assertion for readiness `ready`, `535` permits, `1082` inspections, `535` captured corrections, and zero thin groups; `git diff --check`
+- next: keep using autonomy/cockpit/Render reliability or real-ingest work while Dallas readiness remains green; the policy behavior now has committed unit coverage
+
+- lane: editor
 - status: hardened the Render autonomous worker policy so green Dallas readiness no longer accepts another synthetic `example.local` Dallas row append just because README/NEXT_TASK/landing/journal/handoff were refreshed; the loop prompt receives the stricter policy snapshot, status payloads expose `autonomy_policy`, and the supervisor gate now requires code, ingest, infra, test, or durable spec companion work for any synthetic row append
 - files: scripts/run_autonomous_agent_loop.py, README.md, NEXT_TASK.md, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
 - checks: `python3 -m py_compile scripts/run_autonomous_agent_loop.py scripts/publish_cockpit_to_relay.py`; policy smoke via monkeypatched `run_autonomy_policy_check` covering row-only failure, status-doc companion failure, and script companion pass; `cmp -s generated/landing.html index.html`; Render-worker copy assertion for `generated/landing.html` and `index.html`; `git diff --check`; `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json > /tmp/automoat-policy-ready.json`
