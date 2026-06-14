@@ -412,12 +412,57 @@
         background: #7d8b79;
       }
 
+      .terminal-meta {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+        color: rgba(255, 248, 243, 0.68);
+        white-space: nowrap;
+      }
+
+      .terminal-live-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: #f0d8c8;
+        box-shadow: 0 0 0 rgba(240, 216, 200, 0.52);
+        animation: terminalPulse 1.3s ease-in-out infinite;
+      }
+
+      @keyframes terminalPulse {
+        0%,
+        100% {
+          opacity: 0.52;
+          box-shadow: 0 0 0 0 rgba(240, 216, 200, 0.38);
+        }
+        50% {
+          opacity: 1;
+          box-shadow: 0 0 0 8px rgba(240, 216, 200, 0);
+        }
+      }
+
       .terminal-body {
         padding: 16px;
         color: #fff8f3;
         font-family: "SFMono-Regular", Menlo, Consolas, monospace;
         font-size: 0.86rem;
         line-height: 1.7;
+      }
+
+      .terminal-body-live {
+        box-sizing: border-box;
+        display: block;
+        width: 100%;
+        min-height: 360px;
+        max-height: 480px;
+        margin: 0;
+        overflow: auto;
+        border: 0;
+        background:
+          linear-gradient(180deg, rgba(255, 248, 243, 0.05), rgba(255, 248, 243, 0)),
+          #151b24;
+        white-space: pre-wrap;
       }
 
       .terminal-line {
@@ -1072,22 +1117,16 @@
               The old local/ngrok bridge remains only as a legacy fallback.
             </p>
             <div class="cockpit-layout">
-              <div class="terminal-panel" aria-label="Example Codex loop terminal stream">
+              <div class="terminal-panel" aria-label="Live Codex loop terminal stream">
                 <div class="terminal-bar">
-                  <span>codex-loop tunnel</span>
+                  <span>render codex live</span>
+                  <span class="terminal-meta">
+                    <span class="terminal-live-dot" aria-hidden="true"></span>
+                    <span data-cockpit-terminal-status>connecting</span>
+                  </span>
                   <span class="terminal-dots" aria-hidden="true"><span></span><span></span><span></span></span>
                 </div>
-                <div class="terminal-body">
-                  <span class="terminal-line">$ automoat loop --goal "create data moat from repeated workflow"</span>
-                  <span class="terminal-line dim">$ python3 /app/scripts/start_render_codex_worker.py</span>
-                  <span class="terminal-line dim">$ python3 scripts/publish_cockpit_to_relay.py</span>
-                  <span class="terminal-line dim">read .pixelbox/handoff.md</span>
-                  <span class="terminal-line dim">inspect generated records, labels, evals, and action queue</span>
-                  <span class="terminal-line">codex exec: make one bounded repo improvement</span>
-                  <span class="terminal-line good">verify, sync, commit, and push to main</span>
-                  <span class="terminal-line">sleep until the next autonomous iteration</span>
-                  <span class="terminal-line good">publish every step to the Render relay</span>
-                </div>
+                <pre class="terminal-body terminal-body-live" data-cockpit-terminal-log aria-live="polite">connecting to Render Codex worker...</pre>
               </div>
               <div class="cockpit-list">
                 <div class="cockpit-step">
@@ -1561,9 +1600,12 @@
     <script>
       (() => {
         const panels = Array.from(document.querySelectorAll("[data-bridge-url]"));
-        if (!panels.length) return;
+        const liveTerminals = Array.from(document.querySelectorAll("[data-cockpit-terminal-log]"));
+        const liveTerminalStatuses = Array.from(document.querySelectorAll("[data-cockpit-terminal-status]"));
+        if (!panels.length && !liveTerminals.length) return;
 
         const headers = {};
+        let pollCount = 0;
 
         async function fetchFirst(urls, options = {}) {
           let lastError;
@@ -1577,6 +1619,45 @@
             }
           }
           throw lastError || new Error("no cockpit endpoint responded");
+        }
+
+        function terminalHeader(status) {
+          const git = status.git || {};
+          const relay = status.relay || {};
+          const phase = status.phase || "unknown";
+          const head = git.head || (relay.publisher && relay.publisher.git && relay.publisher.git.head) || "unknown";
+          const runId = status.run_id || "unknown-run";
+          const updated = status.publisher_updated_at || status.updated_at || relay.updated_at || "unknown-time";
+          const running = status.loop_running ? "running" : "stopped";
+          return [
+            `$ python3 /app/scripts/start_render_codex_worker.py`,
+            `$ render worker=${running} phase=${phase} head=${head} poll=${pollCount}`,
+            `$ run_id=${runId} updated=${updated}`,
+            "",
+          ].join("\n");
+        }
+
+        function updateLiveTerminals(status, logText) {
+          const rawLines = (logText || "").split("\n").filter(Boolean);
+          const tail = rawLines.slice(-54).join("\n");
+          const body = `${terminalHeader(status)}${tail || "waiting for Codex loop output..."}`;
+          liveTerminals.forEach((terminal) => {
+            terminal.textContent = body;
+            terminal.scrollTop = terminal.scrollHeight;
+          });
+          const label = `${status.loop_running ? "live" : "stopped"} · ${status.phase || "unknown"}`;
+          liveTerminalStatuses.forEach((node) => {
+            node.textContent = label;
+          });
+        }
+
+        function updateLiveTerminalError(message) {
+          liveTerminals.forEach((terminal) => {
+            terminal.textContent = `Could not reach cockpit relay: ${message}`;
+          });
+          liveTerminalStatuses.forEach((node) => {
+            node.textContent = "relay error";
+          });
         }
 
         async function refreshPanel(panel) {
@@ -1615,13 +1696,16 @@
             const text = await logResponse.text();
             fields.log.textContent = text.split("\n").slice(-34).join("\n").trim() || "waiting for loop output...";
             fields.log.scrollTop = fields.log.scrollHeight;
+            updateLiveTerminals(status, text);
           } catch (error) {
             fields.status.textContent = "relay error";
             fields.log.textContent = `Could not reach cockpit relay: ${error.message}`;
+            updateLiveTerminalError(error.message);
           }
         }
 
         function refreshBridge() {
+          pollCount += 1;
           panels.forEach((panel) => refreshPanel(panel));
         }
 

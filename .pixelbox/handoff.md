@@ -4,6 +4,12 @@ Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
 - lane: editor
+- status: wired the Agent Cockpit terminal panel on the landing page to the live Render relay log instead of a static example transcript; the terminal now polls `/api/cockpit-status` and `/api/cockpit-log`, shows run/head/phase metadata, auto-scrolls the latest Codex log tail, and still keeps the top relay status panel active
+- files: generated/landing.html, index.html, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- checks: `cmp -s generated/landing.html index.html`; Node live-terminal assertions and script syntax parse for `generated/landing.html` and `index.html`; `python3 -m unittest discover -s tests -p 'test_loop_artifact_visibility.py' -v`; `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json > /tmp/automoat-live-terminal-ready.json`; `git diff --check`
+- next: verify the deployed Vercel landing page shows `render codex live`, `data-cockpit-terminal-log`, and live relay text from the current Render worker
+
+- lane: editor
 - status: bounded Render cockpit relay status snapshot size so oversized published `status` objects are rejected before persistence or in-memory mutation; relay config now exposes `AUTOMOAT_RELAY_MAX_STATUS_BYTES` / `--max-status-bytes` with a 128 KiB default and `--check-env` validation; no Dallas raw CSV rows were edited
 - files: scripts/render_cockpit_relay.py, tests/test_render_cockpit_relay.py, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
 - checks: `python3 -m unittest tests/test_render_cockpit_relay.py -v`; `python3 -m py_compile scripts/render_cockpit_relay.py tests/test_render_cockpit_relay.py`; `python3 -m unittest discover -s tests -v`; `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json > /tmp/automoat-relay-status-cap-ready.json`; JSON assertion for readiness `ready`, `535` permits, `1082` inspections, and zero thin groups; `AUTOMOAT_RELAY_TOKEN=relay-token python3 scripts/render_cockpit_relay.py --check-env --max-status-bytes 0` (expected exit `2`); `cmp -s generated/landing.html index.html`; `git diff --exit-code -- .pxcode/preview.json`
