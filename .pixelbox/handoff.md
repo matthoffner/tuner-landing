@@ -4,6 +4,12 @@ Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
 - lane: editor
+- status: refocused the root landing page around the autonomous terminal concept; the live Render Codex terminal is now the primary hero surface with runtime facts, command-line context, and loop/memory/artifact cards, while Dallas/MVP proof details moved to `/mvp.html` so the root stays terminal-first
+- files: generated/landing.html, index.html, mvp.html, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- checks: `cmp -s generated/landing.html index.html`; Node terminal-first landing assertions and script syntax parse for `generated/landing.html`, `index.html`, and `mvp.html`; `python3 -m unittest discover -s tests -p 'test_loop_artifact_visibility.py' -v`; `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json > /tmp/automoat-terminal-core-ready.json`; `git diff --check`; Playwright rendered visibility assertions for desktop/mobile root and `/mvp.html`
+- next: verify Vercel serves the terminal-first root page with no visible MVP/Dallas/ngrok copy and serves `/mvp.html` as the proof archive
+
+- lane: editor
 - status: made autonomous-loop policy failures machine-readable and cockpit-visible so rejected diffs now carry stable `failure_reason` values plus specific top-level status errors for snapshot-blocked synthetic Dallas rows, raw Dallas CSV edits without companion work, and synthetic appends without durable product/test/ingest work; no Dallas raw CSV rows were edited
 - files: scripts/run_autonomous_agent_loop.py, tests/test_autonomous_agent_policy.py, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
 - checks: `python3 -m unittest tests/test_autonomous_agent_policy.py -v`; `python3 -m py_compile scripts/run_autonomous_agent_loop.py tests/test_autonomous_agent_policy.py`; `python3 -m unittest discover -s tests -v`; `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json > /tmp/automoat-policy-failure-reasons-ready.json`; JSON assertion for readiness `ready`, `535/535` corrections, `535` permits, `1082` inspections, and zero thin groups; `cmp -s generated/landing.html index.html`; `git diff --exit-code -- .pxcode/preview.json`; `git diff -- generated/raw/dallas-electrician-import-sample-v2/permits.csv generated/raw/dallas-electrician-import-sample-v2/inspections.csv generated/raw/dallas-electrician-import-sample-v2/contractors.csv generated/raw/dallas-electrician-import-sample-v2/rule_documents.csv`; `git diff --check`

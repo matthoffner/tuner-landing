@@ -214,6 +214,67 @@
         color: var(--ink);
       }
 
+      .terminal-stage {
+        margin-top: 32px;
+        padding: 18px;
+        border: 1px solid rgba(29, 36, 48, 0.16);
+        border-radius: 30px;
+        background:
+          radial-gradient(circle at 16% 0%, rgba(182, 84, 45, 0.22), transparent 32%),
+          linear-gradient(135deg, rgba(255, 252, 246, 0.98), rgba(240, 216, 200, 0.38));
+        box-shadow: 0 24px 70px rgba(29, 36, 48, 0.13);
+      }
+
+      .terminal-stage-header {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(250px, 0.72fr);
+        gap: 16px;
+        align-items: end;
+        margin-bottom: 16px;
+      }
+
+      .terminal-stage-header h2 {
+        margin-top: 8px;
+        font-size: clamp(2rem, 5vw, 4rem);
+        line-height: 0.96;
+      }
+
+      .terminal-stage-header p {
+        max-width: 680px;
+      }
+
+      .terminal-facts {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .terminal-fact {
+        min-width: 0;
+        padding: 12px;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.56);
+        font-family: "Helvetica Neue", Arial, sans-serif;
+      }
+
+      .terminal-fact strong,
+      .terminal-note strong {
+        display: block;
+        font-size: 0.72rem;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+
+      .terminal-fact span {
+        display: block;
+        margin-top: 8px;
+        color: var(--accent-2);
+        font-size: 0.92rem;
+        font-weight: 800;
+        overflow-wrap: anywhere;
+      }
+
       .hero-grid,
       .grid {
         display: grid;
@@ -463,6 +524,60 @@
           linear-gradient(180deg, rgba(255, 248, 243, 0.05), rgba(255, 248, 243, 0)),
           #151b24;
         white-space: pre-wrap;
+      }
+
+      .terminal-panel-primary {
+        margin-top: 0;
+        text-align: left;
+        border-color: rgba(255, 248, 243, 0.18);
+        box-shadow: 0 24px 60px rgba(8, 16, 25, 0.26);
+      }
+
+      .terminal-panel-primary .terminal-body-live {
+        min-height: 500px;
+        max-height: 620px;
+      }
+
+      .terminal-commandline {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        padding: 13px 16px;
+        border-bottom: 1px solid rgba(255, 248, 243, 0.1);
+        background: rgba(255, 248, 243, 0.04);
+        color: rgba(255, 248, 243, 0.74);
+        font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+        font-size: 0.82rem;
+        overflow-wrap: anywhere;
+      }
+
+      .terminal-commandline span {
+        color: #f0d8c8;
+      }
+
+      .terminal-commandline code {
+        color: #fff8f3;
+      }
+
+      .terminal-note-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+        margin-top: 12px;
+      }
+
+      .terminal-note {
+        min-width: 0;
+        padding: 14px;
+        border: 1px solid rgba(29, 36, 48, 0.12);
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.52);
+      }
+
+      .terminal-note p {
+        margin-top: 6px;
+        font-size: 0.94rem;
+        line-height: 1.52;
       }
 
       .terminal-line {
@@ -837,6 +952,32 @@
           min-height: 48px;
         }
 
+        .terminal-stage {
+          margin-top: 22px;
+          padding: 12px;
+          border-radius: 22px;
+        }
+
+        .terminal-stage-header,
+        .terminal-facts,
+        .terminal-note-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .terminal-stage-header h2 {
+          font-size: 2rem;
+        }
+
+        .terminal-panel-primary .terminal-body-live {
+          min-height: 58vh;
+          max-height: 66vh;
+        }
+
+        .terminal-commandline {
+          padding: 11px 12px;
+          font-size: 0.72rem;
+        }
+
         .section {
           margin-top: 12px;
           padding: 16px;
@@ -956,102 +1097,123 @@
             <div class="brand-name">automoat</div>
           </a>
           <div class="nav-links">
-            <a href="#moat">Moat</a>
-            <a href="#cockpit">Cockpit</a>
-            <a href="#proof">Proof</a>
-            <a href="#docs">Docs</a>
+            <a href="#terminal">Terminal</a>
+            <a href="#concept">Concept</a>
+            <a href="/mvp.html">Proof archive</a>
           </div>
         </div>
 
         <div class="hero">
           <div class="hero-brand">
             <img class="hero-logo" src="assets/automoat-icon.svg" alt="" aria-hidden="true" />
-            <div class="eyebrow">Evidence-first workflow intelligence scaffolding</div>
+            <div class="eyebrow">Autonomous agent cockpit</div>
           </div>
-          <h1>Create a data moat automatically from the work a business already repeats.</h1>
+          <h1>Watch an autonomous Codex agent build the data moat in public.</h1>
           <p class="hero-copy">
-            <code>automoat</code> watches repeated operational work, captures the records and
-            corrections it produces, and turns that stream into reusable workflow data. Permits are
-            only the first concrete wedge.
+            The core product is the terminal: a real agent running in Render, looping on the repo,
+            publishing its thoughts as logs, and turning repeated business workflows into durable
+            data artifacts.
           </p>
           <div class="hero-actions">
-            <a class="button button-primary" href="#cockpit">Watch Cockpit</a>
-            <a class="button button-secondary" href="/api/cockpit-status">Open Relay Status</a>
+            <a class="button button-primary" href="#terminal">Watch Terminal</a>
+            <a class="button button-secondary" href="/mvp.html">Open Proof Archive</a>
           </div>
 
-          <div class="hero-grid">
-            <div class="section" id="state">
-              <div class="section-header">
-                <div class="kicker">Proof Snapshot</div>
+          <div class="terminal-stage" id="terminal" aria-label="Autonomous terminal cockpit">
+            <div class="terminal-stage-header">
+              <div>
+                <div class="kicker">Live product surface</div>
+                <h2>The terminal is the cockpit.</h2>
+                <p>
+                  Render runs Codex, GitHub records the work, and Vercel exposes the live stream.
+                  The product is not a static demo; it is the visible control room for an agent that
+                  keeps making bounded improvements.
+                </p>
               </div>
-              <h2>Small wedge. Real loop. Inspectable output.</h2>
-              <p>
-                The current wedge is Dallas residential electrical permits because the records are
-                messy enough to prove the loop: normalize data, label decisions, generate evals, and
-                show the agent working.
-              </p>
-              <div class="metric-grid">
-                <div class="metric">
-                  <div class="metric-value">535</div>
-                  <div class="metric-label">Imported permits in the current Dallas proof set</div>
+              <div class="terminal-facts" aria-label="Cockpit runtime facts">
+                <div class="terminal-fact">
+                  <strong>Runtime</strong>
+                  <span>Render worker</span>
                 </div>
-                <div class="metric">
-                  <div class="metric-value">1093</div>
-                  <div class="metric-label">Generated eval tasks tied to the workflow</div>
+                <div class="terminal-fact">
+                  <strong>Trail</strong>
+                  <span>commit + push</span>
                 </div>
-                <div class="metric">
-                  <div class="metric-value">13/13</div>
-                  <div class="metric-label">Contract checks passing</div>
-                </div>
-                <div class="metric">
-                  <div class="metric-value">Live</div>
-                  <div class="metric-label">Render-hosted Codex worker visible below</div>
+                <div class="terminal-fact">
+                  <strong>Visibility</strong>
+                  <span>live log relay</span>
                 </div>
               </div>
-              <ul class="status-list">
-                <li><strong>Input:</strong> repeated workflow records and operator corrections.</li>
-                <li><strong>Output:</strong> normalized rows, labels, evals, action queues, and contract checks.</li>
-                <li><strong>Next:</strong> move from fixture-backed Dallas proof toward real ingest.</li>
-              </ul>
             </div>
 
-            <div class="section" id="moat">
-              <div class="section-header">
-                <div class="kicker">Moat Candidate</div>
+            <div class="terminal-panel terminal-panel-primary" aria-label="Live autonomous Codex terminal">
+              <div class="terminal-bar">
+                <span>render codex live</span>
+                <span class="terminal-meta">
+                  <span class="terminal-live-dot" aria-hidden="true"></span>
+                  <span data-cockpit-terminal-status>connecting</span>
+                </span>
+                <span class="terminal-dots" aria-hidden="true"><span></span><span></span><span></span></span>
               </div>
-              <h2>The moat is operational memory</h2>
-              <p>
-                Generic models do not have your corrections, exceptions, follow-ups, and outcomes.
-                Automoat turns that private workflow exhaust into a dataset the business owns.
-              </p>
-              <div class="moat-grid">
-                <div class="moat-card">
-                  <span class="moat-index">1</span>
-                  <div>
-                    <strong>Workflow-to-dataset capture</strong>
-                    <p>Automoat should watch repeated work turn into structured records: inputs, decisions, approvals, exceptions, follow-ups, and outcomes.</p>
-                  </div>
+              <div class="terminal-commandline">
+                <span>$</span>
+                <code>codex loop --autonomous --publish-cockpit --push main</code>
+              </div>
+              <pre class="terminal-body terminal-body-live" data-cockpit-terminal-log aria-live="polite">connecting to Render Codex worker...</pre>
+            </div>
+
+            <div class="terminal-note-grid">
+              <div class="terminal-note">
+                <strong>Loop</strong>
+                <p>The agent reads the repo, chooses a small improvement, runs checks, commits, and pushes.</p>
+              </div>
+              <div class="terminal-note">
+                <strong>Memory</strong>
+                <p>Each correction, failure, passing contract, and operator decision becomes future context.</p>
+              </div>
+              <div class="terminal-note">
+                <strong>Artifacts</strong>
+                <p>The work produces files, evals, contracts, logs, and handoffs instead of disappearing into chat.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="section" id="concept">
+            <div class="section-header">
+              <div class="kicker">Concept</div>
+            </div>
+            <h2>The moat is operational memory</h2>
+            <p>
+              Generic models do not have your corrections, exceptions, follow-ups, and outcomes.
+              Automoat turns that private workflow exhaust into a dataset the business owns.
+            </p>
+            <div class="moat-grid">
+              <div class="moat-card">
+                <span class="moat-index">1</span>
+                <div>
+                  <strong>Workflow-to-dataset capture</strong>
+                  <p>Repeated work becomes structured records: inputs, decisions, approvals, exceptions, follow-ups, and outcomes.</p>
                 </div>
-                <div class="moat-card">
-                  <span class="moat-index">2</span>
-                  <div>
-                    <strong>Human correction memory</strong>
-                    <p>Every accepted, rejected, or edited recommendation becomes a label that generic models and public datasets do not have.</p>
-                  </div>
+              </div>
+              <div class="moat-card">
+                <span class="moat-index">2</span>
+                <div>
+                  <strong>Human correction memory</strong>
+                  <p>Every accepted, rejected, or edited recommendation becomes a label that generic models and public datasets do not have.</p>
                 </div>
-                <div class="moat-card">
-                  <span class="moat-index">3</span>
-                  <div>
-                    <strong>Reusable eval contracts</strong>
-                    <p>Each new domain should prove the same thing: the captured data improves predictions, routing, recommendations, or automation compared with a generic baseline.</p>
-                  </div>
+              </div>
+              <div class="moat-card">
+                <span class="moat-index">3</span>
+                <div>
+                  <strong>Reusable eval contracts</strong>
+                  <p>Each domain has to prove the captured data improves predictions, routing, recommendations, or automation.</p>
                 </div>
-                <div class="moat-card">
-                  <span class="moat-index">4</span>
-                  <div>
-                    <strong>Compounding operational memory</strong>
-                    <p>The more workflows run through the system, the more proprietary examples, edge cases, and outcome-linked playbooks the business owns.</p>
-                  </div>
+              </div>
+              <div class="moat-card">
+                <span class="moat-index">4</span>
+                <div>
+                  <strong>Compounding operating system</strong>
+                  <p>The cockpit becomes the place where proprietary examples, edge cases, and outcome-linked playbooks accumulate.</p>
                 </div>
               </div>
             </div>
@@ -1059,7 +1221,7 @@
         </div>
 
         <div class="content">
-          <div class="section" id="cockpit">
+          <div class="section" id="cockpit" hidden>
             <div class="section-header">
               <div class="kicker">Agent Cockpit</div>
             </div>
@@ -1102,7 +1264,7 @@
             </div>
           </div>
 
-          <div class="section" id="proof">
+          <div class="section" id="proof" hidden>
             <div class="section-header">
               <div class="kicker">Proof</div>
             </div>
@@ -1488,7 +1650,7 @@
             </p>
           </div>
 
-          <div class="section" id="docs">
+          <div class="section" id="docs" hidden>
             <div class="section-header">
               <div class="kicker">Docs And Files</div>
             </div>
