@@ -7,7 +7,6 @@ const {
   setProxyHeaders,
   setUpstreamSelectionHeaders,
   upstreamAttemptSummary,
-  upstreamAttemptsHeader,
   upstreams,
 } = require("./cockpit-upstreams");
 
@@ -50,12 +49,14 @@ module.exports = async function handler(request, response) {
   }
   if (invalid.length) {
     response.setHeader("X-Automoat-Upstream-Invalid-Config", invalidUpstreamsHeader(invalid));
+    setUpstreamSelectionHeaders(response, "invalid_configuration", 0, []);
     const details = invalid.map((item) => `${item.kind}:${item.error}`).join(", ");
     sendProxyResponse(request, response, 503, `cockpit_relay_invalid_configuration: ${details}\n`);
     return;
   }
   if (!configured.length) {
     response.setHeader("X-Automoat-Upstream-Not-Configured", NOT_CONFIGURED_UPSTREAMS_HEADER);
+    setUpstreamSelectionHeaders(response, "not_configured", 0, []);
     sendProxyResponse(
       request,
       response,
@@ -109,7 +110,7 @@ module.exports = async function handler(request, response) {
     }
   }
 
-  response.setHeader("X-Automoat-Upstream-Attempts", upstreamAttemptsHeader(attempts));
+  setUpstreamSelectionHeaders(response, "unreachable", Math.max(0, attempts.length - 1), attempts);
   sendProxyResponse(
     request,
     response,

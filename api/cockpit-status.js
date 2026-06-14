@@ -6,7 +6,6 @@ const {
   sendProxyResponse,
   setProxyHeaders,
   setUpstreamSelectionHeaders,
-  upstreamAttemptsHeader,
   upstreams,
 } = require("./cockpit-upstreams");
 
@@ -45,6 +44,7 @@ module.exports = async function handler(request, response) {
   }
   if (invalid.length) {
     response.setHeader("X-Automoat-Upstream-Invalid-Config", invalidUpstreamsHeader(invalid));
+    setUpstreamSelectionHeaders(response, "invalid_configuration", 0, []);
     sendProxyResponse(request, response, 503, JSON.stringify({
       error: "cockpit_relay_invalid_configuration",
       invalid,
@@ -53,6 +53,7 @@ module.exports = async function handler(request, response) {
   }
   if (!configured.length) {
     response.setHeader("X-Automoat-Upstream-Not-Configured", NOT_CONFIGURED_UPSTREAMS_HEADER);
+    setUpstreamSelectionHeaders(response, "not_configured", 0, []);
     sendProxyResponse(request, response, 503, JSON.stringify({
       error: "cockpit_relay_not_configured",
       message: "Set AUTOMOAT_RELAY_URL on Vercel, or AUTOMOAT_BRIDGE_URL for the legacy ngrok bridge.",
@@ -104,7 +105,7 @@ module.exports = async function handler(request, response) {
     }
   }
 
-  response.setHeader("X-Automoat-Upstream-Attempts", upstreamAttemptsHeader(attempts));
+  setUpstreamSelectionHeaders(response, "unreachable", Math.max(0, attempts.length - 1), attempts);
   sendProxyResponse(request, response, 502, JSON.stringify({
     error: "cockpit_relay_unreachable",
     attempts,

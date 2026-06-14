@@ -651,6 +651,11 @@ class CockpitApiProxyTest(unittest.TestCase):
                 statusResponse.headers["X-Automoat-Upstream-Attempts"],
                 "relay:200:invalid_json,legacy_bridge:200:status_payload_must_be_object",
               );
+              assert.strictEqual(statusResponse.headers["X-Automoat-Upstream"], "unreachable");
+              assert.strictEqual(
+                statusResponse.headers["X-Automoat-Upstream-Fallback-Count"],
+                "1",
+              );
               assert(!statusResponse.body.includes("relay-secret-offline-page"));
             })().catch((error) => {
               console.error(error.stack || error);
@@ -782,6 +787,11 @@ class CockpitApiProxyTest(unittest.TestCase):
                 logResponse.headers["X-Automoat-Upstream-Attempts"],
                 "relay:200:log_payload_must_not_be_html,legacy_bridge:200:log_payload_must_not_be_html",
               );
+              assert.strictEqual(logResponse.headers["X-Automoat-Upstream"], "unreachable");
+              assert.strictEqual(
+                logResponse.headers["X-Automoat-Upstream-Fallback-Count"],
+                "1",
+              );
               assert(!logResponse.body.includes("relay-secret-offline-page"));
               assert(!logResponse.body.includes("bridge-secret-offline-page"));
             })().catch((error) => {
@@ -853,12 +863,30 @@ class CockpitApiProxyTest(unittest.TestCase):
               assert.strictEqual(statusResponse.statusCode, 503);
               assert(statusResponse.body.includes("cockpit_relay_invalid_configuration"));
               assert(statusResponse.body.includes("AUTOMOAT_COCKPIT_UPSTREAM_TIMEOUT_MS"));
+              assert.strictEqual(
+                statusResponse.headers["X-Automoat-Upstream"],
+                "invalid_configuration",
+              );
+              assert.strictEqual(
+                statusResponse.headers["X-Automoat-Upstream-Fallback-Count"],
+                "0",
+              );
+              assert.strictEqual(statusResponse.headers["X-Automoat-Upstream-Attempts"], "");
 
               const logResponse = response();
               await logHandler({ method: "GET" }, logResponse);
               assert.strictEqual(logResponse.statusCode, 503);
               assert(logResponse.body.includes("cockpit_relay_invalid_configuration"));
               assert(logResponse.body.includes("AUTOMOAT_COCKPIT_UPSTREAM_TIMEOUT_MS"));
+              assert.strictEqual(
+                logResponse.headers["X-Automoat-Upstream"],
+                "invalid_configuration",
+              );
+              assert.strictEqual(
+                logResponse.headers["X-Automoat-Upstream-Fallback-Count"],
+                "0",
+              );
+              assert.strictEqual(logResponse.headers["X-Automoat-Upstream-Attempts"], "");
 
               process.env.AUTOMOAT_COCKPIT_UPSTREAM_TIMEOUT_MS = "15001";
 
@@ -1058,6 +1086,18 @@ class CockpitApiProxyTest(unittest.TestCase):
                 "timeout:AUTOMOAT_COCKPIT_UPSTREAM_TIMEOUT_MS must be a positive integer",
               );
               assert.strictEqual(
+                invalidStatusResponse.headers["X-Automoat-Upstream"],
+                "invalid_configuration",
+              );
+              assert.strictEqual(
+                invalidStatusResponse.headers["X-Automoat-Upstream-Fallback-Count"],
+                "0",
+              );
+              assert.strictEqual(
+                invalidStatusResponse.headers["X-Automoat-Upstream-Attempts"],
+                "",
+              );
+              assert.strictEqual(
                 invalidStatusResponse.headers["Access-Control-Expose-Headers"],
                 "X-Automoat-Upstream, X-Automoat-Upstream-Fallback-Count, X-Automoat-Upstream-Attempts, X-Automoat-Upstream-Timeout-Ms, X-Automoat-Upstream-Invalid-Config, X-Automoat-Upstream-Not-Configured",
               );
@@ -1073,6 +1113,18 @@ class CockpitApiProxyTest(unittest.TestCase):
               assert.strictEqual(
                 invalidLogResponse.headers["X-Automoat-Upstream-Invalid-Config"],
                 "timeout:AUTOMOAT_COCKPIT_UPSTREAM_TIMEOUT_MS must be a positive integer",
+              );
+              assert.strictEqual(
+                invalidLogResponse.headers["X-Automoat-Upstream"],
+                "invalid_configuration",
+              );
+              assert.strictEqual(
+                invalidLogResponse.headers["X-Automoat-Upstream-Fallback-Count"],
+                "0",
+              );
+              assert.strictEqual(
+                invalidLogResponse.headers["X-Automoat-Upstream-Attempts"],
+                "",
               );
               assert.strictEqual(
                 invalidLogResponse.headers["Access-Control-Expose-Headers"],
@@ -1136,6 +1188,12 @@ class CockpitApiProxyTest(unittest.TestCase):
                 statusResponse.headers["X-Automoat-Upstream-Not-Configured"],
                 "relay,legacy_bridge",
               );
+              assert.strictEqual(statusResponse.headers["X-Automoat-Upstream"], "not_configured");
+              assert.strictEqual(
+                statusResponse.headers["X-Automoat-Upstream-Fallback-Count"],
+                "0",
+              );
+              assert.strictEqual(statusResponse.headers["X-Automoat-Upstream-Attempts"], "");
               assert.strictEqual(
                 statusResponse.headers["Access-Control-Expose-Headers"],
                 "X-Automoat-Upstream, X-Automoat-Upstream-Fallback-Count, X-Automoat-Upstream-Attempts, X-Automoat-Upstream-Timeout-Ms, X-Automoat-Upstream-Invalid-Config, X-Automoat-Upstream-Not-Configured",
@@ -1149,6 +1207,12 @@ class CockpitApiProxyTest(unittest.TestCase):
                 logResponse.headers["X-Automoat-Upstream-Not-Configured"],
                 "relay,legacy_bridge",
               );
+              assert.strictEqual(logResponse.headers["X-Automoat-Upstream"], "not_configured");
+              assert.strictEqual(
+                logResponse.headers["X-Automoat-Upstream-Fallback-Count"],
+                "0",
+              );
+              assert.strictEqual(logResponse.headers["X-Automoat-Upstream-Attempts"], "");
               assert.strictEqual(
                 logResponse.headers["Access-Control-Expose-Headers"],
                 "X-Automoat-Upstream, X-Automoat-Upstream-Fallback-Count, X-Automoat-Upstream-Attempts, X-Automoat-Upstream-Timeout-Ms, X-Automoat-Upstream-Invalid-Config, X-Automoat-Upstream-Not-Configured",
@@ -1162,6 +1226,15 @@ class CockpitApiProxyTest(unittest.TestCase):
                 headStatusResponse.headers["X-Automoat-Upstream-Not-Configured"],
                 "relay,legacy_bridge",
               );
+              assert.strictEqual(
+                headStatusResponse.headers["X-Automoat-Upstream"],
+                "not_configured",
+              );
+              assert.strictEqual(
+                headStatusResponse.headers["X-Automoat-Upstream-Fallback-Count"],
+                "0",
+              );
+              assert.strictEqual(headStatusResponse.headers["X-Automoat-Upstream-Attempts"], "");
 
               const headLogResponse = response();
               await logHandler({ method: "HEAD" }, headLogResponse);
@@ -1171,6 +1244,15 @@ class CockpitApiProxyTest(unittest.TestCase):
                 headLogResponse.headers["X-Automoat-Upstream-Not-Configured"],
                 "relay,legacy_bridge",
               );
+              assert.strictEqual(
+                headLogResponse.headers["X-Automoat-Upstream"],
+                "not_configured",
+              );
+              assert.strictEqual(
+                headLogResponse.headers["X-Automoat-Upstream-Fallback-Count"],
+                "0",
+              );
+              assert.strictEqual(headLogResponse.headers["X-Automoat-Upstream-Attempts"], "");
             })().catch((error) => {
               console.error(error.stack || error);
               process.exit(1);
