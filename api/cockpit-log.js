@@ -29,7 +29,7 @@ function setHeaders(response, contentType) {
   response.setHeader("Access-Control-Allow-Headers", "content-type");
   response.setHeader(
     "Access-Control-Expose-Headers",
-    "X-Automoat-Upstream, X-Automoat-Upstream-Fallback-Count, X-Automoat-Upstream-Attempts",
+    "X-Automoat-Upstream, X-Automoat-Upstream-Fallback-Count, X-Automoat-Upstream-Attempts, X-Automoat-Upstream-Timeout-Ms",
   );
   response.setHeader("Cache-Control", "no-store");
   response.setHeader("Content-Type", contentType);
@@ -67,6 +67,9 @@ module.exports = async function handler(request, response) {
     relayPath: "/api/log",
     bridgePath: "/.automoat/logs/mvp-loop.log",
   });
+  if (!invalid.some((item) => item.kind === "timeout")) {
+    response.setHeader("X-Automoat-Upstream-Timeout-Ms", String(timeoutMs));
+  }
   if (invalid.length) {
     const details = invalid.map((item) => `${item.kind}:${item.error}`).join(", ");
     sendResponse(request, response, 503, `cockpit_relay_invalid_configuration: ${details}\n`);

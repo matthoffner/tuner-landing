@@ -294,8 +294,9 @@ class CockpitApiProxyTest(unittest.TestCase):
               );
               assert.strictEqual(
                 statusResponse.headers["Access-Control-Expose-Headers"],
-                "X-Automoat-Upstream, X-Automoat-Upstream-Fallback-Count, X-Automoat-Upstream-Attempts",
+                "X-Automoat-Upstream, X-Automoat-Upstream-Fallback-Count, X-Automoat-Upstream-Attempts, X-Automoat-Upstream-Timeout-Ms",
               );
+              assert.strictEqual(statusResponse.headers["X-Automoat-Upstream-Timeout-Ms"], "5");
 
               const logResponse = response();
               await logHandler({ method: "GET" }, logResponse);
@@ -309,8 +310,9 @@ class CockpitApiProxyTest(unittest.TestCase):
               );
               assert.strictEqual(
                 logResponse.headers["Access-Control-Expose-Headers"],
-                "X-Automoat-Upstream, X-Automoat-Upstream-Fallback-Count, X-Automoat-Upstream-Attempts",
+                "X-Automoat-Upstream, X-Automoat-Upstream-Fallback-Count, X-Automoat-Upstream-Attempts, X-Automoat-Upstream-Timeout-Ms",
               );
+              assert.strictEqual(logResponse.headers["X-Automoat-Upstream-Timeout-Ms"], "5");
 
               assert.deepStrictEqual(fetched, [
                 "https://automoat-cockpit-relay.example/api/status",
@@ -733,6 +735,7 @@ class CockpitApiProxyTest(unittest.TestCase):
               assert.strictEqual(statusResponse.headers["X-Automoat-Upstream"], "relay");
               assert.strictEqual(statusResponse.headers["X-Automoat-Upstream-Fallback-Count"], "0");
               assert.strictEqual(statusResponse.headers["X-Automoat-Upstream-Attempts"], "relay:200");
+              assert.strictEqual(statusResponse.headers["X-Automoat-Upstream-Timeout-Ms"], "8000");
               assert.strictEqual(
                 statusResponse.headers["Content-Type"],
                 "application/json; charset=utf-8",
@@ -745,6 +748,7 @@ class CockpitApiProxyTest(unittest.TestCase):
               assert.strictEqual(logResponse.headers["X-Automoat-Upstream"], "relay");
               assert.strictEqual(logResponse.headers["X-Automoat-Upstream-Fallback-Count"], "0");
               assert.strictEqual(logResponse.headers["X-Automoat-Upstream-Attempts"], "relay:200");
+              assert.strictEqual(logResponse.headers["X-Automoat-Upstream-Timeout-Ms"], "8000");
               assert.strictEqual(logResponse.headers["Content-Type"], "text/plain; charset=utf-8");
               assert.deepStrictEqual(fetches, [
                 {
@@ -783,6 +787,10 @@ class CockpitApiProxyTest(unittest.TestCase):
                 fallbackStatusResponse.headers["X-Automoat-Upstream-Attempts"],
                 "relay:503,legacy_bridge:200",
               );
+              assert.strictEqual(
+                fallbackStatusResponse.headers["X-Automoat-Upstream-Timeout-Ms"],
+                "8000",
+              );
 
               const fallbackLogResponse = response();
               await logHandler({ method: "HEAD" }, fallbackLogResponse);
@@ -799,6 +807,10 @@ class CockpitApiProxyTest(unittest.TestCase):
               assert.strictEqual(
                 fallbackLogResponse.headers["X-Automoat-Upstream-Attempts"],
                 "relay:503,legacy_bridge:200",
+              );
+              assert.strictEqual(
+                fallbackLogResponse.headers["X-Automoat-Upstream-Timeout-Ms"],
+                "8000",
               );
               assert.deepStrictEqual(fallbackFetches, [
                 {
@@ -824,11 +836,19 @@ class CockpitApiProxyTest(unittest.TestCase):
               await statusHandler({ method: "HEAD" }, invalidStatusResponse);
               assert.strictEqual(invalidStatusResponse.statusCode, 503);
               assert.strictEqual(invalidStatusResponse.body, "");
+              assert.strictEqual(
+                invalidStatusResponse.headers["X-Automoat-Upstream-Timeout-Ms"],
+                undefined,
+              );
 
               const invalidLogResponse = response();
               await logHandler({ method: "HEAD" }, invalidLogResponse);
               assert.strictEqual(invalidLogResponse.statusCode, 503);
               assert.strictEqual(invalidLogResponse.body, "");
+              assert.strictEqual(
+                invalidLogResponse.headers["X-Automoat-Upstream-Timeout-Ms"],
+                undefined,
+              );
             })().catch((error) => {
               console.error(error.stack || error);
               process.exit(1);
