@@ -251,6 +251,11 @@ def source_status_log_fields(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def relay_response_failure_reason(response: dict[str, Any]) -> str:
+    reason = response.get("error") or response.get("message") or "relay_response_not_ok"
+    return str(reason).replace("\r", " ").replace("\n", " ")[:200]
+
+
 def publish_once_result(args: argparse.Namespace) -> dict[str, Any]:
     source_fields: dict[str, Any] = {}
     try:
@@ -264,6 +269,21 @@ def publish_once_result(args: argparse.Namespace) -> dict[str, Any]:
     except (OSError, URLError, json.JSONDecodeError, subprocess.SubprocessError) as exc:
         emit(f"publish failed error={exc}", log_path=args.publisher_log)
         return {"published": False, "source_status_stale": None}
+    if not response.get("ok"):
+        emit(
+            "publish failed relay_ok=False "
+            f"reason={relay_response_failure_reason(response)} "
+            f"source_status={source_fields['source_status']} "
+            f"source_loop_running={source_fields['source_loop_running']} "
+            f"source_status_stale={source_fields['source_status_stale']} "
+            f"source_status_age_seconds={source_fields['source_status_age_seconds']} "
+            f"source_status_file_status={source_fields['source_status_file_status']}",
+            log_path=args.publisher_log,
+        )
+        return {
+            "published": False,
+            "source_status_stale": source_fields["source_status_stale"],
+        }
     emit(
         f"published relay snapshot ok={response.get('ok')} "
         f"received_at={response.get('received_at')} "
@@ -275,7 +295,7 @@ def publish_once_result(args: argparse.Namespace) -> dict[str, Any]:
         log_path=args.publisher_log,
     )
     return {
-        "published": bool(response.get("ok")),
+        "published": True,
         "source_status_stale": source_fields["source_status_stale"],
     }
 

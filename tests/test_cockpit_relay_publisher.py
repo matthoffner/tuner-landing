@@ -386,6 +386,40 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertIn("source_status_age_seconds=700", log_text)
         self.assertIn("source_status_file_status=None", log_text)
 
+    def test_publish_once_logs_relay_ok_false_as_failure(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            publisher_log = Path(tmp) / "publisher.log"
+            args = Namespace(publisher_log=publisher_log)
+            payload = {
+                "status": {
+                    "status": "running",
+                    "loop_running": True,
+                    "source_status_stale": False,
+                    "source_status_age_seconds": 10,
+                    "source_status_file_status": "loaded",
+                },
+                "log_tail": "loop log\n",
+            }
+            self.publisher.build_payload = lambda _args: payload
+            self.publisher.post_payload = lambda _args, _body: {
+                "ok": False,
+                "error": "relay_backpressure\ninternal detail trimmed",
+            }
+
+            result = self.publisher.publish_once_result(args)
+            log_text = publisher_log.read_text(encoding="utf-8")
+
+        self.assertEqual(
+            result,
+            {"published": False, "source_status_stale": False},
+        )
+        self.assertIn("publish failed relay_ok=False", log_text)
+        self.assertIn("reason=relay_backpressure internal detail trimmed", log_text)
+        self.assertIn("source_status=running", log_text)
+        self.assertIn("source_loop_running=True", log_text)
+        self.assertIn("source_status_stale=False", log_text)
+        self.assertNotIn("published relay snapshot ok=False", log_text)
+
     def test_publish_loop_exits_after_configured_consecutive_failures(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             publisher_log = Path(tmp) / "publisher.log"

@@ -4,6 +4,12 @@ Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
 - lane: editor
+- status: made Render cockpit publisher relay-level `ok: false` responses explicit failure events instead of ambiguous successful publish log lines; the publisher now logs `publish failed relay_ok=False` with source freshness fields and keeps returning `published: false` for the existing failure budget; no Dallas raw CSV rows were edited
+- files: scripts/publish_cockpit_to_relay.py, tests/test_cockpit_relay_publisher.py, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- checks: `python3 -m unittest tests/test_cockpit_relay_publisher.py -v`; `python3 -m py_compile scripts/publish_cockpit_to_relay.py tests/test_cockpit_relay_publisher.py`; `python3 -m unittest discover -s tests -v`; `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json > /tmp/automoat-publisher-ok-false-ready.json`; JSON assertion for readiness `ready`, `535` permits, `1082` inspections, and zero thin groups; `cmp -s generated/landing.html index.html`
+- next: keep prioritizing autonomy/cockpit/Render reliability, real ingest, policy/checking, product clarity, or tests while Dallas readiness remains green; Render incident logs now distinguish relay rejection/backpressure from accepted cockpit snapshots
+
+- lane: editor
 - status: blocked automatic upstream redirects in the Vercel cockpit proxy so `/api/cockpit-status` and `/api/cockpit-log` send `redirect: "manual"`, record 3xx relay or legacy bridge responses as secret-safe `redirect_blocked` attempts, and fall back to the next configured upstream without reading redirect bodies; no Dallas raw CSV rows were edited
 - files: api/cockpit-upstreams.js, api/cockpit-status.js, api/cockpit-log.js, tests/test_cockpit_api_proxy.py, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
 - checks: `node --check api/cockpit-upstreams.js`; `node --check api/cockpit-status.js`; `node --check api/cockpit-log.js`; `python3 -m unittest tests/test_cockpit_api_proxy.py -v`; `python3 -m unittest discover -s tests -v`; `python3 -m py_compile tests/test_cockpit_api_proxy.py`; `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json > /tmp/automoat-redirect-block-ready.json`; JSON assertion for readiness `ready`, `535` permits, `1082` inspections, and zero thin groups; `cmp -s generated/landing.html index.html`; `git diff --check`; `git diff --exit-code -- .pxcode/preview.json`
