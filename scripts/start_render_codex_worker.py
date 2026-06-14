@@ -152,6 +152,7 @@ def validate_worker_environment(
         errors,
         required=True,
     )
+    validate_git_branch_name(env.get("AUTOMOAT_GIT_BRANCH", "main"), errors)
 
     if not env.get("AUTOMOAT_RELAY_TOKEN", "").strip():
         errors.append("AUTOMOAT_RELAY_TOKEN is required")
@@ -204,6 +205,34 @@ def validate_secret_safe_http_url(
         errors.append(f"{name} must not include embedded credentials")
     elif parsed_value.query or parsed_value.fragment:
         errors.append(f"{name} must not include query strings or fragments")
+
+
+def validate_git_branch_name(value: str, errors: list[str]) -> None:
+    branch = value.strip()
+    if not branch:
+        errors.append("AUTOMOAT_GIT_BRANCH must not be empty")
+        return
+    if branch.startswith("-"):
+        errors.append("AUTOMOAT_GIT_BRANCH must not start with -")
+        return
+    if any(
+        character.isspace() or ord(character) < 32 or ord(character) == 127
+        for character in branch
+    ):
+        errors.append("AUTOMOAT_GIT_BRANCH must not contain whitespace or control characters")
+        return
+
+    invalid_fragments = ("..", "//", "@{", "\\")
+    invalid_characters = set("~^:?*[")
+    if (
+        branch.startswith("/")
+        or branch.endswith("/")
+        or branch.endswith(".")
+        or branch.endswith(".lock")
+        or any(fragment in branch for fragment in invalid_fragments)
+        or any(character in invalid_characters for character in branch)
+    ):
+        errors.append("AUTOMOAT_GIT_BRANCH must be a valid git branch name")
 
 
 def emit_environment_preflight(
@@ -331,7 +360,7 @@ def configure_git_auth() -> None:
 
 def sync_repo() -> None:
     repo = os.environ.get("AUTOMOAT_GIT_REPO", DEFAULT_REPO)
-    branch = os.environ.get("AUTOMOAT_GIT_BRANCH", "main")
+    branch = os.environ.get("AUTOMOAT_GIT_BRANCH", "main").strip() or "main"
     WORKDIR.parent.mkdir(parents=True, exist_ok=True)
     if not (WORKDIR / ".git").exists():
         if WORKDIR.exists():

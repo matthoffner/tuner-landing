@@ -67,6 +67,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                 "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
                 "AUTOMOAT_RELAY_TOKEN": "relay-token",
                 "AUTOMOAT_GIT_REPO": "https://github.com/example/private-automoat.git",
+                "AUTOMOAT_GIT_BRANCH": "release/2026.06",
                 "GH_TOKEN": "github-token",
                 "CODEX_ACCESS_TOKEN": "codex-token",
             },
@@ -211,6 +212,36 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         )
 
         self.assertEqual(errors, ["AUTOMOAT_GIT_REPO must start with http:// or https://"])
+
+    def test_rejects_invalid_git_branch_before_clone(self) -> None:
+        base_env = {
+            "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            "GITHUB_TOKEN": "github-token",
+            "CODEX_ACCESS_TOKEN": "codex-token",
+        }
+        cases = {
+            "": "AUTOMOAT_GIT_BRANCH must not be empty",
+            "-main": "AUTOMOAT_GIT_BRANCH must not start with -",
+            "feature/with space": (
+                "AUTOMOAT_GIT_BRANCH must not contain whitespace or control characters"
+            ),
+            "release..candidate": "AUTOMOAT_GIT_BRANCH must be a valid git branch name",
+            "feature/@{bad}": "AUTOMOAT_GIT_BRANCH must be a valid git branch name",
+            "topic.lock": "AUTOMOAT_GIT_BRANCH must be a valid git branch name",
+        }
+
+        for branch, expected_error in cases.items():
+            with self.subTest(branch=branch):
+                errors = self.worker.validate_worker_environment(
+                    {
+                        **base_env,
+                        "AUTOMOAT_GIT_BRANCH": branch,
+                    },
+                    found_command,
+                )
+
+                self.assertEqual(errors, [expected_error])
 
     def test_git_repo_preflight_does_not_print_url_secrets(self) -> None:
         env = {
