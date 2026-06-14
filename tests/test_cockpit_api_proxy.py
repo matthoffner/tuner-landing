@@ -286,11 +286,23 @@ class CockpitApiProxyTest(unittest.TestCase):
               await statusHandler({ method: "GET" }, statusResponse);
               assert.strictEqual(statusResponse.statusCode, 200);
               assert.strictEqual(statusResponse.body, JSON.stringify({ status: "bridge-live" }));
+              assert.strictEqual(statusResponse.headers["X-Automoat-Upstream"], "legacy_bridge");
+              assert.strictEqual(statusResponse.headers["X-Automoat-Upstream-Fallback-Count"], "1");
+              assert.strictEqual(
+                statusResponse.headers["Access-Control-Expose-Headers"],
+                "X-Automoat-Upstream, X-Automoat-Upstream-Fallback-Count",
+              );
 
               const logResponse = response();
               await logHandler({ method: "GET" }, logResponse);
               assert.strictEqual(logResponse.statusCode, 200);
               assert.strictEqual(logResponse.body, "bridge log\\n");
+              assert.strictEqual(logResponse.headers["X-Automoat-Upstream"], "legacy_bridge");
+              assert.strictEqual(logResponse.headers["X-Automoat-Upstream-Fallback-Count"], "1");
+              assert.strictEqual(
+                logResponse.headers["Access-Control-Expose-Headers"],
+                "X-Automoat-Upstream, X-Automoat-Upstream-Fallback-Count",
+              );
 
               assert.deepStrictEqual(fetched, [
                 "https://automoat-cockpit-relay.example/api/status",
@@ -702,6 +714,8 @@ class CockpitApiProxyTest(unittest.TestCase):
               await statusHandler({ method: "HEAD" }, statusResponse);
               assert.strictEqual(statusResponse.statusCode, 200);
               assert.strictEqual(statusResponse.body, "");
+              assert.strictEqual(statusResponse.headers["X-Automoat-Upstream"], "relay");
+              assert.strictEqual(statusResponse.headers["X-Automoat-Upstream-Fallback-Count"], "0");
               assert.strictEqual(
                 statusResponse.headers["Content-Type"],
                 "application/json; charset=utf-8",
@@ -711,6 +725,8 @@ class CockpitApiProxyTest(unittest.TestCase):
               await logHandler({ method: "HEAD" }, logResponse);
               assert.strictEqual(logResponse.statusCode, 200);
               assert.strictEqual(logResponse.body, "");
+              assert.strictEqual(logResponse.headers["X-Automoat-Upstream"], "relay");
+              assert.strictEqual(logResponse.headers["X-Automoat-Upstream-Fallback-Count"], "0");
               assert.strictEqual(logResponse.headers["Content-Type"], "text/plain; charset=utf-8");
               assert.deepStrictEqual(fetches, [
                 {
@@ -719,6 +735,60 @@ class CockpitApiProxyTest(unittest.TestCase):
                 },
                 {
                   url: "https://automoat-cockpit-relay.example/api/log",
+                  method: "HEAD",
+                },
+              ]);
+
+              process.env.AUTOMOAT_BRIDGE_URL = "https://legacy-bridge.example";
+              const fallbackFetches = [];
+              global.fetch = async (url, options) => {
+                fallbackFetches.push({ url, method: options.method });
+                if (url.includes("automoat-cockpit-relay.example")) {
+                  return { ok: false, status: 503, text: async () => "" };
+                }
+                return { ok: true, status: 200, text: async () => "" };
+              };
+
+              const fallbackStatusResponse = response();
+              await statusHandler({ method: "HEAD" }, fallbackStatusResponse);
+              assert.strictEqual(fallbackStatusResponse.statusCode, 200);
+              assert.strictEqual(fallbackStatusResponse.body, "");
+              assert.strictEqual(
+                fallbackStatusResponse.headers["X-Automoat-Upstream"],
+                "legacy_bridge",
+              );
+              assert.strictEqual(
+                fallbackStatusResponse.headers["X-Automoat-Upstream-Fallback-Count"],
+                "1",
+              );
+
+              const fallbackLogResponse = response();
+              await logHandler({ method: "HEAD" }, fallbackLogResponse);
+              assert.strictEqual(fallbackLogResponse.statusCode, 200);
+              assert.strictEqual(fallbackLogResponse.body, "");
+              assert.strictEqual(
+                fallbackLogResponse.headers["X-Automoat-Upstream"],
+                "legacy_bridge",
+              );
+              assert.strictEqual(
+                fallbackLogResponse.headers["X-Automoat-Upstream-Fallback-Count"],
+                "1",
+              );
+              assert.deepStrictEqual(fallbackFetches, [
+                {
+                  url: "https://automoat-cockpit-relay.example/api/status",
+                  method: "HEAD",
+                },
+                {
+                  url: "https://legacy-bridge.example/api/status",
+                  method: "HEAD",
+                },
+                {
+                  url: "https://automoat-cockpit-relay.example/api/log",
+                  method: "HEAD",
+                },
+                {
+                  url: "https://legacy-bridge.example/.automoat/logs/mvp-loop.log",
                   method: "HEAD",
                 },
               ]);

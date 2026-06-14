@@ -17,8 +17,17 @@ function setHeaders(response, contentType) {
   response.setHeader("Access-Control-Allow-Origin", "*");
   response.setHeader("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS");
   response.setHeader("Access-Control-Allow-Headers", "content-type");
+  response.setHeader(
+    "Access-Control-Expose-Headers",
+    "X-Automoat-Upstream, X-Automoat-Upstream-Fallback-Count",
+  );
   response.setHeader("Cache-Control", "no-store");
   response.setHeader("Content-Type", contentType);
+}
+
+function setUpstreamHeaders(response, upstreamKind, fallbackCount) {
+  response.setHeader("X-Automoat-Upstream", upstreamKind);
+  response.setHeader("X-Automoat-Upstream-Fallback-Count", String(fallbackCount));
 }
 
 function sendResponse(request, response, statusCode, body) {
@@ -74,6 +83,7 @@ module.exports = async function handler(request, response) {
         continue;
       }
       if (request.method === "HEAD") {
+        setUpstreamHeaders(response, upstreamConfig.kind, attempts.length);
         sendResponse(request, response, upstream.status, "");
         return;
       }
@@ -86,6 +96,7 @@ module.exports = async function handler(request, response) {
         });
         continue;
       }
+      setUpstreamHeaders(response, upstreamConfig.kind, attempts.length);
       sendResponse(request, response, upstream.status, parsed.body);
       return;
     } catch (error) {
