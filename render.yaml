@@ -23,7 +23,7 @@ services:
     region: oregon
     branch: main
     autoDeployTrigger: commit
-    dockerfilePath: ./Dockerfile.render-agent
+    dockerfilePath: ./Dockerfile
     dockerContext: .
     envVars:
       - key: AUTOMOAT_GIT_REPO

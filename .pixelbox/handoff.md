@@ -5,10 +5,10 @@ Use this file to coordinate between editor/runtime lanes.
 ## Latest
 - lane: editor
 - status: stopped the local autonomous cockpit loop after it completed and pushed `d78a706d`, then added a Docker-backed Render Codex worker definition so the real agent can run inside Render while publishing visibility snapshots to the existing Render cockpit relay
-- files: Dockerfile.render-agent, scripts/start_render_codex_worker.py, render.yaml, README.md, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- files: Dockerfile, scripts/start_render_codex_worker.py, render.yaml, README.md, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
 - checks: `python3 -m py_compile scripts/start_render_codex_worker.py`; `render blueprints validate render.yaml -o json --confirm`
 - note: local loop and publisher are stopped to avoid racing the cloud worker; the worker requires Render secrets `GITHUB_TOKEN`, `CODEX_AUTH_JSON_B64` or another Codex login secret, `AUTOMOAT_RELAY_TOKEN`, and `AUTOMOAT_RELAY_URL`
-- next: commit/push the worker files, create the `automoat-codex-worker` Render service from Docker, inject the GitHub/Codex/relay secrets, then verify the relay reports a Render worker host instead of `Mac.lan`
+- next: commit/push the root Dockerfile fix, redeploy `automoat-codex-worker`, then verify the relay reports a Render worker host instead of `Mac.lan`
 
 - lane: editor
 - status: appended one importable Dallas electrical repair permit bundle for `ELZ-2026-0732` to raw import `v2`, regenerated the Dallas import pipeline artifacts, captured `workflow-item:dallas:next-action:0531` as an accepted non-server operator correction, synced the visible status page, refreshed README, NEXT_TASK, and journal status, and restored execution readiness to `ready` with `531/531` queue corrections, `531` imported permits, `1074` imported inspections, `1085` eval tasks, `537` reviewed labels, and `1613` source records
