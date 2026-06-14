@@ -149,6 +149,8 @@ def validate_worker_environment(
             errors.append("AUTOMOAT_RELAY_URL must include a host")
         elif parsed_relay_url.username or parsed_relay_url.password:
             errors.append("AUTOMOAT_RELAY_URL must not include embedded credentials")
+        elif parsed_relay_url.query or parsed_relay_url.fragment:
+            errors.append("AUTOMOAT_RELAY_URL must not include query strings or fragments")
 
     if not env.get("AUTOMOAT_RELAY_TOKEN", "").strip():
         errors.append("AUTOMOAT_RELAY_TOKEN is required")

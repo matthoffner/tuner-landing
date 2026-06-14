@@ -335,6 +335,8 @@ def validate_publisher_configuration(args: argparse.Namespace) -> list[str]:
             errors.append("--relay-url must include a host")
         elif parsed_relay_url.username or parsed_relay_url.password:
             errors.append("--relay-url must not include embedded credentials")
+        elif parsed_relay_url.query or parsed_relay_url.fragment:
+            errors.append("--relay-url must not include query strings or fragments")
 
     if not str(args.token).strip():
         errors.append("AUTOMOAT_RELAY_TOKEN or --token is required")

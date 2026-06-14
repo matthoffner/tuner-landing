@@ -135,6 +135,22 @@ class RenderWorkerPreflightTest(unittest.TestCase):
 
         self.assertEqual(errors, ["AUTOMOAT_RELAY_URL must not include embedded credentials"])
 
+    def test_rejects_relay_url_with_query_or_fragment(self) -> None:
+        errors = self.worker.validate_worker_environment(
+            {
+                "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example?token=relay-secret#debug",
+                "AUTOMOAT_RELAY_TOKEN": "relay-token",
+                "GITHUB_TOKEN": "github-token",
+                "CODEX_ACCESS_TOKEN": "codex-token",
+            },
+            found_command,
+        )
+
+        self.assertEqual(
+            errors,
+            ["AUTOMOAT_RELAY_URL must not include query strings or fragments"],
+        )
+
     def test_rejects_codex_auth_base64_that_decodes_to_non_json(self) -> None:
         auth_b64 = base64.b64encode(b"not-json").decode("ascii")
 
