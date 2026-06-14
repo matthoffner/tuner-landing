@@ -51,15 +51,16 @@ function relayHeaders(env = process.env) {
   return token ? { "X-Automoat-Relay-Token": token } : {};
 }
 
-async function fetchUpstreamText(upstreamConfig, timeoutMs) {
+async function fetchUpstreamText(upstreamConfig, timeoutMs, method = "GET") {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const upstream = await fetch(upstreamConfig.url, {
       headers: upstreamConfig.headers,
+      method,
       signal: controller.signal,
     });
-    const body = await upstream.text();
+    const body = method === "HEAD" ? "" : await upstream.text();
     return {
       ok: upstream.ok,
       status: upstream.status,

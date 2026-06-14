@@ -65,13 +65,17 @@ module.exports = async function handler(request, response) {
   const attempts = [];
   for (const upstreamConfig of configured) {
     try {
-      const upstream = await fetchUpstreamText(upstreamConfig, timeoutMs);
+      const upstream = await fetchUpstreamText(upstreamConfig, timeoutMs, request.method);
       if (!upstream.ok) {
         attempts.push({
           kind: upstreamConfig.kind,
           status: upstream.status,
         });
         continue;
+      }
+      if (request.method === "HEAD") {
+        sendResponse(request, response, upstream.status, "");
+        return;
       }
       const parsed = parseStatusPayload(upstream.body);
       if (!parsed.ok) {

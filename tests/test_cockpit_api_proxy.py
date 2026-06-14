@@ -680,7 +680,9 @@ class CockpitApiProxyTest(unittest.TestCase):
             process.env.AUTOMOAT_RELAY_URL = "https://automoat-cockpit-relay.example";
             process.env.AUTOMOAT_BRIDGE_URL = "";
             process.env.AUTOMOAT_COCKPIT_UPSTREAM_TIMEOUT_MS = "";
-            global.fetch = async (url) => {
+            const fetches = [];
+            global.fetch = async (url, options) => {
+              fetches.push({ url, method: options.method });
               if (url.endsWith("/api/status")) {
                 return {
                   ok: true,
@@ -710,6 +712,16 @@ class CockpitApiProxyTest(unittest.TestCase):
               assert.strictEqual(logResponse.statusCode, 200);
               assert.strictEqual(logResponse.body, "");
               assert.strictEqual(logResponse.headers["Content-Type"], "text/plain; charset=utf-8");
+              assert.deepStrictEqual(fetches, [
+                {
+                  url: "https://automoat-cockpit-relay.example/api/status",
+                  method: "HEAD",
+                },
+                {
+                  url: "https://automoat-cockpit-relay.example/api/log",
+                  method: "HEAD",
+                },
+              ]);
 
               process.env.AUTOMOAT_COCKPIT_UPSTREAM_TIMEOUT_MS = "bad";
               const invalidStatusResponse = response();
