@@ -89,6 +89,44 @@ class RenderCockpitRelayTest(unittest.TestCase):
         self.assertEqual(status["relay"]["snapshot_age_seconds"], 150)
         self.assertTrue(status["relay"]["snapshot_stale"])
 
+    def test_authentication_accepts_matching_supplied_tokens(self) -> None:
+        self.assertEqual(
+            self.relay.relay_authentication_result("secret", "secret", ""),
+            (True, ""),
+        )
+        self.assertEqual(
+            self.relay.relay_authentication_result("secret", "", "Bearer secret"),
+            (True, ""),
+        )
+        self.assertEqual(
+            self.relay.relay_authentication_result("secret", "secret", "Bearer secret"),
+            (True, ""),
+        )
+
+    def test_authentication_rejects_missing_or_unconfigured_tokens(self) -> None:
+        self.assertEqual(
+            self.relay.relay_authentication_result("", "secret", "Bearer secret"),
+            (False, "AUTOMOAT_RELAY_TOKEN is not configured on the relay"),
+        )
+        self.assertEqual(
+            self.relay.relay_authentication_result("secret", "", ""),
+            (False, "invalid relay token"),
+        )
+
+    def test_authentication_rejects_conflicting_supplied_tokens(self) -> None:
+        self.assertEqual(
+            self.relay.relay_authentication_result("secret", "secret", "Bearer stale"),
+            (False, "invalid relay token"),
+        )
+        self.assertEqual(
+            self.relay.relay_authentication_result("secret", "stale", "Bearer secret"),
+            (False, "invalid relay token"),
+        )
+        self.assertEqual(
+            self.relay.relay_authentication_result("secret", "secret", "Basic secret"),
+            (False, "invalid relay token"),
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

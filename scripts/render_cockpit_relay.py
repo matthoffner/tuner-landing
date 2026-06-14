@@ -176,6 +176,36 @@ def health_payload() -> dict[str, Any]:
     }
 
 
+def relay_authentication_result(
+    configured_token: str,
+    header_token: str,
+    authorization: str,
+) -> tuple[bool, str]:
+    token = configured_token.strip()
+    if not token:
+        return False, "AUTOMOAT_RELAY_TOKEN is not configured on the relay"
+
+    presented_tokens: list[str] = []
+    header_token = header_token.strip()
+    if header_token:
+        presented_tokens.append(header_token)
+
+    authorization = authorization.strip()
+    if authorization:
+        if not authorization.lower().startswith("bearer "):
+            return False, "invalid relay token"
+        bearer = authorization[7:].strip()
+        if not bearer:
+            return False, "invalid relay token"
+        presented_tokens.append(bearer)
+
+    if not presented_tokens:
+        return False, "invalid relay token"
+    if any(presented_token != token for presented_token in presented_tokens):
+        return False, "invalid relay token"
+    return True, ""
+
+
 class RelayHandler(BaseHTTPRequestHandler):
     server_version = "AutomoatRelay/0.1"
 
@@ -270,17 +300,11 @@ class RelayHandler(BaseHTTPRequestHandler):
         self.send_json({"error": "not_found"}, HTTPStatus.NOT_FOUND, head_only=head_only)
 
     def authenticated(self) -> tuple[bool, str]:
-        token = str(CONFIG.get("token") or "")
-        if not token:
-            return False, "AUTOMOAT_RELAY_TOKEN is not configured on the relay"
-        header_token = self.headers.get("X-Automoat-Relay-Token", "").strip()
-        auth = self.headers.get("Authorization", "").strip()
-        bearer = ""
-        if auth.lower().startswith("bearer "):
-            bearer = auth[7:].strip()
-        if token in {header_token, bearer}:
-            return True, ""
-        return False, "invalid relay token"
+        return relay_authentication_result(
+            str(CONFIG.get("token") or ""),
+            self.headers.get("X-Automoat-Relay-Token", ""),
+            self.headers.get("Authorization", ""),
+        )
 
     def do_POST(self) -> None:
         path = urlparse(self.path).path
