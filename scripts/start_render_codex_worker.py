@@ -32,6 +32,12 @@ CODEX_CONFIG_ENV_DEFAULTS = {
     "AUTOMOAT_CODEX_MODEL": "gpt-5.5",
     "AUTOMOAT_CODEX_REASONING_EFFORT": "high",
 }
+GIT_IDENTITY_ENV_DEFAULTS = {
+    "GIT_AUTHOR_NAME": "automoat-render-agent",
+    "GIT_AUTHOR_EMAIL": "automoat-render-agent@users.noreply.github.com",
+    "GIT_COMMITTER_NAME": "automoat-render-agent",
+    "GIT_COMMITTER_EMAIL": "automoat-render-agent@users.noreply.github.com",
+}
 
 
 def emit(message: str) -> None:
@@ -157,6 +163,24 @@ def validate_codex_config_value(
         errors.append(f"{name} must be a single-line value without control characters")
 
 
+def validate_git_identity_value(
+    env: os._Environ[str] | dict[str, str],
+    name: str,
+    errors: list[str],
+) -> None:
+    if name not in env:
+        return
+    value = env.get(name, "")
+    if not value.strip():
+        errors.append(f"{name} must not be empty")
+        return
+    if any(
+        character in "\r\n" or ord(character) < 32 or ord(character) == 127
+        for character in value
+    ):
+        errors.append(f"{name} must be a single-line value without control characters")
+
+
 def toml_basic_string(value: str) -> str:
     return json.dumps(value)
 
@@ -216,6 +240,8 @@ def validate_worker_environment(
     validate_nonnegative_int(env, "AUTOMOAT_AGENT_ITERATIONS", errors)
     validate_codex_config_value(env, "AUTOMOAT_CODEX_MODEL", errors)
     validate_codex_config_value(env, "AUTOMOAT_CODEX_REASONING_EFFORT", errors)
+    for name in GIT_IDENTITY_ENV_DEFAULTS:
+        validate_git_identity_value(env, name, errors)
 
     for command in REQUIRED_COMMANDS:
         if not command_lookup(command):
@@ -420,8 +446,8 @@ def configure_git_auth() -> None:
     GIT_ASKPASS.chmod(0o700)
     os.environ["GIT_ASKPASS"] = str(GIT_ASKPASS)
     os.environ["GIT_TERMINAL_PROMPT"] = "0"
-    os.environ.setdefault("GIT_AUTHOR_NAME", "automoat-render-agent")
-    os.environ.setdefault("GIT_AUTHOR_EMAIL", "automoat-render-agent@users.noreply.github.com")
+    os.environ.setdefault("GIT_AUTHOR_NAME", GIT_IDENTITY_ENV_DEFAULTS["GIT_AUTHOR_NAME"])
+    os.environ.setdefault("GIT_AUTHOR_EMAIL", GIT_IDENTITY_ENV_DEFAULTS["GIT_AUTHOR_EMAIL"])
     os.environ.setdefault("GIT_COMMITTER_NAME", os.environ["GIT_AUTHOR_NAME"])
     os.environ.setdefault("GIT_COMMITTER_EMAIL", os.environ["GIT_AUTHOR_EMAIL"])
     run(["git", "config", "--global", "user.name", os.environ["GIT_AUTHOR_NAME"]])

@@ -93,6 +93,23 @@ class RenderWorkerPreflightTest(unittest.TestCase):
 
         self.assertEqual(errors, [])
 
+    def test_accepts_custom_git_identity_values(self) -> None:
+        errors = self.worker.validate_worker_environment(
+            {
+                "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+                "AUTOMOAT_RELAY_TOKEN": "relay-token",
+                "GITHUB_TOKEN": "github-token",
+                "CODEX_ACCESS_TOKEN": "codex-token",
+                "GIT_AUTHOR_NAME": "automoat-render-bot",
+                "GIT_AUTHOR_EMAIL": "automoat-render-bot@example.com",
+                "GIT_COMMITTER_NAME": "automoat-render-bot",
+                "GIT_COMMITTER_EMAIL": "automoat-render-bot@example.com",
+            },
+            found_command,
+        )
+
+        self.assertEqual(errors, [])
+
     def test_accepts_codex_auth_json_base64_object(self) -> None:
         auth_b64 = base64.b64encode(b'{"tokens":{"access_token":"token"}}').decode("ascii")
 
@@ -323,6 +340,33 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                     "AUTOMOAT_CODEX_REASONING_EFFORT must be a single-line value "
                     "without control characters"
                 ),
+            ],
+        )
+
+    def test_rejects_bad_git_identity_values_before_git_config(self) -> None:
+        base_env = {
+            "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            "GITHUB_TOKEN": "github-token",
+            "CODEX_ACCESS_TOKEN": "codex-token",
+        }
+        errors = self.worker.validate_worker_environment(
+            {
+                **base_env,
+                "GIT_AUTHOR_NAME": "   ",
+                "GIT_AUTHOR_EMAIL": "agent@example.com\nhelper@example.com",
+                "GIT_COMMITTER_NAME": "render-agent\rhelper",
+                "GIT_COMMITTER_EMAIL": "render-agent@example.com",
+            },
+            found_command,
+        )
+
+        self.assertEqual(
+            errors,
+            [
+                "GIT_AUTHOR_NAME must not be empty",
+                "GIT_AUTHOR_EMAIL must be a single-line value without control characters",
+                "GIT_COMMITTER_NAME must be a single-line value without control characters",
             ],
         )
 
