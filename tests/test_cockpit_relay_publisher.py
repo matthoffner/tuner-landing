@@ -15,6 +15,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 from urllib.error import HTTPError
+from urllib.error import URLError
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -462,6 +463,53 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertIn("source_status_file_status=loaded", log_text)
         self.assertNotIn("relay-secret", log_text)
         self.assertNotIn("<html>", log_text)
+
+    def test_publish_once_sanitizes_generic_transport_error_log(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            publisher_log = Path(tmp) / "publisher.log"
+            args = Namespace(publisher_log=publisher_log)
+            payload = {
+                "status": {
+                    "status": "running",
+                    "loop_running": True,
+                    "source_status_stale": False,
+                    "source_status_age_seconds": 9,
+                    "source_status_file_status": "loaded",
+                },
+                "log_tail": "loop log\n",
+            }
+            self.publisher.build_payload = lambda _args: payload
+            self.publisher.post_payload = lambda _args, _body: (_ for _ in ()).throw(
+                URLError(
+                    "failed to reach "
+                    "https://relay-user:relay-pass@automoat-cockpit-relay.example"
+                    "/ingest?token=relay-secret#debug "
+                    "Authorization: Bearer bearer-secret "
+                    "x-automoat-relay-token=header-secret"
+                )
+            )
+
+            result = self.publisher.publish_once_result(args)
+            log_text = publisher_log.read_text(encoding="utf-8")
+
+        self.assertEqual(
+            result,
+            {"published": False, "source_status_stale": False},
+        )
+        self.assertIn("publish failed error=", log_text)
+        self.assertIn(
+            "https://automoat-cockpit-relay.example/ingest?[redacted]#[redacted]",
+            log_text,
+        )
+        self.assertIn("Authorization: Bearer [redacted]", log_text)
+        self.assertIn("x-automoat-relay-token=[redacted]", log_text)
+        self.assertIn("source_status=running", log_text)
+        self.assertIn("source_status_file_status=loaded", log_text)
+        self.assertNotIn("relay-user", log_text)
+        self.assertNotIn("relay-pass", log_text)
+        self.assertNotIn("relay-secret", log_text)
+        self.assertNotIn("bearer-secret", log_text)
+        self.assertNotIn("header-secret", log_text)
 
     def test_publish_loop_exits_after_configured_consecutive_failures(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

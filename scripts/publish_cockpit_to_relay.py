@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import socket
 import subprocess
 import sys
@@ -15,7 +16,7 @@ from http import HTTPStatus
 from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlunparse
 from urllib.request import Request, urlopen
 
 
@@ -27,6 +28,15 @@ PUBLISHER_LOG = ROOT / ".automoat" / "logs" / "cockpit-relay-publisher.log"
 DEFAULT_MAX_CONSECUTIVE_FAILURES = 3
 DEFAULT_MAX_CONSECUTIVE_STALE_STATUSES = 0
 DEFAULT_STATUS_STALE_AFTER_SECONDS = 660
+URL_TEXT_PATTERN = re.compile(r"https?://[^\s'\"<>]+")
+BEARER_SECRET_PATTERN = re.compile(
+    r"\b(authorization\s*[:=]\s*bearer)\s+[^\s,;]+",
+    re.IGNORECASE,
+)
+SECRET_ASSIGNMENT_PATTERN = re.compile(
+    r"\b(token|access_token|api_key|x-automoat-relay-token)\s*[:=]\s*[^\s,;]+",
+    re.IGNORECASE,
+)
 
 
 def utc_now() -> str:
@@ -273,6 +283,40 @@ def http_error_summary(exc: HTTPError) -> dict[str, Any]:
     }
 
 
+def sanitize_url_for_log(match: re.Match[str]) -> str:
+    value = match.group(0)
+    parsed = urlparse(value)
+    if not parsed.scheme or not parsed.netloc:
+        return value
+    hostname = parsed.hostname or ""
+    netloc = hostname
+    try:
+        port = parsed.port
+    except ValueError:
+        port = None
+    if port is not None:
+        netloc = f"{netloc}:{port}"
+
+    path = parsed.path or ""
+    if parsed.params:
+        path = f"{path};{parsed.params}"
+    query = "[redacted]" if parsed.query else ""
+    fragment = "[redacted]" if parsed.fragment else ""
+    return urlunparse((parsed.scheme, netloc, path, "", query, fragment))
+
+
+def sanitize_error_for_log(exc: BaseException) -> str:
+    message = str(exc)
+    message = URL_TEXT_PATTERN.sub(sanitize_url_for_log, message)
+    message = BEARER_SECRET_PATTERN.sub(r"\1 [redacted]", message)
+    message = SECRET_ASSIGNMENT_PATTERN.sub(
+        lambda match: f"{match.group(1)}=[redacted]",
+        message,
+    )
+    message = message.replace("\r", " ").replace("\n", " ")
+    return message[:300]
+
+
 def publish_once_result(args: argparse.Namespace) -> dict[str, Any]:
     source_fields: dict[str, Any] = {}
     try:
@@ -298,8 +342,20 @@ def publish_once_result(args: argparse.Namespace) -> dict[str, Any]:
             "source_status_stale": source_fields.get("source_status_stale"),
         }
     except (OSError, URLError, json.JSONDecodeError, subprocess.SubprocessError) as exc:
-        emit(f"publish failed error={exc}", log_path=args.publisher_log)
-        return {"published": False, "source_status_stale": None}
+        emit(
+            "publish failed "
+            f"error={sanitize_error_for_log(exc)} "
+            f"source_status={source_fields.get('source_status', 'unknown')} "
+            f"source_loop_running={source_fields.get('source_loop_running')} "
+            f"source_status_stale={source_fields.get('source_status_stale')} "
+            f"source_status_age_seconds={source_fields.get('source_status_age_seconds')} "
+            f"source_status_file_status={source_fields.get('source_status_file_status')}",
+            log_path=args.publisher_log,
+        )
+        return {
+            "published": False,
+            "source_status_stale": source_fields.get("source_status_stale"),
+        }
     if not response.get("ok"):
         emit(
             "publish failed relay_ok=False "

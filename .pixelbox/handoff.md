@@ -4,6 +4,12 @@ Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
 - lane: editor
+- status: hardened Render cockpit publisher generic transport failure logs so `OSError`/`URLError`/JSON/subprocess publish failures redact URL credentials, query strings, fragments, bearer tokens, and token-like assignments before persistence while preserving source-loop freshness fields for diagnosis; no Dallas raw CSV rows were edited
+- files: scripts/publish_cockpit_to_relay.py, tests/test_cockpit_relay_publisher.py, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- checks: `python3 -m unittest tests/test_cockpit_relay_publisher.py -v`; `python3 -m py_compile scripts/publish_cockpit_to_relay.py tests/test_cockpit_relay_publisher.py`; `python3 -m unittest discover -s tests -v`; `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json > /tmp/automoat-publisher-generic-error-ready.json`; JSON assertion for readiness `ready`, `535/535` corrections, `535` permits, `1082` inspections, and zero thin groups; `cmp -s generated/landing.html index.html`; `git diff --exit-code -- .pxcode/preview.json`; `git diff --check`
+- next: keep prioritizing autonomy/cockpit/Render reliability, real ingest, policy/checking, product clarity, or tests while Dallas readiness remains green; generic publisher failures are now diagnosable without retaining URL or header-style secrets in persistent logs
+
+- lane: editor
 - status: simplified the landing page so the visible page leads with the product promise, one live Render Codex terminal, a compact moat explanation, and a short proof section; removed visible ngrok/local bridge language, duplicate relay panels, the long artifact wall, latest-signal block, changelog wall, and truth-in-advertising block from the rendered page, then capped the terminal tail and visible docs list to keep the page scan-friendly
 - files: generated/landing.html, index.html, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
 - checks: `cmp -s generated/landing.html index.html`; Node simplified-landing assertions and script syntax parse for `generated/landing.html` and `index.html`; `python3 -m unittest discover -s tests -p 'test_loop_artifact_visibility.py' -v`; `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json > /tmp/automoat-simplified-landing-ready.json`; `git diff --check`
