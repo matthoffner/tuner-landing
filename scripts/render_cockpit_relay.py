@@ -65,6 +65,36 @@ def snapshot_freshness(state: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def cockpit_health(
+    state: dict[str, Any],
+    status: dict[str, Any],
+    freshness: dict[str, Any],
+) -> dict[str, Any]:
+    reasons: list[str] = []
+    if not state.get("received_at"):
+        reasons.append("relay_snapshot_missing")
+    if freshness.get("snapshot_stale") is True:
+        reasons.append("relay_snapshot_stale")
+    if status.get("source_status_stale") is True:
+        reasons.append("source_status_stale")
+    if status.get("loop_running") is False:
+        reasons.append("source_loop_not_running")
+    if status.get("status") in {"error", "failing"}:
+        reasons.append("source_status_failing")
+
+    if not state.get("received_at"):
+        health_status = "waiting"
+    elif reasons:
+        health_status = "degraded"
+    else:
+        health_status = "live"
+    return {
+        "status": health_status,
+        "ok": health_status == "live",
+        "reasons": reasons,
+    }
+
+
 def empty_state() -> dict[str, Any]:
     return {
         "relay_status": "waiting",
@@ -163,6 +193,10 @@ def relay_status_payload() -> dict[str, Any]:
         status = {"status": "relay_waiting", "loop_running": False}
     status = dict(status)
     freshness = snapshot_freshness(state)
+    health = cockpit_health(state, status, freshness)
+    status["cockpit_health"] = health
+    status["cockpit_status"] = health["status"]
+    status["cockpit_ok"] = health["ok"]
     status["relay"] = {
         "status": state.get("relay_status", "waiting"),
         "received_at": state.get("received_at"),
@@ -175,10 +209,17 @@ def relay_status_payload() -> dict[str, Any]:
 
 def health_payload() -> dict[str, Any]:
     state = snapshot()
+    status = state.get("status")
+    if not isinstance(status, dict):
+        status = {"status": "relay_waiting", "loop_running": False}
     freshness = snapshot_freshness(state)
+    health = cockpit_health(state, status, freshness)
     return {
         "ok": True,
         "service": "automoat-cockpit-relay",
+        "cockpit_status": health["status"],
+        "cockpit_ok": health["ok"],
+        "cockpit_health": health,
         "relay_status": state.get("relay_status", "waiting"),
         "has_snapshot": bool(state.get("received_at")),
         "received_at": state.get("received_at"),

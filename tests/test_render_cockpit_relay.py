@@ -49,9 +49,21 @@ class RenderCockpitRelayTest(unittest.TestCase):
         status = self.relay.relay_status_payload()
 
         self.assertTrue(health["ok"])
+        self.assertFalse(health["cockpit_ok"])
+        self.assertEqual(health["cockpit_status"], "waiting")
+        self.assertEqual(
+            health["cockpit_health"]["reasons"],
+            [
+                "relay_snapshot_missing",
+                "relay_snapshot_stale",
+                "source_loop_not_running",
+            ],
+        )
         self.assertFalse(health["has_snapshot"])
         self.assertTrue(health["snapshot_stale"])
         self.assertIsNone(health["snapshot_age_seconds"])
+        self.assertEqual(status["cockpit_status"], "waiting")
+        self.assertFalse(status["cockpit_ok"])
         self.assertTrue(status["relay"]["snapshot_stale"])
 
     def test_status_and_health_report_fresh_snapshot_age(self) -> None:
@@ -70,8 +82,14 @@ class RenderCockpitRelayTest(unittest.TestCase):
         status = self.relay.relay_status_payload()
 
         self.assertTrue(health["ok"])
+        self.assertTrue(health["cockpit_ok"])
+        self.assertEqual(health["cockpit_status"], "live")
+        self.assertEqual(health["cockpit_health"]["reasons"], [])
         self.assertEqual(health["snapshot_age_seconds"], 30)
         self.assertFalse(health["snapshot_stale"])
+        self.assertTrue(status["cockpit_ok"])
+        self.assertEqual(status["cockpit_status"], "live")
+        self.assertEqual(status["cockpit_health"]["reasons"], [])
         self.assertEqual(status["relay"]["snapshot_age_seconds"], 30)
         self.assertFalse(status["relay"]["snapshot_stale"])
 
@@ -90,10 +108,64 @@ class RenderCockpitRelayTest(unittest.TestCase):
         status = self.relay.relay_status_payload()
 
         self.assertTrue(health["ok"])
+        self.assertFalse(health["cockpit_ok"])
+        self.assertEqual(health["cockpit_status"], "degraded")
+        self.assertEqual(health["cockpit_health"]["reasons"], ["relay_snapshot_stale"])
         self.assertEqual(health["snapshot_age_seconds"], 150)
         self.assertTrue(health["snapshot_stale"])
+        self.assertFalse(status["cockpit_ok"])
+        self.assertEqual(status["cockpit_status"], "degraded")
+        self.assertEqual(status["cockpit_health"]["reasons"], ["relay_snapshot_stale"])
         self.assertEqual(status["relay"]["snapshot_age_seconds"], 150)
         self.assertTrue(status["relay"]["snapshot_stale"])
+
+    def test_status_and_health_report_degraded_source_snapshot(self) -> None:
+        self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
+        self.relay.update_state(
+            {
+                "pushed_at": "2026-06-14T19:59:30Z",
+                "status": {
+                    "status": "running",
+                    "loop_running": True,
+                    "source_status_stale": True,
+                },
+                "log_tail": "loop is working\n",
+            }
+        )
+        self.relay.utc_now = lambda: "2026-06-14T20:00:00Z"
+
+        health = self.relay.health_payload()
+        status = self.relay.relay_status_payload()
+
+        self.assertTrue(health["ok"])
+        self.assertFalse(health["cockpit_ok"])
+        self.assertEqual(health["cockpit_status"], "degraded")
+        self.assertEqual(health["cockpit_health"]["reasons"], ["source_status_stale"])
+        self.assertFalse(status["cockpit_ok"])
+        self.assertEqual(status["cockpit_status"], "degraded")
+        self.assertEqual(status["cockpit_health"]["reasons"], ["source_status_stale"])
+
+    def test_status_and_health_report_failing_source_snapshot(self) -> None:
+        self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
+        self.relay.update_state(
+            {
+                "pushed_at": "2026-06-14T19:59:30Z",
+                "status": {"status": "failing", "loop_running": True},
+                "log_tail": "loop failed\n",
+            }
+        )
+        self.relay.utc_now = lambda: "2026-06-14T20:00:00Z"
+
+        health = self.relay.health_payload()
+        status = self.relay.relay_status_payload()
+
+        self.assertTrue(health["ok"])
+        self.assertFalse(health["cockpit_ok"])
+        self.assertEqual(health["cockpit_status"], "degraded")
+        self.assertEqual(health["cockpit_health"]["reasons"], ["source_status_failing"])
+        self.assertFalse(status["cockpit_ok"])
+        self.assertEqual(status["cockpit_status"], "degraded")
+        self.assertEqual(status["cockpit_health"]["reasons"], ["source_status_failing"])
 
     def test_authentication_accepts_matching_supplied_tokens(self) -> None:
         self.assertEqual(
