@@ -11,6 +11,7 @@ import signal
 import subprocess
 import sys
 import time
+from collections.abc import Callable
 from pathlib import Path
 
 
@@ -24,6 +25,7 @@ CHILDREN: list[subprocess.Popen[object]] = []
 STOP_REQUESTED = False
 CODEX_AUTH_ENV_NAMES = ("CODEX_AUTH_JSON_B64", "CODEX_ACCESS_TOKEN", "OPENAI_API_KEY")
 GIT_AUTH_ENV_NAMES = ("GITHUB_TOKEN", "GH_TOKEN")
+REQUIRED_COMMANDS = ("git", "codex")
 
 
 def emit(message: str) -> None:
@@ -96,10 +98,18 @@ def validate_nonnegative_int(
         errors.append(f"{name} must be greater than or equal to 0")
 
 
-def validate_worker_environment(env: os._Environ[str] | dict[str, str] | None = None) -> list[str]:
+def validate_worker_environment(
+    env: os._Environ[str] | dict[str, str] | None = None,
+    command_lookup: Callable[[str], str | None] | None = None,
+) -> list[str]:
     """Return actionable Render startup configuration errors without exposing secrets."""
     env = env if env is not None else os.environ
     errors: list[str] = []
+    if command_lookup is None:
+        path = env.get("PATH")
+
+        def command_lookup(command: str) -> str | None:
+            return shutil.which(command, path=path)
 
     relay_url = env.get("AUTOMOAT_RELAY_URL", "").strip()
     if not relay_url:
@@ -124,12 +134,19 @@ def validate_worker_environment(env: os._Environ[str] | dict[str, str] | None = 
     validate_positive_float(env, "AUTOMOAT_RELAY_INTERVAL", errors)
     validate_nonnegative_float(env, "AUTOMOAT_AGENT_INTERVAL", errors)
     validate_nonnegative_int(env, "AUTOMOAT_AGENT_ITERATIONS", errors)
+
+    for command in REQUIRED_COMMANDS:
+        if not command_lookup(command):
+            errors.append(f"{command} executable is required on PATH")
     return errors
 
 
-def emit_environment_preflight(env: os._Environ[str] | dict[str, str] | None = None) -> list[str]:
+def emit_environment_preflight(
+    env: os._Environ[str] | dict[str, str] | None = None,
+    command_lookup: Callable[[str], str | None] | None = None,
+) -> list[str]:
     env = env if env is not None else os.environ
-    errors = validate_worker_environment(env)
+    errors = validate_worker_environment(env, command_lookup)
     if errors:
         emit("environment preflight failed")
         for error in errors:
@@ -142,7 +159,8 @@ def emit_environment_preflight(env: os._Environ[str] | dict[str, str] | None = N
         f"git_auth={','.join(configured_names(env, GIT_AUTH_ENV_NAMES))} "
         f"codex_auth={','.join(configured_names(env, CODEX_AUTH_ENV_NAMES))} "
         f"agent_interval={env.get('AUTOMOAT_AGENT_INTERVAL', '300')} "
-        f"relay_interval={env.get('AUTOMOAT_RELAY_INTERVAL', '3')}"
+        f"relay_interval={env.get('AUTOMOAT_RELAY_INTERVAL', '3')} "
+        f"commands={','.join(REQUIRED_COMMANDS)}"
     )
     return []
 
