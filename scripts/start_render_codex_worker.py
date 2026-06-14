@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import base64
+import argparse
 import os
 import shutil
 import signal
@@ -21,6 +22,8 @@ GITHUB_TOKEN_FILE = Path("/tmp/automoat-github-token")
 
 CHILDREN: list[subprocess.Popen[object]] = []
 STOP_REQUESTED = False
+CODEX_AUTH_ENV_NAMES = ("CODEX_AUTH_JSON_B64", "CODEX_ACCESS_TOKEN", "OPENAI_API_KEY")
+GIT_AUTH_ENV_NAMES = ("GITHUB_TOKEN", "GH_TOKEN")
 
 
 def emit(message: str) -> None:
@@ -32,6 +35,116 @@ def require_env(name: str) -> str:
     if not value:
         raise RuntimeError(f"{name} is required")
     return value
+
+
+def env_has_any(env: os._Environ[str] | dict[str, str], names: tuple[str, ...]) -> bool:
+    return any(env.get(name, "").strip() for name in names)
+
+
+def configured_names(env: os._Environ[str] | dict[str, str], names: tuple[str, ...]) -> list[str]:
+    return [name for name in names if env.get(name, "").strip()]
+
+
+def validate_nonnegative_float(
+    env: os._Environ[str] | dict[str, str],
+    name: str,
+    errors: list[str],
+) -> None:
+    value = env.get(name, "").strip()
+    if not value:
+        return
+    try:
+        parsed = float(value)
+    except ValueError:
+        errors.append(f"{name} must be a number of seconds")
+        return
+    if parsed < 0:
+        errors.append(f"{name} must be greater than or equal to 0")
+
+
+def validate_positive_float(
+    env: os._Environ[str] | dict[str, str],
+    name: str,
+    errors: list[str],
+) -> None:
+    value = env.get(name, "").strip()
+    if not value:
+        return
+    try:
+        parsed = float(value)
+    except ValueError:
+        errors.append(f"{name} must be a positive number of seconds")
+        return
+    if parsed <= 0:
+        errors.append(f"{name} must be greater than 0")
+
+
+def validate_nonnegative_int(
+    env: os._Environ[str] | dict[str, str],
+    name: str,
+    errors: list[str],
+) -> None:
+    value = env.get(name, "").strip()
+    if not value:
+        return
+    try:
+        parsed = int(value)
+    except ValueError:
+        errors.append(f"{name} must be an integer")
+        return
+    if parsed < 0:
+        errors.append(f"{name} must be greater than or equal to 0")
+
+
+def validate_worker_environment(env: os._Environ[str] | dict[str, str] | None = None) -> list[str]:
+    """Return actionable Render startup configuration errors without exposing secrets."""
+    env = env if env is not None else os.environ
+    errors: list[str] = []
+
+    relay_url = env.get("AUTOMOAT_RELAY_URL", "").strip()
+    if not relay_url:
+        errors.append("AUTOMOAT_RELAY_URL is required")
+    elif not relay_url.startswith(("http://", "https://")):
+        errors.append("AUTOMOAT_RELAY_URL must start with http:// or https://")
+
+    if not env.get("AUTOMOAT_RELAY_TOKEN", "").strip():
+        errors.append("AUTOMOAT_RELAY_TOKEN is required")
+    if not env_has_any(env, GIT_AUTH_ENV_NAMES):
+        errors.append("GITHUB_TOKEN or GH_TOKEN is required")
+    if not env_has_any(env, CODEX_AUTH_ENV_NAMES):
+        errors.append("CODEX_AUTH_JSON_B64, CODEX_ACCESS_TOKEN, or OPENAI_API_KEY is required")
+
+    auth_b64 = env.get("CODEX_AUTH_JSON_B64", "").strip()
+    if auth_b64:
+        try:
+            base64.b64decode(auth_b64, validate=True)
+        except ValueError:
+            errors.append("CODEX_AUTH_JSON_B64 must be valid base64")
+
+    validate_positive_float(env, "AUTOMOAT_RELAY_INTERVAL", errors)
+    validate_nonnegative_float(env, "AUTOMOAT_AGENT_INTERVAL", errors)
+    validate_nonnegative_int(env, "AUTOMOAT_AGENT_ITERATIONS", errors)
+    return errors
+
+
+def emit_environment_preflight(env: os._Environ[str] | dict[str, str] | None = None) -> list[str]:
+    env = env if env is not None else os.environ
+    errors = validate_worker_environment(env)
+    if errors:
+        emit("environment preflight failed")
+        for error in errors:
+            emit(f"  - {error}")
+        return errors
+
+    emit(
+        "environment preflight passed: "
+        f"relay_url={env.get('AUTOMOAT_RELAY_URL', '').strip()} "
+        f"git_auth={','.join(configured_names(env, GIT_AUTH_ENV_NAMES))} "
+        f"codex_auth={','.join(configured_names(env, CODEX_AUTH_ENV_NAMES))} "
+        f"agent_interval={env.get('AUTOMOAT_AGENT_INTERVAL', '300')} "
+        f"relay_interval={env.get('AUTOMOAT_RELAY_INTERVAL', '3')}"
+    )
+    return []
 
 
 def run(command: list[str], *, cwd: Path | None = None, input_text: str | None = None) -> None:
@@ -170,6 +283,16 @@ def run_loop() -> int:
     return process.wait()
 
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--check-env",
+        action="store_true",
+        help="validate Render worker environment variables without starting the worker",
+    )
+    return parser.parse_args()
+
+
 def stop_children() -> None:
     for child in list(CHILDREN):
         if child.poll() is None:
@@ -192,6 +315,13 @@ def request_stop(_signum: int, _frame: object) -> None:
 
 
 def main() -> int:
+    args = parse_args()
+    env_errors = emit_environment_preflight()
+    if args.check_env:
+        return 0 if not env_errors else 2
+    if env_errors:
+        return 2
+
     signal.signal(signal.SIGTERM, request_stop)
     signal.signal(signal.SIGINT, request_stop)
     configure_git_auth()
