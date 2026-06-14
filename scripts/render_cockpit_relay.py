@@ -25,6 +25,39 @@ def utc_now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+def parse_utc_timestamp(value: Any) -> datetime | None:
+    if not isinstance(value, str) or not value.strip():
+        return None
+    normalized = value.strip()
+    if normalized.endswith("Z"):
+        normalized = normalized[:-1] + "+00:00"
+    try:
+        parsed = datetime.fromisoformat(normalized)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def snapshot_freshness(state: dict[str, Any]) -> dict[str, Any]:
+    stale_after = int(CONFIG.get("stale_after_seconds", 120))
+    received_at = parse_utc_timestamp(state.get("received_at"))
+    current_time = parse_utc_timestamp(utc_now())
+    if received_at is None or current_time is None:
+        return {
+            "snapshot_age_seconds": None,
+            "snapshot_stale_after_seconds": stale_after,
+            "snapshot_stale": True,
+        }
+    age_seconds = max(0, int((current_time - received_at).total_seconds()))
+    return {
+        "snapshot_age_seconds": age_seconds,
+        "snapshot_stale_after_seconds": stale_after,
+        "snapshot_stale": age_seconds > stale_after,
+    }
+
+
 def empty_state() -> dict[str, Any]:
     return {
         "relay_status": "waiting",
@@ -119,10 +152,12 @@ def relay_status_payload() -> dict[str, Any]:
     if not isinstance(status, dict):
         status = {"status": "relay_waiting", "loop_running": False}
     status = dict(status)
+    freshness = snapshot_freshness(state)
     status["relay"] = {
         "status": state.get("relay_status", "waiting"),
         "received_at": state.get("received_at"),
         "updated_at": state.get("updated_at"),
+        **freshness,
         "publisher": state.get("publisher", {}),
     }
     return status
@@ -130,12 +165,14 @@ def relay_status_payload() -> dict[str, Any]:
 
 def health_payload() -> dict[str, Any]:
     state = snapshot()
+    freshness = snapshot_freshness(state)
     return {
         "ok": True,
         "service": "automoat-cockpit-relay",
         "relay_status": state.get("relay_status", "waiting"),
         "has_snapshot": bool(state.get("received_at")),
         "received_at": state.get("received_at"),
+        **freshness,
     }
 
 
@@ -311,6 +348,12 @@ def parse_args() -> argparse.Namespace:
         type=int,
         default=int(os.environ.get("AUTOMOAT_RELAY_MAX_LOG_CHARS", str(160 * 1024))),
     )
+    parser.add_argument(
+        "--stale-after-seconds",
+        type=int,
+        default=int(os.environ.get("AUTOMOAT_RELAY_STALE_AFTER_SECONDS", "120")),
+        help="mark relay snapshots stale when they are older than this many seconds",
+    )
     return parser.parse_args()
 
 
@@ -323,6 +366,7 @@ def main() -> int:
             "state_file": state_file,
             "max_ingest_bytes": args.max_ingest_bytes,
             "max_log_chars": args.max_log_chars,
+            "stale_after_seconds": args.stale_after_seconds,
         }
     )
     with STATE_LOCK:
