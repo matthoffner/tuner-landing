@@ -53,21 +53,21 @@ def pid_alive(pid: int) -> bool:
         return False
 
 
-def local_loop_pid() -> int | None:
+def local_loop_pid(pid_file: Path = PID_FILE) -> int | None:
     try:
-        pid = int(PID_FILE.read_text(encoding="utf-8").strip())
+        pid = int(pid_file.read_text(encoding="utf-8").strip())
     except (OSError, ValueError):
         return None
     return pid if pid_alive(pid) else None
 
 
-def read_status() -> dict[str, Any]:
-    status = read_json(STATUS_FILE) or {
+def read_status(status_file: Path = STATUS_FILE, pid_file: Path = PID_FILE) -> dict[str, Any]:
+    status = read_json(status_file) or {
         "status": "waiting",
         "updated_at": None,
     }
     status = dict(status)
-    pid = local_loop_pid()
+    pid = local_loop_pid(pid_file)
     status["loop_running"] = pid is not None
     status["loop_pid"] = pid
     status["publisher_updated_at"] = utc_now()
@@ -134,12 +134,13 @@ def repo_relative(path: Path) -> str:
 def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     return {
         "pushed_at": utc_now(),
-        "status": read_status(),
+        "status": read_status(args.status_file, args.pid_file),
         "log_tail": tail_text(args.log_file, args.tail_lines, args.max_log_bytes),
         "publisher": {
             "host": socket.gethostname(),
             "repo": str(ROOT),
             "status_file": repo_relative(args.status_file),
+            "pid_file": repo_relative(args.pid_file),
             "log_file": repo_relative(args.log_file),
             "git": git_snapshot(),
         },
@@ -193,6 +194,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--tail-lines", type=int, default=180)
     parser.add_argument("--max-log-bytes", type=int, default=256 * 1024)
     parser.add_argument("--status-file", type=Path, default=STATUS_FILE)
+    parser.add_argument("--pid-file", type=Path, default=PID_FILE)
     parser.add_argument("--log-file", type=Path, default=LOG_FILE)
     parser.add_argument("--publisher-log", type=Path, default=PUBLISHER_LOG)
     return parser.parse_args()
@@ -201,6 +203,7 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     args.status_file = args.status_file.expanduser().resolve()
+    args.pid_file = args.pid_file.expanduser().resolve()
     args.log_file = args.log_file.expanduser().resolve()
     args.publisher_log = args.publisher_log.expanduser().resolve()
     if not args.relay_url:
