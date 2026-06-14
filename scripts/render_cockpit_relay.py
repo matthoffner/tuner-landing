@@ -71,6 +71,9 @@ def cockpit_health(
     freshness: dict[str, Any],
 ) -> dict[str, Any]:
     reasons: list[str] = []
+    startup = state.get("relay_startup")
+    if isinstance(startup, dict) and startup.get("state_load_status") == "failed":
+        reasons.append("relay_state_load_failed")
     if not state.get("received_at"):
         reasons.append("relay_snapshot_missing")
     if freshness.get("snapshot_stale") is True:
@@ -110,23 +113,47 @@ def empty_state() -> dict[str, Any]:
     }
 
 
-def read_json(path: Path) -> dict[str, Any] | None:
+def read_json_with_error(path: Path) -> tuple[dict[str, Any] | None, str | None]:
     try:
         with path.open("r", encoding="utf-8") as handle:
             payload = json.load(handle)
-    except (OSError, json.JSONDecodeError):
-        return None
-    return payload if isinstance(payload, dict) else None
+    except OSError as exc:
+        return None, f"failed_to_read_state_file: {exc}"
+    except json.JSONDecodeError as exc:
+        return None, f"invalid_state_json: line {exc.lineno} column {exc.colno}: {exc.msg}"
+    if not isinstance(payload, dict):
+        return None, f"state_file_must_be_object: {type(payload).__name__}"
+    return payload, None
 
 
 def load_state(path: Path | None) -> dict[str, Any]:
-    if path is None:
-        return empty_state()
-    payload = read_json(path)
-    if payload is None:
-        return empty_state()
     state = empty_state()
+    if path is None:
+        state["relay_startup"] = {
+            "state_file": None,
+            "state_load_status": "memory_only",
+        }
+        return state
+    if not path.exists():
+        state["relay_startup"] = {
+            "state_file": str(path),
+            "state_load_status": "missing",
+        }
+        return state
+    payload, error = read_json_with_error(path)
+    if payload is None:
+        state["relay_status"] = "state_load_failed"
+        state["relay_startup"] = {
+            "state_file": str(path),
+            "state_load_status": "failed",
+            "state_load_error": error,
+        }
+        return state
     state.update(payload)
+    state["relay_startup"] = {
+        "state_file": str(path),
+        "state_load_status": "loaded",
+    }
     return state
 
 
@@ -202,6 +229,7 @@ def relay_status_payload() -> dict[str, Any]:
         "received_at": state.get("received_at"),
         "updated_at": state.get("updated_at"),
         **freshness,
+        "startup": state.get("relay_startup", {}),
         "publisher": state.get("publisher", {}),
     }
     return status
@@ -221,6 +249,7 @@ def health_payload() -> dict[str, Any]:
         "cockpit_ok": health["ok"],
         "cockpit_health": health,
         "relay_status": state.get("relay_status", "waiting"),
+        "relay_startup": state.get("relay_startup", {}),
         "has_snapshot": bool(state.get("received_at")),
         "received_at": state.get("received_at"),
         **freshness,

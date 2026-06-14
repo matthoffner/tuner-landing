@@ -167,6 +167,30 @@ class RenderCockpitRelayTest(unittest.TestCase):
         self.assertEqual(status["cockpit_status"], "degraded")
         self.assertEqual(status["cockpit_health"]["reasons"], ["source_status_failing"])
 
+    def test_malformed_persisted_state_is_visible_in_health(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            state_file = Path(tmp) / "relay-state.json"
+            state_file.write_text("{not-json\n", encoding="utf-8")
+            loaded_state = self.relay.load_state(state_file)
+
+        with self.relay.STATE_LOCK:
+            self.relay.STATE.clear()
+            self.relay.STATE.update(loaded_state)
+
+        health = self.relay.health_payload()
+        status = self.relay.relay_status_payload()
+
+        self.assertTrue(health["ok"])
+        self.assertFalse(health["cockpit_ok"])
+        self.assertEqual(health["cockpit_status"], "waiting")
+        self.assertIn("relay_state_load_failed", health["cockpit_health"]["reasons"])
+        self.assertEqual(health["relay_status"], "state_load_failed")
+        self.assertEqual(health["relay_startup"]["state_load_status"], "failed")
+        self.assertIn("invalid_state_json", health["relay_startup"]["state_load_error"])
+        self.assertEqual(status["relay"]["status"], "state_load_failed")
+        self.assertEqual(status["relay"]["startup"]["state_load_status"], "failed")
+        self.assertIn("invalid_state_json", status["relay"]["startup"]["state_load_error"])
+
     def test_authentication_accepts_matching_supplied_tokens(self) -> None:
         self.assertEqual(
             self.relay.relay_authentication_result("secret", "secret", ""),
