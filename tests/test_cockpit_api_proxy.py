@@ -444,6 +444,151 @@ class CockpitApiProxyTest(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_log_handler_rejects_html_success_and_falls_back(self) -> None:
+        result = run_node(
+            """
+            const assert = require("assert");
+            const logHandler = require("./api/cockpit-log");
+
+            function response() {
+              return {
+                statusCode: null,
+                body: "",
+                headers: {},
+                setHeader(name, value) {
+                  this.headers[name] = value;
+                },
+                status(code) {
+                  this.statusCode = code;
+                  return this;
+                },
+                send(body) {
+                  this.body = String(body);
+                  return this;
+                },
+                end(body = "") {
+                  this.body = String(body);
+                  return this;
+                },
+              };
+            }
+
+            process.env.AUTOMOAT_RELAY_URL = "https://automoat-cockpit-relay.example";
+            process.env.AUTOMOAT_BRIDGE_URL = "https://legacy-bridge.example";
+            process.env.AUTOMOAT_COCKPIT_UPSTREAM_TIMEOUT_MS = "";
+            const fetched = [];
+            global.fetch = async (url) => {
+              fetched.push(url);
+              if (url.includes("automoat-cockpit-relay.example")) {
+                return {
+                  ok: true,
+                  status: 200,
+                  text: async () => "<html>relay-secret-offline-page</html>",
+                };
+              }
+              return {
+                ok: true,
+                status: 200,
+                text: async () => "bridge log\\n",
+              };
+            };
+
+            (async () => {
+              const logResponse = response();
+              await logHandler({ method: "GET" }, logResponse);
+              assert.strictEqual(logResponse.statusCode, 200);
+              assert.strictEqual(logResponse.body, "bridge log\\n");
+              assert.deepStrictEqual(fetched, [
+                "https://automoat-cockpit-relay.example/api/log",
+                "https://legacy-bridge.example/.automoat/logs/mvp-loop.log",
+              ]);
+            })().catch((error) => {
+              console.error(error.stack || error);
+              process.exit(1);
+            });
+            """
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_log_handler_reports_invalid_html_without_body_leak(self) -> None:
+        result = run_node(
+            """
+            const assert = require("assert");
+            const logHandler = require("./api/cockpit-log");
+
+            function response() {
+              return {
+                statusCode: null,
+                body: "",
+                headers: {},
+                setHeader(name, value) {
+                  this.headers[name] = value;
+                },
+                status(code) {
+                  this.statusCode = code;
+                  return this;
+                },
+                send(body) {
+                  this.body = String(body);
+                  return this;
+                },
+                end(body = "") {
+                  this.body = String(body);
+                  return this;
+                },
+              };
+            }
+
+            process.env.AUTOMOAT_RELAY_URL = "https://automoat-cockpit-relay.example";
+            process.env.AUTOMOAT_BRIDGE_URL = "https://legacy-bridge.example";
+            process.env.AUTOMOAT_COCKPIT_UPSTREAM_TIMEOUT_MS = "";
+            global.fetch = async (url) => {
+              const secret = url.includes("automoat-cockpit-relay.example")
+                ? "relay-secret-offline-page"
+                : "bridge-secret-offline-page";
+              return {
+                ok: true,
+                status: 200,
+                text: async () => `<!doctype html><html>${secret}</html>`,
+              };
+            };
+
+            (async () => {
+              const logResponse = response();
+              await logHandler({ method: "GET" }, logResponse);
+              assert.strictEqual(logResponse.statusCode, 502);
+              assert(logResponse.body.includes("cockpit_relay_unreachable"));
+              assert(logResponse.body.includes("relay:200:log_payload_must_not_be_html"));
+              assert(logResponse.body.includes("legacy_bridge:200:log_payload_must_not_be_html"));
+              assert(!logResponse.body.includes("relay-secret-offline-page"));
+              assert(!logResponse.body.includes("bridge-secret-offline-page"));
+            })().catch((error) => {
+              console.error(error.stack || error);
+              process.exit(1);
+            });
+            """
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_log_parser_returns_bounded_tail(self) -> None:
+        result = run_node(
+            """
+            const assert = require("assert");
+            const { MAX_LOG_BODY_CHARS, parseLogPayload } = require("./api/cockpit-log");
+
+            const body = `${"a".repeat(MAX_LOG_BODY_CHARS)}tail`;
+            const parsed = parseLogPayload(body);
+            assert.strictEqual(parsed.ok, true);
+            assert.strictEqual(parsed.truncated, true);
+            assert.strictEqual(parsed.body.length, MAX_LOG_BODY_CHARS);
+            assert(parsed.body.endsWith("tail"));
+            """
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_handlers_reject_invalid_timeout_without_fetching(self) -> None:
         result = run_node(
             """

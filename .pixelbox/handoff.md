@@ -4,6 +4,12 @@ Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
 - lane: editor
+- status: hardened the Vercel cockpit log proxy so `/api/cockpit-log` rejects likely HTML 2xx upstream bodies, falls back to the next configured upstream, returns secret-safe `cockpit_relay_unreachable` attempts when every upstream serves HTML, and bounds returned log tails to 160 KiB; no Dallas raw CSV rows were edited
+- files: api/cockpit-log.js, tests/test_cockpit_api_proxy.py, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- checks: `node --check api/cockpit-log.js`; `node --check api/cockpit-status.js`; `node --check api/cockpit-upstreams.js`; `python3 -m unittest tests/test_cockpit_api_proxy.py -v`; `python3 -m unittest discover -s tests -v`; `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json > /tmp/automoat-log-proxy-ready.json`; JSON assertion for readiness `ready`, `535` permits, `1082` inspections, and zero thin groups; `cmp -s generated/landing.html index.html`; `git diff --check`; `git diff --exit-code -- .pxcode/preview.json`
+- next: keep prioritizing autonomy/cockpit/Render reliability, real ingest, policy/checking, product clarity, or tests while Dallas readiness remains green; remote cockpit log readers now fail closed on HTML error pages instead of rendering them as agent logs
+
+- lane: editor
 - status: hardened the Vercel cockpit status proxy so `/api/cockpit-status` no longer returns any successful upstream body unless it parses as a JSON object; invalid 2xx relay or bridge payloads now fall through to the next upstream or return structured `cockpit_relay_unreachable` attempts without leaking the upstream body; no Dallas raw CSV rows were edited
 - files: api/cockpit-status.js, tests/test_cockpit_api_proxy.py, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
 - checks: `node --check api/cockpit-status.js`; `python3 -m unittest tests/test_cockpit_api_proxy.py -v`; `python3 -m unittest discover -s tests -v`; `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json > /tmp/automoat-status-proxy-json-ready.json`; JSON assertion for readiness `ready`, `535` permits, `1082` inspections, and zero thin groups; `git diff --check`; `cmp -s generated/landing.html index.html`

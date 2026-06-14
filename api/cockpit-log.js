@@ -1,5 +1,22 @@
 const { fetchUpstreamText, upstreams } = require("./cockpit-upstreams");
 
+const MAX_LOG_BODY_CHARS = 160 * 1024;
+
+function parseLogPayload(body) {
+  const normalized = body.trimStart().toLowerCase();
+  if (normalized.startsWith("<!doctype html") || normalized.startsWith("<html")) {
+    return { ok: false, error: "log_payload_must_not_be_html" };
+  }
+  if (body.length > MAX_LOG_BODY_CHARS) {
+    return {
+      ok: true,
+      body: body.slice(-MAX_LOG_BODY_CHARS),
+      truncated: true,
+    };
+  }
+  return { ok: true, body, truncated: false };
+}
+
 function setHeaders(response, contentType) {
   response.setHeader("Access-Control-Allow-Origin", "*");
   response.setHeader("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS");
@@ -43,7 +60,12 @@ module.exports = async function handler(request, response) {
         attempts.push(`${upstreamConfig.kind}:${upstream.status}`);
         continue;
       }
-      response.status(upstream.status).send(upstream.body);
+      const parsed = parseLogPayload(upstream.body);
+      if (!parsed.ok) {
+        attempts.push(`${upstreamConfig.kind}:${upstream.status}:${parsed.error}`);
+        continue;
+      }
+      response.status(upstream.status).send(parsed.body);
       return;
     } catch (error) {
       attempts.push(`${upstreamConfig.kind}:${error.message}`);
@@ -52,3 +74,6 @@ module.exports = async function handler(request, response) {
 
   response.status(502).send(`cockpit_relay_unreachable: ${attempts.join(", ")}\n`);
 };
+
+module.exports.parseLogPayload = parseLogPayload;
+module.exports.MAX_LOG_BODY_CHARS = MAX_LOG_BODY_CHARS;
