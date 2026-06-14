@@ -24,6 +24,7 @@ PID_FILE = ROOT / ".automoat" / "state" / "mvp-loop.pid"
 LOG_FILE = ROOT / ".automoat" / "logs" / "mvp-loop.log"
 PUBLISHER_LOG = ROOT / ".automoat" / "logs" / "cockpit-relay-publisher.log"
 DEFAULT_MAX_CONSECUTIVE_FAILURES = 3
+DEFAULT_MAX_CONSECUTIVE_STALE_STATUSES = 0
 DEFAULT_STATUS_STALE_AFTER_SECONDS = 660
 
 
@@ -223,18 +224,19 @@ def source_status_log_fields(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def publish_once(args: argparse.Namespace) -> bool:
+def publish_once_result(args: argparse.Namespace) -> dict[str, Any]:
+    source_fields: dict[str, Any] = {}
     try:
         payload = build_payload(args)
+        source_fields = source_status_log_fields(payload)
         response = post_payload(args, payload)
     except HTTPError as exc:
         detail = exc.read().decode("utf-8", errors="replace")
         emit(f"publish failed http_status={exc.code} body={detail.strip()}", log_path=args.publisher_log)
-        return False
+        return {"published": False, "source_status_stale": None}
     except (OSError, URLError, json.JSONDecodeError, subprocess.SubprocessError) as exc:
         emit(f"publish failed error={exc}", log_path=args.publisher_log)
-        return False
-    source_fields = source_status_log_fields(payload)
+        return {"published": False, "source_status_stale": None}
     emit(
         f"published relay snapshot ok={response.get('ok')} "
         f"received_at={response.get('received_at')} "
@@ -244,14 +246,38 @@ def publish_once(args: argparse.Namespace) -> bool:
         f"source_status_age_seconds={source_fields['source_status_age_seconds']}",
         log_path=args.publisher_log,
     )
-    return bool(response.get("ok"))
+    return {
+        "published": bool(response.get("ok")),
+        "source_status_stale": source_fields["source_status_stale"],
+    }
+
+
+def publish_once(args: argparse.Namespace) -> bool:
+    return bool(publish_once_result(args)["published"])
 
 
 def run_publish_loop(args: argparse.Namespace) -> int:
     consecutive_failures = 0
+    consecutive_stale_statuses = 0
     while True:
-        if publish_once(args):
+        result = publish_once_result(args)
+        if result["published"]:
             consecutive_failures = 0
+            if result["source_status_stale"] is True:
+                consecutive_stale_statuses += 1
+                if (
+                    args.max_consecutive_stale_statuses > 0
+                    and consecutive_stale_statuses >= args.max_consecutive_stale_statuses
+                ):
+                    emit(
+                        "exiting after consecutive stale source statuses "
+                        f"count={consecutive_stale_statuses} "
+                        f"limit={args.max_consecutive_stale_statuses}",
+                        log_path=args.publisher_log,
+                    )
+                    return 1
+            else:
+                consecutive_stale_statuses = 0
         else:
             consecutive_failures += 1
             if (
@@ -290,6 +316,10 @@ def validate_publisher_configuration(args: argparse.Namespace) -> list[str]:
         errors.append("--max-log-bytes must be greater than 0")
     if args.max_consecutive_failures < 0:
         errors.append("--max-consecutive-failures must be greater than or equal to 0")
+    if args.max_consecutive_stale_statuses < 0:
+        errors.append(
+            "--max-consecutive-stale-statuses must be greater than or equal to 0"
+        )
     if args.status_stale_after_seconds <= 0:
         errors.append("--status-stale-after-seconds must be greater than 0")
 
@@ -324,7 +354,8 @@ def emit_publisher_preflight(args: argparse.Namespace) -> list[str]:
         f"tail_lines={args.tail_lines} "
         f"max_log_bytes={args.max_log_bytes} "
         f"status_stale_after_seconds={args.status_stale_after_seconds} "
-        f"max_consecutive_failures={args.max_consecutive_failures}"
+        f"max_consecutive_failures={args.max_consecutive_failures} "
+        f"max_consecutive_stale_statuses={args.max_consecutive_stale_statuses}"
     )
     return []
 
@@ -370,6 +401,18 @@ def parse_args() -> argparse.Namespace:
         help=(
             "exit nonzero after this many consecutive publish failures; "
             "set 0 to retry forever"
+        ),
+    )
+    parser.add_argument(
+        "--max-consecutive-stale-statuses",
+        type=int,
+        default=os.environ.get(
+            "AUTOMOAT_RELAY_MAX_CONSECUTIVE_STALE_STATUSES",
+            str(DEFAULT_MAX_CONSECUTIVE_STALE_STATUSES),
+        ),
+        help=(
+            "exit nonzero after this many consecutive successful publishes whose "
+            "source status is stale; set 0 to keep relaying stale status"
         ),
     )
     return parser.parse_args()

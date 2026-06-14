@@ -136,6 +136,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             "AUTOMOAT_RELAY_TAIL_LINES": "77",
             "AUTOMOAT_RELAY_MAX_LOG_BYTES": "4096",
             "AUTOMOAT_RELAY_MAX_CONSECUTIVE_FAILURES": "5",
+            "AUTOMOAT_RELAY_MAX_CONSECUTIVE_STALE_STATUSES": "6",
             "AUTOMOAT_STATUS_STALE_AFTER_SECONDS": "900",
         }
 
@@ -153,6 +154,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertEqual(args.tail_lines, 77)
         self.assertEqual(args.max_log_bytes, 4096)
         self.assertEqual(args.max_consecutive_failures, 5)
+        self.assertEqual(args.max_consecutive_stale_statuses, 6)
         self.assertEqual(args.status_stale_after_seconds, 900)
 
     def test_validate_publisher_configuration_reports_bad_runtime_settings(self) -> None:
@@ -168,6 +170,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 tail_lines=0,
                 max_log_bytes=0,
                 max_consecutive_failures=-1,
+                max_consecutive_stale_statuses=-1,
                 status_stale_after_seconds=0,
                 status_file=tmp_path / "status.json",
                 pid_file=tmp_path / "loop.pid",
@@ -185,6 +188,10 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertIn("--max-log-bytes must be greater than 0", errors)
         self.assertIn(
             "--max-consecutive-failures must be greater than or equal to 0",
+            errors,
+        )
+        self.assertIn(
+            "--max-consecutive-stale-statuses must be greater than or equal to 0",
             errors,
         )
         self.assertIn("--status-stale-after-seconds must be greater than 0", errors)
@@ -310,9 +317,13 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 publisher_log=publisher_log,
                 interval=0,
                 max_consecutive_failures=2,
+                max_consecutive_stale_statuses=0,
             )
             calls = []
-            self.publisher.publish_once = lambda _args: calls.append(False) or False
+            self.publisher.publish_once_result = lambda _args: calls.append(False) or {
+                "published": False,
+                "source_status_stale": None,
+            }
             self.publisher.time.sleep = lambda _seconds: None
 
             status = self.publisher.run_publish_loop(args)
@@ -332,9 +343,13 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 publisher_log=publisher_log,
                 interval=0,
                 max_consecutive_failures=2,
+                max_consecutive_stale_statuses=0,
             )
             outcomes = iter([False, True, False, False])
-            self.publisher.publish_once = lambda _args: next(outcomes)
+            self.publisher.publish_once_result = lambda _args: {
+                "published": next(outcomes),
+                "source_status_stale": False,
+            }
             self.publisher.time.sleep = lambda _seconds: None
 
             status = self.publisher.run_publish_loop(args)
@@ -343,6 +358,57 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertEqual(status, 1)
         self.assertIn(
             "exiting after consecutive publish failures count=2 limit=2",
+            log_text,
+        )
+
+    def test_publish_loop_exits_after_configured_consecutive_stale_statuses(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            publisher_log = Path(tmp) / "publisher.log"
+            args = Namespace(
+                publisher_log=publisher_log,
+                interval=0,
+                max_consecutive_failures=3,
+                max_consecutive_stale_statuses=2,
+            )
+            calls = []
+            self.publisher.publish_once_result = lambda _args: calls.append(True) or {
+                "published": True,
+                "source_status_stale": True,
+            }
+            self.publisher.time.sleep = lambda _seconds: None
+
+            status = self.publisher.run_publish_loop(args)
+            log_text = publisher_log.read_text(encoding="utf-8")
+
+        self.assertEqual(status, 1)
+        self.assertEqual(calls, [True, True])
+        self.assertIn(
+            "exiting after consecutive stale source statuses count=2 limit=2",
+            log_text,
+        )
+
+    def test_publish_loop_resets_stale_status_count_after_fresh_status(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            publisher_log = Path(tmp) / "publisher.log"
+            args = Namespace(
+                publisher_log=publisher_log,
+                interval=0,
+                max_consecutive_failures=3,
+                max_consecutive_stale_statuses=2,
+            )
+            stale_outcomes = iter([True, False, True, True])
+            self.publisher.publish_once_result = lambda _args: {
+                "published": True,
+                "source_status_stale": next(stale_outcomes),
+            }
+            self.publisher.time.sleep = lambda _seconds: None
+
+            status = self.publisher.run_publish_loop(args)
+            log_text = publisher_log.read_text(encoding="utf-8")
+
+        self.assertEqual(status, 1)
+        self.assertIn(
+            "exiting after consecutive stale source statuses count=2 limit=2",
             log_text,
         )
 

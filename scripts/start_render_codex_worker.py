@@ -163,6 +163,7 @@ def validate_worker_environment(
     validate_positive_float(env, "AUTOMOAT_RELAY_INTERVAL", errors)
     validate_positive_float(env, "AUTOMOAT_RELAY_TIMEOUT", errors)
     validate_nonnegative_int(env, "AUTOMOAT_RELAY_MAX_CONSECUTIVE_FAILURES", errors)
+    validate_nonnegative_int(env, "AUTOMOAT_RELAY_MAX_CONSECUTIVE_STALE_STATUSES", errors)
     validate_positive_int(env, "AUTOMOAT_RELAY_TAIL_LINES", errors)
     validate_positive_int(env, "AUTOMOAT_RELAY_MAX_LOG_BYTES", errors)
     validate_positive_int(env, "AUTOMOAT_STATUS_STALE_AFTER_SECONDS", errors)
@@ -197,6 +198,8 @@ def emit_environment_preflight(
         f"relay_timeout={env.get('AUTOMOAT_RELAY_TIMEOUT', '8')} "
         f"relay_max_consecutive_failures="
         f"{env.get('AUTOMOAT_RELAY_MAX_CONSECUTIVE_FAILURES', '3')} "
+        f"relay_max_consecutive_stale_statuses="
+        f"{env.get('AUTOMOAT_RELAY_MAX_CONSECUTIVE_STALE_STATUSES', '0')} "
         f"relay_tail_lines={env.get('AUTOMOAT_RELAY_TAIL_LINES', '180')} "
         f"relay_max_log_bytes={env.get('AUTOMOAT_RELAY_MAX_LOG_BYTES', str(256 * 1024))} "
         f"status_stale_after_seconds={env.get('AUTOMOAT_STATUS_STALE_AFTER_SECONDS', '660')} "
