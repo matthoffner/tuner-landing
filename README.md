@@ -31,6 +31,7 @@ Created from Pixelbox.
 - Render cockpit relay service: `python3 scripts/render_cockpit_relay.py --host 0.0.0.0 --port ${PORT:-4180}`
 - Render relay publisher: `AUTOMOAT_RELAY_URL=https://<render-service>.onrender.com AUTOMOAT_RELAY_TOKEN=<secret> python3 scripts/publish_cockpit_to_relay.py`
 - Detached autonomous cockpit plus Render relay publisher: `AUTOMOAT_RELAY_URL=https://<render-service>.onrender.com AUTOMOAT_RELAY_TOKEN=<secret> python3 scripts/start_autonomous_cockpit_relay.py`
+- Render Codex worker entrypoint: `python3 scripts/start_render_codex_worker.py`; this is intended for the Docker-backed `automoat-codex-worker` Render service and requires `GITHUB_TOKEN`, `CODEX_AUTH_JSON_B64` or another Codex login secret, `AUTOMOAT_RELAY_URL`, and `AUTOMOAT_RELAY_TOKEN`.
 - Legacy detached autonomous cockpit plus ngrok bridge: `python3 scripts/start_autonomous_cockpit_bridge.py`
 - Legacy read-only ngrok bridge: `python3 scripts/bridge_mvp_cockpit.py`
 - Dallas eval artifact writer: `python3 scripts/generate_dallas_eval_artifacts.py`
@@ -63,7 +64,9 @@ Created from Pixelbox.
 
 ## Cockpit Architecture
 
-The deployed cockpit should use the Render relay path instead of ngrok. The local machine keeps running the real Codex loop and publishes snapshots out to `AUTOMOAT_RELAY_URL`; Render stores the latest status and log tail; Vercel reads that stable public relay through `/api/cockpit-status` and `/api/cockpit-log`. This avoids exposing inbound access to the local machine and avoids tunnel bandwidth/session failures.
+The deployed cockpit should use the Render relay path instead of ngrok. The stable public surface is `automoat-cockpit-relay`, which stores the latest status and log tail and serves `/api/status` plus `/api/log`; Vercel reads that stable public relay through `/api/cockpit-status` and `/api/cockpit-log`. This avoids exposing inbound access to a developer machine and avoids tunnel bandwidth/session failures.
+
+The real cloud worker is `automoat-codex-worker`. It runs from `Dockerfile.render-agent`, clones `main` at runtime with a GitHub token, authenticates Codex from a Render secret, starts `scripts/run_autonomous_agent_loop.py`, and runs `scripts/publish_cockpit_to_relay.py` beside it so the landing page can show the agent working. Only one writer should run against `main` at a time: stop the local cockpit loop before enabling the Render worker.
 
 The eventual app shell can be React Server Components instead of an iframe. Use RSC for the initial cockpit snapshot from `/api/status` and whitelisted artifacts, then use a small client component or polling client for the live terminal/log stream. Keep mutation endpoints local-only; remote relays should stay read-only.
 
@@ -78,5 +81,6 @@ Latest Dallas import status: the generated workflow now has `531/531` queue item
 
 - Vercel should rebuild from pushes to `main`.
 - Render should use the root `render.yaml` Blueprint to create `automoat-cockpit-relay`; set `AUTOMOAT_RELAY_TOKEN` as a secret when applying the Blueprint.
+- Render should also run `automoat-codex-worker` from `Dockerfile.render-agent`; set `GITHUB_TOKEN`, `CODEX_AUTH_JSON_B64` or `OPENAI_API_KEY`, `AUTOMOAT_RELAY_TOKEN`, and `AUTOMOAT_RELAY_URL`.
 - Vercel should set `AUTOMOAT_RELAY_URL=https://<render-service>.onrender.com`; only set `AUTOMOAT_BRIDGE_URL` when intentionally using the legacy ngrok bridge.
 - Local publishing should run with the same `AUTOMOAT_RELAY_URL` and `AUTOMOAT_RELAY_TOKEN`, then `python3 scripts/start_autonomous_cockpit_relay.py` starts the local autonomous cockpit and the outbound publisher together.

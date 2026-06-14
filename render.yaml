@@ -15,3 +15,30 @@ services:
         sync: false
       - key: AUTOMOAT_RELAY_STATE_FILE
         value: /tmp/automoat-relay-state.json
+  - type: worker
+    name: automoat-codex-worker
+    runtime: docker
+    repo: https://github.com/matthoffner/tuner-landing.git
+    plan: starter
+    region: oregon
+    branch: main
+    autoDeployTrigger: commit
+    dockerfilePath: ./Dockerfile.render-agent
+    dockerContext: .
+    envVars:
+      - key: AUTOMOAT_GIT_REPO
+        value: https://github.com/matthoffner/tuner-landing.git
+      - key: AUTOMOAT_GIT_BRANCH
+        value: main
+      - key: AUTOMOAT_RELAY_URL
+        value: https://automoat-cockpit-relay.onrender.com
+      - key: AUTOMOAT_RELAY_TOKEN
+        sync: false
+      - key: GITHUB_TOKEN
+        sync: false
+      - key: CODEX_AUTH_JSON_B64
+        sync: false
+      - key: AUTOMOAT_AGENT_INTERVAL
+        value: "300"
+      - key: AUTOMOAT_RELAY_INTERVAL
+        value: "3"
