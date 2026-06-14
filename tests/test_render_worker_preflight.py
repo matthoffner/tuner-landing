@@ -68,6 +68,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                 "AUTOMOAT_AGENT_INTERVAL": "-1",
                 "AUTOMOAT_AGENT_ITERATIONS": "-2",
                 "AUTOMOAT_RELAY_INTERVAL": "0",
+                "AUTOMOAT_RELAY_MAX_CONSECUTIVE_FAILURES": "not-an-int",
             },
             found_command,
         )
@@ -77,6 +78,24 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertIn("AUTOMOAT_AGENT_INTERVAL must be greater than or equal to 0", errors)
         self.assertIn("AUTOMOAT_AGENT_ITERATIONS must be greater than or equal to 0", errors)
         self.assertIn("AUTOMOAT_RELAY_INTERVAL must be greater than 0", errors)
+        self.assertIn("AUTOMOAT_RELAY_MAX_CONSECUTIVE_FAILURES must be an integer", errors)
+
+    def test_rejects_negative_relay_failure_limit(self) -> None:
+        errors = self.worker.validate_worker_environment(
+            {
+                "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+                "AUTOMOAT_RELAY_TOKEN": "relay-token",
+                "GITHUB_TOKEN": "github-token",
+                "CODEX_ACCESS_TOKEN": "codex-token",
+                "AUTOMOAT_RELAY_MAX_CONSECUTIVE_FAILURES": "-1",
+            },
+            found_command,
+        )
+
+        self.assertEqual(
+            errors,
+            ["AUTOMOAT_RELAY_MAX_CONSECUTIVE_FAILURES must be greater than or equal to 0"],
+        )
 
     def test_rejects_missing_required_commands(self) -> None:
         def missing_codex(command: str) -> str | None:
