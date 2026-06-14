@@ -4,6 +4,12 @@ Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
 - lane: editor
+- status: blocked automatic upstream redirects in the Vercel cockpit proxy so `/api/cockpit-status` and `/api/cockpit-log` send `redirect: "manual"`, record 3xx relay or legacy bridge responses as secret-safe `redirect_blocked` attempts, and fall back to the next configured upstream without reading redirect bodies; no Dallas raw CSV rows were edited
+- files: api/cockpit-upstreams.js, api/cockpit-status.js, api/cockpit-log.js, tests/test_cockpit_api_proxy.py, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- checks: `node --check api/cockpit-upstreams.js`; `node --check api/cockpit-status.js`; `node --check api/cockpit-log.js`; `python3 -m unittest tests/test_cockpit_api_proxy.py -v`; `python3 -m unittest discover -s tests -v`; `python3 -m py_compile tests/test_cockpit_api_proxy.py`; `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json > /tmp/automoat-redirect-block-ready.json`; JSON assertion for readiness `ready`, `535` permits, `1082` inspections, and zero thin groups; `cmp -s generated/landing.html index.html`; `git diff --check`; `git diff --exit-code -- .pxcode/preview.json`
+- next: keep prioritizing autonomy/cockpit/Render reliability, real ingest, policy/checking, product clarity, or tests while Dallas readiness remains green; Vercel proxy readers now see redirect failover explicitly via `X-Automoat-Upstream-Attempts`
+
+- lane: editor
 - status: hardened the Vercel cockpit log proxy so `/api/cockpit-log` rejects likely HTML 2xx upstream bodies, falls back to the next configured upstream, returns secret-safe `cockpit_relay_unreachable` attempts when every upstream serves HTML, and bounds returned log tails to 160 KiB; no Dallas raw CSV rows were edited
 - files: api/cockpit-log.js, tests/test_cockpit_api_proxy.py, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
 - checks: `node --check api/cockpit-log.js`; `node --check api/cockpit-status.js`; `node --check api/cockpit-upstreams.js`; `python3 -m unittest tests/test_cockpit_api_proxy.py -v`; `python3 -m unittest discover -s tests -v`; `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json > /tmp/automoat-log-proxy-ready.json`; JSON assertion for readiness `ready`, `535` permits, `1082` inspections, and zero thin groups; `cmp -s generated/landing.html index.html`; `git diff --check`; `git diff --exit-code -- .pxcode/preview.json`

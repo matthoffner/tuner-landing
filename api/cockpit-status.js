@@ -88,6 +88,7 @@ module.exports = async function handler(request, response) {
         attempts.push({
           kind: upstreamConfig.kind,
           status: upstream.status,
+          ...(upstream.error ? { error: upstream.error } : {}),
         });
         continue;
       }

@@ -102,8 +102,17 @@ async function fetchUpstreamText(upstreamConfig, timeoutMs, method = "GET") {
     const upstream = await fetch(upstreamConfig.url, {
       headers: upstreamConfig.headers,
       method,
+      redirect: "manual",
       signal: controller.signal,
     });
+    if (upstream.status >= 300 && upstream.status < 400) {
+      return {
+        ok: false,
+        status: upstream.status,
+        body: "",
+        error: "redirect_blocked",
+      };
+    }
     const body = method === "HEAD" ? "" : await upstream.text();
     return {
       ok: upstream.ok,

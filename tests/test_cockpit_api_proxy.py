@@ -329,6 +329,114 @@ class CockpitApiProxyTest(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_handlers_block_upstream_redirects_and_fall_back(self) -> None:
+        result = run_node(
+            """
+            const assert = require("assert");
+            const statusHandler = require("./api/cockpit-status");
+            const logHandler = require("./api/cockpit-log");
+
+            function response() {
+              return {
+                statusCode: null,
+                body: "",
+                headers: {},
+                setHeader(name, value) {
+                  this.headers[name] = value;
+                },
+                status(code) {
+                  this.statusCode = code;
+                  return this;
+                },
+                send(body) {
+                  this.body = String(body);
+                  return this;
+                },
+                end(body = "") {
+                  this.body = String(body);
+                  return this;
+                },
+              };
+            }
+
+            process.env.AUTOMOAT_RELAY_URL = "https://automoat-cockpit-relay.example";
+            process.env.AUTOMOAT_BRIDGE_URL = "https://legacy-bridge.example";
+            process.env.AUTOMOAT_COCKPIT_UPSTREAM_TIMEOUT_MS = "";
+            const fetches = [];
+            global.fetch = async (url, options) => {
+              fetches.push({ url, redirect: options.redirect });
+              if (url.includes("automoat-cockpit-relay.example")) {
+                return {
+                  ok: false,
+                  status: 302,
+                  text: async () => "<html>redirect-secret</html>",
+                };
+              }
+              if (url.endsWith("/api/status")) {
+                return {
+                  ok: true,
+                  status: 200,
+                  text: async () => JSON.stringify({ status: "bridge-live", cockpit_ok: true }),
+                };
+              }
+              return {
+                ok: true,
+                status: 200,
+                text: async () => "bridge log\\n",
+              };
+            };
+
+            (async () => {
+              const statusResponse = response();
+              await statusHandler({ method: "GET" }, statusResponse);
+              assert.strictEqual(statusResponse.statusCode, 200);
+              assert.deepStrictEqual(JSON.parse(statusResponse.body), {
+                status: "bridge-live",
+                cockpit_ok: true,
+              });
+              assert.strictEqual(
+                statusResponse.headers["X-Automoat-Upstream-Attempts"],
+                "relay:302:redirect_blocked,legacy_bridge:200",
+              );
+              assert(!statusResponse.body.includes("redirect-secret"));
+
+              const logResponse = response();
+              await logHandler({ method: "GET" }, logResponse);
+              assert.strictEqual(logResponse.statusCode, 200);
+              assert.strictEqual(logResponse.body, "bridge log\\n");
+              assert.strictEqual(
+                logResponse.headers["X-Automoat-Upstream-Attempts"],
+                "relay:302:redirect_blocked,legacy_bridge:200",
+              );
+              assert(!logResponse.body.includes("redirect-secret"));
+
+              assert.deepStrictEqual(fetches, [
+                {
+                  url: "https://automoat-cockpit-relay.example/api/status",
+                  redirect: "manual",
+                },
+                {
+                  url: "https://legacy-bridge.example/api/status",
+                  redirect: "manual",
+                },
+                {
+                  url: "https://automoat-cockpit-relay.example/api/log",
+                  redirect: "manual",
+                },
+                {
+                  url: "https://legacy-bridge.example/.automoat/logs/mvp-loop.log",
+                  redirect: "manual",
+                },
+              ]);
+            })().catch((error) => {
+              console.error(error.stack || error);
+              process.exit(1);
+            });
+            """
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_status_handler_rejects_non_json_success_and_falls_back(self) -> None:
         result = run_node(
             """
