@@ -8,7 +8,9 @@ from contextlib import redirect_stdout
 import importlib.util
 import io
 from pathlib import Path
+import tempfile
 import unittest
+from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -70,6 +72,21 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                 "AUTOMOAT_GIT_BRANCH": "release/2026.06",
                 "GH_TOKEN": "github-token",
                 "CODEX_ACCESS_TOKEN": "codex-token",
+            },
+            found_command,
+        )
+
+        self.assertEqual(errors, [])
+
+    def test_accepts_custom_codex_config_values(self) -> None:
+        errors = self.worker.validate_worker_environment(
+            {
+                "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+                "AUTOMOAT_RELAY_TOKEN": "relay-token",
+                "GITHUB_TOKEN": "github-token",
+                "CODEX_ACCESS_TOKEN": "codex-token",
+                "AUTOMOAT_CODEX_MODEL": "gpt-5.5-codex",
+                "AUTOMOAT_CODEX_REASONING_EFFORT": "medium",
             },
             found_command,
         )
@@ -242,6 +259,58 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                 )
 
                 self.assertEqual(errors, [expected_error])
+
+    def test_rejects_bad_codex_config_values_before_writing_config(self) -> None:
+        base_env = {
+            "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            "GITHUB_TOKEN": "github-token",
+            "CODEX_ACCESS_TOKEN": "codex-token",
+        }
+        errors = self.worker.validate_worker_environment(
+            {
+                **base_env,
+                "AUTOMOAT_CODEX_MODEL": "   ",
+                "AUTOMOAT_CODEX_REASONING_EFFORT": "high\napproval_policy = \"on-request\"",
+            },
+            found_command,
+        )
+
+        self.assertEqual(
+            errors,
+            [
+                "AUTOMOAT_CODEX_MODEL must not be empty",
+                (
+                    "AUTOMOAT_CODEX_REASONING_EFFORT must be a single-line value "
+                    "without control characters"
+                ),
+            ],
+        )
+
+    def test_write_codex_config_escapes_string_values(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            self.worker.CODEX_HOME = Path(temp_dir) / "codex-home"
+            self.worker.WORKDIR = Path(temp_dir) / 'repo"quoted'
+            with patch.dict(
+                self.worker.os.environ,
+                {
+                    "AUTOMOAT_CODEX_MODEL": 'gpt"quoted',
+                    "AUTOMOAT_CODEX_REASONING_EFFORT": 'high"quoted',
+                },
+                clear=False,
+            ):
+                self.worker.write_codex_config()
+
+            config = (self.worker.CODEX_HOME / "config.toml").read_text(
+                encoding="utf-8"
+            )
+
+        self.assertIn('model = "gpt\\"quoted"', config)
+        self.assertIn('model_reasoning_effort = "high\\"quoted"', config)
+        self.assertIn(
+            f"[projects.{self.worker.toml_basic_string(self.worker.WORKDIR.as_posix())}]",
+            config,
+        )
 
     def test_git_repo_preflight_does_not_print_url_secrets(self) -> None:
         env = {

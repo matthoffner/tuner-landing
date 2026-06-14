@@ -28,6 +28,10 @@ STOP_REQUESTED = False
 CODEX_AUTH_ENV_NAMES = ("CODEX_AUTH_JSON_B64", "CODEX_ACCESS_TOKEN", "OPENAI_API_KEY")
 GIT_AUTH_ENV_NAMES = ("GITHUB_TOKEN", "GH_TOKEN")
 REQUIRED_COMMANDS = ("git", "codex")
+CODEX_CONFIG_ENV_DEFAULTS = {
+    "AUTOMOAT_CODEX_MODEL": "gpt-5.5",
+    "AUTOMOAT_CODEX_REASONING_EFFORT": "high",
+}
 
 
 def emit(message: str) -> None:
@@ -125,6 +129,38 @@ def validate_positive_int(
         errors.append(f"{name} must be greater than 0")
 
 
+def codex_config_value(
+    env: os._Environ[str] | dict[str, str],
+    name: str,
+) -> str:
+    raw_value = env.get(name)
+    if raw_value is None:
+        return CODEX_CONFIG_ENV_DEFAULTS[name]
+    return raw_value.strip()
+
+
+def validate_codex_config_value(
+    env: os._Environ[str] | dict[str, str],
+    name: str,
+    errors: list[str],
+) -> None:
+    if name not in env:
+        return
+    value = env.get(name, "")
+    if not value.strip():
+        errors.append(f"{name} must not be empty")
+        return
+    if any(
+        character in "\r\n" or ord(character) < 32 or ord(character) == 127
+        for character in value
+    ):
+        errors.append(f"{name} must be a single-line value without control characters")
+
+
+def toml_basic_string(value: str) -> str:
+    return json.dumps(value)
+
+
 def validate_worker_environment(
     env: os._Environ[str] | dict[str, str] | None = None,
     command_lookup: Callable[[str], str | None] | None = None,
@@ -177,6 +213,8 @@ def validate_worker_environment(
     validate_positive_int(env, "AUTOMOAT_STATUS_STALE_AFTER_SECONDS", errors)
     validate_nonnegative_float(env, "AUTOMOAT_AGENT_INTERVAL", errors)
     validate_nonnegative_int(env, "AUTOMOAT_AGENT_ITERATIONS", errors)
+    validate_codex_config_value(env, "AUTOMOAT_CODEX_MODEL", errors)
+    validate_codex_config_value(env, "AUTOMOAT_CODEX_REASONING_EFFORT", errors)
 
     for command in REQUIRED_COMMANDS:
         if not command_lookup(command):
@@ -263,6 +301,9 @@ def emit_environment_preflight(
         f"relay_tail_lines={env.get('AUTOMOAT_RELAY_TAIL_LINES', '180')} "
         f"relay_max_log_bytes={env.get('AUTOMOAT_RELAY_MAX_LOG_BYTES', str(256 * 1024))} "
         f"status_stale_after_seconds={env.get('AUTOMOAT_STATUS_STALE_AFTER_SECONDS', '660')} "
+        f"codex_model={codex_config_value(env, 'AUTOMOAT_CODEX_MODEL')} "
+        f"codex_reasoning_effort="
+        f"{codex_config_value(env, 'AUTOMOAT_CODEX_REASONING_EFFORT')} "
         f"commands={','.join(REQUIRED_COMMANDS)}"
     )
     return []
@@ -291,17 +332,17 @@ def run(command: list[str], *, cwd: Path | None = None, input_text: str | None =
 def write_codex_config() -> None:
     CODEX_HOME.mkdir(parents=True, exist_ok=True)
     config = CODEX_HOME / "config.toml"
-    model = os.environ.get("AUTOMOAT_CODEX_MODEL", "gpt-5.5")
-    reasoning = os.environ.get("AUTOMOAT_CODEX_REASONING_EFFORT", "high")
+    model = codex_config_value(os.environ, "AUTOMOAT_CODEX_MODEL")
+    reasoning = codex_config_value(os.environ, "AUTOMOAT_CODEX_REASONING_EFFORT")
     config.write_text(
         "\n".join(
             [
-                f'model = "{model}"',
-                f'model_reasoning_effort = "{reasoning}"',
+                f"model = {toml_basic_string(model)}",
+                f"model_reasoning_effort = {toml_basic_string(reasoning)}",
                 'approval_policy = "never"',
                 'sandbox_mode = "danger-full-access"',
                 "",
-                f'[projects."{WORKDIR.as_posix()}"]',
+                f"[projects.{toml_basic_string(WORKDIR.as_posix())}]",
                 'trust_level = "trusted"',
                 "",
             ]
