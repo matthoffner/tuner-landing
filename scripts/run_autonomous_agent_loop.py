@@ -371,6 +371,11 @@ def added_synthetic_dallas_rows() -> list[str]:
     return rows
 
 
+def synthetic_dallas_appends_allowed_by_policy() -> bool:
+    snapshot = autonomy_policy_snapshot()
+    return snapshot.get("synthetic_example_local_dallas_appends_allowed") is True
+
+
 def autonomy_policy_snapshot() -> dict[str, Any]:
     import_pipeline = import_pipeline_snapshot()
     readiness = import_pipeline.get("execution_readiness", {})
@@ -553,9 +558,19 @@ def run_autonomy_policy_check(log_file: Path) -> dict[str, Any]:
     paths = dirty_paths_excluding_preview()
     synthetic_rows = added_synthetic_dallas_rows()
     productive_change = changed_paths_include_productive_work(paths)
+    policy_allows_synthetic_append = synthetic_dallas_appends_allowed_by_policy()
     allow_override = os.environ.get("AUTOMOAT_ALLOW_SYNTHETIC_DALLAS_APPEND") == "1"
     exit_status = 0
-    if synthetic_rows and not productive_change and not allow_override:
+    if synthetic_rows and not policy_allows_synthetic_append and not allow_override:
+        exit_status = 1
+        emit(
+            log_file,
+            "policy violation: supervisor snapshot disallows synthetic Dallas "
+            "example.local row appends for the current readiness state",
+        )
+        for row in synthetic_rows[:5]:
+            emit(log_file, "  synthetic row: " + row[:240])
+    elif synthetic_rows and not productive_change and not allow_override:
         exit_status = 1
         emit(
             log_file,
@@ -570,6 +585,7 @@ def run_autonomy_policy_check(log_file: Path) -> dict[str, Any]:
             "policy ok: "
             f"synthetic_rows={len(synthetic_rows)} "
             f"productive_change={productive_change} "
+            f"policy_allows_synthetic_append={policy_allows_synthetic_append} "
             f"override={allow_override}",
         )
     elapsed = round(time.monotonic() - started, 3)
@@ -581,6 +597,7 @@ def run_autonomy_policy_check(log_file: Path) -> dict[str, Any]:
         "seconds": elapsed,
         "synthetic_row_count": len(synthetic_rows),
         "productive_change": productive_change,
+        "policy_allows_synthetic_append": policy_allows_synthetic_append,
     }
 
 

@@ -106,8 +106,9 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
         self.assertEqual(result["exit_status"], 1)
         self.assertEqual(result["synthetic_row_count"], 1)
         self.assertFalse(result["productive_change"])
+        self.assertFalse(result["policy_allows_synthetic_append"])
 
-    def test_policy_check_accepts_synthetic_row_with_durable_test_work(self) -> None:
+    def test_policy_check_rejects_synthetic_row_when_snapshot_disallows_it(self) -> None:
         self.loop.dirty_paths_excluding_preview = lambda: [
             "tests/test_autonomous_agent_policy.py",
             "generated/raw/dallas-electrician-import-sample-v2/permits.csv",
@@ -120,8 +121,29 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             result = self.loop.run_autonomy_policy_check(Path(tmp) / "policy.log")
 
+        self.assertEqual(result["exit_status"], 1)
+        self.assertTrue(result["productive_change"])
+        self.assertFalse(result["policy_allows_synthetic_append"])
+
+    def test_policy_check_accepts_synthetic_row_when_snapshot_allows_companion_work(self) -> None:
+        self.loop.dirty_paths_excluding_preview = lambda: [
+            "tests/test_autonomous_agent_policy.py",
+            "generated/raw/dallas-electrician-import-sample-v2/permits.csv",
+        ]
+        self.loop.added_synthetic_dallas_rows = lambda: [
+            "ELZ-2026-9999,100 Example Ave,Dallas,electrical,"
+            "residential,Electrical repair,Finaled,example.local/dallas/9999"
+        ]
+        self.loop.autonomy_policy_snapshot = lambda: {
+            "synthetic_example_local_dallas_appends_allowed": True,
+        }
+
+        with tempfile.TemporaryDirectory() as tmp:
+            result = self.loop.run_autonomy_policy_check(Path(tmp) / "policy.log")
+
         self.assertEqual(result["exit_status"], 0)
         self.assertTrue(result["productive_change"])
+        self.assertTrue(result["policy_allows_synthetic_append"])
 
 
 if __name__ == "__main__":
