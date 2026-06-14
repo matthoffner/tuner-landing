@@ -4,6 +4,12 @@ Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
 - lane: editor
+- status: bounded Render cockpit relay status snapshot size so oversized published `status` objects are rejected before persistence or in-memory mutation; relay config now exposes `AUTOMOAT_RELAY_MAX_STATUS_BYTES` / `--max-status-bytes` with a 128 KiB default and `--check-env` validation; no Dallas raw CSV rows were edited
+- files: scripts/render_cockpit_relay.py, tests/test_render_cockpit_relay.py, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- checks: `python3 -m unittest tests/test_render_cockpit_relay.py -v`; `python3 -m py_compile scripts/render_cockpit_relay.py tests/test_render_cockpit_relay.py`; `python3 -m unittest discover -s tests -v`; `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json > /tmp/automoat-relay-status-cap-ready.json`; JSON assertion for readiness `ready`, `535` permits, `1082` inspections, and zero thin groups; `AUTOMOAT_RELAY_TOKEN=relay-token python3 scripts/render_cockpit_relay.py --check-env --max-status-bytes 0` (expected exit `2`); `cmp -s generated/landing.html index.html`; `git diff --exit-code -- .pxcode/preview.json`
+- next: keep the default 128 KiB status-object cap unless real cockpit metadata needs a larger bound; continue prioritizing autonomy/cockpit/Render reliability, real ingest, policy/checking, product clarity, or tests while Dallas readiness remains green
+
+- lane: editor
 - status: tightened the autonomous-loop raw Dallas CSV policy gate so changed raw Dallas import CSV paths are tracked beyond synthetic `ELZ` row detection, docs/status-only raw CSV edits are rejected while readiness is green, and policy results expose the changed raw CSV paths for cockpit diagnostics; no Dallas raw CSV rows were edited
 - files: scripts/run_autonomous_agent_loop.py, tests/test_autonomous_agent_policy.py, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
 - checks: `python3 -m unittest tests/test_autonomous_agent_policy.py -v`; `python3 -m py_compile scripts/run_autonomous_agent_loop.py tests/test_autonomous_agent_policy.py`; `python3 -m unittest discover -s tests -v`; `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json > /tmp/automoat-raw-csv-policy-ready.json`; JSON assertion for readiness `ready`, `535` permits, `1082` inspections, and zero thin groups; `cmp -s generated/landing.html index.html`; `git diff --exit-code -- .pxcode/preview.json`; `git diff --check`

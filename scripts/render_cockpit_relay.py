@@ -21,6 +21,7 @@ STATE: dict[str, Any] = {}
 CONFIG: dict[str, Any] = {}
 DEFAULT_MAX_INGEST_BYTES = 1024 * 1024
 DEFAULT_MAX_LOG_CHARS = 160 * 1024
+DEFAULT_MAX_STATUS_BYTES = 128 * 1024
 DEFAULT_STALE_AFTER_SECONDS = 120
 HTTP_REQUEST_METHODS = {
     "DELETE",
@@ -209,6 +210,12 @@ def save_state(path: Path | None, payload: dict[str, Any]) -> None:
     temp_path.replace(path)
 
 
+def encoded_json_size(payload: Any) -> int:
+    return len(
+        json.dumps(payload, separators=(",", ":"), sort_keys=True).encode("utf-8")
+    )
+
+
 def snapshot() -> dict[str, Any]:
     with STATE_LOCK:
         return json.loads(json.dumps(STATE))
@@ -221,6 +228,13 @@ def update_state(payload: dict[str, Any]) -> dict[str, Any]:
         status = {"status": "publisher_missing_status"}
     status = dict(status)
     status.setdefault("status", "unknown")
+    status_size_bytes = encoded_json_size(status)
+    max_status_bytes = int(CONFIG["max_status_bytes"])
+    if status_size_bytes > max_status_bytes:
+        raise ValueError(
+            "status object exceeds max status bytes "
+            f"({status_size_bytes} > {max_status_bytes})"
+        )
 
     log_tail = payload.get("log_tail", "")
     if not isinstance(log_tail, str):
@@ -362,6 +376,7 @@ def validate_relay_configuration(
         errors.append("--port must be less than or equal to 65535")
     parse_positive_int("--max-ingest-bytes", args.max_ingest_bytes, errors)
     parse_positive_int("--max-log-chars", args.max_log_chars, errors)
+    parse_positive_int("--max-status-bytes", args.max_status_bytes, errors)
     parse_positive_int("--stale-after-seconds", args.stale_after_seconds, errors)
     return errors
 
@@ -382,6 +397,7 @@ def emit_relay_preflight(args: argparse.Namespace) -> list[str]:
         f"state_file={state_file} "
         f"max_ingest_bytes={int(args.max_ingest_bytes)} "
         f"max_log_chars={int(args.max_log_chars)} "
+        f"max_status_bytes={int(args.max_status_bytes)} "
         f"stale_after_seconds={int(args.stale_after_seconds)}",
         flush=True,
     )
@@ -560,6 +576,14 @@ def parse_args() -> argparse.Namespace:
         default=os.environ.get("AUTOMOAT_RELAY_MAX_LOG_CHARS", str(DEFAULT_MAX_LOG_CHARS)),
     )
     parser.add_argument(
+        "--max-status-bytes",
+        default=os.environ.get(
+            "AUTOMOAT_RELAY_MAX_STATUS_BYTES",
+            str(DEFAULT_MAX_STATUS_BYTES),
+        ),
+        help="reject ingest payloads whose status object exceeds this serialized size",
+    )
+    parser.add_argument(
         "--stale-after-seconds",
         default=os.environ.get("AUTOMOAT_RELAY_STALE_AFTER_SECONDS", str(DEFAULT_STALE_AFTER_SECONDS)),
         help="mark relay snapshots stale when they are older than this many seconds",
@@ -589,6 +613,7 @@ def main() -> int:
             "state_file": state_file,
             "max_ingest_bytes": int(args.max_ingest_bytes),
             "max_log_chars": int(args.max_log_chars),
+            "max_status_bytes": int(args.max_status_bytes),
             "stale_after_seconds": int(args.stale_after_seconds),
         }
     )

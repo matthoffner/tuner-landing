@@ -36,6 +36,7 @@ class RenderCockpitRelayTest(unittest.TestCase):
                 "state_file": None,
                 "max_ingest_bytes": 1024 * 1024,
                 "max_log_chars": 160 * 1024,
+                "max_status_bytes": 128 * 1024,
                 "stale_after_seconds": 120,
             }
         )
@@ -291,6 +292,7 @@ class RenderCockpitRelayTest(unittest.TestCase):
             "PORT": "not-a-port",
             "AUTOMOAT_RELAY_MAX_BYTES": "bad",
             "AUTOMOAT_RELAY_MAX_LOG_CHARS": "0",
+            "AUTOMOAT_RELAY_MAX_STATUS_BYTES": "-2",
             "AUTOMOAT_RELAY_STALE_AFTER_SECONDS": "-1",
         }
         with patch.dict(os.environ, env, clear=True), patch.object(
@@ -305,6 +307,7 @@ class RenderCockpitRelayTest(unittest.TestCase):
         self.assertIn("--port must be an integer", errors)
         self.assertIn("--max-ingest-bytes must be an integer", errors)
         self.assertIn("--max-log-chars must be greater than 0", errors)
+        self.assertIn("--max-status-bytes must be greater than 0", errors)
         self.assertIn("--stale-after-seconds must be greater than 0", errors)
 
     def test_relay_preflight_rejects_state_file_directory(self) -> None:
@@ -338,6 +341,27 @@ class RenderCockpitRelayTest(unittest.TestCase):
 
             self.assertEqual(self.relay.snapshot(), before)
 
+    def test_update_state_rejects_oversized_status_without_mutating_snapshot(self) -> None:
+        self.relay.CONFIG["max_status_bytes"] = 96
+        before = self.relay.snapshot()
+
+        with self.assertRaisesRegex(
+            ValueError,
+            r"status object exceeds max status bytes \(\d+ > 96\)",
+        ):
+            self.relay.update_state(
+                {
+                    "status": {
+                        "status": "running",
+                        "loop_running": True,
+                        "oversized_diagnostic": "x" * 160,
+                    },
+                    "log_tail": "new log\n",
+                }
+            )
+
+        self.assertEqual(self.relay.snapshot(), before)
+
     def test_check_env_exits_without_serving_when_relay_config_is_valid(self) -> None:
         env = {
             "AUTOMOAT_RELAY_TOKEN": "relay-token",
@@ -355,6 +379,7 @@ class RenderCockpitRelayTest(unittest.TestCase):
         self.assertEqual(status, 0)
         self.assertIn("relay environment preflight passed", stdout.getvalue())
         self.assertIn("state_file=memory-only", stdout.getvalue())
+        self.assertIn("max_status_bytes=131072", stdout.getvalue())
 
 
 if __name__ == "__main__":
