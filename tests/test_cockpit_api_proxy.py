@@ -294,7 +294,7 @@ class CockpitApiProxyTest(unittest.TestCase):
               );
               assert.strictEqual(
                 statusResponse.headers["Access-Control-Expose-Headers"],
-                "X-Automoat-Upstream, X-Automoat-Upstream-Fallback-Count, X-Automoat-Upstream-Attempts, X-Automoat-Upstream-Timeout-Ms",
+                "X-Automoat-Upstream, X-Automoat-Upstream-Fallback-Count, X-Automoat-Upstream-Attempts, X-Automoat-Upstream-Timeout-Ms, X-Automoat-Upstream-Invalid-Config",
               );
               assert.strictEqual(statusResponse.headers["X-Automoat-Upstream-Timeout-Ms"], "5");
 
@@ -310,7 +310,7 @@ class CockpitApiProxyTest(unittest.TestCase):
               );
               assert.strictEqual(
                 logResponse.headers["Access-Control-Expose-Headers"],
-                "X-Automoat-Upstream, X-Automoat-Upstream-Fallback-Count, X-Automoat-Upstream-Attempts, X-Automoat-Upstream-Timeout-Ms",
+                "X-Automoat-Upstream, X-Automoat-Upstream-Fallback-Count, X-Automoat-Upstream-Attempts, X-Automoat-Upstream-Timeout-Ms, X-Automoat-Upstream-Invalid-Config",
               );
               assert.strictEqual(logResponse.headers["X-Automoat-Upstream-Timeout-Ms"], "5");
 
@@ -948,6 +948,14 @@ class CockpitApiProxyTest(unittest.TestCase):
                 invalidStatusResponse.headers["X-Automoat-Upstream-Timeout-Ms"],
                 undefined,
               );
+              assert.strictEqual(
+                invalidStatusResponse.headers["X-Automoat-Upstream-Invalid-Config"],
+                "timeout:AUTOMOAT_COCKPIT_UPSTREAM_TIMEOUT_MS must be a positive integer",
+              );
+              assert.strictEqual(
+                invalidStatusResponse.headers["Access-Control-Expose-Headers"],
+                "X-Automoat-Upstream, X-Automoat-Upstream-Fallback-Count, X-Automoat-Upstream-Attempts, X-Automoat-Upstream-Timeout-Ms, X-Automoat-Upstream-Invalid-Config",
+              );
 
               const invalidLogResponse = response();
               await logHandler({ method: "HEAD" }, invalidLogResponse);
@@ -956,6 +964,14 @@ class CockpitApiProxyTest(unittest.TestCase):
               assert.strictEqual(
                 invalidLogResponse.headers["X-Automoat-Upstream-Timeout-Ms"],
                 undefined,
+              );
+              assert.strictEqual(
+                invalidLogResponse.headers["X-Automoat-Upstream-Invalid-Config"],
+                "timeout:AUTOMOAT_COCKPIT_UPSTREAM_TIMEOUT_MS must be a positive integer",
+              );
+              assert.strictEqual(
+                invalidLogResponse.headers["Access-Control-Expose-Headers"],
+                "X-Automoat-Upstream, X-Automoat-Upstream-Fallback-Count, X-Automoat-Upstream-Attempts, X-Automoat-Upstream-Timeout-Ms, X-Automoat-Upstream-Invalid-Config",
               );
             })().catch((error) => {
               console.error(error.stack || error);

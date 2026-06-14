@@ -1,6 +1,7 @@
 const {
   classifyUpstreamError,
   fetchUpstreamText,
+  invalidUpstreamsHeader,
   upstreamAttemptsHeader,
   upstreams,
 } = require("./cockpit-upstreams");
@@ -24,7 +25,7 @@ function setHeaders(response, contentType) {
   response.setHeader("Access-Control-Allow-Headers", "content-type");
   response.setHeader(
     "Access-Control-Expose-Headers",
-    "X-Automoat-Upstream, X-Automoat-Upstream-Fallback-Count, X-Automoat-Upstream-Attempts, X-Automoat-Upstream-Timeout-Ms",
+    "X-Automoat-Upstream, X-Automoat-Upstream-Fallback-Count, X-Automoat-Upstream-Attempts, X-Automoat-Upstream-Timeout-Ms, X-Automoat-Upstream-Invalid-Config",
   );
   response.setHeader("Cache-Control", "no-store");
   response.setHeader("Content-Type", contentType);
@@ -66,6 +67,7 @@ module.exports = async function handler(request, response) {
     response.setHeader("X-Automoat-Upstream-Timeout-Ms", String(timeoutMs));
   }
   if (invalid.length) {
+    response.setHeader("X-Automoat-Upstream-Invalid-Config", invalidUpstreamsHeader(invalid));
     sendResponse(request, response, 503, JSON.stringify({
       error: "cockpit_relay_invalid_configuration",
       invalid,

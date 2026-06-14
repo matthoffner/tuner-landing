@@ -95,6 +95,16 @@ function upstreamAttemptsHeader(attempts) {
     .join(",");
 }
 
+function invalidUpstreamsHeader(invalid) {
+  return invalid
+    .map((item) => {
+      const kind = item.kind || "unknown";
+      const error = String(item.error || "invalid_configuration").replace(/[\r\n]/g, " ");
+      return `${kind}:${error}`;
+    })
+    .join(",");
+}
+
 async function fetchUpstreamText(upstreamConfig, timeoutMs, method = "GET") {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
@@ -166,6 +176,7 @@ module.exports = {
   DEFAULT_UPSTREAM_TIMEOUT_MS,
   classifyUpstreamError,
   fetchUpstreamText,
+  invalidUpstreamsHeader,
   normalizeBaseUrl,
   normalizeUpstreamTimeoutMs,
   relayHeaders,
