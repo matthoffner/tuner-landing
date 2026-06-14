@@ -4,9 +4,9 @@ Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
 - lane: editor
-- status: tightened the Render autonomous worker policy so green Dallas readiness no longer leads to endless hidden fixture-row appends; the loop prompt now receives a policy snapshot, status payloads expose `autonomy_policy`, and a supervisor gate rejects synthetic `example.local` Dallas raw-row-only diffs before publish
-- files: scripts/run_autonomous_agent_loop.py, scripts/publish_cockpit_to_relay.py, generated/landing.html, index.html, README.md, NEXT_TASK.md, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
-- checks: `python3 -m py_compile scripts/run_autonomous_agent_loop.py scripts/publish_cockpit_to_relay.py`; policy smoke via monkeypatched `run_autonomy_policy_check`; `cmp -s generated/landing.html index.html`; Render-worker copy assertion for `generated/landing.html` and `index.html`; `git diff --check`; `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json > /tmp/automoat-policy-ready.json`
+- status: hardened the Render autonomous worker policy so green Dallas readiness no longer accepts another synthetic `example.local` Dallas row append just because README/NEXT_TASK/landing/journal/handoff were refreshed; the loop prompt receives the stricter policy snapshot, status payloads expose `autonomy_policy`, and the supervisor gate now requires code, ingest, infra, test, or durable spec companion work for any synthetic row append
+- files: scripts/run_autonomous_agent_loop.py, README.md, NEXT_TASK.md, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- checks: `python3 -m py_compile scripts/run_autonomous_agent_loop.py scripts/publish_cockpit_to_relay.py`; policy smoke via monkeypatched `run_autonomy_policy_check` covering row-only failure, status-doc companion failure, and script companion pass; `cmp -s generated/landing.html index.html`; Render-worker copy assertion for `generated/landing.html` and `index.html`; `git diff --check`; `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json > /tmp/automoat-policy-ready.json`
 - next: after deploy, verify `/api/cockpit-status` exposes `autonomy_policy.current_focus` and the Render worker chooses autonomy/visibility/reliability/product work instead of another synthetic `ELZ-*` append
 
 - lane: editor

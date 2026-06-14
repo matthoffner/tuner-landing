@@ -44,6 +44,8 @@ Task policy:
 - If the Dallas import pipeline is already ready and coverage has no thin groups,
   do not append another synthetic `ELZ-*` row to the example.local Dallas CSV
   fixtures. That work is low-leverage and will be rejected by the supervisor.
+- Updating README, NEXT_TASK, the landing page, the journal, or the handoff to
+  describe that fixture append does not make it higher-leverage work.
 - Prefer autonomy, cockpit visibility, Render worker reliability, policy/checking,
   product clarity, real-data ingestion mechanics, or tests that make the agent
   more useful and inspectable.
@@ -70,12 +72,13 @@ PRODUCTIVE_CHANGE_PREFIXES = (
 PRODUCTIVE_CHANGE_FILES = {
     "AGENTS.md",
     "Dockerfile",
-    "README.md",
-    "NEXT_TASK.md",
     "implementation-spec.md",
     "schema.md",
     "evals.md",
     "discovery-artifacts.md",
+    "vision.md",
+    "use-cases.md",
+    "mvp.md",
     "render.yaml",
 }
 SYNTHETIC_DALLAS_RAW_FILES = (
@@ -290,6 +293,7 @@ def dirty_paths_excluding_preview() -> list[str]:
 
 
 def changed_paths_include_productive_work(paths: list[str]) -> bool:
+    """Return whether a synthetic row append is paired with durable product work."""
     for path in paths:
         if path in PRODUCTIVE_CHANGE_FILES:
             return True
@@ -340,7 +344,9 @@ def autonomy_policy_snapshot() -> dict[str, Any]:
         "policy": (
             "When Dallas readiness is already green, do not append another "
             "synthetic ELZ fixture row unless paired with a real product, "
-            "ingestion, autonomy, or reliability improvement."
+            "ingestion, autonomy, reliability, test, or durable spec "
+            "improvement. Routine README, NEXT_TASK, landing, journal, or "
+            "handoff refreshes do not count as that companion work."
         ),
     }
 
@@ -498,7 +504,7 @@ def run_autonomy_policy_check(log_file: Path) -> dict[str, Any]:
         emit(
             log_file,
             "policy violation: synthetic Dallas example.local row append without "
-            "a product, autonomy, ingest, reliability, or test change",
+            "code, ingest, infra, test, or durable spec companion work",
         )
         for row in synthetic_rows[:5]:
             emit(log_file, "  synthetic row: " + row[:240])

@@ -57,7 +57,7 @@ Updated next best artifacts:
 - read `.automoat/state/mvp-loop-status.json` `artifacts.import_pipeline.execution_readiness` when the cockpit or autonomous supervisor needs the current Dallas import readiness gate in the same status payload as contract, coverage, workflow, and git state
 - keep `generated/workflows/dallas-inspection-workflow-v1/action-queue.json` `operator_correction_patterns` current as accepted operational patterns widen
 - use the now-repeated latest-import coverage to choose the next real Dallas import-readiness gap instead of adding more hidden fixture rows by default
-- when Dallas readiness is `ready` and coverage has no thin groups, prefer autonomy/cockpit/Render/reliability/product improvements; a synthetic example.local Dallas row append without higher-leverage code, ingest, or test work is now an autonomous-loop policy failure
+- when Dallas readiness is `ready` and coverage has no thin groups, prefer autonomy/cockpit/Render/reliability/product improvements; a synthetic example.local Dallas row append without higher-leverage code, ingest, infra, test, or durable spec work is now an autonomous-loop policy failure, and routine README/NEXT_TASK/landing/journal/handoff refreshes do not satisfy that gate
 
 Latest bounded improvement completed:
 
