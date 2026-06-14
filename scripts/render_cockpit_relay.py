@@ -22,6 +22,15 @@ CONFIG: dict[str, Any] = {}
 DEFAULT_MAX_INGEST_BYTES = 1024 * 1024
 DEFAULT_MAX_LOG_CHARS = 160 * 1024
 DEFAULT_STALE_AFTER_SECONDS = 120
+HTTP_REQUEST_METHODS = {
+    "DELETE",
+    "GET",
+    "HEAD",
+    "OPTIONS",
+    "PATCH",
+    "POST",
+    "PUT",
+}
 
 
 class RelayPersistenceError(RuntimeError):
@@ -45,6 +54,31 @@ def parse_utc_timestamp(value: Any) -> datetime | None:
     if parsed.tzinfo is None:
         parsed = parsed.replace(tzinfo=timezone.utc)
     return parsed.astimezone(timezone.utc)
+
+
+def sanitize_request_line_for_log(value: object) -> object:
+    if not isinstance(value, str):
+        return value
+    parts = value.split()
+    if (
+        len(parts) < 3
+        or parts[0] not in HTTP_REQUEST_METHODS
+        or not parts[-1].startswith("HTTP/")
+    ):
+        return value
+
+    parsed = urlparse(parts[1])
+    if not parsed.query and not parsed.fragment:
+        return value
+
+    safe_target = parsed.path or "/"
+    if parsed.params:
+        safe_target = f"{safe_target};{parsed.params}"
+    if parsed.query:
+        safe_target = f"{safe_target}?[redacted]"
+    if parsed.fragment:
+        safe_target = f"{safe_target}#[redacted]"
+    return " ".join([parts[0], safe_target, *parts[2:]])
 
 
 def snapshot_freshness(state: dict[str, Any]) -> dict[str, Any]:
@@ -358,9 +392,10 @@ class RelayHandler(BaseHTTPRequestHandler):
     server_version = "AutomoatRelay/0.1"
 
     def log_message(self, format: str, *args: object) -> None:
+        safe_args = tuple(sanitize_request_line_for_log(arg) for arg in args)
         sys.stderr.write(
             "%s - - [%s] %s\n"
-            % (self.address_string(), self.log_date_time_string(), format % args)
+            % (self.address_string(), self.log_date_time_string(), format % safe_args)
         )
 
     def send_common_headers(self, content_type: str) -> None:

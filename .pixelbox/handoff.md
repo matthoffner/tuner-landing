@@ -4,6 +4,12 @@ Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
 - lane: editor
+- status: redacted query strings/fragments from Render cockpit relay access logs before request lines are written to stderr, preventing accidental URL query tokens on cockpit probes from persisting in Render logs; added deterministic coverage for the sanitizer and `RelayHandler.log_message`; no Dallas raw CSV rows were edited
+- files: scripts/render_cockpit_relay.py, tests/test_render_cockpit_relay.py, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- checks: `python3 -m unittest tests/test_render_cockpit_relay.py -v`; `python3 -m py_compile scripts/render_cockpit_relay.py tests/test_render_cockpit_relay.py`; `python3 -m unittest discover -s tests -v`; `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json > /tmp/automoat-relay-log-redaction-ready.json`; JSON assertion for readiness `ready`, `535` permits, `1082` inspections, and zero thin groups; `cmp -s generated/landing.html index.html`; `git diff --check`; `git diff --exit-code -- .pxcode/preview.json`
+- next: keep prioritizing autonomy/cockpit/Render reliability, real ingest, policy/checking, product clarity, or tests while Dallas readiness remains green; direct Render relay logs now keep request paths inspectable without retaining query secrets
+
+- lane: editor
 - status: made Render cockpit publisher relay-level `ok: false` responses explicit failure events instead of ambiguous successful publish log lines; the publisher now logs `publish failed relay_ok=False` with source freshness fields and keeps returning `published: false` for the existing failure budget; no Dallas raw CSV rows were edited
 - files: scripts/publish_cockpit_to_relay.py, tests/test_cockpit_relay_publisher.py, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
 - checks: `python3 -m unittest tests/test_cockpit_relay_publisher.py -v`; `python3 -m py_compile scripts/publish_cockpit_to_relay.py tests/test_cockpit_relay_publisher.py`; `python3 -m unittest discover -s tests -v`; `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json > /tmp/automoat-publisher-ok-false-ready.json`; JSON assertion for readiness `ready`, `535` permits, `1082` inspections, and zero thin groups; `cmp -s generated/landing.html index.html`

@@ -267,6 +267,25 @@ class RenderCockpitRelayTest(unittest.TestCase):
             (False, "invalid relay token"),
         )
 
+    def test_access_log_redacts_query_strings_from_request_lines(self) -> None:
+        request_line = "GET /api/status?relay_token=super-secret&debug=1 HTTP/1.1"
+
+        self.assertEqual(
+            self.relay.sanitize_request_line_for_log(request_line),
+            "GET /api/status?[redacted] HTTP/1.1",
+        )
+
+        handler = self.relay.RelayHandler.__new__(self.relay.RelayHandler)
+        handler.client_address = ("127.0.0.1", 51234)
+        stderr = io.StringIO()
+        with contextlib.redirect_stderr(stderr):
+            handler.log_message('"%s" %s %s', request_line, "200", "12")
+
+        log_line = stderr.getvalue()
+        self.assertIn('"GET /api/status?[redacted] HTTP/1.1" 200 12', log_line)
+        self.assertNotIn("super-secret", log_line)
+        self.assertNotIn("debug=1", log_line)
+
     def test_relay_preflight_rejects_missing_token_and_invalid_numeric_defaults(self) -> None:
         env = {
             "PORT": "not-a-port",
