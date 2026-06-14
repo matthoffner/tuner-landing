@@ -31,6 +31,15 @@ LOOP_PROCESS: subprocess.Popen[str] | None = None
 LOOP_LOCK = threading.Lock()
 SERVER_CONFIG: dict[str, float | int | str] = {"iterations": 0, "interval": 8.0, "loop_mode": "mvp"}
 SERVER_CONFIG["read_only"] = 0
+HTTP_REQUEST_METHODS = {
+    "DELETE",
+    "GET",
+    "HEAD",
+    "OPTIONS",
+    "PATCH",
+    "POST",
+    "PUT",
+}
 
 
 def utc_now() -> str:
@@ -133,6 +142,31 @@ def safe_file_path(raw_path: str) -> Path | None:
                 return None
         return candidate
     return None
+
+
+def sanitize_request_line_for_log(value: object) -> object:
+    if not isinstance(value, str):
+        return value
+    parts = value.split()
+    if (
+        len(parts) < 3
+        or parts[0] not in HTTP_REQUEST_METHODS
+        or not parts[-1].startswith("HTTP/")
+    ):
+        return value
+
+    parsed = urlparse(parts[1])
+    if not parsed.query and not parsed.fragment:
+        return value
+
+    safe_target = parsed.path or "/"
+    if parsed.params:
+        safe_target = f"{safe_target};{parsed.params}"
+    if parsed.query:
+        safe_target = f"{safe_target}?[redacted]"
+    if parsed.fragment:
+        safe_target = f"{safe_target}#[redacted]"
+    return " ".join([parts[0], safe_target, *parts[2:]])
 
 
 def cockpit_html() -> str:
@@ -402,7 +436,11 @@ class CockpitHandler(BaseHTTPRequestHandler):
     server_version = "AutomoatCockpit/0.1"
 
     def log_message(self, format: str, *args: object) -> None:
-        sys.stderr.write("%s - - [%s] %s\n" % (self.address_string(), self.log_date_time_string(), format % args))
+        safe_args = tuple(sanitize_request_line_for_log(arg) for arg in args)
+        sys.stderr.write(
+            "%s - - [%s] %s\n"
+            % (self.address_string(), self.log_date_time_string(), format % safe_args)
+        )
 
     def send_cors_headers(self) -> None:
         if int(SERVER_CONFIG.get("read_only", 0)):

@@ -4,6 +4,12 @@ Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
 - lane: editor
+- status: hardened the local MVP cockpit and read-only bridge access logs so request-line query strings and fragments are redacted before `CockpitHandler.log_message` writes to stderr, preventing token-bearing cockpit URLs from persisting in local/bridge logs; no Dallas raw CSV rows were edited
+- files: scripts/serve_mvp_cockpit.py, tests/test_mvp_cockpit_server.py, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- checks: `python3 -m unittest tests/test_mvp_cockpit_server.py -v`; `python3 -m py_compile scripts/serve_mvp_cockpit.py tests/test_mvp_cockpit_server.py`; `python3 -m unittest discover -s tests -v`; `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json > /tmp/automoat-local-cockpit-log-redaction-ready.json`; JSON assertion for readiness `ready`, `535/535` corrections, `535` permits, `1082` inspections, and zero thin groups; `cmp -s generated/landing.html index.html`; `git diff --exit-code -- .pxcode/preview.json`
+- next: keep prioritizing autonomy/cockpit/Render reliability, real ingest, policy/checking, product clarity, or tests while Dallas readiness remains green; local and bridged cockpit access logs now keep request paths inspectable without retaining query secrets
+
+- lane: editor
 - status: hardened Render cockpit publisher generic transport failure logs so `OSError`/`URLError`/JSON/subprocess publish failures redact URL credentials, query strings, fragments, bearer tokens, and token-like assignments before persistence while preserving source-loop freshness fields for diagnosis; no Dallas raw CSV rows were edited
 - files: scripts/publish_cockpit_to_relay.py, tests/test_cockpit_relay_publisher.py, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
 - checks: `python3 -m unittest tests/test_cockpit_relay_publisher.py -v`; `python3 -m py_compile scripts/publish_cockpit_to_relay.py tests/test_cockpit_relay_publisher.py`; `python3 -m unittest discover -s tests -v`; `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json > /tmp/automoat-publisher-generic-error-ready.json`; JSON assertion for readiness `ready`, `535/535` corrections, `535` permits, `1082` inspections, and zero thin groups; `cmp -s generated/landing.html index.html`; `git diff --exit-code -- .pxcode/preview.json`; `git diff --check`
