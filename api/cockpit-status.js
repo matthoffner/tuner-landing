@@ -1,4 +1,6 @@
 const {
+  EXPOSED_UPSTREAM_HEADERS,
+  NOT_CONFIGURED_UPSTREAMS_HEADER,
   classifyUpstreamError,
   fetchUpstreamText,
   invalidUpstreamsHeader,
@@ -23,10 +25,7 @@ function setHeaders(response, contentType) {
   response.setHeader("Access-Control-Allow-Origin", "*");
   response.setHeader("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS");
   response.setHeader("Access-Control-Allow-Headers", "content-type");
-  response.setHeader(
-    "Access-Control-Expose-Headers",
-    "X-Automoat-Upstream, X-Automoat-Upstream-Fallback-Count, X-Automoat-Upstream-Attempts, X-Automoat-Upstream-Timeout-Ms, X-Automoat-Upstream-Invalid-Config",
-  );
+  response.setHeader("Access-Control-Expose-Headers", EXPOSED_UPSTREAM_HEADERS);
   response.setHeader("Cache-Control", "no-store");
   response.setHeader("Content-Type", contentType);
 }
@@ -75,6 +74,7 @@ module.exports = async function handler(request, response) {
     return;
   }
   if (!configured.length) {
+    response.setHeader("X-Automoat-Upstream-Not-Configured", NOT_CONFIGURED_UPSTREAMS_HEADER);
     sendResponse(request, response, 503, JSON.stringify({
       error: "cockpit_relay_not_configured",
       message: "Set AUTOMOAT_RELAY_URL on Vercel, or AUTOMOAT_BRIDGE_URL for the legacy ngrok bridge.",

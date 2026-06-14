@@ -1,4 +1,6 @@
 const {
+  EXPOSED_UPSTREAM_HEADERS,
+  NOT_CONFIGURED_UPSTREAMS_HEADER,
   classifyUpstreamError,
   fetchUpstreamText,
   invalidUpstreamsHeader,
@@ -28,10 +30,7 @@ function setHeaders(response, contentType) {
   response.setHeader("Access-Control-Allow-Origin", "*");
   response.setHeader("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS");
   response.setHeader("Access-Control-Allow-Headers", "content-type");
-  response.setHeader(
-    "Access-Control-Expose-Headers",
-    "X-Automoat-Upstream, X-Automoat-Upstream-Fallback-Count, X-Automoat-Upstream-Attempts, X-Automoat-Upstream-Timeout-Ms, X-Automoat-Upstream-Invalid-Config",
-  );
+  response.setHeader("Access-Control-Expose-Headers", EXPOSED_UPSTREAM_HEADERS);
   response.setHeader("Cache-Control", "no-store");
   response.setHeader("Content-Type", contentType);
 }
@@ -78,11 +77,12 @@ module.exports = async function handler(request, response) {
     return;
   }
   if (!configured.length) {
+    response.setHeader("X-Automoat-Upstream-Not-Configured", NOT_CONFIGURED_UPSTREAMS_HEADER);
     sendResponse(
       request,
       response,
       503,
-      "cockpit_relay_not_configured: set AUTOMOAT_RELAY_URL on Vercel\n",
+      "cockpit_relay_not_configured: set AUTOMOAT_RELAY_URL or AUTOMOAT_BRIDGE_URL on Vercel\n",
     );
     return;
   }

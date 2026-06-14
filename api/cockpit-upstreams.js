@@ -1,4 +1,13 @@
 const DEFAULT_UPSTREAM_TIMEOUT_MS = 8000;
+const EXPOSED_UPSTREAM_HEADERS = [
+  "X-Automoat-Upstream",
+  "X-Automoat-Upstream-Fallback-Count",
+  "X-Automoat-Upstream-Attempts",
+  "X-Automoat-Upstream-Timeout-Ms",
+  "X-Automoat-Upstream-Invalid-Config",
+  "X-Automoat-Upstream-Not-Configured",
+].join(", ");
+const NOT_CONFIGURED_UPSTREAMS_HEADER = "relay,legacy_bridge";
 
 function normalizeBaseUrl(value) {
   const raw = (value || "").trim();
@@ -174,6 +183,8 @@ function upstreams({ relayPath, bridgePath, env = process.env }) {
 
 module.exports = {
   DEFAULT_UPSTREAM_TIMEOUT_MS,
+  EXPOSED_UPSTREAM_HEADERS,
+  NOT_CONFIGURED_UPSTREAMS_HEADER,
   classifyUpstreamError,
   fetchUpstreamText,
   invalidUpstreamsHeader,
