@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 from argparse import Namespace
+from contextlib import redirect_stdout
 import importlib.util
+import io
 import json
 import os
 from pathlib import Path
@@ -152,6 +154,97 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertEqual(args.max_log_bytes, 4096)
         self.assertEqual(args.max_consecutive_failures, 5)
         self.assertEqual(args.status_stale_after_seconds, 900)
+
+    def test_validate_publisher_configuration_reports_bad_runtime_settings(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            publisher_log_dir = tmp_path / "publisher-log-dir"
+            publisher_log_dir.mkdir()
+            args = Namespace(
+                relay_url="automoat-cockpit-relay.example",
+                token="",
+                interval=0,
+                timeout=-1,
+                tail_lines=0,
+                max_log_bytes=0,
+                max_consecutive_failures=-1,
+                status_stale_after_seconds=0,
+                status_file=tmp_path / "status.json",
+                pid_file=tmp_path / "loop.pid",
+                log_file=tmp_path / "loop.log",
+                publisher_log=publisher_log_dir,
+            )
+
+            errors = self.publisher.validate_publisher_configuration(args)
+
+        self.assertIn("--relay-url must start with http:// or https://", errors)
+        self.assertIn("AUTOMOAT_RELAY_TOKEN or --token is required", errors)
+        self.assertIn("--interval must be greater than 0", errors)
+        self.assertIn("--timeout must be greater than 0", errors)
+        self.assertIn("--tail-lines must be greater than 0", errors)
+        self.assertIn("--max-log-bytes must be greater than 0", errors)
+        self.assertIn(
+            "--max-consecutive-failures must be greater than or equal to 0",
+            errors,
+        )
+        self.assertIn("--status-stale-after-seconds must be greater than 0", errors)
+        self.assertIn("--publisher-log must be a file path, not a directory", errors)
+
+    def test_check_env_validates_without_publishing(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            env = {
+                "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+                "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            }
+            output = io.StringIO()
+            self.publisher.publish_once = lambda _args: self.fail("publish_once should not run")
+            with patch.dict(os.environ, env, clear=True), patch.object(
+                sys,
+                "argv",
+                [
+                    "publish_cockpit_to_relay.py",
+                    "--check-env",
+                    "--status-file",
+                    str(tmp_path / "status.json"),
+                    "--pid-file",
+                    str(tmp_path / "loop.pid"),
+                    "--log-file",
+                    str(tmp_path / "loop.log"),
+                    "--publisher-log",
+                    str(tmp_path / "publisher.log"),
+                ],
+            ), redirect_stdout(output):
+                status = self.publisher.main()
+
+        self.assertEqual(status, 0)
+        self.assertIn("publisher environment preflight passed", output.getvalue())
+        self.assertIn("relay_url=https://automoat-cockpit-relay.example", output.getvalue())
+
+    def test_check_env_rejects_malformed_relay_url_before_publish(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            env = {
+                "AUTOMOAT_RELAY_URL": "automoat-cockpit-relay.example",
+                "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            }
+            output = io.StringIO()
+            self.publisher.publish_once = lambda _args: self.fail("publish_once should not run")
+            with patch.dict(os.environ, env, clear=True), patch.object(
+                sys,
+                "argv",
+                [
+                    "publish_cockpit_to_relay.py",
+                    "--check-env",
+                    "--publisher-log",
+                    str(tmp_path / "publisher.log"),
+                ],
+            ), redirect_stdout(output):
+                status = self.publisher.main()
+
+        self.assertEqual(status, 2)
+        self.assertIn("publisher environment preflight failed", output.getvalue())
+        self.assertIn("--relay-url must start with http:// or https://", output.getvalue())
 
     def test_publish_once_logs_source_status_freshness(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

@@ -267,6 +267,65 @@ def run_publish_loop(args: argparse.Namespace) -> int:
         time.sleep(args.interval)
 
 
+def validate_publisher_configuration(args: argparse.Namespace) -> list[str]:
+    errors: list[str] = []
+    relay_url = str(args.relay_url).strip()
+    if not relay_url:
+        errors.append("AUTOMOAT_RELAY_URL or --relay-url is required")
+    elif not relay_url.startswith(("http://", "https://")):
+        errors.append("--relay-url must start with http:// or https://")
+
+    if not str(args.token).strip():
+        errors.append("AUTOMOAT_RELAY_TOKEN or --token is required")
+    if args.interval <= 0:
+        errors.append("--interval must be greater than 0")
+    if args.timeout <= 0:
+        errors.append("--timeout must be greater than 0")
+    if args.tail_lines <= 0:
+        errors.append("--tail-lines must be greater than 0")
+    if args.max_log_bytes <= 0:
+        errors.append("--max-log-bytes must be greater than 0")
+    if args.max_consecutive_failures < 0:
+        errors.append("--max-consecutive-failures must be greater than or equal to 0")
+    if args.status_stale_after_seconds <= 0:
+        errors.append("--status-stale-after-seconds must be greater than 0")
+
+    configured_file_args = {
+        "--status-file": args.status_file,
+        "--pid-file": args.pid_file,
+        "--log-file": args.log_file,
+        "--publisher-log": args.publisher_log,
+    }
+    for label, path in configured_file_args.items():
+        if path.exists() and path.is_dir():
+            errors.append(f"{label} must be a file path, not a directory")
+    publisher_log_parent = args.publisher_log.parent
+    if publisher_log_parent.exists() and not publisher_log_parent.is_dir():
+        errors.append("--publisher-log parent must be a directory")
+    return errors
+
+
+def emit_publisher_preflight(args: argparse.Namespace) -> list[str]:
+    errors = validate_publisher_configuration(args)
+    if errors:
+        print("publisher environment preflight failed")
+        for error in errors:
+            print(f"  - {error}")
+        return errors
+
+    print(
+        "publisher environment preflight passed: "
+        f"relay_url={str(args.relay_url).strip()} "
+        f"interval={args.interval} "
+        f"timeout={args.timeout} "
+        f"tail_lines={args.tail_lines} "
+        f"max_log_bytes={args.max_log_bytes} "
+        f"status_stale_after_seconds={args.status_stale_after_seconds} "
+        f"max_consecutive_failures={args.max_consecutive_failures}"
+    )
+    return []
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--relay-url", default=os.environ.get("AUTOMOAT_RELAY_URL", ""))
@@ -274,6 +333,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--interval", type=float, default=os.environ.get("AUTOMOAT_RELAY_INTERVAL", "3"))
     parser.add_argument("--timeout", type=float, default=os.environ.get("AUTOMOAT_RELAY_TIMEOUT", "8"))
     parser.add_argument("--once", action="store_true")
+    parser.add_argument(
+        "--check-env",
+        action="store_true",
+        help="validate publisher configuration without posting to the relay",
+    )
     parser.add_argument("--tail-lines", type=int, default=os.environ.get("AUTOMOAT_RELAY_TAIL_LINES", "180"))
     parser.add_argument(
         "--max-log-bytes",
@@ -308,35 +372,22 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def main() -> int:
-    args = parse_args()
+def normalize_args(args: argparse.Namespace) -> argparse.Namespace:
     args.status_file = args.status_file.expanduser().resolve()
     args.pid_file = args.pid_file.expanduser().resolve()
     args.log_file = args.log_file.expanduser().resolve()
     args.publisher_log = args.publisher_log.expanduser().resolve()
-    if not args.relay_url:
-        print("AUTOMOAT_RELAY_URL or --relay-url is required", file=sys.stderr)
-        return 2
-    if not args.token:
-        print("AUTOMOAT_RELAY_TOKEN or --token is required", file=sys.stderr)
-        return 2
-    if args.interval <= 0:
-        print("--interval must be greater than 0", file=sys.stderr)
-        return 2
-    if args.timeout <= 0:
-        print("--timeout must be greater than 0", file=sys.stderr)
-        return 2
-    if args.tail_lines <= 0:
-        print("--tail-lines must be greater than 0", file=sys.stderr)
-        return 2
-    if args.max_log_bytes <= 0:
-        print("--max-log-bytes must be greater than 0", file=sys.stderr)
-        return 2
-    if args.max_consecutive_failures < 0:
-        print("--max-consecutive-failures must be greater than or equal to 0", file=sys.stderr)
-        return 2
-    if args.status_stale_after_seconds <= 0:
-        print("--status-stale-after-seconds must be greater than 0", file=sys.stderr)
+    return args
+
+
+def main() -> int:
+    args = normalize_args(parse_args())
+    errors = validate_publisher_configuration(args)
+    if args.check_env:
+        return 0 if not emit_publisher_preflight(args) else 2
+    if errors:
+        for error in errors:
+            print(error, file=sys.stderr)
         return 2
 
     if args.once:
