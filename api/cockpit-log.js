@@ -1,4 +1,10 @@
-const { fetchUpstreamText, upstreams } = require("./cockpit-upstreams");
+const {
+  classifyUpstreamError,
+  fetchUpstreamText,
+  upstreamAttemptSummary,
+  upstreamAttemptsHeader,
+  upstreams,
+} = require("./cockpit-upstreams");
 
 const MAX_LOG_BODY_CHARS = 160 * 1024;
 
@@ -23,15 +29,16 @@ function setHeaders(response, contentType) {
   response.setHeader("Access-Control-Allow-Headers", "content-type");
   response.setHeader(
     "Access-Control-Expose-Headers",
-    "X-Automoat-Upstream, X-Automoat-Upstream-Fallback-Count",
+    "X-Automoat-Upstream, X-Automoat-Upstream-Fallback-Count, X-Automoat-Upstream-Attempts",
   );
   response.setHeader("Cache-Control", "no-store");
   response.setHeader("Content-Type", contentType);
 }
 
-function setUpstreamHeaders(response, upstreamKind, fallbackCount) {
+function setUpstreamHeaders(response, upstreamKind, fallbackCount, attempts) {
   response.setHeader("X-Automoat-Upstream", upstreamKind);
   response.setHeader("X-Automoat-Upstream-Fallback-Count", String(fallbackCount));
+  response.setHeader("X-Automoat-Upstream-Attempts", upstreamAttemptsHeader(attempts));
 }
 
 function sendResponse(request, response, statusCode, body) {
@@ -80,28 +87,51 @@ module.exports = async function handler(request, response) {
     try {
       const upstream = await fetchUpstreamText(upstreamConfig, timeoutMs, request.method);
       if (!upstream.ok) {
-        attempts.push(`${upstreamConfig.kind}:${upstream.status}`);
+        attempts.push({
+          kind: upstreamConfig.kind,
+          status: upstream.status,
+        });
         continue;
       }
       if (request.method === "HEAD") {
-        setUpstreamHeaders(response, upstreamConfig.kind, attempts.length);
+        setUpstreamHeaders(response, upstreamConfig.kind, attempts.length, [
+          ...attempts,
+          { kind: upstreamConfig.kind, status: upstream.status },
+        ]);
         sendResponse(request, response, upstream.status, "");
         return;
       }
       const parsed = parseLogPayload(upstream.body);
       if (!parsed.ok) {
-        attempts.push(`${upstreamConfig.kind}:${upstream.status}:${parsed.error}`);
+        attempts.push({
+          kind: upstreamConfig.kind,
+          status: upstream.status,
+          error: parsed.error,
+        });
         continue;
       }
-      setUpstreamHeaders(response, upstreamConfig.kind, attempts.length);
+      setUpstreamHeaders(response, upstreamConfig.kind, attempts.length, [
+        ...attempts,
+        { kind: upstreamConfig.kind, status: upstream.status },
+      ]);
       sendResponse(request, response, upstream.status, parsed.body);
       return;
     } catch (error) {
-      attempts.push(`${upstreamConfig.kind}:${error.message}`);
+      attempts.push({
+        kind: upstreamConfig.kind,
+        error: classifyUpstreamError(error),
+        message: error.message,
+      });
     }
   }
 
-  sendResponse(request, response, 502, `cockpit_relay_unreachable: ${attempts.join(", ")}\n`);
+  response.setHeader("X-Automoat-Upstream-Attempts", upstreamAttemptsHeader(attempts));
+  sendResponse(
+    request,
+    response,
+    502,
+    `cockpit_relay_unreachable: ${attempts.map(upstreamAttemptSummary).join(", ")}\n`,
+  );
 };
 
 module.exports.parseLogPayload = parseLogPayload;

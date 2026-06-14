@@ -289,8 +289,12 @@ class CockpitApiProxyTest(unittest.TestCase):
               assert.strictEqual(statusResponse.headers["X-Automoat-Upstream"], "legacy_bridge");
               assert.strictEqual(statusResponse.headers["X-Automoat-Upstream-Fallback-Count"], "1");
               assert.strictEqual(
+                statusResponse.headers["X-Automoat-Upstream-Attempts"],
+                "relay:timeout,legacy_bridge:200",
+              );
+              assert.strictEqual(
                 statusResponse.headers["Access-Control-Expose-Headers"],
-                "X-Automoat-Upstream, X-Automoat-Upstream-Fallback-Count",
+                "X-Automoat-Upstream, X-Automoat-Upstream-Fallback-Count, X-Automoat-Upstream-Attempts",
               );
 
               const logResponse = response();
@@ -300,8 +304,12 @@ class CockpitApiProxyTest(unittest.TestCase):
               assert.strictEqual(logResponse.headers["X-Automoat-Upstream"], "legacy_bridge");
               assert.strictEqual(logResponse.headers["X-Automoat-Upstream-Fallback-Count"], "1");
               assert.strictEqual(
+                logResponse.headers["X-Automoat-Upstream-Attempts"],
+                "relay:timeout,legacy_bridge:200",
+              );
+              assert.strictEqual(
                 logResponse.headers["Access-Control-Expose-Headers"],
-                "X-Automoat-Upstream, X-Automoat-Upstream-Fallback-Count",
+                "X-Automoat-Upstream, X-Automoat-Upstream-Fallback-Count, X-Automoat-Upstream-Attempts",
               );
 
               assert.deepStrictEqual(fetched, [
@@ -446,6 +454,10 @@ class CockpitApiProxyTest(unittest.TestCase):
                 { kind: "relay", status: 200, error: "invalid_json" },
                 { kind: "legacy_bridge", status: 200, error: "status_payload_must_be_object" },
               ]);
+              assert.strictEqual(
+                statusResponse.headers["X-Automoat-Upstream-Attempts"],
+                "relay:200:invalid_json,legacy_bridge:200:status_payload_must_be_object",
+              );
               assert(!statusResponse.body.includes("relay-secret-offline-page"));
             })().catch((error) => {
               console.error(error.stack || error);
@@ -573,6 +585,10 @@ class CockpitApiProxyTest(unittest.TestCase):
               assert(logResponse.body.includes("cockpit_relay_unreachable"));
               assert(logResponse.body.includes("relay:200:log_payload_must_not_be_html"));
               assert(logResponse.body.includes("legacy_bridge:200:log_payload_must_not_be_html"));
+              assert.strictEqual(
+                logResponse.headers["X-Automoat-Upstream-Attempts"],
+                "relay:200:log_payload_must_not_be_html,legacy_bridge:200:log_payload_must_not_be_html",
+              );
               assert(!logResponse.body.includes("relay-secret-offline-page"));
               assert(!logResponse.body.includes("bridge-secret-offline-page"));
             })().catch((error) => {
@@ -716,6 +732,7 @@ class CockpitApiProxyTest(unittest.TestCase):
               assert.strictEqual(statusResponse.body, "");
               assert.strictEqual(statusResponse.headers["X-Automoat-Upstream"], "relay");
               assert.strictEqual(statusResponse.headers["X-Automoat-Upstream-Fallback-Count"], "0");
+              assert.strictEqual(statusResponse.headers["X-Automoat-Upstream-Attempts"], "relay:200");
               assert.strictEqual(
                 statusResponse.headers["Content-Type"],
                 "application/json; charset=utf-8",
@@ -727,6 +744,7 @@ class CockpitApiProxyTest(unittest.TestCase):
               assert.strictEqual(logResponse.body, "");
               assert.strictEqual(logResponse.headers["X-Automoat-Upstream"], "relay");
               assert.strictEqual(logResponse.headers["X-Automoat-Upstream-Fallback-Count"], "0");
+              assert.strictEqual(logResponse.headers["X-Automoat-Upstream-Attempts"], "relay:200");
               assert.strictEqual(logResponse.headers["Content-Type"], "text/plain; charset=utf-8");
               assert.deepStrictEqual(fetches, [
                 {
@@ -761,6 +779,10 @@ class CockpitApiProxyTest(unittest.TestCase):
                 fallbackStatusResponse.headers["X-Automoat-Upstream-Fallback-Count"],
                 "1",
               );
+              assert.strictEqual(
+                fallbackStatusResponse.headers["X-Automoat-Upstream-Attempts"],
+                "relay:503,legacy_bridge:200",
+              );
 
               const fallbackLogResponse = response();
               await logHandler({ method: "HEAD" }, fallbackLogResponse);
@@ -773,6 +795,10 @@ class CockpitApiProxyTest(unittest.TestCase):
               assert.strictEqual(
                 fallbackLogResponse.headers["X-Automoat-Upstream-Fallback-Count"],
                 "1",
+              );
+              assert.strictEqual(
+                fallbackLogResponse.headers["X-Automoat-Upstream-Attempts"],
+                "relay:503,legacy_bridge:200",
               );
               assert.deepStrictEqual(fallbackFetches, [
                 {

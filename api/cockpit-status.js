@@ -1,4 +1,9 @@
-const { fetchUpstreamText, upstreams } = require("./cockpit-upstreams");
+const {
+  classifyUpstreamError,
+  fetchUpstreamText,
+  upstreamAttemptsHeader,
+  upstreams,
+} = require("./cockpit-upstreams");
 
 function parseStatusPayload(body) {
   let payload;
@@ -19,15 +24,16 @@ function setHeaders(response, contentType) {
   response.setHeader("Access-Control-Allow-Headers", "content-type");
   response.setHeader(
     "Access-Control-Expose-Headers",
-    "X-Automoat-Upstream, X-Automoat-Upstream-Fallback-Count",
+    "X-Automoat-Upstream, X-Automoat-Upstream-Fallback-Count, X-Automoat-Upstream-Attempts",
   );
   response.setHeader("Cache-Control", "no-store");
   response.setHeader("Content-Type", contentType);
 }
 
-function setUpstreamHeaders(response, upstreamKind, fallbackCount) {
+function setUpstreamHeaders(response, upstreamKind, fallbackCount, attempts) {
   response.setHeader("X-Automoat-Upstream", upstreamKind);
   response.setHeader("X-Automoat-Upstream-Fallback-Count", String(fallbackCount));
+  response.setHeader("X-Automoat-Upstream-Attempts", upstreamAttemptsHeader(attempts));
 }
 
 function sendResponse(request, response, statusCode, body) {
@@ -83,7 +89,10 @@ module.exports = async function handler(request, response) {
         continue;
       }
       if (request.method === "HEAD") {
-        setUpstreamHeaders(response, upstreamConfig.kind, attempts.length);
+        setUpstreamHeaders(response, upstreamConfig.kind, attempts.length, [
+          ...attempts,
+          { kind: upstreamConfig.kind, status: upstream.status },
+        ]);
         sendResponse(request, response, upstream.status, "");
         return;
       }
@@ -96,17 +105,22 @@ module.exports = async function handler(request, response) {
         });
         continue;
       }
-      setUpstreamHeaders(response, upstreamConfig.kind, attempts.length);
+      setUpstreamHeaders(response, upstreamConfig.kind, attempts.length, [
+        ...attempts,
+        { kind: upstreamConfig.kind, status: upstream.status },
+      ]);
       sendResponse(request, response, upstream.status, parsed.body);
       return;
     } catch (error) {
       attempts.push({
         kind: upstreamConfig.kind,
+        error: classifyUpstreamError(error),
         message: error.message,
       });
     }
   }
 
+  response.setHeader("X-Automoat-Upstream-Attempts", upstreamAttemptsHeader(attempts));
   sendResponse(request, response, 502, JSON.stringify({
     error: "cockpit_relay_unreachable",
     attempts,

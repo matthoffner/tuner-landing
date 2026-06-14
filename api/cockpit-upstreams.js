@@ -51,6 +51,50 @@ function relayHeaders(env = process.env) {
   return token ? { "X-Automoat-Relay-Token": token } : {};
 }
 
+function classifyUpstreamError(error) {
+  const message = String((error && error.message) || "");
+  if (message.startsWith("timeout after ")) {
+    return "timeout";
+  }
+  return "fetch_error";
+}
+
+function upstreamAttemptSummary(attempt) {
+  const kind = attempt.kind || "unknown";
+  if (Number.isInteger(attempt.status)) {
+    return attempt.error
+      ? `${kind}:${attempt.status}:${attempt.error}`
+      : `${kind}:${attempt.status}`;
+  }
+  if (attempt.error) {
+    return `${kind}:${attempt.error}`;
+  }
+  if (attempt.message) {
+    return `${kind}:${attempt.message}`;
+  }
+  return kind;
+}
+
+function upstreamAttemptsHeader(attempts) {
+  return attempts
+    .map((attempt) => {
+      const kind = attempt.kind || "unknown";
+      if (Number.isInteger(attempt.status)) {
+        return attempt.error
+          ? `${kind}:${attempt.status}:${attempt.error}`
+          : `${kind}:${attempt.status}`;
+      }
+      if (attempt.error) {
+        return `${kind}:${attempt.error}`;
+      }
+      if (attempt.message) {
+        return `${kind}:${classifyUpstreamError(attempt)}`;
+      }
+      return kind;
+    })
+    .join(",");
+}
+
 async function fetchUpstreamText(upstreamConfig, timeoutMs, method = "GET") {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
@@ -111,9 +155,12 @@ function upstreams({ relayPath, bridgePath, env = process.env }) {
 
 module.exports = {
   DEFAULT_UPSTREAM_TIMEOUT_MS,
+  classifyUpstreamError,
   fetchUpstreamText,
   normalizeBaseUrl,
   normalizeUpstreamTimeoutMs,
   relayHeaders,
+  upstreamAttemptSummary,
+  upstreamAttemptsHeader,
   upstreams,
 };
