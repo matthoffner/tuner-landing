@@ -80,6 +80,13 @@ def cockpit_health(
         reasons.append("relay_snapshot_stale")
     if status.get("source_status_stale") is True:
         reasons.append("source_status_stale")
+    if status.get("source_status_file_status") in {
+        "missing",
+        "read_failed",
+        "invalid_json",
+        "not_object",
+    }:
+        reasons.append("source_status_unavailable")
     if status.get("loop_running") is False:
         reasons.append("source_loop_not_running")
     if status.get("status") in {"error", "failing"}:

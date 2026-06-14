@@ -87,19 +87,41 @@ class CockpitRelayPublisherTest(unittest.TestCase):
     def test_read_status_returns_waiting_for_missing_configured_file(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
+            status_file = tmp_path / "missing-status.json"
             status = self.publisher.read_status(
-                tmp_path / "missing-status.json",
+                status_file,
                 tmp_path / "missing.pid",
                 status_stale_after_seconds=120,
             )
 
         self.assertEqual(status["status"], "waiting")
+        self.assertEqual(status["source_status_file"], str(status_file))
+        self.assertEqual(status["source_status_file_status"], "missing")
+        self.assertNotIn("source_status_file_error", status)
         self.assertIsNone(status["source_status_age_seconds"])
         self.assertEqual(status["source_status_stale_after_seconds"], 120)
         self.assertTrue(status["source_status_stale"])
         self.assertFalse(status["loop_running"])
         self.assertIsNone(status["loop_pid"])
         self.assertIn("publisher_updated_at", status)
+
+    def test_read_status_marks_malformed_status_file_unavailable(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            status_file = tmp_path / "status.json"
+            status_file.write_text("{not-json\n", encoding="utf-8")
+
+            status = self.publisher.read_status(
+                status_file,
+                tmp_path / "missing.pid",
+                status_stale_after_seconds=120,
+            )
+
+        self.assertEqual(status["status"], "waiting")
+        self.assertEqual(status["source_status_file"], str(status_file))
+        self.assertEqual(status["source_status_file_status"], "invalid_json")
+        self.assertIn("line 1 column 2", status["source_status_file_error"])
+        self.assertTrue(status["source_status_stale"])
 
     def test_read_status_marks_old_source_status_stale(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -336,6 +358,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertIn("source_loop_running=False", log_text)
         self.assertIn("source_status_stale=True", log_text)
         self.assertIn("source_status_age_seconds=700", log_text)
+        self.assertIn("source_status_file_status=None", log_text)
 
     def test_publish_loop_exits_after_configured_consecutive_failures(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

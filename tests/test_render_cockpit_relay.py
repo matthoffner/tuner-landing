@@ -145,6 +145,44 @@ class RenderCockpitRelayTest(unittest.TestCase):
         self.assertEqual(status["cockpit_status"], "degraded")
         self.assertEqual(status["cockpit_health"]["reasons"], ["source_status_stale"])
 
+    def test_status_and_health_report_unavailable_source_status_file(self) -> None:
+        self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
+        self.relay.update_state(
+            {
+                "pushed_at": "2026-06-14T19:59:30Z",
+                "status": {
+                    "status": "waiting",
+                    "loop_running": False,
+                    "source_status_stale": True,
+                    "source_status_file": ".automoat/state/mvp-loop-status.json",
+                    "source_status_file_status": "invalid_json",
+                    "source_status_file_error": "line 1 column 2: Expecting property name",
+                },
+                "log_tail": "loop status file could not be parsed\n",
+            }
+        )
+        self.relay.utc_now = lambda: "2026-06-14T20:00:00Z"
+
+        health = self.relay.health_payload()
+        status = self.relay.relay_status_payload()
+
+        self.assertTrue(health["ok"])
+        self.assertFalse(health["cockpit_ok"])
+        self.assertEqual(health["cockpit_status"], "degraded")
+        self.assertEqual(
+            health["cockpit_health"]["reasons"],
+            [
+                "source_status_stale",
+                "source_status_unavailable",
+                "source_loop_not_running",
+            ],
+        )
+        self.assertEqual(status["source_status_file_status"], "invalid_json")
+        self.assertEqual(
+            status["cockpit_health"]["reasons"],
+            health["cockpit_health"]["reasons"],
+        )
+
     def test_status_and_health_report_failing_source_snapshot(self) -> None:
         self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
         self.relay.update_state(

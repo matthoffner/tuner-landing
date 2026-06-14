@@ -40,13 +40,44 @@ def emit(message: str, *, log_path: Path) -> None:
         handle.write(line + "\n")
 
 
-def read_json(path: Path) -> dict[str, Any] | None:
+def repo_relative(path: Path) -> str:
+    try:
+        return path.relative_to(ROOT).as_posix()
+    except ValueError:
+        return str(path)
+
+
+def read_json_with_status(path: Path) -> tuple[dict[str, Any] | None, dict[str, Any]]:
+    metadata: dict[str, Any] = {
+        "source_status_file": repo_relative(path),
+        "source_status_file_status": "loaded",
+    }
+    if not path.exists():
+        metadata["source_status_file_status"] = "missing"
+        return None, metadata
     try:
         with path.open("r", encoding="utf-8") as handle:
             payload = json.load(handle)
-    except (OSError, json.JSONDecodeError):
-        return None
-    return payload if isinstance(payload, dict) else None
+    except OSError as exc:
+        metadata["source_status_file_status"] = "read_failed"
+        metadata["source_status_file_error"] = str(exc)
+        return None, metadata
+    except json.JSONDecodeError as exc:
+        metadata["source_status_file_status"] = "invalid_json"
+        metadata["source_status_file_error"] = (
+            f"line {exc.lineno} column {exc.colno}: {exc.msg}"
+        )
+        return None, metadata
+    if not isinstance(payload, dict):
+        metadata["source_status_file_status"] = "not_object"
+        metadata["source_status_file_error"] = type(payload).__name__
+        return None, metadata
+    return payload, metadata
+
+
+def read_json(path: Path) -> dict[str, Any] | None:
+    payload, _metadata = read_json_with_status(path)
+    return payload
 
 
 def parse_utc_timestamp(value: Any) -> datetime | None:
@@ -102,11 +133,13 @@ def read_status(
     pid_file: Path = PID_FILE,
     status_stale_after_seconds: int = DEFAULT_STATUS_STALE_AFTER_SECONDS,
 ) -> dict[str, Any]:
-    status = read_json(status_file) or {
+    loaded_status, source_file_metadata = read_json_with_status(status_file)
+    status = loaded_status or {
         "status": "waiting",
         "updated_at": None,
     }
     status = dict(status)
+    status.update(source_file_metadata)
     status.update(status_freshness(status, status_stale_after_seconds))
     pid = local_loop_pid(pid_file)
     status["loop_running"] = pid is not None
@@ -165,13 +198,6 @@ def git_snapshot() -> dict[str, Any]:
     }
 
 
-def repo_relative(path: Path) -> str:
-    try:
-        return path.relative_to(ROOT).as_posix()
-    except ValueError:
-        return str(path)
-
-
 def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     return {
         "pushed_at": utc_now(),
@@ -221,6 +247,7 @@ def source_status_log_fields(payload: dict[str, Any]) -> dict[str, Any]:
         "source_loop_running": status.get("loop_running"),
         "source_status_stale": status.get("source_status_stale"),
         "source_status_age_seconds": status.get("source_status_age_seconds"),
+        "source_status_file_status": status.get("source_status_file_status"),
     }
 
 
@@ -243,7 +270,8 @@ def publish_once_result(args: argparse.Namespace) -> dict[str, Any]:
         f"source_status={source_fields['source_status']} "
         f"source_loop_running={source_fields['source_loop_running']} "
         f"source_status_stale={source_fields['source_status_stale']} "
-        f"source_status_age_seconds={source_fields['source_status_age_seconds']}",
+        f"source_status_age_seconds={source_fields['source_status_age_seconds']} "
+        f"source_status_file_status={source_fields['source_status_file_status']}",
         log_path=args.publisher_log,
     )
     return {
