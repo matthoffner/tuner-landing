@@ -11,6 +11,7 @@ import subprocess
 import sys
 import time
 from datetime import datetime, timezone
+from http import HTTPStatus
 from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
@@ -256,6 +257,22 @@ def relay_response_failure_reason(response: dict[str, Any]) -> str:
     return str(reason).replace("\r", " ").replace("\n", " ")[:200]
 
 
+def http_error_summary(exc: HTTPError) -> dict[str, Any]:
+    try:
+        body_bytes = len(exc.read())
+    except OSError:
+        body_bytes = None
+    try:
+        reason = HTTPStatus(exc.code).phrase
+    except ValueError:
+        reason = "HTTP error"
+    return {
+        "http_status": exc.code,
+        "http_reason": reason.replace("\r", " ").replace("\n", " ")[:80],
+        "http_body_bytes": body_bytes,
+    }
+
+
 def publish_once_result(args: argparse.Namespace) -> dict[str, Any]:
     source_fields: dict[str, Any] = {}
     try:
@@ -263,9 +280,23 @@ def publish_once_result(args: argparse.Namespace) -> dict[str, Any]:
         source_fields = source_status_log_fields(payload)
         response = post_payload(args, payload)
     except HTTPError as exc:
-        detail = exc.read().decode("utf-8", errors="replace")
-        emit(f"publish failed http_status={exc.code} body={detail.strip()}", log_path=args.publisher_log)
-        return {"published": False, "source_status_stale": None}
+        http_fields = http_error_summary(exc)
+        emit(
+            "publish failed "
+            f"http_status={http_fields['http_status']} "
+            f"http_reason={http_fields['http_reason']} "
+            f"http_body_bytes={http_fields['http_body_bytes']} "
+            f"source_status={source_fields.get('source_status', 'unknown')} "
+            f"source_loop_running={source_fields.get('source_loop_running')} "
+            f"source_status_stale={source_fields.get('source_status_stale')} "
+            f"source_status_age_seconds={source_fields.get('source_status_age_seconds')} "
+            f"source_status_file_status={source_fields.get('source_status_file_status')}",
+            log_path=args.publisher_log,
+        )
+        return {
+            "published": False,
+            "source_status_stale": source_fields.get("source_status_stale"),
+        }
     except (OSError, URLError, json.JSONDecodeError, subprocess.SubprocessError) as exc:
         emit(f"publish failed error={exc}", log_path=args.publisher_log)
         return {"published": False, "source_status_stale": None}

@@ -14,6 +14,7 @@ import sys
 import tempfile
 import unittest
 from unittest.mock import patch
+from urllib.error import HTTPError
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -419,6 +420,48 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertIn("source_loop_running=True", log_text)
         self.assertIn("source_status_stale=False", log_text)
         self.assertNotIn("published relay snapshot ok=False", log_text)
+
+    def test_publish_once_logs_http_error_without_response_body(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            publisher_log = Path(tmp) / "publisher.log"
+            args = Namespace(publisher_log=publisher_log)
+            payload = {
+                "status": {
+                    "status": "running",
+                    "loop_running": True,
+                    "source_status_stale": False,
+                    "source_status_age_seconds": 12,
+                    "source_status_file_status": "loaded",
+                },
+                "log_tail": "loop log\n",
+            }
+            error_body = b"unauthorized token=relay-secret\n<html>debug page</html>"
+            self.publisher.build_payload = lambda _args: payload
+            self.publisher.post_payload = lambda _args, _body: (_ for _ in ()).throw(
+                HTTPError(
+                    "https://automoat-cockpit-relay.example/ingest",
+                    401,
+                    "Unauthorized",
+                    {},
+                    io.BytesIO(error_body),
+                )
+            )
+
+            result = self.publisher.publish_once_result(args)
+            log_text = publisher_log.read_text(encoding="utf-8")
+
+        self.assertEqual(
+            result,
+            {"published": False, "source_status_stale": False},
+        )
+        self.assertIn("publish failed http_status=401", log_text)
+        self.assertIn("http_reason=Unauthorized", log_text)
+        self.assertIn(f"http_body_bytes={len(error_body)}", log_text)
+        self.assertIn("source_status=running", log_text)
+        self.assertIn("source_loop_running=True", log_text)
+        self.assertIn("source_status_file_status=loaded", log_text)
+        self.assertNotIn("relay-secret", log_text)
+        self.assertNotIn("<html>", log_text)
 
     def test_publish_loop_exits_after_configured_consecutive_failures(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
