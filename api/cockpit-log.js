@@ -1,32 +1,4 @@
-function cleanUrl(value) {
-  return (value || "").trim().replace(/\/$/, "");
-}
-
-function upstreams() {
-  const relayUrl = cleanUrl(process.env.AUTOMOAT_RELAY_URL);
-  const bridgeUrl = cleanUrl(process.env.AUTOMOAT_BRIDGE_URL);
-  const configured = [];
-  if (relayUrl) {
-    configured.push({
-      kind: "relay",
-      url: `${relayUrl}/api/log`,
-      headers: relayHeaders(),
-    });
-  }
-  if (bridgeUrl) {
-    configured.push({
-      kind: "legacy_bridge",
-      url: `${bridgeUrl}/.automoat/logs/mvp-loop.log`,
-      headers: { "ngrok-skip-browser-warning": "1" },
-    });
-  }
-  return configured;
-}
-
-function relayHeaders() {
-  const token = (process.env.AUTOMOAT_RELAY_READ_TOKEN || process.env.AUTOMOAT_RELAY_TOKEN || "").trim();
-  return token ? { "X-Automoat-Relay-Token": token } : {};
-}
+const { upstreams } = require("./cockpit-upstreams");
 
 function setHeaders(response, contentType) {
   response.setHeader("Access-Control-Allow-Origin", "*");
@@ -49,13 +21,21 @@ module.exports = async function handler(request, response) {
     return;
   }
 
-  const configured = upstreams();
+  const { configured, invalid } = upstreams({
+    relayPath: "/api/log",
+    bridgePath: "/.automoat/logs/mvp-loop.log",
+  });
   if (!configured.length) {
+    if (invalid.length) {
+      const details = invalid.map((item) => `${item.kind}:${item.error}`).join(", ");
+      response.status(503).send(`cockpit_relay_invalid_configuration: ${details}\n`);
+      return;
+    }
     response.status(503).send("cockpit_relay_not_configured: set AUTOMOAT_RELAY_URL on Vercel\n");
     return;
   }
 
-  const attempts = [];
+  const attempts = invalid.map((item) => `${item.kind}:${item.error}`);
   for (const upstreamConfig of configured) {
     try {
       const upstream = await fetch(upstreamConfig.url, { headers: upstreamConfig.headers });
