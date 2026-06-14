@@ -111,6 +111,72 @@ class CockpitApiProxyTest(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_shared_proxy_helpers_set_diagnostics_and_keep_head_bodyless(self) -> None:
+        result = run_node(
+            """
+            const assert = require("assert");
+            const {
+              EXPOSED_UPSTREAM_HEADERS,
+              sendProxyResponse,
+              setProxyHeaders,
+              setUpstreamSelectionHeaders,
+            } = require("./api/cockpit-upstreams");
+
+            function response() {
+              return {
+                statusCode: null,
+                body: "unset",
+                headers: {},
+                setHeader(name, value) {
+                  this.headers[name] = value;
+                },
+                status(code) {
+                  this.statusCode = code;
+                  return this;
+                },
+                send(body) {
+                  this.body = String(body);
+                  return this;
+                },
+                end(body = "") {
+                  this.body = String(body);
+                  return this;
+                },
+              };
+            }
+
+            const getResponse = response();
+            setProxyHeaders(getResponse, "application/json; charset=utf-8");
+            setUpstreamSelectionHeaders(getResponse, "legacy_bridge", 1, [
+              { kind: "relay", status: 503 },
+              { kind: "legacy_bridge", status: 200 },
+            ]);
+            sendProxyResponse({ method: "GET" }, getResponse, 200, '{"ok":true}');
+            assert.strictEqual(getResponse.statusCode, 200);
+            assert.strictEqual(getResponse.body, '{"ok":true}');
+            assert.strictEqual(
+              getResponse.headers["Access-Control-Expose-Headers"],
+              EXPOSED_UPSTREAM_HEADERS,
+            );
+            assert.strictEqual(getResponse.headers["X-Automoat-Upstream"], "legacy_bridge");
+            assert.strictEqual(getResponse.headers["X-Automoat-Upstream-Fallback-Count"], "1");
+            assert.strictEqual(
+              getResponse.headers["X-Automoat-Upstream-Attempts"],
+              "relay:503,legacy_bridge:200",
+            );
+            assert.strictEqual(getResponse.headers["Content-Type"], "application/json; charset=utf-8");
+
+            const headResponse = response();
+            setProxyHeaders(headResponse, "text/plain; charset=utf-8");
+            sendProxyResponse({ method: "HEAD" }, headResponse, 503, "must not be sent");
+            assert.strictEqual(headResponse.statusCode, 503);
+            assert.strictEqual(headResponse.body, "");
+            assert.strictEqual(headResponse.headers["Content-Type"], "text/plain; charset=utf-8");
+            """
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_handlers_reject_secret_bearing_upstream_urls_without_fetching(self) -> None:
         result = run_node(
             """

@@ -121,6 +121,30 @@ function invalidUpstreamsHeader(invalid) {
     .join(",");
 }
 
+function setProxyHeaders(response, contentType) {
+  response.setHeader("Access-Control-Allow-Origin", "*");
+  response.setHeader("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS");
+  response.setHeader("Access-Control-Allow-Headers", "content-type");
+  response.setHeader("Access-Control-Expose-Headers", EXPOSED_UPSTREAM_HEADERS);
+  response.setHeader("Cache-Control", "no-store");
+  response.setHeader("Content-Type", contentType);
+}
+
+function setUpstreamSelectionHeaders(response, upstreamKind, fallbackCount, attempts) {
+  response.setHeader("X-Automoat-Upstream", upstreamKind);
+  response.setHeader("X-Automoat-Upstream-Fallback-Count", String(fallbackCount));
+  response.setHeader("X-Automoat-Upstream-Attempts", upstreamAttemptsHeader(attempts));
+}
+
+function sendProxyResponse(request, response, statusCode, body) {
+  response.status(statusCode);
+  if (request.method === "HEAD") {
+    response.end();
+    return;
+  }
+  response.send(body);
+}
+
 async function fetchUpstreamText(upstreamConfig, timeoutMs, method = "GET") {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
@@ -199,6 +223,9 @@ module.exports = {
   normalizeBaseUrl,
   normalizeUpstreamTimeoutMs,
   relayHeaders,
+  sendProxyResponse,
+  setProxyHeaders,
+  setUpstreamSelectionHeaders,
   upstreamAttemptSummary,
   upstreamAttemptsHeader,
   upstreams,

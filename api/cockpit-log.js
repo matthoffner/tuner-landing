@@ -1,9 +1,11 @@
 const {
-  EXPOSED_UPSTREAM_HEADERS,
   NOT_CONFIGURED_UPSTREAMS_HEADER,
   classifyUpstreamError,
   fetchUpstreamText,
   invalidUpstreamsHeader,
+  sendProxyResponse,
+  setProxyHeaders,
+  setUpstreamSelectionHeaders,
   upstreamAttemptSummary,
   upstreamAttemptsHeader,
   upstreams,
@@ -26,32 +28,8 @@ function parseLogPayload(body) {
   return { ok: true, body, truncated: false };
 }
 
-function setHeaders(response, contentType) {
-  response.setHeader("Access-Control-Allow-Origin", "*");
-  response.setHeader("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS");
-  response.setHeader("Access-Control-Allow-Headers", "content-type");
-  response.setHeader("Access-Control-Expose-Headers", EXPOSED_UPSTREAM_HEADERS);
-  response.setHeader("Cache-Control", "no-store");
-  response.setHeader("Content-Type", contentType);
-}
-
-function setUpstreamHeaders(response, upstreamKind, fallbackCount, attempts) {
-  response.setHeader("X-Automoat-Upstream", upstreamKind);
-  response.setHeader("X-Automoat-Upstream-Fallback-Count", String(fallbackCount));
-  response.setHeader("X-Automoat-Upstream-Attempts", upstreamAttemptsHeader(attempts));
-}
-
-function sendResponse(request, response, statusCode, body) {
-  response.status(statusCode);
-  if (request.method === "HEAD") {
-    response.end();
-    return;
-  }
-  response.send(body);
-}
-
 module.exports = async function handler(request, response) {
-  setHeaders(response, "text/plain; charset=utf-8");
+  setProxyHeaders(response, "text/plain; charset=utf-8");
 
   if (request.method === "OPTIONS") {
     response.status(204).end();
@@ -59,7 +37,7 @@ module.exports = async function handler(request, response) {
   }
 
   if (request.method !== "GET" && request.method !== "HEAD") {
-    sendResponse(request, response, 405, "method_not_allowed\n");
+    sendProxyResponse(request, response, 405, "method_not_allowed\n");
     return;
   }
 
@@ -73,12 +51,12 @@ module.exports = async function handler(request, response) {
   if (invalid.length) {
     response.setHeader("X-Automoat-Upstream-Invalid-Config", invalidUpstreamsHeader(invalid));
     const details = invalid.map((item) => `${item.kind}:${item.error}`).join(", ");
-    sendResponse(request, response, 503, `cockpit_relay_invalid_configuration: ${details}\n`);
+    sendProxyResponse(request, response, 503, `cockpit_relay_invalid_configuration: ${details}\n`);
     return;
   }
   if (!configured.length) {
     response.setHeader("X-Automoat-Upstream-Not-Configured", NOT_CONFIGURED_UPSTREAMS_HEADER);
-    sendResponse(
+    sendProxyResponse(
       request,
       response,
       503,
@@ -100,11 +78,11 @@ module.exports = async function handler(request, response) {
         continue;
       }
       if (request.method === "HEAD") {
-        setUpstreamHeaders(response, upstreamConfig.kind, attempts.length, [
+        setUpstreamSelectionHeaders(response, upstreamConfig.kind, attempts.length, [
           ...attempts,
           { kind: upstreamConfig.kind, status: upstream.status },
         ]);
-        sendResponse(request, response, upstream.status, "");
+        sendProxyResponse(request, response, upstream.status, "");
         return;
       }
       const parsed = parseLogPayload(upstream.body);
@@ -116,11 +94,11 @@ module.exports = async function handler(request, response) {
         });
         continue;
       }
-      setUpstreamHeaders(response, upstreamConfig.kind, attempts.length, [
+      setUpstreamSelectionHeaders(response, upstreamConfig.kind, attempts.length, [
         ...attempts,
         { kind: upstreamConfig.kind, status: upstream.status },
       ]);
-      sendResponse(request, response, upstream.status, parsed.body);
+      sendProxyResponse(request, response, upstream.status, parsed.body);
       return;
     } catch (error) {
       attempts.push({
@@ -132,7 +110,7 @@ module.exports = async function handler(request, response) {
   }
 
   response.setHeader("X-Automoat-Upstream-Attempts", upstreamAttemptsHeader(attempts));
-  sendResponse(
+  sendProxyResponse(
     request,
     response,
     502,
