@@ -1,3 +1,5 @@
+const DEFAULT_UPSTREAM_TIMEOUT_MS = 8000;
+
 function normalizeBaseUrl(value) {
   const raw = (value || "").trim();
   if (!raw) {
@@ -28,14 +30,58 @@ function normalizeBaseUrl(value) {
   return { url: `${parsed.origin}${pathname === "/" ? "" : pathname}`, error: null };
 }
 
+function normalizeUpstreamTimeoutMs(value) {
+  const raw = (value || "").trim();
+  if (!raw) {
+    return { timeoutMs: DEFAULT_UPSTREAM_TIMEOUT_MS, error: null };
+  }
+
+  const parsed = Number(raw);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    return {
+      timeoutMs: DEFAULT_UPSTREAM_TIMEOUT_MS,
+      error: "AUTOMOAT_COCKPIT_UPSTREAM_TIMEOUT_MS must be a positive integer",
+    };
+  }
+  return { timeoutMs: parsed, error: null };
+}
+
 function relayHeaders(env = process.env) {
   const token = (env.AUTOMOAT_RELAY_READ_TOKEN || env.AUTOMOAT_RELAY_TOKEN || "").trim();
   return token ? { "X-Automoat-Relay-Token": token } : {};
 }
 
+async function fetchUpstreamText(upstreamConfig, timeoutMs) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const upstream = await fetch(upstreamConfig.url, {
+      headers: upstreamConfig.headers,
+      signal: controller.signal,
+    });
+    const body = await upstream.text();
+    return {
+      ok: upstream.ok,
+      status: upstream.status,
+      body,
+    };
+  } catch (error) {
+    if (controller.signal.aborted) {
+      throw new Error(`timeout after ${timeoutMs}ms`);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 function upstreams({ relayPath, bridgePath, env = process.env }) {
   const configured = [];
   const invalid = [];
+  const timeout = normalizeUpstreamTimeoutMs(env.AUTOMOAT_COCKPIT_UPSTREAM_TIMEOUT_MS);
+  if (timeout.error) {
+    invalid.push({ kind: "timeout", error: timeout.error });
+  }
 
   const relay = normalizeBaseUrl(env.AUTOMOAT_RELAY_URL);
   if (relay.url) {
@@ -59,11 +105,14 @@ function upstreams({ relayPath, bridgePath, env = process.env }) {
     invalid.push({ kind: "legacy_bridge", error: bridge.error });
   }
 
-  return { configured, invalid };
+  return { configured, invalid, timeoutMs: timeout.timeoutMs };
 }
 
 module.exports = {
+  DEFAULT_UPSTREAM_TIMEOUT_MS,
+  fetchUpstreamText,
   normalizeBaseUrl,
+  normalizeUpstreamTimeoutMs,
   relayHeaders,
   upstreams,
 };

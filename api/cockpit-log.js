@@ -1,4 +1,4 @@
-const { upstreams } = require("./cockpit-upstreams");
+const { fetchUpstreamText, upstreams } = require("./cockpit-upstreams");
 
 function setHeaders(response, contentType) {
   response.setHeader("Access-Control-Allow-Origin", "*");
@@ -21,7 +21,7 @@ module.exports = async function handler(request, response) {
     return;
   }
 
-  const { configured, invalid } = upstreams({
+  const { configured, invalid, timeoutMs } = upstreams({
     relayPath: "/api/log",
     bridgePath: "/.automoat/logs/mvp-loop.log",
   });
@@ -38,13 +38,12 @@ module.exports = async function handler(request, response) {
   const attempts = [];
   for (const upstreamConfig of configured) {
     try {
-      const upstream = await fetch(upstreamConfig.url, { headers: upstreamConfig.headers });
-      const body = await upstream.text();
+      const upstream = await fetchUpstreamText(upstreamConfig, timeoutMs);
       if (!upstream.ok) {
         attempts.push(`${upstreamConfig.kind}:${upstream.status}`);
         continue;
       }
-      response.status(upstream.status).send(body);
+      response.status(upstream.status).send(upstream.body);
       return;
     } catch (error) {
       attempts.push(`${upstreamConfig.kind}:${error.message}`);

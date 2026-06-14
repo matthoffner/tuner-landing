@@ -54,6 +54,41 @@ class CockpitApiProxyTest(unittest.TestCase):
             });
             assert.strictEqual(result.configured[1].kind, "legacy_bridge");
             assert.strictEqual(result.configured[1].url, "https://legacy-bridge.example/base/api/status");
+            assert.strictEqual(result.timeoutMs, 8000);
+            """
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_upstreams_validate_configured_timeout(self) -> None:
+        result = run_node(
+            """
+            const assert = require("assert");
+            const { upstreams } = require("./api/cockpit-upstreams");
+            const valid = upstreams({
+              relayPath: "/api/status",
+              bridgePath: "/api/status",
+              env: {
+                AUTOMOAT_RELAY_URL: "https://automoat-cockpit-relay.example",
+                AUTOMOAT_COCKPIT_UPSTREAM_TIMEOUT_MS: "1250",
+              },
+            });
+            assert.deepStrictEqual(valid.invalid, []);
+            assert.strictEqual(valid.timeoutMs, 1250);
+
+            const invalid = upstreams({
+              relayPath: "/api/status",
+              bridgePath: "/api/status",
+              env: {
+                AUTOMOAT_RELAY_URL: "https://automoat-cockpit-relay.example",
+                AUTOMOAT_COCKPIT_UPSTREAM_TIMEOUT_MS: "soon",
+              },
+            });
+            assert.strictEqual(invalid.timeoutMs, 8000);
+            assert.deepStrictEqual(invalid.invalid, [{
+              kind: "timeout",
+              error: "AUTOMOAT_COCKPIT_UPSTREAM_TIMEOUT_MS must be a positive integer",
+            }]);
             """
         )
 
@@ -180,6 +215,147 @@ class CockpitApiProxyTest(unittest.TestCase):
               assert(!logResponse.body.includes("legacy-bridge.example"));
               assert(!logResponse.body.includes("relay-user"));
               assert(!logResponse.body.includes("relay-pass"));
+            })().catch((error) => {
+              console.error(error.stack || error);
+              process.exit(1);
+            });
+            """
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_handlers_timeout_slow_relay_and_fall_back_to_bridge(self) -> None:
+        result = run_node(
+            """
+            const assert = require("assert");
+            const statusHandler = require("./api/cockpit-status");
+            const logHandler = require("./api/cockpit-log");
+
+            function response() {
+              return {
+                statusCode: null,
+                body: "",
+                headers: {},
+                setHeader(name, value) {
+                  this.headers[name] = value;
+                },
+                status(code) {
+                  this.statusCode = code;
+                  return this;
+                },
+                send(body) {
+                  this.body = String(body);
+                  return this;
+                },
+                end(body = "") {
+                  this.body = String(body);
+                  return this;
+                },
+              };
+            }
+
+            process.env.AUTOMOAT_RELAY_URL = "https://automoat-cockpit-relay.example";
+            process.env.AUTOMOAT_BRIDGE_URL = "https://legacy-bridge.example";
+            process.env.AUTOMOAT_COCKPIT_UPSTREAM_TIMEOUT_MS = "5";
+            const fetched = [];
+            global.fetch = async (url, options) => {
+              fetched.push(url);
+              if (url.includes("automoat-cockpit-relay.example")) {
+                return new Promise((_resolve, reject) => {
+                  options.signal.addEventListener("abort", () => {
+                    reject(new Error("aborted"));
+                  });
+                });
+              }
+              if (url.endsWith("/api/status")) {
+                return {
+                  ok: true,
+                  status: 200,
+                  text: async () => JSON.stringify({ status: "bridge-live" }),
+                };
+              }
+              return {
+                ok: true,
+                status: 200,
+                text: async () => "bridge log\\n",
+              };
+            };
+
+            (async () => {
+              const statusResponse = response();
+              await statusHandler({ method: "GET" }, statusResponse);
+              assert.strictEqual(statusResponse.statusCode, 200);
+              assert.strictEqual(statusResponse.body, JSON.stringify({ status: "bridge-live" }));
+
+              const logResponse = response();
+              await logHandler({ method: "GET" }, logResponse);
+              assert.strictEqual(logResponse.statusCode, 200);
+              assert.strictEqual(logResponse.body, "bridge log\\n");
+
+              assert.deepStrictEqual(fetched, [
+                "https://automoat-cockpit-relay.example/api/status",
+                "https://legacy-bridge.example/api/status",
+                "https://automoat-cockpit-relay.example/api/log",
+                "https://legacy-bridge.example/.automoat/logs/mvp-loop.log",
+              ]);
+            })().catch((error) => {
+              console.error(error.stack || error);
+              process.exit(1);
+            });
+            """
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_handlers_reject_invalid_timeout_without_fetching(self) -> None:
+        result = run_node(
+            """
+            const assert = require("assert");
+            const statusHandler = require("./api/cockpit-status");
+            const logHandler = require("./api/cockpit-log");
+
+            function response() {
+              return {
+                statusCode: null,
+                body: "",
+                headers: {},
+                setHeader(name, value) {
+                  this.headers[name] = value;
+                },
+                status(code) {
+                  this.statusCode = code;
+                  return this;
+                },
+                send(body) {
+                  this.body = String(body);
+                  return this;
+                },
+                end(body = "") {
+                  this.body = String(body);
+                  return this;
+                },
+              };
+            }
+
+            process.env.AUTOMOAT_RELAY_URL = "https://automoat-cockpit-relay.example";
+            process.env.AUTOMOAT_BRIDGE_URL = "";
+            process.env.AUTOMOAT_COCKPIT_UPSTREAM_TIMEOUT_MS = "soon";
+            global.fetch = async () => {
+              throw new Error("fetch should not be called with an invalid timeout");
+            };
+
+            (async () => {
+              const statusResponse = response();
+              await statusHandler({ method: "GET" }, statusResponse);
+              assert.strictEqual(statusResponse.statusCode, 503);
+              assert(statusResponse.body.includes("cockpit_relay_invalid_configuration"));
+              assert(statusResponse.body.includes("AUTOMOAT_COCKPIT_UPSTREAM_TIMEOUT_MS"));
+
+              const logResponse = response();
+              await logHandler({ method: "GET" }, logResponse);
+              assert.strictEqual(logResponse.statusCode, 503);
+              assert(logResponse.body.includes("cockpit_relay_invalid_configuration"));
+              assert(logResponse.body.includes("AUTOMOAT_COCKPIT_UPSTREAM_TIMEOUT_MS"));
             })().catch((error) => {
               console.error(error.stack || error);
               process.exit(1);
