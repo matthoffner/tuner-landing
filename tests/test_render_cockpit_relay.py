@@ -9,6 +9,7 @@ import importlib.util
 import os
 from pathlib import Path
 import sys
+import tempfile
 import unittest
 from unittest.mock import patch
 
@@ -152,6 +153,37 @@ class RenderCockpitRelayTest(unittest.TestCase):
         self.assertIn("--max-ingest-bytes must be an integer", errors)
         self.assertIn("--max-log-chars must be greater than 0", errors)
         self.assertIn("--stale-after-seconds must be greater than 0", errors)
+
+    def test_relay_preflight_rejects_state_file_directory(self) -> None:
+        with patch.dict(os.environ, {"AUTOMOAT_RELAY_TOKEN": "relay-token"}, clear=True), patch.object(
+            sys,
+            "argv",
+            ["render_cockpit_relay.py", "--check-env", "--state-file", str(ROOT)],
+        ):
+            args = self.relay.parse_args()
+            errors = self.relay.validate_relay_configuration(args)
+
+        self.assertIn("--state-file must be a file path, not a directory", errors)
+
+    def test_update_state_reports_persistence_failure_without_mutating_snapshot(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            state_directory = Path(tmp) / "state-dir"
+            state_directory.mkdir()
+            self.relay.CONFIG["state_file"] = state_directory
+            before = self.relay.snapshot()
+
+            with self.assertRaisesRegex(
+                self.relay.RelayPersistenceError,
+                "failed to persist relay state",
+            ):
+                self.relay.update_state(
+                    {
+                        "status": {"status": "running", "loop_running": True},
+                        "log_tail": "new log\n",
+                    }
+                )
+
+            self.assertEqual(self.relay.snapshot(), before)
 
     def test_check_env_exits_without_serving_when_relay_config_is_valid(self) -> None:
         env = {

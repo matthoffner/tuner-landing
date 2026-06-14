@@ -24,6 +24,10 @@ DEFAULT_MAX_LOG_CHARS = 160 * 1024
 DEFAULT_STALE_AFTER_SECONDS = 120
 
 
+class RelayPersistenceError(RuntimeError):
+    """Raised when a validated snapshot cannot be written to relay storage."""
+
+
 def utc_now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
@@ -143,9 +147,12 @@ def update_state(payload: dict[str, Any]) -> dict[str, Any]:
         "publisher": publisher,
     }
     with STATE_LOCK:
+        try:
+            save_state(CONFIG.get("state_file"), next_state)
+        except OSError as exc:
+            raise RelayPersistenceError(f"failed to persist relay state: {exc}") from exc
         STATE.clear()
         STATE.update(next_state)
-        save_state(CONFIG.get("state_file"), STATE)
         return json.loads(json.dumps(STATE))
 
 
@@ -231,6 +238,13 @@ def validate_relay_configuration(
         errors.append("AUTOMOAT_RELAY_TOKEN is required")
     if not str(args.host).strip():
         errors.append("--host must not be empty")
+    state_file = str(args.state_file).strip()
+    if state_file:
+        state_path = Path(state_file).expanduser()
+        if state_path.exists() and state_path.is_dir():
+            errors.append("--state-file must be a file path, not a directory")
+        elif state_path.parent.exists() and not state_path.parent.is_dir():
+            errors.append("--state-file parent must be a directory")
 
     port = parse_positive_int("--port", args.port, errors)
     if port is not None and port > 65535:
@@ -400,6 +414,12 @@ class RelayHandler(BaseHTTPRequestHandler):
             state = update_state(payload)
         except ValueError as exc:
             self.send_json({"error": "invalid_payload", "message": str(exc)}, HTTPStatus.BAD_REQUEST)
+            return
+        except RelayPersistenceError as exc:
+            self.send_json(
+                {"error": "persistence_failed", "message": str(exc)},
+                HTTPStatus.INTERNAL_SERVER_ERROR,
+            )
             return
         self.send_json(
             {
