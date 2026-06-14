@@ -307,6 +307,143 @@ class CockpitApiProxyTest(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_status_handler_rejects_non_json_success_and_falls_back(self) -> None:
+        result = run_node(
+            """
+            const assert = require("assert");
+            const statusHandler = require("./api/cockpit-status");
+
+            function response() {
+              return {
+                statusCode: null,
+                body: "",
+                headers: {},
+                setHeader(name, value) {
+                  this.headers[name] = value;
+                },
+                status(code) {
+                  this.statusCode = code;
+                  return this;
+                },
+                send(body) {
+                  this.body = String(body);
+                  return this;
+                },
+                end(body = "") {
+                  this.body = String(body);
+                  return this;
+                },
+              };
+            }
+
+            process.env.AUTOMOAT_RELAY_URL = "https://automoat-cockpit-relay.example";
+            process.env.AUTOMOAT_BRIDGE_URL = "https://legacy-bridge.example";
+            process.env.AUTOMOAT_COCKPIT_UPSTREAM_TIMEOUT_MS = "";
+            const fetched = [];
+            global.fetch = async (url) => {
+              fetched.push(url);
+              if (url.includes("automoat-cockpit-relay.example")) {
+                return {
+                  ok: true,
+                  status: 200,
+                  text: async () => "<html>offline</html>",
+                };
+              }
+              return {
+                ok: true,
+                status: 200,
+                text: async () => JSON.stringify({ status: "bridge-live", cockpit_ok: true }),
+              };
+            };
+
+            (async () => {
+              const statusResponse = response();
+              await statusHandler({ method: "GET" }, statusResponse);
+              assert.strictEqual(statusResponse.statusCode, 200);
+              assert.deepStrictEqual(JSON.parse(statusResponse.body), {
+                status: "bridge-live",
+                cockpit_ok: true,
+              });
+              assert.deepStrictEqual(fetched, [
+                "https://automoat-cockpit-relay.example/api/status",
+                "https://legacy-bridge.example/api/status",
+              ]);
+            })().catch((error) => {
+              console.error(error.stack || error);
+              process.exit(1);
+            });
+            """
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_status_handler_reports_invalid_success_payloads_without_body_leak(self) -> None:
+        result = run_node(
+            """
+            const assert = require("assert");
+            const statusHandler = require("./api/cockpit-status");
+
+            function response() {
+              return {
+                statusCode: null,
+                body: "",
+                headers: {},
+                setHeader(name, value) {
+                  this.headers[name] = value;
+                },
+                status(code) {
+                  this.statusCode = code;
+                  return this;
+                },
+                send(body) {
+                  this.body = String(body);
+                  return this;
+                },
+                end(body = "") {
+                  this.body = String(body);
+                  return this;
+                },
+              };
+            }
+
+            process.env.AUTOMOAT_RELAY_URL = "https://automoat-cockpit-relay.example";
+            process.env.AUTOMOAT_BRIDGE_URL = "https://legacy-bridge.example";
+            process.env.AUTOMOAT_COCKPIT_UPSTREAM_TIMEOUT_MS = "";
+            global.fetch = async (url) => {
+              if (url.includes("automoat-cockpit-relay.example")) {
+                return {
+                  ok: true,
+                  status: 200,
+                  text: async () => "<html>relay-secret-offline-page</html>",
+                };
+              }
+              return {
+                ok: true,
+                status: 200,
+                text: async () => JSON.stringify(["not", "an", "object"]),
+              };
+            };
+
+            (async () => {
+              const statusResponse = response();
+              await statusHandler({ method: "GET" }, statusResponse);
+              assert.strictEqual(statusResponse.statusCode, 502);
+              const payload = JSON.parse(statusResponse.body);
+              assert.strictEqual(payload.error, "cockpit_relay_unreachable");
+              assert.deepStrictEqual(payload.attempts, [
+                { kind: "relay", status: 200, error: "invalid_json" },
+                { kind: "legacy_bridge", status: 200, error: "status_payload_must_be_object" },
+              ]);
+              assert(!statusResponse.body.includes("relay-secret-offline-page"));
+            })().catch((error) => {
+              console.error(error.stack || error);
+              process.exit(1);
+            });
+            """
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_handlers_reject_invalid_timeout_without_fetching(self) -> None:
         result = run_node(
             """

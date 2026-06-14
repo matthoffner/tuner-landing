@@ -1,5 +1,18 @@
 const { fetchUpstreamText, upstreams } = require("./cockpit-upstreams");
 
+function parseStatusPayload(body) {
+  let payload;
+  try {
+    payload = JSON.parse(body);
+  } catch (_error) {
+    return { ok: false, error: "invalid_json" };
+  }
+  if (!payload || Array.isArray(payload) || typeof payload !== "object") {
+    return { ok: false, error: "status_payload_must_be_object" };
+  }
+  return { ok: true, body: JSON.stringify(payload) };
+}
+
 function setHeaders(response, contentType) {
   response.setHeader("Access-Control-Allow-Origin", "*");
   response.setHeader("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS");
@@ -51,7 +64,16 @@ module.exports = async function handler(request, response) {
         });
         continue;
       }
-      response.status(upstream.status).send(upstream.body);
+      const parsed = parseStatusPayload(upstream.body);
+      if (!parsed.ok) {
+        attempts.push({
+          kind: upstreamConfig.kind,
+          status: upstream.status,
+          error: parsed.error,
+        });
+        continue;
+      }
+      response.status(upstream.status).send(parsed.body);
       return;
     } catch (error) {
       attempts.push({
@@ -66,3 +88,5 @@ module.exports = async function handler(request, response) {
     attempts,
   }));
 };
+
+module.exports.parseStatusPayload = parseStatusPayload;
