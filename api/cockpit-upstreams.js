@@ -1,4 +1,5 @@
 const DEFAULT_UPSTREAM_TIMEOUT_MS = 8000;
+const MAX_UPSTREAM_TIMEOUT_MS = 15000;
 const EXPOSED_UPSTREAM_HEADERS = [
   "X-Automoat-Upstream",
   "X-Automoat-Upstream-Fallback-Count",
@@ -50,6 +51,12 @@ function normalizeUpstreamTimeoutMs(value) {
     return {
       timeoutMs: DEFAULT_UPSTREAM_TIMEOUT_MS,
       error: "AUTOMOAT_COCKPIT_UPSTREAM_TIMEOUT_MS must be a positive integer",
+    };
+  }
+  if (parsed > MAX_UPSTREAM_TIMEOUT_MS) {
+    return {
+      timeoutMs: DEFAULT_UPSTREAM_TIMEOUT_MS,
+      error: `AUTOMOAT_COCKPIT_UPSTREAM_TIMEOUT_MS must be less than or equal to ${MAX_UPSTREAM_TIMEOUT_MS}`,
     };
   }
   return { timeoutMs: parsed, error: null };
@@ -184,6 +191,7 @@ function upstreams({ relayPath, bridgePath, env = process.env }) {
 module.exports = {
   DEFAULT_UPSTREAM_TIMEOUT_MS,
   EXPOSED_UPSTREAM_HEADERS,
+  MAX_UPSTREAM_TIMEOUT_MS,
   NOT_CONFIGURED_UPSTREAMS_HEADER,
   classifyUpstreamError,
   fetchUpstreamText,

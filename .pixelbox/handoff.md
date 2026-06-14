@@ -4,6 +4,12 @@ Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
 - lane: editor
+- status: capped the Vercel cockpit proxy upstream timeout override at 15000ms so malformed long `AUTOMOAT_COCKPIT_UPSTREAM_TIMEOUT_MS` settings fail closed before `/api/cockpit-status` or `/api/cockpit-log` can wait until the serverless platform kills the request; no Dallas raw CSV rows were edited
+- files: api/cockpit-upstreams.js, tests/test_cockpit_api_proxy.py, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- checks: `python3 -m unittest tests.test_cockpit_api_proxy`; `node --check api/cockpit-upstreams.js`; `node --check api/cockpit-status.js`; `node --check api/cockpit-log.js`; `python3 -m unittest discover -s tests`; `python3 -m py_compile tests/test_cockpit_api_proxy.py`; `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json`; `cmp -s generated/landing.html index.html`
+- next: keep `AUTOMOAT_COCKPIT_UPSTREAM_TIMEOUT_MS` at or below `15000`; if cockpit fallback needs more time, prefer improving relay responsiveness or upstream health rather than raising the serverless proxy wait budget
+
+- lane: editor
 - status: redacted query strings/fragments from Render cockpit relay access logs before request lines are written to stderr, preventing accidental URL query tokens on cockpit probes from persisting in Render logs; added deterministic coverage for the sanitizer and `RelayHandler.log_message`; no Dallas raw CSV rows were edited
 - files: scripts/render_cockpit_relay.py, tests/test_render_cockpit_relay.py, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
 - checks: `python3 -m unittest tests/test_render_cockpit_relay.py -v`; `python3 -m py_compile scripts/render_cockpit_relay.py tests/test_render_cockpit_relay.py`; `python3 -m unittest discover -s tests -v`; `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json > /tmp/automoat-relay-log-redaction-ready.json`; JSON assertion for readiness `ready`, `535` permits, `1082` inspections, and zero thin groups; `cmp -s generated/landing.html index.html`; `git diff --check`; `git diff --exit-code -- .pxcode/preview.json`

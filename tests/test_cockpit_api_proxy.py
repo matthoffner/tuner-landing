@@ -64,7 +64,10 @@ class CockpitApiProxyTest(unittest.TestCase):
         result = run_node(
             """
             const assert = require("assert");
-            const { upstreams } = require("./api/cockpit-upstreams");
+            const {
+              MAX_UPSTREAM_TIMEOUT_MS,
+              upstreams,
+            } = require("./api/cockpit-upstreams");
             const valid = upstreams({
               relayPath: "/api/status",
               bridgePath: "/api/status",
@@ -88,6 +91,20 @@ class CockpitApiProxyTest(unittest.TestCase):
             assert.deepStrictEqual(invalid.invalid, [{
               kind: "timeout",
               error: "AUTOMOAT_COCKPIT_UPSTREAM_TIMEOUT_MS must be a positive integer",
+            }]);
+
+            const tooHigh = upstreams({
+              relayPath: "/api/status",
+              bridgePath: "/api/status",
+              env: {
+                AUTOMOAT_RELAY_URL: "https://automoat-cockpit-relay.example",
+                AUTOMOAT_COCKPIT_UPSTREAM_TIMEOUT_MS: String(MAX_UPSTREAM_TIMEOUT_MS + 1),
+              },
+            });
+            assert.strictEqual(tooHigh.timeoutMs, 8000);
+            assert.deepStrictEqual(tooHigh.invalid, [{
+              kind: "timeout",
+              error: `AUTOMOAT_COCKPIT_UPSTREAM_TIMEOUT_MS must be less than or equal to ${MAX_UPSTREAM_TIMEOUT_MS}`,
             }]);
             """
         )
@@ -776,6 +793,28 @@ class CockpitApiProxyTest(unittest.TestCase):
               assert.strictEqual(logResponse.statusCode, 503);
               assert(logResponse.body.includes("cockpit_relay_invalid_configuration"));
               assert(logResponse.body.includes("AUTOMOAT_COCKPIT_UPSTREAM_TIMEOUT_MS"));
+
+              process.env.AUTOMOAT_COCKPIT_UPSTREAM_TIMEOUT_MS = "15001";
+
+              const highStatusResponse = response();
+              await statusHandler({ method: "GET" }, highStatusResponse);
+              assert.strictEqual(highStatusResponse.statusCode, 503);
+              assert(highStatusResponse.body.includes("cockpit_relay_invalid_configuration"));
+              assert(highStatusResponse.body.includes("less than or equal to 15000"));
+              assert.strictEqual(
+                highStatusResponse.headers["X-Automoat-Upstream-Invalid-Config"],
+                "timeout:AUTOMOAT_COCKPIT_UPSTREAM_TIMEOUT_MS must be less than or equal to 15000",
+              );
+
+              const highLogResponse = response();
+              await logHandler({ method: "GET" }, highLogResponse);
+              assert.strictEqual(highLogResponse.statusCode, 503);
+              assert(highLogResponse.body.includes("cockpit_relay_invalid_configuration"));
+              assert(highLogResponse.body.includes("less than or equal to 15000"));
+              assert.strictEqual(
+                highLogResponse.headers["X-Automoat-Upstream-Invalid-Config"],
+                "timeout:AUTOMOAT_COCKPIT_UPSTREAM_TIMEOUT_MS must be less than or equal to 15000",
+              );
             })().catch((error) => {
               console.error(error.stack || error);
               process.exit(1);
