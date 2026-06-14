@@ -119,6 +119,28 @@ def read_json(path: Path) -> dict[str, Any]:
         return json.load(handle)
 
 
+def artifact_error(status: str, path: Path, error: str | None = None) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "artifact_status": status,
+        "artifact_path": repo_path(path),
+    }
+    if error:
+        payload["artifact_error"] = error
+    return payload
+
+
+def read_json_artifact(path: Path) -> tuple[dict[str, Any], dict[str, Any]]:
+    try:
+        payload = read_json(path)
+    except FileNotFoundError:
+        return {}, artifact_error("missing", path)
+    except (OSError, json.JSONDecodeError) as exc:
+        return {}, artifact_error("invalid", path, str(exc))
+    if not isinstance(payload, dict):
+        return {}, artifact_error("invalid", path, "artifact JSON must be an object")
+    return payload, artifact_error("loaded", path)
+
+
 def shell(command: list[str], timeout: float | None = None) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         command,
@@ -246,32 +268,58 @@ def import_pipeline_snapshot() -> dict[str, Any]:
 
 
 def inspect_artifacts() -> dict[str, Any]:
-    contract = read_json(CONTRACT_PATH)
-    coverage = read_json(COVERAGE_PATH)
-    queue = read_json(QUEUE_PATH)
+    contract, contract_artifact = read_json_artifact(CONTRACT_PATH)
+    coverage, coverage_artifact = read_json_artifact(COVERAGE_PATH)
+    queue, queue_artifact = read_json_artifact(QUEUE_PATH)
     checks = contract.get("checks", [])
-    passed_checks = sum(1 for check in checks if check.get("passed") is True)
+    if not isinstance(checks, list):
+        checks = []
+    passed_checks = sum(
+        1 for check in checks if isinstance(check, dict) and check.get("passed") is True
+    )
     queue_summary = queue.get("summary", {})
+    if not isinstance(queue_summary, dict):
+        queue_summary = {}
     coverage_summary = coverage.get("summary", {})
+    if not isinstance(coverage_summary, dict):
+        coverage_summary = {}
+    import_pipeline = import_pipeline_snapshot()
+    artifact_statuses = {
+        "contract": contract_artifact["artifact_status"],
+        "coverage": coverage_artifact["artifact_status"],
+        "workflow": queue_artifact["artifact_status"],
+        "import_pipeline": import_pipeline.get("status"),
+    }
     return {
+        "artifact_health": {
+            "status": (
+                "loaded"
+                if all(status == "loaded" for status in artifact_statuses.values())
+                else "degraded"
+            ),
+            "statuses": artifact_statuses,
+        },
         "contract": {
+            **contract_artifact,
             "overall_passed": bool(contract.get("overall_passed")),
             "passed_checks": passed_checks,
             "total_checks": len(checks),
             "next_gap": contract.get("next_gap"),
         },
         "coverage": {
+            **coverage_artifact,
             "latest_dataset_id": coverage_summary.get("latest_dataset_id"),
             "repeated_counts": coverage_summary.get("latest_repeated_counts", {}),
             "thin_counts": coverage_summary.get("latest_thin_counts", {}),
             "recommended_next_step": coverage_summary.get("recommended_next_step"),
         },
         "workflow": {
+            **queue_artifact,
             "queue_items": queue_summary.get("queue_items"),
             "priority_counts": queue_summary.get("priority_counts", {}),
             "recommended_action_counts": queue_summary.get("recommended_action_counts", {}),
         },
-        "import_pipeline": import_pipeline_snapshot(),
+        "import_pipeline": import_pipeline,
     }
 
 
