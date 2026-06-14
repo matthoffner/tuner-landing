@@ -25,14 +25,14 @@ module.exports = async function handler(request, response) {
     relayPath: "/api/status",
     bridgePath: "/api/status",
   });
+  if (invalid.length) {
+    response.status(503).send(JSON.stringify({
+      error: "cockpit_relay_invalid_configuration",
+      invalid,
+    }));
+    return;
+  }
   if (!configured.length) {
-    if (invalid.length) {
-      response.status(503).send(JSON.stringify({
-        error: "cockpit_relay_invalid_configuration",
-        invalid,
-      }));
-      return;
-    }
     response.status(503).send(JSON.stringify({
       error: "cockpit_relay_not_configured",
       message: "Set AUTOMOAT_RELAY_URL on Vercel, or AUTOMOAT_BRIDGE_URL for the legacy ngrok bridge.",
@@ -40,7 +40,7 @@ module.exports = async function handler(request, response) {
     return;
   }
 
-  const attempts = invalid.slice();
+  const attempts = [];
   for (const upstreamConfig of configured) {
     try {
       const upstream = await fetch(upstreamConfig.url, { headers: upstreamConfig.headers });

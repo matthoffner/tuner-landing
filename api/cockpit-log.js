@@ -25,17 +25,17 @@ module.exports = async function handler(request, response) {
     relayPath: "/api/log",
     bridgePath: "/.automoat/logs/mvp-loop.log",
   });
+  if (invalid.length) {
+    const details = invalid.map((item) => `${item.kind}:${item.error}`).join(", ");
+    response.status(503).send(`cockpit_relay_invalid_configuration: ${details}\n`);
+    return;
+  }
   if (!configured.length) {
-    if (invalid.length) {
-      const details = invalid.map((item) => `${item.kind}:${item.error}`).join(", ");
-      response.status(503).send(`cockpit_relay_invalid_configuration: ${details}\n`);
-      return;
-    }
     response.status(503).send("cockpit_relay_not_configured: set AUTOMOAT_RELAY_URL on Vercel\n");
     return;
   }
 
-  const attempts = invalid.map((item) => `${item.kind}:${item.error}`);
+  const attempts = [];
   for (const upstreamConfig of configured) {
     try {
       const upstream = await fetch(upstreamConfig.url, { headers: upstreamConfig.headers });

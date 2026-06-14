@@ -124,6 +124,71 @@ class CockpitApiProxyTest(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_handlers_reject_mixed_invalid_and_valid_upstreams_without_fetching(self) -> None:
+        result = run_node(
+            """
+            const assert = require("assert");
+            const statusHandler = require("./api/cockpit-status");
+            const logHandler = require("./api/cockpit-log");
+
+            function response() {
+              return {
+                statusCode: null,
+                body: "",
+                headers: {},
+                setHeader(name, value) {
+                  this.headers[name] = value;
+                },
+                status(code) {
+                  this.statusCode = code;
+                  return this;
+                },
+                send(body) {
+                  this.body = String(body);
+                  return this;
+                },
+                end(body = "") {
+                  this.body = String(body);
+                  return this;
+                },
+              };
+            }
+
+            process.env.AUTOMOAT_RELAY_URL = "https://relay-user:relay-pass@automoat-cockpit-relay.example";
+            process.env.AUTOMOAT_BRIDGE_URL = "https://legacy-bridge.example";
+            global.fetch = async () => {
+              throw new Error("fetch should not be called when any upstream URL is invalid");
+            };
+
+            (async () => {
+              const statusResponse = response();
+              await statusHandler({ method: "GET" }, statusResponse);
+              assert.strictEqual(statusResponse.statusCode, 503);
+              assert(statusResponse.body.includes("cockpit_relay_invalid_configuration"));
+              assert(statusResponse.body.includes("embedded credentials"));
+              assert(statusResponse.body.includes("relay"));
+              assert(!statusResponse.body.includes("legacy-bridge.example"));
+              assert(!statusResponse.body.includes("relay-user"));
+              assert(!statusResponse.body.includes("relay-pass"));
+
+              const logResponse = response();
+              await logHandler({ method: "GET" }, logResponse);
+              assert.strictEqual(logResponse.statusCode, 503);
+              assert(logResponse.body.includes("cockpit_relay_invalid_configuration"));
+              assert(logResponse.body.includes("embedded credentials"));
+              assert(logResponse.body.includes("relay"));
+              assert(!logResponse.body.includes("legacy-bridge.example"));
+              assert(!logResponse.body.includes("relay-user"));
+              assert(!logResponse.body.includes("relay-pass"));
+            })().catch((error) => {
+              console.error(error.stack || error);
+              process.exit(1);
+            });
+            """
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()
