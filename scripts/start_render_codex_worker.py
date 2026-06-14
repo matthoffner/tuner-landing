@@ -14,6 +14,7 @@ import sys
 import time
 from collections.abc import Callable
 from pathlib import Path
+from urllib.parse import urlparse
 
 
 DEFAULT_REPO = "https://github.com/matthoffner/tuner-landing.git"
@@ -142,6 +143,8 @@ def validate_worker_environment(
         errors.append("AUTOMOAT_RELAY_URL is required")
     elif not relay_url.startswith(("http://", "https://")):
         errors.append("AUTOMOAT_RELAY_URL must start with http:// or https://")
+    elif not urlparse(relay_url).netloc:
+        errors.append("AUTOMOAT_RELAY_URL must include a host")
 
     if not env.get("AUTOMOAT_RELAY_TOKEN", "").strip():
         errors.append("AUTOMOAT_RELAY_TOKEN is required")

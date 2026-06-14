@@ -104,6 +104,19 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertIn("AUTOMOAT_RELAY_MAX_LOG_BYTES must be greater than 0", errors)
         self.assertIn("AUTOMOAT_STATUS_STALE_AFTER_SECONDS must be greater than 0", errors)
 
+    def test_rejects_relay_url_without_host(self) -> None:
+        errors = self.worker.validate_worker_environment(
+            {
+                "AUTOMOAT_RELAY_URL": "https://",
+                "AUTOMOAT_RELAY_TOKEN": "relay-token",
+                "GITHUB_TOKEN": "github-token",
+                "CODEX_ACCESS_TOKEN": "codex-token",
+            },
+            found_command,
+        )
+
+        self.assertEqual(errors, ["AUTOMOAT_RELAY_URL must include a host"])
+
     def test_rejects_codex_auth_base64_that_decodes_to_non_json(self) -> None:
         auth_b64 = base64.b64encode(b"not-json").decode("ascii")
 

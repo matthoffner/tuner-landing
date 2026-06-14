@@ -14,6 +14,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
+from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
 
@@ -274,6 +275,8 @@ def validate_publisher_configuration(args: argparse.Namespace) -> list[str]:
         errors.append("AUTOMOAT_RELAY_URL or --relay-url is required")
     elif not relay_url.startswith(("http://", "https://")):
         errors.append("--relay-url must start with http:// or https://")
+    elif not urlparse(relay_url).netloc:
+        errors.append("--relay-url must include a host")
 
     if not str(args.token).strip():
         errors.append("AUTOMOAT_RELAY_TOKEN or --token is required")
