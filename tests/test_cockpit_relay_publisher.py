@@ -64,12 +64,17 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 publisher_log=publisher_log,
                 tail_lines=2,
                 max_log_bytes=1024,
+                status_stale_after_seconds=120,
             )
+            self.publisher.utc_now = lambda: "2026-06-14T19:31:00Z"
 
             payload = self.publisher.build_payload(args)
 
         self.assertEqual(payload["status"]["status"], "passing")
         self.assertEqual(payload["status"]["iteration"], 7)
+        self.assertEqual(payload["status"]["source_status_age_seconds"], 60)
+        self.assertEqual(payload["status"]["source_status_stale_after_seconds"], 120)
+        self.assertFalse(payload["status"]["source_status_stale"])
         self.assertFalse(payload["status"]["loop_running"])
         self.assertIsNone(payload["status"]["loop_pid"])
         self.assertEqual(payload["log_tail"], "second\nthird\n")
@@ -83,12 +88,42 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             status = self.publisher.read_status(
                 tmp_path / "missing-status.json",
                 tmp_path / "missing.pid",
+                status_stale_after_seconds=120,
             )
 
         self.assertEqual(status["status"], "waiting")
+        self.assertIsNone(status["source_status_age_seconds"])
+        self.assertEqual(status["source_status_stale_after_seconds"], 120)
+        self.assertTrue(status["source_status_stale"])
         self.assertFalse(status["loop_running"])
         self.assertIsNone(status["loop_pid"])
         self.assertIn("publisher_updated_at", status)
+
+    def test_read_status_marks_old_source_status_stale(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            status_file = tmp_path / "status.json"
+            status_file.write_text(
+                json.dumps(
+                    {
+                        "status": "passing",
+                        "updated_at": "2026-06-14T19:20:00Z",
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            self.publisher.utc_now = lambda: "2026-06-14T19:31:00Z"
+
+            status = self.publisher.read_status(
+                status_file,
+                tmp_path / "missing.pid",
+                status_stale_after_seconds=600,
+            )
+
+        self.assertEqual(status["source_status_age_seconds"], 660)
+        self.assertEqual(status["source_status_stale_after_seconds"], 600)
+        self.assertTrue(status["source_status_stale"])
 
     def test_parse_args_reads_relay_runtime_environment_defaults(self) -> None:
         env = {
@@ -99,6 +134,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             "AUTOMOAT_RELAY_TAIL_LINES": "77",
             "AUTOMOAT_RELAY_MAX_LOG_BYTES": "4096",
             "AUTOMOAT_RELAY_MAX_CONSECUTIVE_FAILURES": "5",
+            "AUTOMOAT_STATUS_STALE_AFTER_SECONDS": "900",
         }
 
         with patch.dict(os.environ, env, clear=True), patch.object(
@@ -115,6 +151,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertEqual(args.tail_lines, 77)
         self.assertEqual(args.max_log_bytes, 4096)
         self.assertEqual(args.max_consecutive_failures, 5)
+        self.assertEqual(args.status_stale_after_seconds, 900)
 
     def test_publish_loop_exits_after_configured_consecutive_failures(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

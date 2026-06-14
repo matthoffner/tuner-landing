@@ -88,6 +88,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                 "AUTOMOAT_RELAY_MAX_CONSECUTIVE_FAILURES": "not-an-int",
                 "AUTOMOAT_RELAY_TAIL_LINES": "0",
                 "AUTOMOAT_RELAY_MAX_LOG_BYTES": "-1",
+                "AUTOMOAT_STATUS_STALE_AFTER_SECONDS": "0",
             },
             found_command,
         )
@@ -101,6 +102,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertIn("AUTOMOAT_RELAY_MAX_CONSECUTIVE_FAILURES must be an integer", errors)
         self.assertIn("AUTOMOAT_RELAY_TAIL_LINES must be greater than 0", errors)
         self.assertIn("AUTOMOAT_RELAY_MAX_LOG_BYTES must be greater than 0", errors)
+        self.assertIn("AUTOMOAT_STATUS_STALE_AFTER_SECONDS must be greater than 0", errors)
 
     def test_rejects_codex_auth_base64_that_decodes_to_non_json(self) -> None:
         auth_b64 = base64.b64encode(b"not-json").decode("ascii")

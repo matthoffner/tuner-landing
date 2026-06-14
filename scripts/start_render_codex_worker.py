@@ -162,6 +162,7 @@ def validate_worker_environment(
     validate_nonnegative_int(env, "AUTOMOAT_RELAY_MAX_CONSECUTIVE_FAILURES", errors)
     validate_positive_int(env, "AUTOMOAT_RELAY_TAIL_LINES", errors)
     validate_positive_int(env, "AUTOMOAT_RELAY_MAX_LOG_BYTES", errors)
+    validate_positive_int(env, "AUTOMOAT_STATUS_STALE_AFTER_SECONDS", errors)
     validate_nonnegative_float(env, "AUTOMOAT_AGENT_INTERVAL", errors)
     validate_nonnegative_int(env, "AUTOMOAT_AGENT_ITERATIONS", errors)
 
@@ -195,6 +196,7 @@ def emit_environment_preflight(
         f"{env.get('AUTOMOAT_RELAY_MAX_CONSECUTIVE_FAILURES', '3')} "
         f"relay_tail_lines={env.get('AUTOMOAT_RELAY_TAIL_LINES', '180')} "
         f"relay_max_log_bytes={env.get('AUTOMOAT_RELAY_MAX_LOG_BYTES', str(256 * 1024))} "
+        f"status_stale_after_seconds={env.get('AUTOMOAT_STATUS_STALE_AFTER_SECONDS', '660')} "
         f"commands={','.join(REQUIRED_COMMANDS)}"
     )
     return []

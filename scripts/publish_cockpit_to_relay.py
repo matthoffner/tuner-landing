@@ -23,6 +23,7 @@ PID_FILE = ROOT / ".automoat" / "state" / "mvp-loop.pid"
 LOG_FILE = ROOT / ".automoat" / "logs" / "mvp-loop.log"
 PUBLISHER_LOG = ROOT / ".automoat" / "logs" / "cockpit-relay-publisher.log"
 DEFAULT_MAX_CONSECUTIVE_FAILURES = 3
+DEFAULT_STATUS_STALE_AFTER_SECONDS = 660
 
 
 def utc_now() -> str:
@@ -46,6 +47,38 @@ def read_json(path: Path) -> dict[str, Any] | None:
     return payload if isinstance(payload, dict) else None
 
 
+def parse_utc_timestamp(value: Any) -> datetime | None:
+    if not isinstance(value, str) or not value.strip():
+        return None
+    normalized = value.strip()
+    if normalized.endswith("Z"):
+        normalized = normalized[:-1] + "+00:00"
+    try:
+        parsed = datetime.fromisoformat(normalized)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def status_freshness(status: dict[str, Any], stale_after_seconds: int) -> dict[str, Any]:
+    updated_at = parse_utc_timestamp(status.get("updated_at"))
+    current_time = parse_utc_timestamp(utc_now())
+    if updated_at is None or current_time is None:
+        return {
+            "source_status_age_seconds": None,
+            "source_status_stale_after_seconds": stale_after_seconds,
+            "source_status_stale": True,
+        }
+    age_seconds = max(0, int((current_time - updated_at).total_seconds()))
+    return {
+        "source_status_age_seconds": age_seconds,
+        "source_status_stale_after_seconds": stale_after_seconds,
+        "source_status_stale": age_seconds > stale_after_seconds,
+    }
+
+
 def pid_alive(pid: int) -> bool:
     try:
         os.kill(pid, 0)
@@ -62,12 +95,17 @@ def local_loop_pid(pid_file: Path = PID_FILE) -> int | None:
     return pid if pid_alive(pid) else None
 
 
-def read_status(status_file: Path = STATUS_FILE, pid_file: Path = PID_FILE) -> dict[str, Any]:
+def read_status(
+    status_file: Path = STATUS_FILE,
+    pid_file: Path = PID_FILE,
+    status_stale_after_seconds: int = DEFAULT_STATUS_STALE_AFTER_SECONDS,
+) -> dict[str, Any]:
     status = read_json(status_file) or {
         "status": "waiting",
         "updated_at": None,
     }
     status = dict(status)
+    status.update(status_freshness(status, status_stale_after_seconds))
     pid = local_loop_pid(pid_file)
     status["loop_running"] = pid is not None
     status["loop_pid"] = pid
@@ -135,7 +173,11 @@ def repo_relative(path: Path) -> str:
 def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     return {
         "pushed_at": utc_now(),
-        "status": read_status(args.status_file, args.pid_file),
+        "status": read_status(
+            args.status_file,
+            args.pid_file,
+            args.status_stale_after_seconds,
+        ),
         "log_tail": tail_text(args.log_file, args.tail_lines, args.max_log_bytes),
         "publisher": {
             "host": socket.gethostname(),
@@ -224,6 +266,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--log-file", type=Path, default=LOG_FILE)
     parser.add_argument("--publisher-log", type=Path, default=PUBLISHER_LOG)
     parser.add_argument(
+        "--status-stale-after-seconds",
+        type=int,
+        default=os.environ.get(
+            "AUTOMOAT_STATUS_STALE_AFTER_SECONDS",
+            str(DEFAULT_STATUS_STALE_AFTER_SECONDS),
+        ),
+        help="mark the source loop status stale when updated_at is older than this many seconds",
+    )
+    parser.add_argument(
         "--max-consecutive-failures",
         type=int,
         default=os.environ.get(
@@ -264,6 +315,9 @@ def main() -> int:
         return 2
     if args.max_consecutive_failures < 0:
         print("--max-consecutive-failures must be greater than or equal to 0", file=sys.stderr)
+        return 2
+    if args.status_stale_after_seconds <= 0:
+        print("--status-stale-after-seconds must be greater than 0", file=sys.stderr)
         return 2
 
     if args.once:
