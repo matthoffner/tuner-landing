@@ -14,6 +14,7 @@ import sys
 import time
 from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 from urllib.parse import urlparse
 
 
@@ -396,12 +397,67 @@ def validate_codex_home_path(path: Path, workdir: Path, errors: list[str]) -> No
         errors.append("CODEX_HOME must not contain AUTOMOAT_WORKDIR")
 
 
+def environment_preflight_summary(
+    env: os._Environ[str] | dict[str, str],
+    errors: list[str],
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "status": "failed" if errors else "passed",
+        "errors": errors,
+    }
+    if errors:
+        return payload
+
+    payload["config"] = {
+        "relay_url": env.get("AUTOMOAT_RELAY_URL", "").strip(),
+        "git_repo": env.get("AUTOMOAT_GIT_REPO", DEFAULT_REPO).strip(),
+        "git_branch": env.get("AUTOMOAT_GIT_BRANCH", "main").strip() or "main",
+        "workdir": str(WORKDIR),
+        "codex_home": str(CODEX_HOME),
+        "git_auth": configured_names(env, GIT_AUTH_ENV_NAMES),
+        "codex_auth": configured_names(env, CODEX_AUTH_ENV_NAMES),
+        "agent_interval": env.get("AUTOMOAT_AGENT_INTERVAL", "300"),
+        "relay_interval": env.get("AUTOMOAT_RELAY_INTERVAL", "3"),
+        "relay_timeout": env.get("AUTOMOAT_RELAY_TIMEOUT", "8"),
+        "relay_max_consecutive_failures": env.get(
+            "AUTOMOAT_RELAY_MAX_CONSECUTIVE_FAILURES",
+            "3",
+        ),
+        "relay_max_consecutive_stale_statuses": env.get(
+            "AUTOMOAT_RELAY_MAX_CONSECUTIVE_STALE_STATUSES",
+            "0",
+        ),
+        "relay_tail_lines": env.get("AUTOMOAT_RELAY_TAIL_LINES", "180"),
+        "relay_max_log_bytes": env.get("AUTOMOAT_RELAY_MAX_LOG_BYTES", str(256 * 1024)),
+        "status_stale_after_seconds": env.get(
+            "AUTOMOAT_STATUS_STALE_AFTER_SECONDS",
+            "660",
+        ),
+        "codex_model": codex_config_value(env, "AUTOMOAT_CODEX_MODEL"),
+        "codex_reasoning_effort": codex_config_value(
+            env,
+            "AUTOMOAT_CODEX_REASONING_EFFORT",
+        ),
+        "commands": list(REQUIRED_COMMANDS),
+    }
+    return payload
+
+
 def emit_environment_preflight(
     env: os._Environ[str] | dict[str, str] | None = None,
     command_lookup: Callable[[str], str | None] | None = None,
+    *,
+    output_format: str = "text",
 ) -> list[str]:
     env = env if env is not None else os.environ
     errors = validate_worker_environment(env, command_lookup)
+    if output_format == "json":
+        print(
+            json.dumps(environment_preflight_summary(env, errors), sort_keys=True),
+            flush=True,
+        )
+        return errors
+
     if errors:
         emit("environment preflight failed")
         for error in errors:
@@ -606,6 +662,12 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="validate Render worker environment variables without starting the worker",
     )
+    parser.add_argument(
+        "--format",
+        choices=("text", "json"),
+        default="text",
+        help="output format for --check-env preflight results",
+    )
     return parser.parse_args()
 
 
@@ -632,7 +694,11 @@ def request_stop(_signum: int, _frame: object) -> None:
 
 def main() -> int:
     args = parse_args()
-    env_errors = emit_environment_preflight()
+    if args.format == "json" and not args.check_env:
+        emit("--format json is only supported with --check-env")
+        return 2
+
+    env_errors = emit_environment_preflight(output_format=args.format)
     if args.check_env:
         return 0 if not env_errors else 2
     if env_errors:

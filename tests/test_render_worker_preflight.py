@@ -7,6 +7,7 @@ import base64
 from contextlib import redirect_stdout
 import importlib.util
 import io
+import json
 from pathlib import Path
 import tempfile
 import unittest
@@ -367,6 +368,81 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertIn("git_branch=release/2026.06", output.getvalue())
         self.assertIn("workdir=/work/automoat", output.getvalue())
         self.assertIn("codex_home=/tmp/codex-home", output.getvalue())
+
+    def test_check_env_json_reports_safe_machine_readable_summary(self) -> None:
+        env = {
+            "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            "GITHUB_TOKEN": "github-token",
+            "CODEX_ACCESS_TOKEN": "codex-token",
+            "AUTOMOAT_GIT_BRANCH": "release/2026.06",
+        }
+        self.worker.WORKDIR = Path("/work/automoat")
+        self.worker.CODEX_HOME = Path("/tmp/codex-home")
+        output = io.StringIO()
+
+        with redirect_stdout(output):
+            errors = self.worker.emit_environment_preflight(
+                env,
+                found_command,
+                output_format="json",
+            )
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(errors, [])
+        self.assertEqual(payload["status"], "passed")
+        self.assertEqual(payload["errors"], [])
+        self.assertEqual(payload["config"]["git_branch"], "release/2026.06")
+        self.assertEqual(payload["config"]["workdir"], "/work/automoat")
+        self.assertEqual(payload["config"]["codex_home"], "/tmp/codex-home")
+        self.assertEqual(payload["config"]["git_auth"], ["GITHUB_TOKEN"])
+        self.assertEqual(payload["config"]["codex_auth"], ["CODEX_ACCESS_TOKEN"])
+        self.assertEqual(payload["config"]["commands"], ["git", "codex"])
+        self.assertNotIn("github-token", output.getvalue())
+        self.assertNotIn("codex-token", output.getvalue())
+
+    def test_check_env_json_failure_does_not_print_invalid_url_values(self) -> None:
+        env = {
+            "AUTOMOAT_RELAY_URL": "https://relay-user:relay-secret@example.test",
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            "AUTOMOAT_GIT_REPO": "https://git-user:git-secret@github.com/example/private.git",
+            "GITHUB_TOKEN": "github-token",
+            "CODEX_ACCESS_TOKEN": "codex-token",
+        }
+        output = io.StringIO()
+
+        with redirect_stdout(output):
+            errors = self.worker.emit_environment_preflight(
+                env,
+                found_command,
+                output_format="json",
+            )
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(payload["status"], "failed")
+        self.assertEqual(payload["errors"], errors)
+        self.assertNotIn("config", payload)
+        self.assertIn("AUTOMOAT_RELAY_URL must not include embedded credentials", errors)
+        self.assertIn("AUTOMOAT_GIT_REPO must not include embedded credentials", errors)
+        self.assertNotIn("relay-secret", output.getvalue())
+        self.assertNotIn("git-secret", output.getvalue())
+        self.assertNotIn("github-token", output.getvalue())
+        self.assertNotIn("codex-token", output.getvalue())
+
+    def test_json_format_is_only_for_check_env(self) -> None:
+        with patch.object(self.worker, "parse_args") as parse_args:
+            parse_args.return_value = type(
+                "Args",
+                (),
+                {"check_env": False, "format": "json"},
+            )()
+            output = io.StringIO()
+
+            with redirect_stdout(output):
+                status = self.worker.main()
+
+        self.assertEqual(status, 2)
+        self.assertIn("--format json is only supported with --check-env", output.getvalue())
 
     def test_rejects_bad_codex_config_values_before_writing_config(self) -> None:
         base_env = {
