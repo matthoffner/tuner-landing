@@ -301,8 +301,12 @@ def validate_publisher_configuration(args: argparse.Namespace) -> list[str]:
         errors.append("AUTOMOAT_RELAY_URL or --relay-url is required")
     elif not relay_url.startswith(("http://", "https://")):
         errors.append("--relay-url must start with http:// or https://")
-    elif not urlparse(relay_url).netloc:
-        errors.append("--relay-url must include a host")
+    else:
+        parsed_relay_url = urlparse(relay_url)
+        if not parsed_relay_url.netloc:
+            errors.append("--relay-url must include a host")
+        elif parsed_relay_url.username or parsed_relay_url.password:
+            errors.append("--relay-url must not include embedded credentials")
 
     if not str(args.token).strip():
         errors.append("AUTOMOAT_RELAY_TOKEN or --token is required")
