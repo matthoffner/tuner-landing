@@ -4,6 +4,12 @@ Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
 - lane: editor
+- status: promoted cockpit artifact health from visible metadata to an enforceable loop gate; the MVP loop now fails degraded artifact health and the autonomous loop stops before diff/publish when post-readiness artifact health is not fully loaded; no Dallas raw CSV rows were edited
+- files: scripts/run_mvp_loop.py, scripts/run_autonomous_agent_loop.py, tests/test_loop_artifact_visibility.py, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- checks: `python3 -m unittest tests/test_loop_artifact_visibility.py -v`; `python3 -m py_compile scripts/run_autonomous_agent_loop.py scripts/run_mvp_loop.py tests/test_loop_artifact_visibility.py`; `python3 -m unittest discover -s tests -v`; `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json > /tmp/automoat-artifact-health-gate-ready.json`; JSON assertion for readiness `ready`, `535` permits, `1082` inspections, and zero thin groups; `git diff --check`
+- next: keep prioritizing autonomy/cockpit/Render reliability, real ingest, policy/checking, product clarity, or tests while Dallas readiness remains green
+
+- lane: editor
 - status: made autonomous and deterministic loop cockpit artifact inspection degrade visibly instead of crashing when generated JSON artifacts are missing, malformed, or non-object; status payloads now include `artifact_health` plus per-artifact status/path/error metadata while preserving existing contract, coverage, workflow, and import-readiness fields; no Dallas raw CSV rows were edited
 - files: scripts/run_autonomous_agent_loop.py, scripts/run_mvp_loop.py, tests/test_loop_artifact_visibility.py, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
 - checks: `python3 -m unittest tests/test_loop_artifact_visibility.py -v`; `python3 -m py_compile scripts/run_autonomous_agent_loop.py scripts/run_mvp_loop.py tests/test_loop_artifact_visibility.py`; `python3 -m unittest discover -s tests -v`; `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json > /tmp/automoat-artifact-visibility-ready.json`; JSON assertion for readiness `ready`, `535` permits, `1082` inspections, and zero thin groups; `git diff --check`

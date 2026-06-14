@@ -126,6 +126,73 @@ class LoopArtifactVisibilityTest(unittest.TestCase):
                 self.assertEqual(artifacts["contract"]["total_checks"], 0)
                 self.assertIsNone(artifacts["workflow"]["queue_items"])
 
+    def test_mvp_iteration_fails_when_artifact_health_is_degraded(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            module = load_module(ROOT / "scripts" / "run_mvp_loop.py")
+            module.STATUS_FILE = tmp_path / "status.json"
+            module.run_step = lambda *_args, **_kwargs: {
+                "name": "test step",
+                "command": ["test"],
+                "exit_status": 0,
+                "seconds": 0,
+            }
+            module.inspect_artifacts = lambda: {
+                "artifact_health": {
+                    "status": "degraded",
+                    "statuses": {
+                        "contract": "loaded",
+                        "coverage": "missing",
+                        "workflow": "loaded",
+                        "import_pipeline": "loaded",
+                    },
+                },
+                "contract": {
+                    "overall_passed": True,
+                    "passed_checks": 1,
+                    "total_checks": 1,
+                },
+                "workflow": {"queue_items": 1},
+            }
+            module.git_state = lambda: {
+                "branch": "main",
+                "head": "abc123",
+                "dirty_paths": [],
+                "dirty_count_excluding_preview": 0,
+            }
+
+            payload = module.run_iteration(
+                tmp_path / "loop.log",
+                tmp_path / "events.jsonl",
+                1,
+                "test-run",
+            )
+
+        self.assertEqual(payload["status"], "failing")
+        self.assertEqual(payload["artifacts"]["artifact_health"]["status"], "degraded")
+
+    def test_autonomous_artifact_health_check_fails_degraded_artifacts(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            module = load_module(ROOT / "scripts" / "run_autonomous_agent_loop.py")
+            module.inspect_artifacts = lambda: {
+                "artifact_health": {
+                    "status": "degraded",
+                    "statuses": {
+                        "contract": "loaded",
+                        "coverage": "invalid",
+                        "workflow": "loaded",
+                        "import_pipeline": "loaded",
+                    },
+                }
+            }
+
+            step = module.run_artifact_health_check(tmp_path / "loop.log")
+
+        self.assertEqual(step["exit_status"], 1)
+        self.assertEqual(step["artifact_health_status"], "degraded")
+        self.assertEqual(step["artifact_statuses"]["coverage"], "invalid")
+
 
 if __name__ == "__main__":
     unittest.main()

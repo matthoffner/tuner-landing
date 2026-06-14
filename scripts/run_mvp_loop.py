@@ -288,6 +288,14 @@ def inspect_artifacts() -> dict[str, Any]:
     }
 
 
+def artifact_health_loaded(artifacts: dict[str, Any]) -> bool:
+    artifact_health = artifacts.get("artifact_health", {})
+    return (
+        isinstance(artifact_health, dict)
+        and artifact_health.get("status") == "loaded"
+    )
+
+
 def git_state() -> dict[str, Any]:
     head = shell(["git", "rev-parse", "--short", "HEAD"]).stdout.strip()
     branch = shell(["git", "rev-parse", "--abbrev-ref", "HEAD"]).stdout.strip()
@@ -345,7 +353,8 @@ def run_iteration(
     git = git_state()
     failed_steps = [step for step in steps if step["exit_status"] != 0]
     contract_ok = artifacts["contract"]["overall_passed"] is True
-    status = "passing" if not failed_steps and contract_ok else "failing"
+    artifact_ok = artifact_health_loaded(artifacts)
+    status = "passing" if not failed_steps and contract_ok and artifact_ok else "failing"
     ended_at = utc_now()
     payload = {
         "run_id": run_id,
@@ -363,6 +372,7 @@ def run_iteration(
         log_file,
         "iteration "
         f"{iteration} end status={status} "
+        f"artifact_health={artifacts['artifact_health']['status']} "
         f"contract={artifacts['contract']['passed_checks']}/{artifacts['contract']['total_checks']} "
         f"queue_items={artifacts['workflow']['queue_items']} "
         f"dirty_paths_excluding_preview={git['dirty_count_excluding_preview']}",

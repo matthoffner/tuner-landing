@@ -323,6 +323,14 @@ def inspect_artifacts() -> dict[str, Any]:
     }
 
 
+def artifact_health_loaded(artifacts: dict[str, Any]) -> bool:
+    artifact_health = artifacts.get("artifact_health", {})
+    return (
+        isinstance(artifact_health, dict)
+        and artifact_health.get("status") == "loaded"
+    )
+
+
 def git_status_lines() -> list[str]:
     return shell(["git", "status", "--porcelain=v1"]).stdout.splitlines()
 
@@ -576,6 +584,35 @@ def run_autonomy_policy_check(log_file: Path) -> dict[str, Any]:
     }
 
 
+def run_artifact_health_check(log_file: Path) -> dict[str, Any]:
+    started = time.monotonic()
+    name = "cockpit artifact health check"
+    emit(log_file, f"step start: {name}")
+    artifacts = inspect_artifacts()
+    artifact_health = artifacts.get("artifact_health", {})
+    if not isinstance(artifact_health, dict):
+        artifact_health = {}
+    health_status = artifact_health.get("status")
+    statuses = artifact_health.get("statuses", {})
+    exit_status = 0 if artifact_health_loaded(artifacts) else 1
+    emit(
+        log_file,
+        "artifact health: "
+        f"status={health_status} "
+        f"statuses={json.dumps(statuses, sort_keys=True)}",
+    )
+    elapsed = round(time.monotonic() - started, 3)
+    emit(log_file, f"step end: {name} status={exit_status} seconds={elapsed}")
+    return {
+        "name": name,
+        "command": ["internal", "cockpit_artifact_health_check"],
+        "exit_status": exit_status,
+        "seconds": elapsed,
+        "artifact_health_status": health_status,
+        "artifact_statuses": statuses,
+    }
+
+
 def sync_landing(log_file: Path) -> dict[str, Any]:
     if not (ROOT / "generated" / "landing.html").exists():
         return {
@@ -705,6 +742,26 @@ def run_iteration(
             log_file,
             "iteration "
             f"{iteration} end status=failing phase=import_readiness_failed "
+            f"dirty_paths_excluding_preview={payload['git']['dirty_count_excluding_preview']}",
+        )
+        return payload
+    artifact_step = run_artifact_health_check(log_file)
+    steps.append(artifact_step)
+    if artifact_step["exit_status"] != 0:
+        payload = write_status(
+            event_file,
+            run_id,
+            iteration,
+            "failing",
+            "artifact_health_failed",
+            started_at,
+            steps,
+            "Cockpit artifact health is degraded after readiness refresh",
+        )
+        emit(
+            log_file,
+            "iteration "
+            f"{iteration} end status=failing phase=artifact_health_failed "
             f"dirty_paths_excluding_preview={payload['git']['dirty_count_excluding_preview']}",
         )
         return payload
