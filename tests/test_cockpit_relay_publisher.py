@@ -87,6 +87,49 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertIsNone(status["loop_pid"])
         self.assertIn("publisher_updated_at", status)
 
+    def test_publish_loop_exits_after_configured_consecutive_failures(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            publisher_log = Path(tmp) / "publisher.log"
+            args = Namespace(
+                publisher_log=publisher_log,
+                interval=0,
+                max_consecutive_failures=2,
+            )
+            calls = []
+            self.publisher.publish_once = lambda _args: calls.append(False) or False
+            self.publisher.time.sleep = lambda _seconds: None
+
+            status = self.publisher.run_publish_loop(args)
+            log_text = publisher_log.read_text(encoding="utf-8")
+
+        self.assertEqual(status, 1)
+        self.assertEqual(calls, [False, False])
+        self.assertIn(
+            "exiting after consecutive publish failures count=2 limit=2",
+            log_text,
+        )
+
+    def test_publish_loop_resets_failure_count_after_success(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            publisher_log = Path(tmp) / "publisher.log"
+            args = Namespace(
+                publisher_log=publisher_log,
+                interval=0,
+                max_consecutive_failures=2,
+            )
+            outcomes = iter([False, True, False, False])
+            self.publisher.publish_once = lambda _args: next(outcomes)
+            self.publisher.time.sleep = lambda _seconds: None
+
+            status = self.publisher.run_publish_loop(args)
+            log_text = publisher_log.read_text(encoding="utf-8")
+
+        self.assertEqual(status, 1)
+        self.assertIn(
+            "exiting after consecutive publish failures count=2 limit=2",
+            log_text,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

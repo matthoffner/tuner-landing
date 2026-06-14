@@ -22,6 +22,7 @@ STATUS_FILE = ROOT / ".automoat" / "state" / "mvp-loop-status.json"
 PID_FILE = ROOT / ".automoat" / "state" / "mvp-loop.pid"
 LOG_FILE = ROOT / ".automoat" / "logs" / "mvp-loop.log"
 PUBLISHER_LOG = ROOT / ".automoat" / "logs" / "cockpit-relay-publisher.log"
+DEFAULT_MAX_CONSECUTIVE_FAILURES = 3
 
 
 def utc_now() -> str:
@@ -184,6 +185,27 @@ def publish_once(args: argparse.Namespace) -> bool:
     return bool(response.get("ok"))
 
 
+def run_publish_loop(args: argparse.Namespace) -> int:
+    consecutive_failures = 0
+    while True:
+        if publish_once(args):
+            consecutive_failures = 0
+        else:
+            consecutive_failures += 1
+            if (
+                args.max_consecutive_failures > 0
+                and consecutive_failures >= args.max_consecutive_failures
+            ):
+                emit(
+                    "exiting after consecutive publish failures "
+                    f"count={consecutive_failures} "
+                    f"limit={args.max_consecutive_failures}",
+                    log_path=args.publisher_log,
+                )
+                return 1
+        time.sleep(args.interval)
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--relay-url", default=os.environ.get("AUTOMOAT_RELAY_URL", ""))
@@ -197,6 +219,20 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--pid-file", type=Path, default=PID_FILE)
     parser.add_argument("--log-file", type=Path, default=LOG_FILE)
     parser.add_argument("--publisher-log", type=Path, default=PUBLISHER_LOG)
+    parser.add_argument(
+        "--max-consecutive-failures",
+        type=int,
+        default=int(
+            os.environ.get(
+                "AUTOMOAT_RELAY_MAX_CONSECUTIVE_FAILURES",
+                str(DEFAULT_MAX_CONSECUTIVE_FAILURES),
+            )
+        ),
+        help=(
+            "exit nonzero after this many consecutive publish failures; "
+            "set 0 to retry forever"
+        ),
+    )
     return parser.parse_args()
 
 
@@ -212,13 +248,17 @@ def main() -> int:
     if not args.token:
         print("AUTOMOAT_RELAY_TOKEN or --token is required", file=sys.stderr)
         return 2
+    if args.interval <= 0:
+        print("--interval must be greater than 0", file=sys.stderr)
+        return 2
+    if args.max_consecutive_failures < 0:
+        print("--max-consecutive-failures must be greater than or equal to 0", file=sys.stderr)
+        return 2
 
     if args.once:
         return 0 if publish_once(args) else 1
 
-    while True:
-        publish_once(args)
-        time.sleep(args.interval)
+    return run_publish_loop(args)
 
 
 if __name__ == "__main__":
