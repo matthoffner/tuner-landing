@@ -189,6 +189,7 @@ def validate_worker_environment(
         required=True,
     )
     validate_git_branch_name(env.get("AUTOMOAT_GIT_BRANCH", "main"), errors)
+    validate_workdir_path(WORKDIR, errors)
 
     if not env.get("AUTOMOAT_RELAY_TOKEN", "").strip():
         errors.append("AUTOMOAT_RELAY_TOKEN is required")
@@ -273,6 +274,33 @@ def validate_git_branch_name(value: str, errors: list[str]) -> None:
         errors.append("AUTOMOAT_GIT_BRANCH must be a valid git branch name")
 
 
+def validate_workdir_path(path: Path, errors: list[str]) -> None:
+    raw_path = str(path).strip()
+    if not raw_path:
+        errors.append("AUTOMOAT_WORKDIR must not be empty")
+        return
+
+    expanded_path = path.expanduser()
+    if not expanded_path.is_absolute():
+        errors.append("AUTOMOAT_WORKDIR must be an absolute path")
+        return
+
+    try:
+        resolved_path = expanded_path.resolve(strict=False)
+        resolved_codex_home = CODEX_HOME.expanduser().resolve(strict=False)
+    except OSError as exc:
+        errors.append(f"AUTOMOAT_WORKDIR could not be resolved: {exc}")
+        return
+
+    named_parts = [part for part in resolved_path.parts if part != resolved_path.anchor]
+    if len(named_parts) < 2:
+        errors.append("AUTOMOAT_WORKDIR must not be filesystem root or a top-level directory")
+        return
+
+    if resolved_path == resolved_codex_home:
+        errors.append("AUTOMOAT_WORKDIR must not equal CODEX_HOME")
+
+
 def emit_environment_preflight(
     env: os._Environ[str] | dict[str, str] | None = None,
     command_lookup: Callable[[str], str | None] | None = None,
@@ -289,6 +317,7 @@ def emit_environment_preflight(
         "environment preflight passed: "
         f"relay_url={env.get('AUTOMOAT_RELAY_URL', '').strip()} "
         f"git_repo={env.get('AUTOMOAT_GIT_REPO', DEFAULT_REPO).strip()} "
+        f"workdir={WORKDIR} "
         f"git_auth={','.join(configured_names(env, GIT_AUTH_ENV_NAMES))} "
         f"codex_auth={','.join(configured_names(env, CODEX_AUTH_ENV_NAMES))} "
         f"agent_interval={env.get('AUTOMOAT_AGENT_INTERVAL', '300')} "

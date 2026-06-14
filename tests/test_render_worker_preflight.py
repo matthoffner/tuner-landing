@@ -260,6 +260,45 @@ class RenderWorkerPreflightTest(unittest.TestCase):
 
                 self.assertEqual(errors, [expected_error])
 
+    def test_rejects_unsafe_workdir_before_clone_cleanup(self) -> None:
+        base_env = {
+            "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            "GITHUB_TOKEN": "github-token",
+            "CODEX_ACCESS_TOKEN": "codex-token",
+        }
+        cases = {
+            Path("/"): "AUTOMOAT_WORKDIR must not be filesystem root or a top-level directory",
+            Path("/work"): (
+                "AUTOMOAT_WORKDIR must not be filesystem root or a top-level directory"
+            ),
+            Path("relative/repo"): "AUTOMOAT_WORKDIR must be an absolute path",
+            self.worker.CODEX_HOME: "AUTOMOAT_WORKDIR must not equal CODEX_HOME",
+        }
+
+        for workdir, expected_error in cases.items():
+            with self.subTest(workdir=workdir):
+                self.worker.WORKDIR = workdir
+                errors = self.worker.validate_worker_environment(base_env, found_command)
+
+                self.assertEqual(errors, [expected_error])
+
+    def test_passed_preflight_reports_safe_workdir(self) -> None:
+        env = {
+            "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            "GITHUB_TOKEN": "github-token",
+            "CODEX_ACCESS_TOKEN": "codex-token",
+        }
+        self.worker.WORKDIR = Path("/work/automoat")
+        output = io.StringIO()
+
+        with redirect_stdout(output):
+            errors = self.worker.emit_environment_preflight(env, found_command)
+
+        self.assertEqual(errors, [])
+        self.assertIn("workdir=/work/automoat", output.getvalue())
+
     def test_rejects_bad_codex_config_values_before_writing_config(self) -> None:
         base_env = {
             "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
