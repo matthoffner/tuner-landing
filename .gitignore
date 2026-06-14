@@ -8,6 +8,7 @@
 .automoat/state/mvp-bridge-runner.pid
 .automoat/state/mvp-cockpit-server.pid
 .automoat/state/cockpit-relay-publisher.pid
+.automoat/state/cockpit-relay-token
 .automoat/state/loop.lock/
 .automoat/state/loop.lock.stale-*/
 .automoat/logs/loop.log

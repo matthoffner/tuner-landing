@@ -2,6 +2,7 @@ services:
   - type: web
     name: automoat-cockpit-relay
     runtime: python
+    repo: https://github.com/matthoffner/tuner-landing.git
     plan: starter
     region: oregon
     branch: main
