@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 import base64
+from contextlib import redirect_stdout
 import importlib.util
+import io
 from pathlib import Path
 import unittest
 
@@ -53,6 +55,20 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                 "AUTOMOAT_AGENT_INTERVAL": "300",
                 "AUTOMOAT_AGENT_ITERATIONS": "0",
                 "AUTOMOAT_RELAY_INTERVAL": "3",
+            },
+            found_command,
+        )
+
+        self.assertEqual(errors, [])
+
+    def test_accepts_secret_safe_custom_git_repo(self) -> None:
+        errors = self.worker.validate_worker_environment(
+            {
+                "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+                "AUTOMOAT_RELAY_TOKEN": "relay-token",
+                "AUTOMOAT_GIT_REPO": "https://github.com/example/private-automoat.git",
+                "GH_TOKEN": "github-token",
+                "CODEX_ACCESS_TOKEN": "codex-token",
             },
             found_command,
         )
@@ -150,6 +166,70 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             errors,
             ["AUTOMOAT_RELAY_URL must not include query strings or fragments"],
         )
+
+    def test_rejects_git_repo_with_embedded_credentials(self) -> None:
+        errors = self.worker.validate_worker_environment(
+            {
+                "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+                "AUTOMOAT_RELAY_TOKEN": "relay-token",
+                "AUTOMOAT_GIT_REPO": "https://git-user:git-secret@github.com/example/private.git",
+                "GITHUB_TOKEN": "github-token",
+                "CODEX_ACCESS_TOKEN": "codex-token",
+            },
+            found_command,
+        )
+
+        self.assertEqual(errors, ["AUTOMOAT_GIT_REPO must not include embedded credentials"])
+
+    def test_rejects_git_repo_with_query_or_fragment(self) -> None:
+        errors = self.worker.validate_worker_environment(
+            {
+                "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+                "AUTOMOAT_RELAY_TOKEN": "relay-token",
+                "AUTOMOAT_GIT_REPO": "https://github.com/example/private.git?token=git-secret#main",
+                "GITHUB_TOKEN": "github-token",
+                "CODEX_ACCESS_TOKEN": "codex-token",
+            },
+            found_command,
+        )
+
+        self.assertEqual(
+            errors,
+            ["AUTOMOAT_GIT_REPO must not include query strings or fragments"],
+        )
+
+    def test_rejects_non_http_git_repo_before_clone(self) -> None:
+        errors = self.worker.validate_worker_environment(
+            {
+                "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+                "AUTOMOAT_RELAY_TOKEN": "relay-token",
+                "AUTOMOAT_GIT_REPO": "git@github.com:example/private.git",
+                "GITHUB_TOKEN": "github-token",
+                "CODEX_ACCESS_TOKEN": "codex-token",
+            },
+            found_command,
+        )
+
+        self.assertEqual(errors, ["AUTOMOAT_GIT_REPO must start with http:// or https://"])
+
+    def test_git_repo_preflight_does_not_print_url_secrets(self) -> None:
+        env = {
+            "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            "AUTOMOAT_GIT_REPO": "https://git-user:git-secret@github.com/example/private.git",
+            "GITHUB_TOKEN": "github-token",
+            "CODEX_ACCESS_TOKEN": "codex-token",
+        }
+        output = io.StringIO()
+
+        with redirect_stdout(output):
+            errors = self.worker.emit_environment_preflight(env, found_command)
+
+        self.assertEqual(errors, ["AUTOMOAT_GIT_REPO must not include embedded credentials"])
+        self.assertIn("environment preflight failed", output.getvalue())
+        self.assertIn("AUTOMOAT_GIT_REPO must not include embedded credentials", output.getvalue())
+        self.assertNotIn("git-user", output.getvalue())
+        self.assertNotIn("git-secret", output.getvalue())
 
     def test_rejects_codex_auth_base64_that_decodes_to_non_json(self) -> None:
         auth_b64 = base64.b64encode(b"not-json").decode("ascii")

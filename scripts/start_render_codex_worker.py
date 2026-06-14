@@ -139,18 +139,19 @@ def validate_worker_environment(
             return shutil.which(command, path=path)
 
     relay_url = env.get("AUTOMOAT_RELAY_URL", "").strip()
-    if not relay_url:
-        errors.append("AUTOMOAT_RELAY_URL is required")
-    elif not relay_url.startswith(("http://", "https://")):
-        errors.append("AUTOMOAT_RELAY_URL must start with http:// or https://")
-    else:
-        parsed_relay_url = urlparse(relay_url)
-        if not parsed_relay_url.netloc:
-            errors.append("AUTOMOAT_RELAY_URL must include a host")
-        elif parsed_relay_url.username or parsed_relay_url.password:
-            errors.append("AUTOMOAT_RELAY_URL must not include embedded credentials")
-        elif parsed_relay_url.query or parsed_relay_url.fragment:
-            errors.append("AUTOMOAT_RELAY_URL must not include query strings or fragments")
+    validate_secret_safe_http_url(
+        "AUTOMOAT_RELAY_URL",
+        relay_url,
+        errors,
+        required=True,
+    )
+    git_repo = env.get("AUTOMOAT_GIT_REPO", DEFAULT_REPO).strip()
+    validate_secret_safe_http_url(
+        "AUTOMOAT_GIT_REPO",
+        git_repo,
+        errors,
+        required=True,
+    )
 
     if not env.get("AUTOMOAT_RELAY_TOKEN", "").strip():
         errors.append("AUTOMOAT_RELAY_TOKEN is required")
@@ -182,6 +183,29 @@ def validate_worker_environment(
     return errors
 
 
+def validate_secret_safe_http_url(
+    name: str,
+    value: str,
+    errors: list[str],
+    *,
+    required: bool,
+) -> None:
+    if not value:
+        if required:
+            errors.append(f"{name} is required")
+        return
+    if not value.startswith(("http://", "https://")):
+        errors.append(f"{name} must start with http:// or https://")
+        return
+    parsed_value = urlparse(value)
+    if not parsed_value.netloc:
+        errors.append(f"{name} must include a host")
+    elif parsed_value.username or parsed_value.password:
+        errors.append(f"{name} must not include embedded credentials")
+    elif parsed_value.query or parsed_value.fragment:
+        errors.append(f"{name} must not include query strings or fragments")
+
+
 def emit_environment_preflight(
     env: os._Environ[str] | dict[str, str] | None = None,
     command_lookup: Callable[[str], str | None] | None = None,
@@ -197,6 +221,7 @@ def emit_environment_preflight(
     emit(
         "environment preflight passed: "
         f"relay_url={env.get('AUTOMOAT_RELAY_URL', '').strip()} "
+        f"git_repo={env.get('AUTOMOAT_GIT_REPO', DEFAULT_REPO).strip()} "
         f"git_auth={','.join(configured_names(env, GIT_AUTH_ENV_NAMES))} "
         f"codex_auth={','.join(configured_names(env, CODEX_AUTH_ENV_NAMES))} "
         f"agent_interval={env.get('AUTOMOAT_AGENT_INTERVAL', '300')} "

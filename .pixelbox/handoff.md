@@ -4,6 +4,12 @@ Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
 - lane: editor
+- status: hardened Render Codex worker Git repo preflight so `AUTOMOAT_GIT_REPO` must be a plain HTTP(S) URL without embedded credentials, query strings, or fragments before Git/Codex setup or `git clone` can echo a secret-bearing origin; no Dallas raw CSV rows were edited
+- files: scripts/start_render_codex_worker.py, tests/test_render_worker_preflight.py, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- checks: `python3 -m unittest tests.test_render_worker_preflight`; `python3 -m py_compile scripts/start_render_codex_worker.py tests/test_render_worker_preflight.py`; `python3 -m unittest discover -s tests`; `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready`; `cmp -s generated/landing.html index.html`; `env -i PATH="$PATH" AUTOMOAT_RELAY_URL=https://automoat-cockpit-relay.example AUTOMOAT_RELAY_TOKEN=relay-token AUTOMOAT_GIT_REPO='https://git-user:git-secret@github.com/example/private.git' GH_TOKEN=github-token CODEX_ACCESS_TOKEN=codex-token python3 scripts/start_render_codex_worker.py --check-env` (expected exit `2` with sanitized `AUTOMOAT_GIT_REPO` embedded-credentials error)
+- next: configure Render `AUTOMOAT_GIT_REPO` as a plain origin such as `https://github.com/owner/repo.git`; keep GitHub credentials in `GITHUB_TOKEN` or `GH_TOKEN`, not in the repo URL
+
+- lane: editor
 - status: capped the Vercel cockpit proxy upstream timeout override at 15000ms so malformed long `AUTOMOAT_COCKPIT_UPSTREAM_TIMEOUT_MS` settings fail closed before `/api/cockpit-status` or `/api/cockpit-log` can wait until the serverless platform kills the request; no Dallas raw CSV rows were edited
 - files: api/cockpit-upstreams.js, tests/test_cockpit_api_proxy.py, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
 - checks: `python3 -m unittest tests.test_cockpit_api_proxy`; `node --check api/cockpit-upstreams.js`; `node --check api/cockpit-status.js`; `node --check api/cockpit-log.js`; `python3 -m unittest discover -s tests`; `python3 -m py_compile tests/test_cockpit_api_proxy.py`; `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json`; `cmp -s generated/landing.html index.html`
