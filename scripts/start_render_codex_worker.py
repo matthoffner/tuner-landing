@@ -181,6 +181,25 @@ def validate_git_identity_value(
         errors.append(f"{name} must be a single-line value without control characters")
 
 
+def validate_secret_value(
+    env: os._Environ[str] | dict[str, str],
+    name: str,
+    errors: list[str],
+) -> bool:
+    if name not in env:
+        return True
+    value = env.get(name, "")
+    if not value.strip():
+        return True
+    if any(
+        character in "\r\n" or ord(character) < 32 or ord(character) == 127
+        for character in value
+    ):
+        errors.append(f"{name} must be a single-line value without control characters")
+        return False
+    return True
+
+
 def toml_basic_string(value: str) -> str:
     return json.dumps(value)
 
@@ -222,8 +241,14 @@ def validate_worker_environment(
     if not env_has_any(env, CODEX_AUTH_ENV_NAMES):
         errors.append("CODEX_AUTH_JSON_B64, CODEX_ACCESS_TOKEN, or OPENAI_API_KEY is required")
 
+    invalid_secret_names = {
+        name
+        for name in ("AUTOMOAT_RELAY_TOKEN", *GIT_AUTH_ENV_NAMES, *CODEX_AUTH_ENV_NAMES)
+        if not validate_secret_value(env, name, errors)
+    }
+
     auth_b64 = env.get("CODEX_AUTH_JSON_B64", "").strip()
-    if auth_b64:
+    if auth_b64 and "CODEX_AUTH_JSON_B64" not in invalid_secret_names:
         try:
             decode_codex_auth_json_b64(auth_b64)
         except (UnicodeDecodeError, json.JSONDecodeError, ValueError):

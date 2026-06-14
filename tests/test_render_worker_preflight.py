@@ -125,6 +125,29 @@ class RenderWorkerPreflightTest(unittest.TestCase):
 
         self.assertEqual(errors, [])
 
+    def test_rejects_bad_secret_values_before_auth_setup(self) -> None:
+        errors = self.worker.validate_worker_environment(
+            {
+                "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+                "AUTOMOAT_RELAY_TOKEN": "relay-token\nsecond-line",
+                "GITHUB_TOKEN": "github-token\rhelper",
+                "GH_TOKEN": "github-token",
+                "CODEX_AUTH_JSON_B64": "eyJ0b2tlbiI6ICJzZWNyZXQifQ==\n",
+                "CODEX_ACCESS_TOKEN": "codex-token\twith-tab",
+            },
+            found_command,
+        )
+
+        self.assertEqual(
+            errors,
+            [
+                "AUTOMOAT_RELAY_TOKEN must be a single-line value without control characters",
+                "GITHUB_TOKEN must be a single-line value without control characters",
+                "CODEX_AUTH_JSON_B64 must be a single-line value without control characters",
+                "CODEX_ACCESS_TOKEN must be a single-line value without control characters",
+            ],
+        )
+
     def test_rejects_bad_url_codex_auth_base64_and_intervals(self) -> None:
         errors = self.worker.validate_worker_environment(
             {
