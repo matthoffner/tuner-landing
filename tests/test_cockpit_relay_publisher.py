@@ -153,6 +153,38 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertEqual(args.max_consecutive_failures, 5)
         self.assertEqual(args.status_stale_after_seconds, 900)
 
+    def test_publish_once_logs_source_status_freshness(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            publisher_log = Path(tmp) / "publisher.log"
+            args = Namespace(publisher_log=publisher_log)
+            payload = {
+                "status": {
+                    "status": "running",
+                    "loop_running": False,
+                    "source_status_stale": True,
+                    "source_status_age_seconds": 700,
+                },
+                "log_tail": "loop log\n",
+            }
+            posted_payloads = []
+            self.publisher.build_payload = lambda _args: payload
+            self.publisher.post_payload = lambda _args, body: posted_payloads.append(body) or {
+                "ok": True,
+                "received_at": "2026-06-14T20:20:00Z",
+            }
+
+            status = self.publisher.publish_once(args)
+            log_text = publisher_log.read_text(encoding="utf-8")
+
+        self.assertTrue(status)
+        self.assertEqual(posted_payloads, [payload])
+        self.assertIn("published relay snapshot ok=True", log_text)
+        self.assertIn("received_at=2026-06-14T20:20:00Z", log_text)
+        self.assertIn("source_status=running", log_text)
+        self.assertIn("source_loop_running=False", log_text)
+        self.assertIn("source_status_stale=True", log_text)
+        self.assertIn("source_status_age_seconds=700", log_text)
+
     def test_publish_loop_exits_after_configured_consecutive_failures(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             publisher_log = Path(tmp) / "publisher.log"

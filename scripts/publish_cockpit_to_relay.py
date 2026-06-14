@@ -210,9 +210,22 @@ def post_payload(args: argparse.Namespace, payload: dict[str, Any]) -> dict[str,
     return parsed if isinstance(parsed, dict) else {"ok": False, "body": body}
 
 
+def source_status_log_fields(payload: dict[str, Any]) -> dict[str, Any]:
+    status = payload.get("status")
+    if not isinstance(status, dict):
+        status = {}
+    return {
+        "source_status": status.get("status", "unknown"),
+        "source_loop_running": status.get("loop_running"),
+        "source_status_stale": status.get("source_status_stale"),
+        "source_status_age_seconds": status.get("source_status_age_seconds"),
+    }
+
+
 def publish_once(args: argparse.Namespace) -> bool:
     try:
-        response = post_payload(args, build_payload(args))
+        payload = build_payload(args)
+        response = post_payload(args, payload)
     except HTTPError as exc:
         detail = exc.read().decode("utf-8", errors="replace")
         emit(f"publish failed http_status={exc.code} body={detail.strip()}", log_path=args.publisher_log)
@@ -220,8 +233,14 @@ def publish_once(args: argparse.Namespace) -> bool:
     except (OSError, URLError, json.JSONDecodeError, subprocess.SubprocessError) as exc:
         emit(f"publish failed error={exc}", log_path=args.publisher_log)
         return False
+    source_fields = source_status_log_fields(payload)
     emit(
-        f"published relay snapshot ok={response.get('ok')} received_at={response.get('received_at')}",
+        f"published relay snapshot ok={response.get('ok')} "
+        f"received_at={response.get('received_at')} "
+        f"source_status={source_fields['source_status']} "
+        f"source_loop_running={source_fields['source_loop_running']} "
+        f"source_status_stale={source_fields['source_status_stale']} "
+        f"source_status_age_seconds={source_fields['source_status_age_seconds']}",
         log_path=args.publisher_log,
     )
     return bool(response.get("ok"))
