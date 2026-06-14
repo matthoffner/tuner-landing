@@ -412,6 +412,7 @@ def emit_environment_preflight(
         "environment preflight passed: "
         f"relay_url={env.get('AUTOMOAT_RELAY_URL', '').strip()} "
         f"git_repo={env.get('AUTOMOAT_GIT_REPO', DEFAULT_REPO).strip()} "
+        f"git_branch={env.get('AUTOMOAT_GIT_BRANCH', 'main').strip() or 'main'} "
         f"workdir={WORKDIR} "
         f"codex_home={CODEX_HOME} "
         f"git_auth={','.join(configured_names(env, GIT_AUTH_ENV_NAMES))} "

@@ -354,6 +354,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             "AUTOMOAT_RELAY_TOKEN": "relay-token",
             "GITHUB_TOKEN": "github-token",
             "CODEX_ACCESS_TOKEN": "codex-token",
+            "AUTOMOAT_GIT_BRANCH": "release/2026.06",
         }
         self.worker.WORKDIR = Path("/work/automoat")
         self.worker.CODEX_HOME = Path("/tmp/codex-home")
@@ -363,6 +364,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             errors = self.worker.emit_environment_preflight(env, found_command)
 
         self.assertEqual(errors, [])
+        self.assertIn("git_branch=release/2026.06", output.getvalue())
         self.assertIn("workdir=/work/automoat", output.getvalue())
         self.assertIn("codex_home=/tmp/codex-home", output.getvalue())
 
