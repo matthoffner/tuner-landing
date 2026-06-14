@@ -454,8 +454,8 @@
         box-sizing: border-box;
         display: block;
         width: 100%;
-        min-height: 360px;
-        max-height: 480px;
+        min-height: 300px;
+        max-height: 360px;
         margin: 0;
         overflow: auto;
         border: 0;
@@ -686,6 +686,10 @@
         flex-wrap: wrap;
         gap: 10px;
         margin-top: 16px;
+      }
+
+      .doc-list .doc-pill:nth-child(n + 7) {
+        display: none;
       }
 
       .doc-pill {
@@ -1560,7 +1564,7 @@
 
         function updateLiveTerminals(status, logText) {
           const rawLines = (logText || "").split("\n").filter(Boolean);
-          const tail = rawLines.slice(-54).join("\n");
+          const tail = rawLines.slice(-24).join("\n");
           const body = `${terminalHeader(status)}${tail || "waiting for Codex loop output..."}`;
           liveTerminals.forEach((terminal) => {
             terminal.textContent = body;

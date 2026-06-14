@@ -4,7 +4,7 @@ Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
 - lane: editor
-- status: simplified the landing page so the visible page leads with the product promise, one live Render Codex terminal, a compact moat explanation, and a short proof section; removed visible ngrok/local bridge language, duplicate relay panels, the long artifact wall, latest-signal block, changelog wall, and truth-in-advertising block from the rendered page
+- status: simplified the landing page so the visible page leads with the product promise, one live Render Codex terminal, a compact moat explanation, and a short proof section; removed visible ngrok/local bridge language, duplicate relay panels, the long artifact wall, latest-signal block, changelog wall, and truth-in-advertising block from the rendered page, then capped the terminal tail and visible docs list to keep the page scan-friendly
 - files: generated/landing.html, index.html, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
 - checks: `cmp -s generated/landing.html index.html`; Node simplified-landing assertions and script syntax parse for `generated/landing.html` and `index.html`; `python3 -m unittest discover -s tests -p 'test_loop_artifact_visibility.py' -v`; `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json > /tmp/automoat-simplified-landing-ready.json`; `git diff --check`
 - next: verify Vercel serves the simplified page without visible `ngrok`/`ngrom` language and with the live Codex terminal still polling `/api/cockpit-status` plus `/api/cockpit-log`
