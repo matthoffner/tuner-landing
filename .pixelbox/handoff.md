@@ -4,6 +4,12 @@ Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
 - lane: editor
+- status: tightened the autonomous-loop raw Dallas CSV policy gate so changed raw Dallas import CSV paths are tracked beyond synthetic `ELZ` row detection, docs/status-only raw CSV edits are rejected while readiness is green, and policy results expose the changed raw CSV paths for cockpit diagnostics; no Dallas raw CSV rows were edited
+- files: scripts/run_autonomous_agent_loop.py, tests/test_autonomous_agent_policy.py, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- checks: `python3 -m unittest tests/test_autonomous_agent_policy.py -v`; `python3 -m py_compile scripts/run_autonomous_agent_loop.py tests/test_autonomous_agent_policy.py`; `python3 -m unittest discover -s tests -v`; `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json > /tmp/automoat-raw-csv-policy-ready.json`; JSON assertion for readiness `ready`, `535` permits, `1082` inspections, and zero thin groups; `cmp -s generated/landing.html index.html`; `git diff --exit-code -- .pxcode/preview.json`; `git diff --check`
+- next: keep prioritizing autonomy/cockpit/Render reliability, real ingest, policy/checking, product clarity, or tests while Dallas readiness remains green; raw Dallas CSV edits now need real companion work instead of slipping through as non-synthetic fixture changes
+
+- lane: editor
 - status: hardened Render cockpit publisher HTTP failure logs so relay `HTTPError` responses no longer persist upstream response bodies; publisher logs now keep safe HTTP status, reason phrase, body byte count, and source-loop freshness/file metadata for incident diagnosis without retaining arbitrary HTML or token-bearing error payloads; no Dallas raw CSV rows were edited
 - files: scripts/publish_cockpit_to_relay.py, tests/test_cockpit_relay_publisher.py, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
 - checks: `python3 -m unittest tests/test_cockpit_relay_publisher.py -v`; `python3 -m py_compile scripts/publish_cockpit_to_relay.py tests/test_cockpit_relay_publisher.py`; `python3 -m unittest discover -s tests -v`; `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json > /tmp/automoat-publisher-http-error-ready.json`; JSON assertion for readiness `ready`, `535` permits, `1082` inspections, and zero thin groups; `cmp -s generated/landing.html index.html`; `git diff --exit-code -- .pxcode/preview.json`

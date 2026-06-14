@@ -108,6 +108,43 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
         self.assertFalse(result["productive_change"])
         self.assertFalse(result["policy_allows_synthetic_append"])
 
+    def test_policy_check_rejects_docs_only_raw_dallas_csv_edit(self) -> None:
+        self.loop.dirty_paths_excluding_preview = lambda: [
+            ".automoat/logs/agent-journal.md",
+            ".pixelbox/handoff.md",
+            "generated/raw/dallas-electrician-import-sample-v2/contractors.csv",
+        ]
+        self.loop.added_synthetic_dallas_rows = lambda: []
+
+        with tempfile.TemporaryDirectory() as tmp:
+            result = self.loop.run_autonomy_policy_check(Path(tmp) / "policy.log")
+
+        self.assertEqual(result["exit_status"], 1)
+        self.assertEqual(result["synthetic_row_count"], 0)
+        self.assertEqual(
+            result["raw_dallas_csv_changed_paths"],
+            ["generated/raw/dallas-electrician-import-sample-v2/contractors.csv"],
+        )
+        self.assertFalse(result["productive_change"])
+
+    def test_policy_check_allows_raw_dallas_csv_edit_with_productive_work(self) -> None:
+        self.loop.dirty_paths_excluding_preview = lambda: [
+            "scripts/import_dallas_permit_extracts.py",
+            "generated/raw/dallas-electrician-import-sample-v2/rule_documents.csv",
+        ]
+        self.loop.added_synthetic_dallas_rows = lambda: []
+
+        with tempfile.TemporaryDirectory() as tmp:
+            result = self.loop.run_autonomy_policy_check(Path(tmp) / "policy.log")
+
+        self.assertEqual(result["exit_status"], 0)
+        self.assertEqual(result["synthetic_row_count"], 0)
+        self.assertEqual(
+            result["raw_dallas_csv_changed_paths"],
+            ["generated/raw/dallas-electrician-import-sample-v2/rule_documents.csv"],
+        )
+        self.assertTrue(result["productive_change"])
+
     def test_policy_check_rejects_synthetic_row_when_snapshot_disallows_it(self) -> None:
         self.loop.dirty_paths_excluding_preview = lambda: [
             "tests/test_autonomous_agent_policy.py",

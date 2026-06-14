@@ -85,6 +85,7 @@ SYNTHETIC_DALLAS_RAW_FILES = (
     "generated/raw/dallas-electrician-import-sample-v2/permits.csv",
     "generated/raw/dallas-electrician-import-sample-v2/inspections.csv",
 )
+DALLAS_RAW_CSV_PREFIX = "generated/raw/dallas-electrician-import-sample-"
 
 
 def utc_now() -> str:
@@ -358,6 +359,17 @@ def changed_paths_include_productive_work(paths: list[str]) -> bool:
     return False
 
 
+def changed_dallas_raw_csv_paths(paths: list[str]) -> list[str]:
+    """Return raw Dallas CSV fixture paths changed in the current diff."""
+    return sorted(
+        {
+            path
+            for path in paths
+            if path.startswith(DALLAS_RAW_CSV_PREFIX) and path.endswith(".csv")
+        }
+    )
+
+
 def added_synthetic_dallas_rows() -> list[str]:
     result = shell(["git", "diff", "--", *SYNTHETIC_DALLAS_RAW_FILES])
     rows: list[str] = []
@@ -556,6 +568,7 @@ def run_autonomy_policy_check(log_file: Path) -> dict[str, Any]:
     name = "autonomy policy check"
     emit(log_file, f"step start: {name}")
     paths = dirty_paths_excluding_preview()
+    raw_csv_paths = changed_dallas_raw_csv_paths(paths)
     synthetic_rows = added_synthetic_dallas_rows()
     productive_change = changed_paths_include_productive_work(paths)
     policy_allows_synthetic_append = synthetic_dallas_appends_allowed_by_policy()
@@ -570,6 +583,16 @@ def run_autonomy_policy_check(log_file: Path) -> dict[str, Any]:
         )
         for row in synthetic_rows[:5]:
             emit(log_file, "  synthetic row: " + row[:240])
+    elif raw_csv_paths and not productive_change and not allow_override:
+        exit_status = 1
+        emit(
+            log_file,
+            "policy violation: raw Dallas CSV edits require code, ingest, infra, "
+            "test, or durable spec companion work when the Dallas readiness gate "
+            "is already green",
+        )
+        for path in raw_csv_paths[:8]:
+            emit(log_file, "  raw csv path: " + path)
     elif synthetic_rows and not productive_change and not allow_override:
         exit_status = 1
         emit(
@@ -584,6 +607,7 @@ def run_autonomy_policy_check(log_file: Path) -> dict[str, Any]:
             log_file,
             "policy ok: "
             f"synthetic_rows={len(synthetic_rows)} "
+            f"raw_dallas_csv_paths={len(raw_csv_paths)} "
             f"productive_change={productive_change} "
             f"policy_allows_synthetic_append={policy_allows_synthetic_append} "
             f"override={allow_override}",
@@ -596,6 +620,7 @@ def run_autonomy_policy_check(log_file: Path) -> dict[str, Any]:
         "exit_status": exit_status,
         "seconds": elapsed,
         "synthetic_row_count": len(synthetic_rows),
+        "raw_dallas_csv_changed_paths": raw_csv_paths,
         "productive_change": productive_change,
         "policy_allows_synthetic_append": policy_allows_synthetic_append,
     }
