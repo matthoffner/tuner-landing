@@ -19,6 +19,9 @@ from urllib.parse import urlparse
 STATE_LOCK = threading.Lock()
 STATE: dict[str, Any] = {}
 CONFIG: dict[str, Any] = {}
+DEFAULT_MAX_INGEST_BYTES = 1024 * 1024
+DEFAULT_MAX_LOG_CHARS = 160 * 1024
+DEFAULT_STALE_AFTER_SECONDS = 120
 
 
 def utc_now() -> str:
@@ -206,6 +209,60 @@ def relay_authentication_result(
     return True, ""
 
 
+def parse_positive_int(name: str, value: Any, errors: list[str]) -> int | None:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        errors.append(f"{name} must be an integer")
+        return None
+    if parsed <= 0:
+        errors.append(f"{name} must be greater than 0")
+        return None
+    return parsed
+
+
+def validate_relay_configuration(
+    args: argparse.Namespace,
+    env: os._Environ[str] | dict[str, str] | None = None,
+) -> list[str]:
+    env = env if env is not None else os.environ
+    errors: list[str] = []
+    if not str(env.get("AUTOMOAT_RELAY_TOKEN", "")).strip():
+        errors.append("AUTOMOAT_RELAY_TOKEN is required")
+    if not str(args.host).strip():
+        errors.append("--host must not be empty")
+
+    port = parse_positive_int("--port", args.port, errors)
+    if port is not None and port > 65535:
+        errors.append("--port must be less than or equal to 65535")
+    parse_positive_int("--max-ingest-bytes", args.max_ingest_bytes, errors)
+    parse_positive_int("--max-log-chars", args.max_log_chars, errors)
+    parse_positive_int("--stale-after-seconds", args.stale_after_seconds, errors)
+    return errors
+
+
+def emit_relay_preflight(args: argparse.Namespace) -> list[str]:
+    errors = validate_relay_configuration(args)
+    if errors:
+        print("relay environment preflight failed", file=sys.stderr)
+        for error in errors:
+            print(f"  - {error}", file=sys.stderr)
+        return errors
+
+    state_file = str(args.state_file).strip() or "memory-only"
+    print(
+        "relay environment preflight passed: "
+        f"host={args.host} "
+        f"port={int(args.port)} "
+        f"state_file={state_file} "
+        f"max_ingest_bytes={int(args.max_ingest_bytes)} "
+        f"max_log_chars={int(args.max_log_chars)} "
+        f"stale_after_seconds={int(args.stale_after_seconds)}",
+        flush=True,
+    )
+    return []
+
+
 class RelayHandler(BaseHTTPRequestHandler):
     server_version = "AutomoatRelay/0.1"
 
@@ -356,7 +413,7 @@ class RelayHandler(BaseHTTPRequestHandler):
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--host", default=os.environ.get("HOST", "127.0.0.1"))
-    parser.add_argument("--port", type=int, default=int(os.environ.get("PORT", "4180")))
+    parser.add_argument("--port", default=os.environ.get("PORT", "4180"))
     parser.add_argument(
         "--state-file",
         default=os.environ.get("AUTOMOAT_RELAY_STATE_FILE", "/tmp/automoat-relay-state.json"),
@@ -364,40 +421,50 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--max-ingest-bytes",
-        type=int,
-        default=int(os.environ.get("AUTOMOAT_RELAY_MAX_BYTES", str(1024 * 1024))),
+        default=os.environ.get("AUTOMOAT_RELAY_MAX_BYTES", str(DEFAULT_MAX_INGEST_BYTES)),
     )
     parser.add_argument(
         "--max-log-chars",
-        type=int,
-        default=int(os.environ.get("AUTOMOAT_RELAY_MAX_LOG_CHARS", str(160 * 1024))),
+        default=os.environ.get("AUTOMOAT_RELAY_MAX_LOG_CHARS", str(DEFAULT_MAX_LOG_CHARS)),
     )
     parser.add_argument(
         "--stale-after-seconds",
-        type=int,
-        default=int(os.environ.get("AUTOMOAT_RELAY_STALE_AFTER_SECONDS", "120")),
+        default=os.environ.get("AUTOMOAT_RELAY_STALE_AFTER_SECONDS", str(DEFAULT_STALE_AFTER_SECONDS)),
         help="mark relay snapshots stale when they are older than this many seconds",
+    )
+    parser.add_argument(
+        "--check-env",
+        action="store_true",
+        help="validate relay startup configuration and exit without serving",
     )
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
+    errors = validate_relay_configuration(args)
+    if args.check_env:
+        return 2 if emit_relay_preflight(args) else 0
+    if errors:
+        for error in errors:
+            print(error, file=sys.stderr)
+        return 2
+
     state_file = Path(args.state_file).expanduser() if args.state_file else None
     CONFIG.update(
         {
             "token": os.environ.get("AUTOMOAT_RELAY_TOKEN", ""),
             "state_file": state_file,
-            "max_ingest_bytes": args.max_ingest_bytes,
-            "max_log_chars": args.max_log_chars,
-            "stale_after_seconds": args.stale_after_seconds,
+            "max_ingest_bytes": int(args.max_ingest_bytes),
+            "max_log_chars": int(args.max_log_chars),
+            "stale_after_seconds": int(args.stale_after_seconds),
         }
     )
     with STATE_LOCK:
         STATE.clear()
         STATE.update(load_state(state_file))
 
-    server = ThreadingHTTPServer((args.host, args.port), RelayHandler)
+    server = ThreadingHTTPServer((args.host, int(args.port)), RelayHandler)
     print(f"automoat cockpit relay listening on http://{args.host}:{args.port}", flush=True)
     try:
         server.serve_forever()

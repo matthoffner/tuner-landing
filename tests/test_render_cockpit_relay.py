@@ -3,9 +3,14 @@
 
 from __future__ import annotations
 
+import contextlib
+import io
 import importlib.util
+import os
 from pathlib import Path
+import sys
 import unittest
+from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -126,6 +131,45 @@ class RenderCockpitRelayTest(unittest.TestCase):
             self.relay.relay_authentication_result("secret", "secret", "Basic secret"),
             (False, "invalid relay token"),
         )
+
+    def test_relay_preflight_rejects_missing_token_and_invalid_numeric_defaults(self) -> None:
+        env = {
+            "PORT": "not-a-port",
+            "AUTOMOAT_RELAY_MAX_BYTES": "bad",
+            "AUTOMOAT_RELAY_MAX_LOG_CHARS": "0",
+            "AUTOMOAT_RELAY_STALE_AFTER_SECONDS": "-1",
+        }
+        with patch.dict(os.environ, env, clear=True), patch.object(
+            sys,
+            "argv",
+            ["render_cockpit_relay.py", "--check-env"],
+        ):
+            args = self.relay.parse_args()
+            errors = self.relay.validate_relay_configuration(args)
+
+        self.assertIn("AUTOMOAT_RELAY_TOKEN is required", errors)
+        self.assertIn("--port must be an integer", errors)
+        self.assertIn("--max-ingest-bytes must be an integer", errors)
+        self.assertIn("--max-log-chars must be greater than 0", errors)
+        self.assertIn("--stale-after-seconds must be greater than 0", errors)
+
+    def test_check_env_exits_without_serving_when_relay_config_is_valid(self) -> None:
+        env = {
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            "PORT": "4180",
+            "AUTOMOAT_RELAY_STATE_FILE": "",
+        }
+        stdout = io.StringIO()
+        with patch.dict(os.environ, env, clear=True), patch.object(
+            sys,
+            "argv",
+            ["render_cockpit_relay.py", "--check-env", "--host", "0.0.0.0"],
+        ), contextlib.redirect_stdout(stdout):
+            status = self.relay.main()
+
+        self.assertEqual(status, 0)
+        self.assertIn("relay environment preflight passed", stdout.getvalue())
+        self.assertIn("state_file=memory-only", stdout.getvalue())
 
 
 if __name__ == "__main__":

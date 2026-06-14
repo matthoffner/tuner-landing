@@ -8,7 +8,7 @@ services:
     branch: main
     autoDeployTrigger: commit
     buildCommand: python3 --version
-    startCommand: python3 scripts/render_cockpit_relay.py --host 0.0.0.0 --port $PORT
+    startCommand: python3 scripts/render_cockpit_relay.py --check-env --host 0.0.0.0 --port $PORT && python3 scripts/render_cockpit_relay.py --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
     envVars:
       - key: AUTOMOAT_RELAY_TOKEN
