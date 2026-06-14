@@ -28,6 +28,8 @@ def load_worker_module():
 class RenderWorkerPreflightTest(unittest.TestCase):
     def setUp(self) -> None:
         self.worker = load_worker_module()
+        self.worker.CHILDREN.clear()
+        self.worker.STOP_REQUESTED = False
 
     def test_reports_all_missing_required_credentials(self) -> None:
         errors = self.worker.validate_worker_environment({}, found_command)
@@ -93,6 +95,57 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         )
 
         self.assertEqual(errors, ["codex executable is required on PATH"])
+
+    def test_monitor_returns_loop_status_when_loop_exits_first(self) -> None:
+        loop = FakeProcess(pid=101, initial_status=7)
+        publisher = FakeProcess(pid=202)
+        self.worker.CHILDREN.extend([publisher, loop])
+
+        status = self.worker.monitor_worker_children(loop, publisher, poll_interval=0)
+
+        self.assertEqual(status, 7)
+        self.assertFalse(loop.terminated)
+        self.assertFalse(publisher.terminated)
+
+    def test_monitor_fails_fast_when_publisher_exits_first(self) -> None:
+        loop = FakeProcess(pid=101)
+        publisher = FakeProcess(pid=202, initial_status=3)
+        self.worker.CHILDREN.extend([publisher, loop])
+
+        status = self.worker.monitor_worker_children(loop, publisher, poll_interval=0)
+
+        self.assertEqual(status, 3)
+        self.assertTrue(loop.terminated)
+        self.assertFalse(loop.killed)
+
+    def test_monitor_treats_clean_publisher_exit_as_worker_failure(self) -> None:
+        loop = FakeProcess(pid=101)
+        publisher = FakeProcess(pid=202, initial_status=0)
+        self.worker.CHILDREN.extend([publisher, loop])
+
+        status = self.worker.monitor_worker_children(loop, publisher, poll_interval=0)
+
+        self.assertEqual(status, 1)
+        self.assertTrue(loop.terminated)
+
+
+class FakeProcess:
+    def __init__(self, *, pid: int, initial_status: int | None = None) -> None:
+        self.pid = pid
+        self.returncode = initial_status
+        self.terminated = False
+        self.killed = False
+
+    def poll(self) -> int | None:
+        return self.returncode
+
+    def terminate(self) -> None:
+        self.terminated = True
+        self.returncode = -15
+
+    def kill(self) -> None:
+        self.killed = True
+        self.returncode = -9
 
 
 if __name__ == "__main__":

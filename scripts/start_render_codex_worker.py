@@ -284,7 +284,7 @@ def start_publisher() -> subprocess.Popen[object]:
     return process
 
 
-def run_loop() -> int:
+def start_loop() -> subprocess.Popen[object]:
     interval = os.environ.get("AUTOMOAT_AGENT_INTERVAL", "300")
     iterations = os.environ.get("AUTOMOAT_AGENT_ITERATIONS", "0")
     command = [
@@ -298,7 +298,35 @@ def run_loop() -> int:
     process = subprocess.Popen(command, cwd=WORKDIR, env=os.environ.copy())
     CHILDREN.append(process)
     emit(f"started autonomous loop pid={process.pid}")
-    return process.wait()
+    return process
+
+
+def monitor_worker_children(
+    loop_process: subprocess.Popen[object],
+    publisher_process: subprocess.Popen[object],
+    poll_interval: float = 5.0,
+) -> int:
+    """Return the loop status, or fail fast if cockpit publishing dies first."""
+    while True:
+        if STOP_REQUESTED:
+            stop_children()
+            return 0
+
+        loop_status = loop_process.poll()
+        if loop_status is not None:
+            emit(f"autonomous loop exited status={loop_status}")
+            return loop_status
+
+        publisher_status = publisher_process.poll()
+        if publisher_status is not None:
+            emit(
+                "relay publisher exited unexpectedly "
+                f"status={publisher_status}; stopping autonomous loop"
+            )
+            stop_children()
+            return publisher_status if publisher_status != 0 else 1
+
+        time.sleep(poll_interval)
 
 
 def parse_args() -> argparse.Namespace:
@@ -345,12 +373,9 @@ def main() -> int:
     configure_git_auth()
     configure_codex_auth()
     sync_repo()
-    start_publisher()
-    status = run_loop()
-    if STOP_REQUESTED:
-        return 0
-    emit(f"autonomous loop exited status={status}")
-    return status
+    publisher = start_publisher()
+    loop = start_loop()
+    return monitor_worker_children(loop, publisher)
 
 
 if __name__ == "__main__":
