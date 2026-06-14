@@ -3,8 +3,9 @@
 
 from __future__ import annotations
 
-import base64
 import argparse
+import base64
+import json
 import os
 import shutil
 import signal
@@ -45,6 +46,14 @@ def env_has_any(env: os._Environ[str] | dict[str, str], names: tuple[str, ...]) 
 
 def configured_names(env: os._Environ[str] | dict[str, str], names: tuple[str, ...]) -> list[str]:
     return [name for name in names if env.get(name, "").strip()]
+
+
+def decode_codex_auth_json_b64(value: str) -> bytes:
+    decoded = base64.b64decode(value, validate=True)
+    parsed = json.loads(decoded.decode("utf-8"))
+    if not isinstance(parsed, dict):
+        raise ValueError("decoded payload must be a JSON object")
+    return decoded
 
 
 def validate_nonnegative_float(
@@ -144,9 +153,9 @@ def validate_worker_environment(
     auth_b64 = env.get("CODEX_AUTH_JSON_B64", "").strip()
     if auth_b64:
         try:
-            base64.b64decode(auth_b64, validate=True)
-        except ValueError:
-            errors.append("CODEX_AUTH_JSON_B64 must be valid base64")
+            decode_codex_auth_json_b64(auth_b64)
+        except (UnicodeDecodeError, json.JSONDecodeError, ValueError):
+            errors.append("CODEX_AUTH_JSON_B64 must decode to a JSON object")
 
     validate_positive_float(env, "AUTOMOAT_RELAY_INTERVAL", errors)
     validate_positive_float(env, "AUTOMOAT_RELAY_TIMEOUT", errors)
@@ -242,7 +251,7 @@ def configure_codex_auth() -> None:
 
     if auth_b64:
         auth_path = CODEX_HOME / "auth.json"
-        auth_path.write_bytes(base64.b64decode(auth_b64))
+        auth_path.write_bytes(decode_codex_auth_json_b64(auth_b64))
         auth_path.chmod(0o600)
         emit(f"wrote Codex auth file to {auth_path}")
     elif access_token:

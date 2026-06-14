@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import base64
 import importlib.util
 from pathlib import Path
 import unittest
@@ -58,7 +59,22 @@ class RenderWorkerPreflightTest(unittest.TestCase):
 
         self.assertEqual(errors, [])
 
-    def test_rejects_bad_url_base64_and_intervals(self) -> None:
+    def test_accepts_codex_auth_json_base64_object(self) -> None:
+        auth_b64 = base64.b64encode(b'{"tokens":{"access_token":"token"}}').decode("ascii")
+
+        errors = self.worker.validate_worker_environment(
+            {
+                "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+                "AUTOMOAT_RELAY_TOKEN": "relay-token",
+                "GITHUB_TOKEN": "github-token",
+                "CODEX_AUTH_JSON_B64": auth_b64,
+            },
+            found_command,
+        )
+
+        self.assertEqual(errors, [])
+
+    def test_rejects_bad_url_codex_auth_base64_and_intervals(self) -> None:
         errors = self.worker.validate_worker_environment(
             {
                 "AUTOMOAT_RELAY_URL": "automoat-cockpit-relay.example",
@@ -77,7 +93,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         )
 
         self.assertIn("AUTOMOAT_RELAY_URL must start with http:// or https://", errors)
-        self.assertIn("CODEX_AUTH_JSON_B64 must be valid base64", errors)
+        self.assertIn("CODEX_AUTH_JSON_B64 must decode to a JSON object", errors)
         self.assertIn("AUTOMOAT_AGENT_INTERVAL must be greater than or equal to 0", errors)
         self.assertIn("AUTOMOAT_AGENT_ITERATIONS must be greater than or equal to 0", errors)
         self.assertIn("AUTOMOAT_RELAY_INTERVAL must be greater than 0", errors)
@@ -85,6 +101,36 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertIn("AUTOMOAT_RELAY_MAX_CONSECUTIVE_FAILURES must be an integer", errors)
         self.assertIn("AUTOMOAT_RELAY_TAIL_LINES must be greater than 0", errors)
         self.assertIn("AUTOMOAT_RELAY_MAX_LOG_BYTES must be greater than 0", errors)
+
+    def test_rejects_codex_auth_base64_that_decodes_to_non_json(self) -> None:
+        auth_b64 = base64.b64encode(b"not-json").decode("ascii")
+
+        errors = self.worker.validate_worker_environment(
+            {
+                "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+                "AUTOMOAT_RELAY_TOKEN": "relay-token",
+                "GITHUB_TOKEN": "github-token",
+                "CODEX_AUTH_JSON_B64": auth_b64,
+            },
+            found_command,
+        )
+
+        self.assertEqual(errors, ["CODEX_AUTH_JSON_B64 must decode to a JSON object"])
+
+    def test_rejects_codex_auth_base64_json_array(self) -> None:
+        auth_b64 = base64.b64encode(b'["token"]').decode("ascii")
+
+        errors = self.worker.validate_worker_environment(
+            {
+                "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+                "AUTOMOAT_RELAY_TOKEN": "relay-token",
+                "GITHUB_TOKEN": "github-token",
+                "CODEX_AUTH_JSON_B64": auth_b64,
+            },
+            found_command,
+        )
+
+        self.assertEqual(errors, ["CODEX_AUTH_JSON_B64 must decode to a JSON object"])
 
     def test_rejects_negative_relay_failure_limit(self) -> None:
         errors = self.worker.validate_worker_environment(
