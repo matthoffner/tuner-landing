@@ -106,9 +106,11 @@ def shell(command: list[str], timeout: float = 5.0) -> str:
 
 
 def git_snapshot() -> dict[str, Any]:
-    status_lines = shell(["git", "status", "--short"]).splitlines()
+    status_lines = shell(["git", "status", "--porcelain=v1"]).splitlines()
     dirty_paths = []
     for line in status_lines:
+        if len(line) < 4:
+            continue
         path = line[3:].strip()
         if " -> " in path:
             path = path.split(" -> ", 1)[1]

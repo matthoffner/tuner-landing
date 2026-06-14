@@ -937,11 +937,11 @@
             <div class="bridge-header">
               <div>
                 <div class="kicker">Live Render Relay Cockpit</div>
-                <h3>Autonomous Codex agent published from the local machine</h3>
+                <h3>Autonomous Codex agent running inside Render</h3>
                 <p>
                   This deployed page reads the live agent loop through Vercel proxy endpoints backed by a
-                  Render-hosted relay. The local machine pushes status and log snapshots out to Render, so the
-                  cockpit no longer depends on an inbound ngrok tunnel.
+                  Render-hosted relay. The worker clones <code>main</code>, authenticates Codex in Render,
+                  publishes status and log snapshots, and no longer depends on an inbound ngrok tunnel.
                 </p>
               </div>
               <a class="bridge-url" href="/api/cockpit-status">open relay status</a>
@@ -1066,11 +1066,10 @@
             </div>
             <h2>A terminal tunnel to an autonomous Codex loop is the product surface</h2>
             <p>
-              The app now has a real local cockpit path: run
-              <code>AUTOMOAT_RELAY_URL=https://your-service.onrender.com AUTOMOAT_RELAY_TOKEN=... python3 scripts/start_autonomous_cockpit_relay.py</code>
-              to start a detached autonomous Codex loop, stream its terminal-style log, and push read-only
-              status snapshots to Render. The old ngrok bridge remains only as a legacy fallback; the MVP
-              path is now outbound publish from local Codex to a stable relay.
+              The app now has a real cloud cockpit path: <code>automoat-codex-worker</code> runs the
+              autonomous Codex loop in Render, streams terminal-style logs through
+              <code>automoat-cockpit-relay</code>, and pushes bounded improvements to <code>main</code>.
+              The old local/ngrok bridge remains only as a legacy fallback.
             </p>
             <div class="cockpit-layout">
               <div class="terminal-panel" aria-label="Example Codex loop terminal stream">
@@ -1080,7 +1079,7 @@
                 </div>
                 <div class="terminal-body">
                   <span class="terminal-line">$ automoat loop --goal "create data moat from repeated workflow"</span>
-                  <span class="terminal-line dim">$ python3 scripts/start_autonomous_cockpit_relay.py</span>
+                  <span class="terminal-line dim">$ python3 /app/scripts/start_render_codex_worker.py</span>
                   <span class="terminal-line dim">$ python3 scripts/publish_cockpit_to_relay.py</span>
                   <span class="terminal-line dim">read .pixelbox/handoff.md</span>
                   <span class="terminal-line dim">inspect generated records, labels, evals, and action queue</span>
@@ -1120,7 +1119,7 @@
                   <div class="kicker">Live Remote Relay</div>
                   <h3>Embedded read-only loop feed</h3>
                   <p>
-                    This panel fetches the local Codex loop through the Render relay as data, not as an iframe,
+                    This panel fetches the Render Codex worker through the relay as data, not as an iframe,
                     so the landing page can render status, import readiness, contract checks, queue state, and logs inline.
                   </p>
                 </div>

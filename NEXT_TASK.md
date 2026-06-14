@@ -1,12 +1,15 @@
 # Next Task
 
-Current priority: make the Dallas electricians MVP executable, not just conceptual.
+Current priority: make the Render-hosted autonomous worker useful, visible, and
+safe. Keep the Dallas electricians permit data as the MVP wedge, but do not
+default to adding more synthetic `ELZ-*` fixture rows when readiness and coverage
+are already green.
 
 ## Immediate Objectives
 
-1. Keep the Dallas electricians MVP executable, not just well-described.
-2. Prefer thin local writers that turn normalized rows into reusable Dallas artifacts.
-3. Tighten reviewed-label and reference-action generation before widening scope.
+1. Improve the autonomous loop, cockpit visibility, Render worker reliability, and product clarity.
+2. Keep the Dallas electricians MVP executable, not just well-described.
+3. Prefer real ingest mechanics, checks, and reusable writers over hidden fixture-row expansion.
 
 ## Good Outputs
 
@@ -54,6 +57,7 @@ Updated next best artifacts:
 - read `.automoat/state/mvp-loop-status.json` `artifacts.import_pipeline.execution_readiness` when the cockpit or autonomous supervisor needs the current Dallas import readiness gate in the same status payload as contract, coverage, workflow, and git state
 - keep `generated/workflows/dallas-inspection-workflow-v1/action-queue.json` `operator_correction_patterns` current as accepted operational patterns widen
 - use the now-repeated latest-import coverage to choose the next real Dallas import-readiness gap instead of adding more hidden fixture rows by default
+- when Dallas readiness is `ready` and coverage has no thin groups, prefer autonomy/cockpit/Render/reliability/product improvements; a synthetic example.local Dallas row append without higher-leverage code, ingest, or test work is now an autonomous-loop policy failure
 
 Latest bounded improvement completed:
 

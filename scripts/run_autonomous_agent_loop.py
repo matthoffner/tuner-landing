@@ -37,9 +37,19 @@ AUTONOMOUS_PROMPT = """\
 You are running inside the Autom oat autonomous loop.
 
 Do exactly one bounded improvement for this repo, then stop. Read AGENTS.md and
-.pixelbox/handoff.md first. Prefer NEXT_TASK.md, with the current priority being
-operator-correction capture or the smallest adjacent improvement that makes the
-Dallas permit-data MVP more executable.
+.pixelbox/handoff.md first. Use NEXT_TASK.md for context, but choose the highest
+leverage improvement for the autonomous product.
+
+Task policy:
+- If the Dallas import pipeline is already ready and coverage has no thin groups,
+  do not append another synthetic `ELZ-*` row to the example.local Dallas CSV
+  fixtures. That work is low-leverage and will be rejected by the supervisor.
+- Prefer autonomy, cockpit visibility, Render worker reliability, policy/checking,
+  product clarity, real-data ingestion mechanics, or tests that make the agent
+  more useful and inspectable.
+- Only edit raw Dallas CSV rows when fixing a broken readiness gate, adding a new
+  documented edge case/source type, or wiring a real import path. Explain why the
+  data change is not just another hidden fixture row.
 
 Constraints:
 - Do not ask the user questions.
@@ -51,6 +61,27 @@ Constraints:
 - Run relevant deterministic checks.
 - Do not commit or push; the autonomous loop supervisor will commit and push after you exit.
 """
+
+PRODUCTIVE_CHANGE_PREFIXES = (
+    "api/",
+    "scripts/",
+    "tests/",
+)
+PRODUCTIVE_CHANGE_FILES = {
+    "AGENTS.md",
+    "Dockerfile",
+    "README.md",
+    "NEXT_TASK.md",
+    "implementation-spec.md",
+    "schema.md",
+    "evals.md",
+    "discovery-artifacts.md",
+    "render.yaml",
+}
+SYNTHETIC_DALLAS_RAW_FILES = (
+    "generated/raw/dallas-electrician-import-sample-v2/permits.csv",
+    "generated/raw/dallas-electrician-import-sample-v2/inspections.csv",
+)
 
 
 def utc_now() -> str:
@@ -242,18 +273,86 @@ def inspect_artifacts() -> dict[str, Any]:
 
 
 def git_status_lines() -> list[str]:
-    return shell(["git", "status", "--short"]).stdout.splitlines()
+    return shell(["git", "status", "--porcelain=v1"]).stdout.splitlines()
 
 
 def dirty_paths_excluding_preview() -> list[str]:
     paths: list[str] = []
     for line in git_status_lines():
+        if len(line) < 4:
+            continue
         path = line[3:].strip()
         if " -> " in path:
             path = path.split(" -> ", 1)[1]
         if path and path != PREVIEW_PATH:
             paths.append(path)
     return paths
+
+
+def changed_paths_include_productive_work(paths: list[str]) -> bool:
+    for path in paths:
+        if path in PRODUCTIVE_CHANGE_FILES:
+            return True
+        if path.startswith(PRODUCTIVE_CHANGE_PREFIXES):
+            return True
+    return False
+
+
+def added_synthetic_dallas_rows() -> list[str]:
+    result = shell(["git", "diff", "--", *SYNTHETIC_DALLAS_RAW_FILES])
+    rows: list[str] = []
+    for line in result.stdout.splitlines():
+        if not line.startswith("+") or line.startswith("+++"):
+            continue
+        if "example.local/dallas/" in line and ",ELZ-2026-" not in line:
+            rows.append(line[1:])
+        elif line.startswith("+ELZ-2026-") and "example.local/dallas/" in line:
+            rows.append(line[1:])
+    return rows
+
+
+def autonomy_policy_snapshot() -> dict[str, Any]:
+    import_pipeline = import_pipeline_snapshot()
+    readiness = import_pipeline.get("execution_readiness", {})
+    coverage = import_pipeline.get("coverage", {})
+    thin_groups = coverage.get("thin_groups", {})
+    if not isinstance(readiness, dict):
+        readiness = {}
+    if not isinstance(thin_groups, dict):
+        thin_groups = {}
+    thin_group_count = sum(
+        len(value) for value in thin_groups.values() if isinstance(value, list)
+    )
+    ready = (
+        readiness.get("ready_for_next_import_records") is True
+        and readiness.get("status") == "ready"
+        and thin_group_count == 0
+    )
+    return {
+        "current_focus": (
+            "autonomy_visibility_or_real_ingest"
+            if ready
+            else "fix_import_readiness_blockers"
+        ),
+        "dallas_pipeline_ready": ready,
+        "synthetic_example_local_dallas_appends_allowed": False,
+        "thin_group_count": thin_group_count,
+        "policy": (
+            "When Dallas readiness is already green, do not append another "
+            "synthetic ELZ fixture row unless paired with a real product, "
+            "ingestion, autonomy, or reliability improvement."
+        ),
+    }
+
+
+def build_iteration_prompt(base_prompt: str) -> str:
+    policy = json.dumps(autonomy_policy_snapshot(), indent=2, sort_keys=True)
+    return (
+        base_prompt.rstrip()
+        + "\n\nCurrent supervisor policy snapshot:\n"
+        + policy
+        + "\n\nChoose work that satisfies this policy snapshot.\n"
+    )
 
 
 def git_state() -> dict[str, Any]:
@@ -287,6 +386,7 @@ def status_payload(
         "updated_at": utc_now(),
         "steps": steps,
         "artifacts": inspect_artifacts(),
+        "autonomy_policy": autonomy_policy_snapshot(),
         "git": git_state(),
     }
     if error:
@@ -384,6 +484,44 @@ def run_check(log_file: Path, name: str, command: list[str]) -> dict[str, Any]:
     }
 
 
+def run_autonomy_policy_check(log_file: Path) -> dict[str, Any]:
+    started = time.monotonic()
+    name = "autonomy policy check"
+    emit(log_file, f"step start: {name}")
+    paths = dirty_paths_excluding_preview()
+    synthetic_rows = added_synthetic_dallas_rows()
+    productive_change = changed_paths_include_productive_work(paths)
+    allow_override = os.environ.get("AUTOMOAT_ALLOW_SYNTHETIC_DALLAS_APPEND") == "1"
+    exit_status = 0
+    if synthetic_rows and not productive_change and not allow_override:
+        exit_status = 1
+        emit(
+            log_file,
+            "policy violation: synthetic Dallas example.local row append without "
+            "a product, autonomy, ingest, reliability, or test change",
+        )
+        for row in synthetic_rows[:5]:
+            emit(log_file, "  synthetic row: " + row[:240])
+    else:
+        emit(
+            log_file,
+            "policy ok: "
+            f"synthetic_rows={len(synthetic_rows)} "
+            f"productive_change={productive_change} "
+            f"override={allow_override}",
+        )
+    elapsed = round(time.monotonic() - started, 3)
+    emit(log_file, f"step end: {name} status={exit_status} seconds={elapsed}")
+    return {
+        "name": name,
+        "command": ["internal", "autonomy_policy_check"],
+        "exit_status": exit_status,
+        "seconds": elapsed,
+        "synthetic_row_count": len(synthetic_rows),
+        "productive_change": productive_change,
+    }
+
+
 def sync_landing(log_file: Path) -> dict[str, Any]:
     if not (ROOT / "generated" / "landing.html").exists():
         return {
@@ -454,7 +592,8 @@ def run_iteration(
 
     env = os.environ.copy()
     env["AUTOMOAT_AUTONOMOUS_LOOP"] = "1"
-    codex_step = stream_command(log_file, "codex autonomous bounded improvement", codex_command(prompt), codex_timeout, env)
+    iteration_prompt = build_iteration_prompt(prompt)
+    codex_step = stream_command(log_file, "codex autonomous bounded improvement", codex_command(iteration_prompt), codex_timeout, env)
     steps.append(codex_step)
     if codex_step["exit_status"] != 0:
         payload = write_status(
@@ -466,6 +605,27 @@ def run_iteration(
             started_at,
             steps,
             f"codex exited with {codex_step['exit_status']}",
+        )
+        return payload
+
+    policy_step = run_autonomy_policy_check(log_file)
+    steps.append(policy_step)
+    if policy_step["exit_status"] != 0:
+        payload = write_status(
+            event_file,
+            run_id,
+            iteration,
+            "failing",
+            "autonomy_policy_failed",
+            started_at,
+            steps,
+            "Autonomy policy rejected a synthetic Dallas fixture append without higher-leverage work",
+        )
+        emit(
+            log_file,
+            "iteration "
+            f"{iteration} end status=failing phase=autonomy_policy_failed "
+            f"dirty_paths_excluding_preview={payload['git']['dirty_count_excluding_preview']}",
         )
         return payload
 
