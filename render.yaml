@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: automoat-cockpit-relay
+    runtime: python
+    plan: starter
+    region: oregon
+    branch: main
+    autoDeployTrigger: commit
+    buildCommand: python3 --version
+    startCommand: python3 scripts/render_cockpit_relay.py --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: AUTOMOAT_RELAY_TOKEN
+        sync: false
+      - key: AUTOMOAT_RELAY_STATE_FILE
+        value: /tmp/automoat-relay-state.json

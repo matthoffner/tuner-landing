@@ -1,13 +1,37 @@
-const DEFAULT_BRIDGE_URL = "https://5694-140-186-106-90.ngrok-free.app";
+function cleanUrl(value) {
+  return (value || "").trim().replace(/\/$/, "");
+}
 
-function bridgeUrl() {
-  return (process.env.AUTOMOAT_BRIDGE_URL || DEFAULT_BRIDGE_URL).replace(/\/$/, "");
+function upstreams() {
+  const relayUrl = cleanUrl(process.env.AUTOMOAT_RELAY_URL);
+  const bridgeUrl = cleanUrl(process.env.AUTOMOAT_BRIDGE_URL);
+  const configured = [];
+  if (relayUrl) {
+    configured.push({
+      kind: "relay",
+      url: `${relayUrl}/api/status`,
+      headers: relayHeaders(),
+    });
+  }
+  if (bridgeUrl) {
+    configured.push({
+      kind: "legacy_bridge",
+      url: `${bridgeUrl}/api/status`,
+      headers: { "ngrok-skip-browser-warning": "1" },
+    });
+  }
+  return configured;
+}
+
+function relayHeaders() {
+  const token = (process.env.AUTOMOAT_RELAY_READ_TOKEN || process.env.AUTOMOAT_RELAY_TOKEN || "").trim();
+  return token ? { "X-Automoat-Relay-Token": token } : {};
 }
 
 function setHeaders(response, contentType) {
   response.setHeader("Access-Control-Allow-Origin", "*");
   response.setHeader("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS");
-  response.setHeader("Access-Control-Allow-Headers", "ngrok-skip-browser-warning, content-type");
+  response.setHeader("Access-Control-Allow-Headers", "content-type");
   response.setHeader("Cache-Control", "no-store");
   response.setHeader("Content-Type", contentType);
 }
@@ -25,23 +49,39 @@ module.exports = async function handler(request, response) {
     return;
   }
 
-  try {
-    const upstream = await fetch(`${bridgeUrl()}/api/status`, {
-      headers: { "ngrok-skip-browser-warning": "1" },
-    });
-    const body = await upstream.text();
-    if (!upstream.ok) {
-      response.status(502).send(JSON.stringify({
-        error: "cockpit_bridge_bad_status",
-        upstream_status: upstream.status,
-      }));
-      return;
-    }
-    response.status(upstream.status).send(body);
-  } catch (error) {
-    response.status(502).send(JSON.stringify({
-      error: "cockpit_bridge_unreachable",
-      message: error.message,
+  const configured = upstreams();
+  if (!configured.length) {
+    response.status(503).send(JSON.stringify({
+      error: "cockpit_relay_not_configured",
+      message: "Set AUTOMOAT_RELAY_URL on Vercel, or AUTOMOAT_BRIDGE_URL for the legacy ngrok bridge.",
     }));
+    return;
   }
+
+  const attempts = [];
+  for (const upstreamConfig of configured) {
+    try {
+      const upstream = await fetch(upstreamConfig.url, { headers: upstreamConfig.headers });
+      const body = await upstream.text();
+      if (!upstream.ok) {
+        attempts.push({
+          kind: upstreamConfig.kind,
+          status: upstream.status,
+        });
+        continue;
+      }
+      response.status(upstream.status).send(body);
+      return;
+    } catch (error) {
+      attempts.push({
+        kind: upstreamConfig.kind,
+        message: error.message,
+      });
+    }
+  }
+
+  response.status(502).send(JSON.stringify({
+    error: "cockpit_relay_unreachable",
+    attempts,
+  }));
 };
