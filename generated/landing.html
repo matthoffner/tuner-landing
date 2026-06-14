@@ -952,11 +952,9 @@
             <div class="brand-name">automoat</div>
           </a>
           <div class="nav-links">
-            <a href="#state">Current State</a>
             <a href="#moat">Moat</a>
             <a href="#cockpit">Cockpit</a>
-            <a href="#artifacts">Artifacts</a>
-            <a href="#changelog">Changelog</a>
+            <a href="#proof">Proof</a>
             <a href="#docs">Docs</a>
           </div>
         </div>
@@ -968,94 +966,48 @@
           </div>
           <h1>Create a data moat automatically from the work a business already repeats.</h1>
           <p class="hero-copy">
-            <code>automoat</code> is broader than permits. It is a local-first system for finding recurring
-            operational work, capturing the records, decisions, corrections, and outcomes it produces, and
-            turning that stream into a structured dataset a company can reuse. Permit and inspection data is
-            just the first MVP wedge because it is concrete, local, messy, and easy to evaluate.
+            <code>automoat</code> watches repeated operational work, captures the records and
+            corrections it produces, and turns that stream into reusable workflow data. Permits are
+            only the first concrete wedge.
           </p>
           <div class="hero-actions">
             <a class="button button-primary" href="#cockpit">Watch Cockpit</a>
             <a class="button button-secondary" href="/api/cockpit-status">Open Relay Status</a>
           </div>
 
-          <div class="bridge-panel bridge-panel-featured" data-bridge-url="">
-            <div class="bridge-header">
-              <div>
-                <div class="kicker">Live Render Relay Cockpit</div>
-                <h3>Autonomous Codex agent running inside Render</h3>
-                <p>
-                  This deployed page reads the live agent loop through Vercel proxy endpoints backed by a
-                  Render-hosted relay. The worker clones <code>main</code>, authenticates Codex in Render,
-                  publishes status and log snapshots, and no longer depends on an inbound ngrok tunnel.
-                </p>
-              </div>
-              <a class="bridge-url" href="/api/cockpit-status">open relay status</a>
-            </div>
-            <div class="bridge-metrics" aria-live="polite">
-              <div class="bridge-metric">
-                <strong data-bridge-status>loading</strong>
-                <span>status</span>
-              </div>
-              <div class="bridge-metric">
-                <strong data-bridge-iteration>...</strong>
-                <span>iteration</span>
-              </div>
-              <div class="bridge-metric">
-                <strong data-bridge-running>...</strong>
-                <span>loop</span>
-              </div>
-              <div class="bridge-metric">
-                <strong data-bridge-contract>...</strong>
-                <span>contract checks</span>
-              </div>
-              <div class="bridge-metric">
-                <strong data-bridge-import-readiness>...</strong>
-                <span>import readiness</span>
-              </div>
-              <div class="bridge-metric">
-                <strong data-bridge-queue>...</strong>
-                <span>queue items</span>
-              </div>
-            </div>
-            <pre class="bridge-log" data-bridge-log>connecting to Render cockpit relay...</pre>
-          </div>
-
           <div class="hero-grid">
             <div class="section" id="state">
               <div class="section-header">
-                <div class="kicker">Current State</div>
+                <div class="kicker">Proof Snapshot</div>
               </div>
-              <h2>Broad product, permit-data MVP as of June 14, 2026</h2>
+              <h2>Small wedge. Real loop. Inspectable output.</h2>
               <p>
-                The product vision is automatic data-moat creation for repeated business workflows.
-                The current repo is still in MVP scaffolding mode, so the proof wedge is intentionally
-                narrow: Dallas residential permit and inspection records. What exists today is an
-                evidence-bearing artifact pipeline with cross-sample checks, not a production app.
+                The current wedge is Dallas residential electrical permits because the records are
+                messy enough to prove the loop: normalize data, label decisions, generate evals, and
+                show the agent working.
               </p>
               <div class="metric-grid">
                 <div class="metric">
-                  <div class="metric-value">2</div>
-                  <div class="metric-label">Dallas intake variants with matching generated discovery runs</div>
+                  <div class="metric-value">535</div>
+                  <div class="metric-label">Imported permits in the current Dallas proof set</div>
                 </div>
                 <div class="metric">
-                  <div class="metric-value">3</div>
-                  <div class="metric-label">Normalized Dallas dataset paths: one synthetic scaffold plus imported CSV samples <code>v1</code> and <code>v2</code></div>
+                  <div class="metric-value">1093</div>
+                  <div class="metric-label">Generated eval tasks tied to the workflow</div>
                 </div>
                 <div class="metric">
                   <div class="metric-value">13/13</div>
-                  <div class="metric-label">Contract checks passing in <code>generated/contracts/dallas-electrician-contract-summary-v1/</code></div>
+                  <div class="metric-label">Contract checks passing</div>
                 </div>
                 <div class="metric">
-                  <div class="metric-value">1093 / 541</div>
-                  <div class="metric-label">Generated eval tasks and reviewed label rows in imported <code>v2</code></div>
+                  <div class="metric-value">Live</div>
+                  <div class="metric-label">Render-hosted Codex worker visible below</div>
                 </div>
               </div>
               <ul class="status-list">
-                <li><strong>MVP wedge:</strong> Dallas, Texas permit and inspection data, currently narrowed to residential electrical records.</li>
-                <li><strong>What works:</strong> deterministic generation of discovery outputs, normalized rows, fixture packs, reviewed labels, eval scaffolds, contract checks, edge-case coverage, and a generated inspection action queue from repo-local inputs.</li>
-                <li><strong>Most current proof:</strong> <code>generated/contracts/dallas-electrician-contract-summary-v1/</code> passes <code>13/13</code> checks across one synthetic and two imported Dallas scaffolds.</li>
-                <li><strong>Current gap:</strong> the action queue is still a generated artifact, not a browser workflow or production app; the next import-readiness gap is moving from fixture-backed proof to real Dallas records.</li>
-                <li><strong>Operational note:</strong> the unattended loop has produced real artifacts, but the repo still needs a cleaner fail-closed supervisor path when child sessions break.</li>
+                <li><strong>Input:</strong> repeated workflow records and operator corrections.</li>
+                <li><strong>Output:</strong> normalized rows, labels, evals, action queues, and contract checks.</li>
+                <li><strong>Next:</strong> move from fixture-backed Dallas proof toward real ingest.</li>
               </ul>
             </div>
 
@@ -1063,12 +1015,10 @@
               <div class="section-header">
                 <div class="kicker">Moat Candidate</div>
               </div>
-              <h2>What could become defensible</h2>
+              <h2>The moat is operational memory</h2>
               <p>
-                The moat is the automatic capture of proprietary operating context: the messy records,
-                human decisions, corrections, edge cases, and outcomes that accumulate while work gets
-                done. The permit MVP is just one place to prove the loop before applying it to other
-                recurring business workflows.
+                Generic models do not have your corrections, exceptions, follow-ups, and outcomes.
+                Automoat turns that private workflow exhaust into a dataset the business owns.
               </p>
               <div class="moat-grid">
                 <div class="moat-card">
@@ -1111,10 +1061,9 @@
             </div>
             <h2>A terminal tunnel to an autonomous Codex loop is the product surface</h2>
             <p>
-              The app now has a real cloud cockpit path: <code>automoat-codex-worker</code> runs the
-              autonomous Codex loop in Render, streams terminal-style logs through
-              <code>automoat-cockpit-relay</code>, and pushes bounded improvements to <code>main</code>.
-              The old local/ngrok bridge remains only as a legacy fallback.
+              The worker runs in Render, publishes status through the relay, and pushes bounded
+              improvements to <code>main</code>. This terminal is the product surface: you can see
+              the agent working instead of trusting a black box.
             </p>
             <div class="cockpit-layout">
               <div class="terminal-panel" aria-label="Live Codex loop terminal stream">
@@ -1147,63 +1096,35 @@
                 </div>
               </div>
             </div>
-            <div class="status-strip">
-              <a class="status-pill" href="/.pixelbox/handoff.md">handoff stream</a>
-              <a class="status-pill" href="/.automoat/logs/agent-journal.md">agent journal</a>
-              <a class="status-pill" href="/generated/workflows/dallas-inspection-workflow-v1/index.html">current action queue</a>
-            </div>
-            <div class="bridge-panel" data-bridge-url="">
-              <div class="bridge-header">
-                <div>
-                  <div class="kicker">Live Remote Relay</div>
-                  <h3>Embedded read-only loop feed</h3>
-                  <p>
-                    This panel fetches the Render Codex worker through the relay as data, not as an iframe,
-                    so the landing page can render status, import readiness, contract checks, queue state, and logs inline.
-                  </p>
-                </div>
-                <a class="bridge-url" href="/api/cockpit-status">open relay status</a>
-              </div>
-              <div class="bridge-metrics" aria-live="polite">
-                <div class="bridge-metric">
-                  <strong data-bridge-status>loading</strong>
-                  <span>status</span>
-                </div>
-                <div class="bridge-metric">
-                  <strong data-bridge-iteration>...</strong>
-                  <span>iteration</span>
-                </div>
-                <div class="bridge-metric">
-                  <strong data-bridge-running>...</strong>
-                  <span>loop</span>
-                </div>
-                <div class="bridge-metric">
-                  <strong data-bridge-contract>...</strong>
-                  <span>contract checks</span>
-                </div>
-                <div class="bridge-metric">
-                  <strong data-bridge-import-readiness>...</strong>
-                  <span>import readiness</span>
-                </div>
-                <div class="bridge-metric">
-                  <strong data-bridge-queue>...</strong>
-                  <span>queue items</span>
-                </div>
-              </div>
-              <pre class="bridge-log" data-bridge-log>connecting to remote relay...</pre>
-            </div>
           </div>
 
-          <div class="section" id="artifacts">
+          <div class="section" id="proof">
             <div class="section-header">
-              <div class="kicker">Artifact Inventory</div>
+              <div class="kicker">Proof</div>
             </div>
-            <h2>What exists on disk today</h2>
+            <h2>The current wedge is already measurable</h2>
             <p>
-              The generated folder shows both sides of the current MVP: business-first discovery
-              outputs and dataset-first eval scaffolding. Every claim below maps to a file in this repo.
+              Dallas permits are only the starter dataset. The point is the loop: ingest messy
+              workflow records, capture corrections, generate evals, and keep the proof visible.
             </p>
             <div class="artifact-grid">
+              <div class="artifact-card">
+                <span class="artifact-label">Data</span>
+                <code>535</code> imported permit sequences with linked inspections, source lineage,
+                rule context, and normalized project rows.
+              </div>
+              <div class="artifact-card">
+                <span class="artifact-label">Judgment</span>
+                <code>541</code> reviewed labels and <code>535/535</code> captured operator
+                corrections turn workflow decisions into durable supervision.
+              </div>
+              <div class="artifact-card">
+                <span class="artifact-label">Evaluation</span>
+                <code>1093</code> generated tasks and <code>13/13</code> contract checks make the
+                wedge testable instead of just a demo.
+              </div>
+            </div>
+            <div class="artifact-grid" hidden>
               <div class="artifact-card">
                 <span class="artifact-label">Discovery Runs</span>
                 Two generated Dallas business profiles exist:
@@ -1267,7 +1188,7 @@
             </div>
           </div>
 
-          <div class="section">
+          <div class="section" hidden>
             <div class="section-header">
               <div class="kicker">Latest Signal</div>
             </div>
@@ -1330,7 +1251,7 @@
             </div>
           </div>
 
-          <div class="section" id="changelog">
+          <div class="section" id="changelog" hidden>
             <div class="section-header">
               <div class="kicker">Build Changelog</div>
             </div>
@@ -1534,7 +1455,7 @@
             </div>
           </div>
 
-          <div class="section">
+          <div class="section" hidden>
             <div class="section-header">
               <div class="kicker">Truth In Advertising</div>
             </div>
@@ -1660,6 +1581,18 @@
           });
         }
 
+        async function refreshLiveTerminalOnly() {
+          try {
+            const statusResponse = await fetchFirst(["/api/cockpit-status"], { headers });
+            const status = await statusResponse.json();
+            const logResponse = await fetchFirst(["/api/cockpit-log"], { headers });
+            const text = await logResponse.text();
+            updateLiveTerminals(status, text);
+          } catch (error) {
+            updateLiveTerminalError(error.message);
+          }
+        }
+
         async function refreshPanel(panel) {
           const base = (panel.getAttribute("data-bridge-url") || "").replace(/\/$/, "");
           const fields = {
@@ -1706,7 +1639,11 @@
 
         function refreshBridge() {
           pollCount += 1;
-          panels.forEach((panel) => refreshPanel(panel));
+          if (panels.length) {
+            panels.forEach((panel) => refreshPanel(panel));
+          } else {
+            refreshLiveTerminalOnly();
+          }
         }
 
         refreshBridge();
