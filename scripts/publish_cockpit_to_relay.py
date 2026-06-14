@@ -210,11 +210,15 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--relay-url", default=os.environ.get("AUTOMOAT_RELAY_URL", ""))
     parser.add_argument("--token", default=os.environ.get("AUTOMOAT_RELAY_TOKEN", ""))
-    parser.add_argument("--interval", type=float, default=float(os.environ.get("AUTOMOAT_RELAY_INTERVAL", "3")))
-    parser.add_argument("--timeout", type=float, default=8.0)
+    parser.add_argument("--interval", type=float, default=os.environ.get("AUTOMOAT_RELAY_INTERVAL", "3"))
+    parser.add_argument("--timeout", type=float, default=os.environ.get("AUTOMOAT_RELAY_TIMEOUT", "8"))
     parser.add_argument("--once", action="store_true")
-    parser.add_argument("--tail-lines", type=int, default=180)
-    parser.add_argument("--max-log-bytes", type=int, default=256 * 1024)
+    parser.add_argument("--tail-lines", type=int, default=os.environ.get("AUTOMOAT_RELAY_TAIL_LINES", "180"))
+    parser.add_argument(
+        "--max-log-bytes",
+        type=int,
+        default=os.environ.get("AUTOMOAT_RELAY_MAX_LOG_BYTES", str(256 * 1024)),
+    )
     parser.add_argument("--status-file", type=Path, default=STATUS_FILE)
     parser.add_argument("--pid-file", type=Path, default=PID_FILE)
     parser.add_argument("--log-file", type=Path, default=LOG_FILE)
@@ -222,11 +226,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--max-consecutive-failures",
         type=int,
-        default=int(
-            os.environ.get(
-                "AUTOMOAT_RELAY_MAX_CONSECUTIVE_FAILURES",
-                str(DEFAULT_MAX_CONSECUTIVE_FAILURES),
-            )
+        default=os.environ.get(
+            "AUTOMOAT_RELAY_MAX_CONSECUTIVE_FAILURES",
+            str(DEFAULT_MAX_CONSECUTIVE_FAILURES),
         ),
         help=(
             "exit nonzero after this many consecutive publish failures; "
@@ -250,6 +252,15 @@ def main() -> int:
         return 2
     if args.interval <= 0:
         print("--interval must be greater than 0", file=sys.stderr)
+        return 2
+    if args.timeout <= 0:
+        print("--timeout must be greater than 0", file=sys.stderr)
+        return 2
+    if args.tail_lines <= 0:
+        print("--tail-lines must be greater than 0", file=sys.stderr)
+        return 2
+    if args.max_log_bytes <= 0:
+        print("--max-log-bytes must be greater than 0", file=sys.stderr)
         return 2
     if args.max_consecutive_failures < 0:
         print("--max-consecutive-failures must be greater than or equal to 0", file=sys.stderr)

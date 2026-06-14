@@ -68,7 +68,10 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                 "AUTOMOAT_AGENT_INTERVAL": "-1",
                 "AUTOMOAT_AGENT_ITERATIONS": "-2",
                 "AUTOMOAT_RELAY_INTERVAL": "0",
+                "AUTOMOAT_RELAY_TIMEOUT": "not-a-number",
                 "AUTOMOAT_RELAY_MAX_CONSECUTIVE_FAILURES": "not-an-int",
+                "AUTOMOAT_RELAY_TAIL_LINES": "0",
+                "AUTOMOAT_RELAY_MAX_LOG_BYTES": "-1",
             },
             found_command,
         )
@@ -78,7 +81,10 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertIn("AUTOMOAT_AGENT_INTERVAL must be greater than or equal to 0", errors)
         self.assertIn("AUTOMOAT_AGENT_ITERATIONS must be greater than or equal to 0", errors)
         self.assertIn("AUTOMOAT_RELAY_INTERVAL must be greater than 0", errors)
+        self.assertIn("AUTOMOAT_RELAY_TIMEOUT must be a positive number of seconds", errors)
         self.assertIn("AUTOMOAT_RELAY_MAX_CONSECUTIVE_FAILURES must be an integer", errors)
+        self.assertIn("AUTOMOAT_RELAY_TAIL_LINES must be greater than 0", errors)
+        self.assertIn("AUTOMOAT_RELAY_MAX_LOG_BYTES must be greater than 0", errors)
 
     def test_rejects_negative_relay_failure_limit(self) -> None:
         errors = self.worker.validate_worker_environment(

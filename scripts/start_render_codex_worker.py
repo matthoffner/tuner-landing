@@ -98,6 +98,23 @@ def validate_nonnegative_int(
         errors.append(f"{name} must be greater than or equal to 0")
 
 
+def validate_positive_int(
+    env: os._Environ[str] | dict[str, str],
+    name: str,
+    errors: list[str],
+) -> None:
+    value = env.get(name, "").strip()
+    if not value:
+        return
+    try:
+        parsed = int(value)
+    except ValueError:
+        errors.append(f"{name} must be an integer")
+        return
+    if parsed <= 0:
+        errors.append(f"{name} must be greater than 0")
+
+
 def validate_worker_environment(
     env: os._Environ[str] | dict[str, str] | None = None,
     command_lookup: Callable[[str], str | None] | None = None,
@@ -132,7 +149,10 @@ def validate_worker_environment(
             errors.append("CODEX_AUTH_JSON_B64 must be valid base64")
 
     validate_positive_float(env, "AUTOMOAT_RELAY_INTERVAL", errors)
+    validate_positive_float(env, "AUTOMOAT_RELAY_TIMEOUT", errors)
     validate_nonnegative_int(env, "AUTOMOAT_RELAY_MAX_CONSECUTIVE_FAILURES", errors)
+    validate_positive_int(env, "AUTOMOAT_RELAY_TAIL_LINES", errors)
+    validate_positive_int(env, "AUTOMOAT_RELAY_MAX_LOG_BYTES", errors)
     validate_nonnegative_float(env, "AUTOMOAT_AGENT_INTERVAL", errors)
     validate_nonnegative_int(env, "AUTOMOAT_AGENT_ITERATIONS", errors)
 
@@ -161,8 +181,11 @@ def emit_environment_preflight(
         f"codex_auth={','.join(configured_names(env, CODEX_AUTH_ENV_NAMES))} "
         f"agent_interval={env.get('AUTOMOAT_AGENT_INTERVAL', '300')} "
         f"relay_interval={env.get('AUTOMOAT_RELAY_INTERVAL', '3')} "
+        f"relay_timeout={env.get('AUTOMOAT_RELAY_TIMEOUT', '8')} "
         f"relay_max_consecutive_failures="
         f"{env.get('AUTOMOAT_RELAY_MAX_CONSECUTIVE_FAILURES', '3')} "
+        f"relay_tail_lines={env.get('AUTOMOAT_RELAY_TAIL_LINES', '180')} "
+        f"relay_max_log_bytes={env.get('AUTOMOAT_RELAY_MAX_LOG_BYTES', str(256 * 1024))} "
         f"commands={','.join(REQUIRED_COMMANDS)}"
     )
     return []

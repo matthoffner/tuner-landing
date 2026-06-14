@@ -4,6 +4,12 @@ Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
 - lane: editor
+- status: made Render cockpit publisher runtime knobs configurable and preflighted so bad timeout/log-tail settings fail before the cloud worker starts Git, Codex, or a long-lived publisher; no Dallas raw CSV rows were edited
+- files: scripts/publish_cockpit_to_relay.py, scripts/start_render_codex_worker.py, tests/test_cockpit_relay_publisher.py, tests/test_render_worker_preflight.py, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- checks: `python3 -m unittest tests/test_render_worker_preflight.py tests/test_cockpit_relay_publisher.py -v`; `python3 -m py_compile scripts/start_render_codex_worker.py scripts/publish_cockpit_to_relay.py tests/test_render_worker_preflight.py tests/test_cockpit_relay_publisher.py`; `python3 -m unittest discover -s tests -v`; `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json > /tmp/automoat-worker-relay-ready.json`; JSON assertion for readiness `ready`, `535` permits, `1082` inspections, and zero thin groups; `git diff --check`
+- next: deploy the worker with optional `AUTOMOAT_RELAY_TIMEOUT`, `AUTOMOAT_RELAY_TAIL_LINES`, and `AUTOMOAT_RELAY_MAX_LOG_BYTES` only when the defaults need tuning; continue prioritizing Render reliability, cockpit visibility, real ingest, or policy/test work while Dallas readiness stays green
+
+- lane: editor
 - status: added deterministic regression coverage for the autonomous-loop supervisor policy so green Dallas readiness plus zero thin groups keeps steering future runs toward autonomy, cockpit visibility, Render reliability, ingest, product, or tests instead of docs/status-only synthetic `example.local` Dallas fixture churn; no Dallas raw CSV rows were edited
 - files: tests/test_autonomous_agent_policy.py, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
 - checks: `python3 -m unittest tests/test_autonomous_agent_policy.py -v`; `python3 -m py_compile scripts/run_autonomous_agent_loop.py tests/test_autonomous_agent_policy.py`; `python3 -m unittest discover -s tests -v`; `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json > /tmp/automoat-policy-tests-ready.json`; JSON assertion for readiness `ready`, `535` permits, `1082` inspections, `535` captured corrections, and zero thin groups; `git diff --check`

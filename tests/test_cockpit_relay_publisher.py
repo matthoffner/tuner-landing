@@ -6,9 +6,12 @@ from __future__ import annotations
 from argparse import Namespace
 import importlib.util
 import json
+import os
 from pathlib import Path
+import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -86,6 +89,32 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertFalse(status["loop_running"])
         self.assertIsNone(status["loop_pid"])
         self.assertIn("publisher_updated_at", status)
+
+    def test_parse_args_reads_relay_runtime_environment_defaults(self) -> None:
+        env = {
+            "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            "AUTOMOAT_RELAY_INTERVAL": "4.5",
+            "AUTOMOAT_RELAY_TIMEOUT": "11.25",
+            "AUTOMOAT_RELAY_TAIL_LINES": "77",
+            "AUTOMOAT_RELAY_MAX_LOG_BYTES": "4096",
+            "AUTOMOAT_RELAY_MAX_CONSECUTIVE_FAILURES": "5",
+        }
+
+        with patch.dict(os.environ, env, clear=True), patch.object(
+            sys,
+            "argv",
+            ["publish_cockpit_to_relay.py"],
+        ):
+            args = self.publisher.parse_args()
+
+        self.assertEqual(args.relay_url, "https://automoat-cockpit-relay.example")
+        self.assertEqual(args.token, "relay-token")
+        self.assertEqual(args.interval, 4.5)
+        self.assertEqual(args.timeout, 11.25)
+        self.assertEqual(args.tail_lines, 77)
+        self.assertEqual(args.max_log_bytes, 4096)
+        self.assertEqual(args.max_consecutive_failures, 5)
 
     def test_publish_loop_exits_after_configured_consecutive_failures(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
