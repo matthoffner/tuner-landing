@@ -574,8 +574,10 @@ def run_autonomy_policy_check(log_file: Path) -> dict[str, Any]:
     policy_allows_synthetic_append = synthetic_dallas_appends_allowed_by_policy()
     allow_override = os.environ.get("AUTOMOAT_ALLOW_SYNTHETIC_DALLAS_APPEND") == "1"
     exit_status = 0
+    failure_reason = None
     if synthetic_rows and not policy_allows_synthetic_append and not allow_override:
         exit_status = 1
+        failure_reason = "synthetic_append_disallowed_by_snapshot"
         emit(
             log_file,
             "policy violation: supervisor snapshot disallows synthetic Dallas "
@@ -585,6 +587,7 @@ def run_autonomy_policy_check(log_file: Path) -> dict[str, Any]:
             emit(log_file, "  synthetic row: " + row[:240])
     elif raw_csv_paths and not productive_change and not allow_override:
         exit_status = 1
+        failure_reason = "raw_dallas_csv_without_productive_work"
         emit(
             log_file,
             "policy violation: raw Dallas CSV edits require code, ingest, infra, "
@@ -595,6 +598,7 @@ def run_autonomy_policy_check(log_file: Path) -> dict[str, Any]:
             emit(log_file, "  raw csv path: " + path)
     elif synthetic_rows and not productive_change and not allow_override:
         exit_status = 1
+        failure_reason = "synthetic_append_without_productive_work"
         emit(
             log_file,
             "policy violation: synthetic Dallas example.local row append without "
@@ -623,7 +627,40 @@ def run_autonomy_policy_check(log_file: Path) -> dict[str, Any]:
         "raw_dallas_csv_changed_paths": raw_csv_paths,
         "productive_change": productive_change,
         "policy_allows_synthetic_append": policy_allows_synthetic_append,
+        "failure_reason": failure_reason,
     }
+
+
+def autonomy_policy_error_message(policy_step: dict[str, Any]) -> str:
+    reason = policy_step.get("failure_reason")
+    synthetic_count = int(policy_step.get("synthetic_row_count") or 0)
+    raw_paths = policy_step.get("raw_dallas_csv_changed_paths")
+    if not isinstance(raw_paths, list):
+        raw_paths = []
+    raw_path_summary = ", ".join(str(path) for path in raw_paths[:5])
+    if len(raw_paths) > 5:
+        raw_path_summary += f", +{len(raw_paths) - 5} more"
+
+    if reason == "synthetic_append_disallowed_by_snapshot":
+        return (
+            "Autonomy policy rejected "
+            f"{synthetic_count} synthetic Dallas example.local row append(s): "
+            "the supervisor snapshot disallows hidden fixture growth while "
+            "Dallas readiness is already green."
+        )
+    if reason == "raw_dallas_csv_without_productive_work":
+        suffix = f": {raw_path_summary}" if raw_path_summary else "."
+        return (
+            "Autonomy policy rejected raw Dallas CSV edits without code, ingest, "
+            "infra, test, or durable spec companion work"
+            + suffix
+        )
+    if reason == "synthetic_append_without_productive_work":
+        return (
+            "Autonomy policy rejected a synthetic Dallas example.local row append "
+            "without code, ingest, infra, test, or durable spec companion work."
+        )
+    return "Autonomy policy rejected the current diff."
 
 
 def run_artifact_health_check(log_file: Path) -> dict[str, Any]:
@@ -752,7 +789,7 @@ def run_iteration(
             "autonomy_policy_failed",
             started_at,
             steps,
-            "Autonomy policy rejected a synthetic Dallas fixture append without higher-leverage work",
+            autonomy_policy_error_message(policy_step),
         )
         emit(
             log_file,

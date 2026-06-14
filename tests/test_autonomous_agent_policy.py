@@ -105,6 +105,10 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
 
         self.assertEqual(result["exit_status"], 1)
         self.assertEqual(result["synthetic_row_count"], 1)
+        self.assertEqual(
+            result["failure_reason"],
+            "synthetic_append_disallowed_by_snapshot",
+        )
         self.assertFalse(result["productive_change"])
         self.assertFalse(result["policy_allows_synthetic_append"])
 
@@ -125,6 +129,10 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
             result["raw_dallas_csv_changed_paths"],
             ["generated/raw/dallas-electrician-import-sample-v2/contractors.csv"],
         )
+        self.assertEqual(
+            result["failure_reason"],
+            "raw_dallas_csv_without_productive_work",
+        )
         self.assertFalse(result["productive_change"])
 
     def test_policy_check_allows_raw_dallas_csv_edit_with_productive_work(self) -> None:
@@ -143,6 +151,7 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
             result["raw_dallas_csv_changed_paths"],
             ["generated/raw/dallas-electrician-import-sample-v2/rule_documents.csv"],
         )
+        self.assertIsNone(result["failure_reason"])
         self.assertTrue(result["productive_change"])
 
     def test_policy_check_rejects_synthetic_row_when_snapshot_disallows_it(self) -> None:
@@ -161,6 +170,10 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
         self.assertEqual(result["exit_status"], 1)
         self.assertTrue(result["productive_change"])
         self.assertFalse(result["policy_allows_synthetic_append"])
+        self.assertEqual(
+            result["failure_reason"],
+            "synthetic_append_disallowed_by_snapshot",
+        )
 
     def test_policy_check_accepts_synthetic_row_when_snapshot_allows_companion_work(self) -> None:
         self.loop.dirty_paths_excluding_preview = lambda: [
@@ -181,6 +194,34 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
         self.assertEqual(result["exit_status"], 0)
         self.assertTrue(result["productive_change"])
         self.assertTrue(result["policy_allows_synthetic_append"])
+        self.assertIsNone(result["failure_reason"])
+
+    def test_policy_error_message_names_raw_csv_companion_gap(self) -> None:
+        message = self.loop.autonomy_policy_error_message(
+            {
+                "failure_reason": "raw_dallas_csv_without_productive_work",
+                "synthetic_row_count": 0,
+                "raw_dallas_csv_changed_paths": [
+                    "generated/raw/dallas-electrician-import-sample-v2/contractors.csv",
+                ],
+            }
+        )
+
+        self.assertIn("raw Dallas CSV edits", message)
+        self.assertIn("without code, ingest, infra, test, or durable spec", message)
+        self.assertIn("contractors.csv", message)
+
+    def test_policy_error_message_names_snapshot_synthetic_block(self) -> None:
+        message = self.loop.autonomy_policy_error_message(
+            {
+                "failure_reason": "synthetic_append_disallowed_by_snapshot",
+                "synthetic_row_count": 2,
+                "raw_dallas_csv_changed_paths": [],
+            }
+        )
+
+        self.assertIn("2 synthetic Dallas example.local row append", message)
+        self.assertIn("supervisor snapshot disallows hidden fixture growth", message)
 
 
 if __name__ == "__main__":
