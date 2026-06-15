@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import base64
 import json
+import math
 import os
 import shutil
 import signal
@@ -163,6 +164,9 @@ def validate_nonnegative_float(
     except ValueError:
         errors.append(f"{name} must be a number of seconds")
         return
+    if not math.isfinite(parsed):
+        errors.append(f"{name} must be a finite number of seconds")
+        return
     if parsed < 0:
         errors.append(f"{name} must be greater than or equal to 0")
         return
@@ -184,6 +188,9 @@ def validate_positive_float(
         parsed = float(value)
     except ValueError:
         errors.append(f"{name} must be a positive number of seconds")
+        return
+    if not math.isfinite(parsed):
+        errors.append(f"{name} must be a finite number of seconds")
         return
     if parsed <= 0:
         errors.append(f"{name} must be greater than 0")

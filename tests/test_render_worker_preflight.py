@@ -234,6 +234,29 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertIn("AUTOMOAT_RELAY_MAX_LOG_BYTES must be greater than 0", errors)
         self.assertIn("AUTOMOAT_STATUS_STALE_AFTER_SECONDS must be greater than 0", errors)
 
+    def test_rejects_non_finite_runtime_float_knobs(self) -> None:
+        errors = self.worker.validate_worker_environment(
+            {
+                "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+                "AUTOMOAT_RELAY_TOKEN": "relay-token",
+                "GITHUB_TOKEN": "github-token",
+                "CODEX_ACCESS_TOKEN": "codex-token",
+                "AUTOMOAT_RELAY_INTERVAL": "nan",
+                "AUTOMOAT_RELAY_TIMEOUT": "inf",
+                "AUTOMOAT_AGENT_INTERVAL": "-inf",
+            },
+            found_command,
+        )
+
+        self.assertEqual(
+            errors,
+            [
+                "AUTOMOAT_RELAY_INTERVAL must be a finite number of seconds",
+                "AUTOMOAT_RELAY_TIMEOUT must be a finite number of seconds",
+                "AUTOMOAT_AGENT_INTERVAL must be a finite number of seconds",
+            ],
+        )
+
     def test_rejects_runtime_knobs_with_empty_or_surrounding_whitespace(self) -> None:
         errors = self.worker.validate_worker_environment(
             {
