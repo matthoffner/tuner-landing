@@ -54,6 +54,7 @@ SOURCE_HEALTH_LABELS = {
     "source_autonomy_policy_failed": "Autonomy policy failed",
     "source_cockpit_attention": "Source cockpit needs attention",
     "source_status_unavailable": "Source status is unavailable",
+    "source_status_timestamp_invalid": "Source status timestamp is invalid",
     "source_status_stale": "Source status is stale",
     "source_loop_not_running": "Source loop is not running",
     "source_status_failing": "Source status is failing",
@@ -63,6 +64,7 @@ OPERATOR_ATTENTION_LABELS = {
     "status_failing": "Loop status is failing",
     "autonomy_policy_failed": "Autonomy policy failed",
     "status_stale": "Status is stale",
+    "status_timestamp_invalid": "Status timestamp is invalid",
     "artifact_health_not_loaded": "Artifact health is not loaded",
     "import_readiness_not_ready": "Import readiness is not ready",
     "import_readiness_blocked": "Import readiness is blocked",
@@ -156,19 +158,23 @@ def parse_utc_timestamp(value: Any) -> datetime | None:
 
 
 def status_freshness(status: dict[str, Any], stale_after_seconds: int) -> dict[str, Any]:
-    updated_at = parse_utc_timestamp(status.get("updated_at"))
+    updated_at_value = status.get("updated_at")
+    updated_at = parse_utc_timestamp(updated_at_value)
     current_time = parse_utc_timestamp(utc_now())
+    timestamp_invalid = compact_text(updated_at_value) is not None and updated_at is None
     if updated_at is None or current_time is None:
         return {
             "source_status_age_seconds": None,
             "source_status_stale_after_seconds": stale_after_seconds,
             "source_status_stale": True,
+            "source_status_timestamp_invalid": timestamp_invalid,
         }
     age_seconds = max(0, int((current_time - updated_at).total_seconds()))
     return {
         "source_status_age_seconds": age_seconds,
         "source_status_stale_after_seconds": stale_after_seconds,
         "source_status_stale": age_seconds > stale_after_seconds,
+        "source_status_timestamp_invalid": False,
     }
 
 
@@ -696,8 +702,11 @@ def publisher_cockpit_summary(status: dict[str, Any]) -> dict[str, Any]:
         attention_reasons.append("autonomy_policy_failed")
     if status_value in {"error", "failing", "invalid-status-json"}:
         attention_reasons.append("status_failing")
-    if status.get("source_status_stale") is True:
+    source_status_timestamp_invalid = status.get("source_status_timestamp_invalid") is True
+    if status.get("source_status_stale") is True and not source_status_timestamp_invalid:
         attention_reasons.append("status_stale")
+    if source_status_timestamp_invalid:
+        attention_reasons.append("status_timestamp_invalid")
     if artifact_health_status != "loaded":
         attention_reasons.append("artifact_health_not_loaded")
     if import_readiness != "ready":
@@ -719,6 +728,7 @@ def publisher_cockpit_summary(status: dict[str, Any]) -> dict[str, Any]:
         "status_age_seconds": status.get("source_status_age_seconds"),
         "status_stale_after_seconds": status.get("source_status_stale_after_seconds"),
         "status_stale": status.get("source_status_stale"),
+        "status_timestamp_invalid": source_status_timestamp_invalid,
         "operator_attention": bool(attention_reasons),
         "operator_attention_reasons": attention_reasons,
         "operator_attention_primary_reason": primary_attention_reason,
@@ -902,6 +912,8 @@ def publisher_source_health(status: dict[str, Any]) -> dict[str, Any]:
         "not_object",
     }:
         reasons.append("source_status_unavailable")
+    if status.get("source_status_timestamp_invalid") is True:
+        reasons.append("source_status_timestamp_invalid")
     if status.get("source_status_stale") is True:
         reasons.append("source_status_stale")
     if status.get("loop_running") is False:

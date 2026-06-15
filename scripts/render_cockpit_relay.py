@@ -48,6 +48,7 @@ COCKPIT_HEALTH_LABELS = {
     "relay_snapshot_missing": "Relay snapshot is missing",
     "relay_snapshot_stale": "Relay snapshot is stale",
     "source_bridge_degraded": "Source bridge is degraded",
+    "source_status_timestamp_invalid": "Source status timestamp is invalid",
     "source_status_stale": "Source status is stale",
     "source_status_unavailable": "Source status is unavailable",
     "source_loop_not_running": "Source loop is not running",
@@ -486,6 +487,9 @@ def source_status_diagnostics(status: dict[str, Any]) -> dict[str, Any]:
     stale = status.get("source_status_stale")
     if isinstance(stale, bool):
         diagnostics["source_status_stale"] = stale
+    timestamp_invalid = status.get("source_status_timestamp_invalid")
+    if isinstance(timestamp_invalid, bool):
+        diagnostics["source_status_timestamp_invalid"] = timestamp_invalid
     return diagnostics
 
 
@@ -840,6 +844,7 @@ def sanitize_cockpit_summary_for_relay_response(summary: Any) -> dict[str, Any] 
 
     bool_fields = {
         "operator_attention": summary.get("operator_attention"),
+        "status_timestamp_invalid": summary.get("status_timestamp_invalid"),
         "ready_for_next_import_records": summary.get("ready_for_next_import_records"),
         "dallas_pipeline_ready": summary.get("dallas_pipeline_ready"),
         "policy_preview_json_changed": summary.get("policy_preview_json_changed"),
@@ -988,6 +993,8 @@ def cockpit_health(
         reasons.append("relay_snapshot_missing")
     if freshness.get("snapshot_stale") is True:
         reasons.append("relay_snapshot_stale")
+    if status.get("source_status_timestamp_invalid") is True:
+        reasons.append("source_status_timestamp_invalid")
     if status.get("source_status_stale") is True:
         reasons.append("source_status_stale")
     if status.get("source_status_file_status") in {

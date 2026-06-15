@@ -98,6 +98,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertEqual(payload["status"]["source_status_age_seconds"], 60)
         self.assertEqual(payload["status"]["source_status_stale_after_seconds"], 120)
         self.assertFalse(payload["status"]["source_status_stale"])
+        self.assertFalse(payload["status"]["source_status_timestamp_invalid"])
         self.assertFalse(payload["status"]["loop_running"])
         self.assertIsNone(payload["status"]["loop_pid"])
         self.assertIn("cockpit_summary", payload["status"])
@@ -1231,6 +1232,31 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertEqual(health["primary_reason"], "source_status_unavailable")
         self.assertEqual(health["label"], "Source status is unavailable")
 
+    def test_publisher_source_health_routes_invalid_source_timestamp(self) -> None:
+        status = {
+            "status": "passing",
+            "loop_running": True,
+            "source_status_stale": True,
+            "source_status_timestamp_invalid": True,
+            "source_status_file_status": "loaded",
+        }
+
+        health = self.publisher.publisher_source_health(status)
+
+        self.assertEqual(
+            health,
+            {
+                "status": "degraded",
+                "ok": False,
+                "reasons": [
+                    "source_status_timestamp_invalid",
+                    "source_status_stale",
+                ],
+                "primary_reason": "source_status_timestamp_invalid",
+                "label": "Source status timestamp is invalid",
+            },
+        )
+
     def test_publisher_source_health_reports_cockpit_attention(self) -> None:
         status = {
             "status": "passing",
@@ -1351,6 +1377,54 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertIn("<external>/status.json", status["source_status_file_error"])
         self.assertNotIn(str(tmp_path), status_text)
         self.assertTrue(status["source_status_stale"])
+
+    def test_read_status_routes_invalid_source_status_timestamp(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            status_file = tmp_path / "status.json"
+            status_file.write_text(
+                json.dumps(
+                    {
+                        "status": "passing",
+                        "updated_at": "not-a-timestamp",
+                        "artifacts": {
+                            "artifact_health": {"status": "loaded"},
+                            "import_pipeline": {
+                                "execution_readiness": {
+                                    "status": "ready",
+                                    "blockers": [],
+                                }
+                            },
+                        },
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            self.publisher.utc_now = lambda: "2026-06-14T19:31:00Z"
+
+            status = self.publisher.read_status(
+                status_file,
+                tmp_path / "missing.pid",
+                status_stale_after_seconds=120,
+            )
+
+        self.assertIsNone(status["source_status_age_seconds"])
+        self.assertTrue(status["source_status_stale"])
+        self.assertTrue(status["source_status_timestamp_invalid"])
+        self.assertEqual(status["source_status_file_status"], "loaded")
+        summary = status["cockpit_summary"]
+        self.assertTrue(summary["status_timestamp_invalid"])
+        self.assertTrue(summary["operator_attention"])
+        self.assertEqual(
+            summary["operator_attention_reasons"],
+            ["loop_not_running", "status_timestamp_invalid"],
+        )
+        self.assertEqual(
+            summary["operator_attention_primary_reason"],
+            "loop_not_running",
+        )
+        self.assertEqual(summary["operator_attention_label"], "Loop is not running")
 
     def test_read_status_marks_old_source_status_stale(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
