@@ -390,6 +390,75 @@ class RenderCockpitRelayTest(unittest.TestCase):
         self.assertNotIn("local-secret", health_text)
         self.assertNotIn("api-secret", health_text)
 
+    def test_status_and_health_report_stale_source_bridge_snapshot(self) -> None:
+        self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
+        self.relay.update_state(
+            {
+                "pushed_at": "2026-06-14T19:59:30Z",
+                "status": {
+                    "status": "running",
+                    "loop_running": True,
+                    "bridge_summary": {
+                        "available": True,
+                        "status_file": ".automoat/state/mvp-bridge-status.json",
+                        "status_file_status": "loaded",
+                        "status": "running",
+                        "updated_at": "2026-06-14T19:56:00Z",
+                        "bridge_status_age_seconds": "210",
+                        "bridge_status_stale_after_seconds": "120",
+                        "bridge_status_stale": True,
+                        "bridge_health": {
+                            "status": "live",
+                            "ok": True,
+                            "reasons": [],
+                            "primary_reason": None,
+                            "label": "Live",
+                        },
+                    },
+                },
+                "log_tail": "bridge status is stale\n",
+            }
+        )
+        self.relay.utc_now = lambda: "2026-06-14T20:00:00Z"
+
+        health = self.relay.health_payload()
+        status = self.relay.relay_status_payload()
+
+        expected_bridge = {
+            "available": True,
+            "status_file": ".automoat/state/mvp-bridge-status.json",
+            "status_file_status": "loaded",
+            "status": "running",
+            "updated_at": "2026-06-14T19:56:00Z",
+            "bridge_status_age_seconds": 210,
+            "bridge_status_stale_after_seconds": 120,
+            "bridge_status_stale": True,
+            "bridge_health": {
+                "status": "live",
+                "ok": True,
+                "reasons": [],
+                "primary_reason": None,
+                "label": "Live",
+            },
+        }
+        self.assertTrue(health["ok"])
+        self.assertFalse(health["cockpit_ok"])
+        self.assertEqual(health["cockpit_status"], "degraded")
+        self.assertEqual(
+            health["cockpit_health"]["reasons"],
+            ["source_bridge_status_stale"],
+        )
+        self.assertEqual(
+            health["cockpit_health_primary_reason"],
+            "source_bridge_status_stale",
+        )
+        self.assertEqual(
+            health["cockpit_health_label"],
+            "Source bridge status is stale",
+        )
+        self.assertEqual(health["cockpit_health"]["source_bridge"], expected_bridge)
+        self.assertEqual(status["cockpit_health"]["source_bridge"], expected_bridge)
+
     def test_status_and_health_report_source_cockpit_attention(self) -> None:
         self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
         self.relay.update_state(

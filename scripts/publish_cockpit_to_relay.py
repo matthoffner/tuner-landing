@@ -29,6 +29,7 @@ BRIDGE_STATUS_FILE = ROOT / ".automoat" / "state" / "mvp-bridge-status.json"
 DEFAULT_MAX_CONSECUTIVE_FAILURES = 3
 DEFAULT_MAX_CONSECUTIVE_STALE_STATUSES = 0
 DEFAULT_STATUS_STALE_AFTER_SECONDS = 660
+DEFAULT_BRIDGE_STATUS_STALE_AFTER_SECONDS = 660
 PUBLISHER_CONFIG_LIMITS = {
     "interval": 60,
     "timeout": 60,
@@ -37,6 +38,7 @@ PUBLISHER_CONFIG_LIMITS = {
     "max_consecutive_failures": 100,
     "max_consecutive_stale_statuses": 100,
     "status_stale_after_seconds": 3600,
+    "bridge_status_stale_after_seconds": 3600,
 }
 URL_TEXT_PATTERN = re.compile(r"https?://[^\s'\"<>]+")
 BEARER_SECRET_PATTERN = re.compile(
@@ -155,6 +157,26 @@ def status_freshness(status: dict[str, Any], stale_after_seconds: int) -> dict[s
         "source_status_age_seconds": age_seconds,
         "source_status_stale_after_seconds": stale_after_seconds,
         "source_status_stale": age_seconds > stale_after_seconds,
+    }
+
+
+def bridge_status_freshness(
+    status: dict[str, Any],
+    stale_after_seconds: int,
+) -> dict[str, Any]:
+    updated_at = parse_utc_timestamp(status.get("updated_at"))
+    current_time = parse_utc_timestamp(utc_now())
+    if updated_at is None or current_time is None:
+        return {
+            "bridge_status_age_seconds": None,
+            "bridge_status_stale_after_seconds": stale_after_seconds,
+            "bridge_status_stale": True,
+        }
+    age_seconds = max(0, int((current_time - updated_at).total_seconds()))
+    return {
+        "bridge_status_age_seconds": age_seconds,
+        "bridge_status_stale_after_seconds": stale_after_seconds,
+        "bridge_status_stale": age_seconds > stale_after_seconds,
     }
 
 
@@ -299,7 +321,10 @@ def bridge_health_summary(value: Any) -> dict[str, Any]:
     }
 
 
-def read_bridge_summary(path: Path | None = None) -> dict[str, Any]:
+def read_bridge_summary(
+    path: Path | None = None,
+    stale_after_seconds: int = DEFAULT_BRIDGE_STATUS_STALE_AFTER_SECONDS,
+) -> dict[str, Any]:
     if path is None:
         path = BRIDGE_STATUS_FILE
     status_file = repo_relative(path)
@@ -338,6 +363,7 @@ def read_bridge_summary(path: Path | None = None) -> dict[str, Any]:
         "status_file": status_file,
         "status_file_status": "loaded",
         "bridge_health": bridge_health_summary(payload.get("bridge_health")),
+        **bridge_status_freshness(payload, stale_after_seconds),
     }
     text_fields = {
         "status": payload.get("status"),
@@ -522,6 +548,7 @@ def read_status(
     pid_file: Path = PID_FILE,
     status_stale_after_seconds: int = DEFAULT_STATUS_STALE_AFTER_SECONDS,
     bridge_status_file: Path = BRIDGE_STATUS_FILE,
+    bridge_status_stale_after_seconds: int = DEFAULT_BRIDGE_STATUS_STALE_AFTER_SECONDS,
 ) -> dict[str, Any]:
     loaded_status, source_file_metadata = read_json_with_status(status_file)
     status = loaded_status or {
@@ -536,7 +563,10 @@ def read_status(
     status["loop_pid"] = pid
     status["publisher_updated_at"] = utc_now()
     status["cockpit_summary"] = publisher_cockpit_summary(status)
-    status["bridge_summary"] = read_bridge_summary(bridge_status_file)
+    status["bridge_summary"] = read_bridge_summary(
+        bridge_status_file,
+        bridge_status_stale_after_seconds,
+    )
     return status
 
 
@@ -635,6 +665,11 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         args.pid_file,
         args.status_stale_after_seconds,
         getattr(args, "bridge_status_file", BRIDGE_STATUS_FILE),
+        getattr(
+            args,
+            "bridge_status_stale_after_seconds",
+            DEFAULT_BRIDGE_STATUS_STALE_AFTER_SECONDS,
+        ),
     )
     return {
         "pushed_at": utc_now(),
@@ -1010,6 +1045,21 @@ def validate_publisher_configuration(args: argparse.Namespace) -> list[str]:
             "--status-stale-after-seconds must be less than or equal to "
             f"{PUBLISHER_CONFIG_LIMITS['status_stale_after_seconds']}"
         )
+    bridge_status_stale_after_seconds = getattr(
+        args,
+        "bridge_status_stale_after_seconds",
+        DEFAULT_BRIDGE_STATUS_STALE_AFTER_SECONDS,
+    )
+    if bridge_status_stale_after_seconds <= 0:
+        errors.append("--bridge-status-stale-after-seconds must be greater than 0")
+    elif (
+        bridge_status_stale_after_seconds
+        > PUBLISHER_CONFIG_LIMITS["bridge_status_stale_after_seconds"]
+    ):
+        errors.append(
+            "--bridge-status-stale-after-seconds must be less than or equal to "
+            f"{PUBLISHER_CONFIG_LIMITS['bridge_status_stale_after_seconds']}"
+        )
 
     configured_file_args = {
         "--status-file": args.status_file,
@@ -1056,6 +1106,7 @@ def publisher_preflight_error_category(error: str) -> str:
             "--max-consecutive-failures",
             "--max-consecutive-stale-statuses",
             "--status-stale-after-seconds",
+            "--bridge-status-stale-after-seconds",
         )
     ):
         return "invalid_runtime_config"
@@ -1102,6 +1153,13 @@ def publisher_preflight_summary(
         "tail_lines": int(args.tail_lines),
         "max_log_bytes": int(args.max_log_bytes),
         "status_stale_after_seconds": int(args.status_stale_after_seconds),
+        "bridge_status_stale_after_seconds": int(
+            getattr(
+                args,
+                "bridge_status_stale_after_seconds",
+                DEFAULT_BRIDGE_STATUS_STALE_AFTER_SECONDS,
+            )
+        ),
         "max_consecutive_failures": int(args.max_consecutive_failures),
         "max_consecutive_stale_statuses": int(
             args.max_consecutive_stale_statuses
@@ -1148,6 +1206,7 @@ def emit_publisher_preflight(
         f"tail_lines={args.tail_lines} "
         f"max_log_bytes={args.max_log_bytes} "
         f"status_stale_after_seconds={args.status_stale_after_seconds} "
+        f"bridge_status_stale_after_seconds={getattr(args, 'bridge_status_stale_after_seconds', DEFAULT_BRIDGE_STATUS_STALE_AFTER_SECONDS)} "
         f"max_consecutive_failures={args.max_consecutive_failures} "
         f"max_consecutive_stale_statuses={args.max_consecutive_stale_statuses} "
         f"bridge_status_file={repo_relative(getattr(args, 'bridge_status_file', BRIDGE_STATUS_FILE))} "
@@ -1200,6 +1259,17 @@ def parse_args() -> argparse.Namespace:
             str(DEFAULT_STATUS_STALE_AFTER_SECONDS),
         ),
         help="mark the source loop status stale when updated_at is older than this many seconds",
+    )
+    parser.add_argument(
+        "--bridge-status-stale-after-seconds",
+        type=int,
+        default=os.environ.get(
+            "AUTOMOAT_BRIDGE_STATUS_STALE_AFTER_SECONDS",
+            str(DEFAULT_BRIDGE_STATUS_STALE_AFTER_SECONDS),
+        ),
+        help=(
+            "mark the bridge status stale when updated_at is older than this many seconds"
+        ),
     )
     parser.add_argument(
         "--max-consecutive-failures",

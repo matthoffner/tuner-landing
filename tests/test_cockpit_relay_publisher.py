@@ -83,6 +83,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 tail_lines=2,
                 max_log_bytes=1024,
                 status_stale_after_seconds=120,
+                bridge_status_stale_after_seconds=120,
             )
             self.publisher.utc_now = lambda: "2026-06-14T19:31:00Z"
 
@@ -111,6 +112,14 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             payload["status"]["bridge_summary"]["public_url"],
             "https://automoat-test.ngrok.app",
         )
+        self.assertIsNone(
+            payload["status"]["bridge_summary"]["bridge_status_age_seconds"]
+        )
+        self.assertEqual(
+            payload["status"]["bridge_summary"]["bridge_status_stale_after_seconds"],
+            120,
+        )
+        self.assertTrue(payload["status"]["bridge_summary"]["bridge_status_stale"])
         self.assertEqual(payload["log_tail"], "second\nthird\n")
         self.assertEqual(payload["publisher"]["repo"], ".")
         self.assertEqual(payload["publisher"]["status_file"], "<external>/custom-status.json")
@@ -211,8 +220,12 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 + "\n",
                 encoding="utf-8",
             )
+            self.publisher.utc_now = lambda: "2026-06-15T03:21:00Z"
 
-            summary = self.publisher.read_bridge_summary(bridge_status_file)
+            summary = self.publisher.read_bridge_summary(
+                bridge_status_file,
+                stale_after_seconds=120,
+            )
 
         self.assertTrue(summary["available"])
         self.assertEqual(summary["status_file_status"], "loaded")
@@ -222,6 +235,9 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertEqual(summary["ngrok_api_url"], "http://127.0.0.1:4041/api/tunnels")
         self.assertEqual(summary["bridge_pid"], 12345)
         self.assertEqual(summary["bridge_status_sequence"], 4)
+        self.assertEqual(summary["bridge_status_age_seconds"], 60)
+        self.assertEqual(summary["bridge_status_stale_after_seconds"], 120)
+        self.assertFalse(summary["bridge_status_stale"])
         self.assertEqual(summary["interval"], 5.5)
         self.assertEqual(summary["mode"], "read-only")
         self.assertEqual(
@@ -282,6 +298,39 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertNotIn("public-secret", summary_text)
         self.assertNotIn("local-secret", summary_text)
         self.assertNotIn("api-secret", summary_text)
+
+    def test_read_bridge_summary_marks_loaded_stale_status(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            bridge_status_file = tmp_path / "mvp-bridge-status.json"
+            bridge_status_file.write_text(
+                json.dumps(
+                    {
+                        "status": "running",
+                        "updated_at": "2026-06-15T03:18:00Z",
+                        "bridge_health": {
+                            "status": "live",
+                            "ok": True,
+                            "reasons": [],
+                            "primary_reason": None,
+                            "label": "Live",
+                        },
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            self.publisher.utc_now = lambda: "2026-06-15T03:21:00Z"
+
+            summary = self.publisher.read_bridge_summary(
+                bridge_status_file,
+                stale_after_seconds=120,
+            )
+
+        self.assertTrue(summary["available"])
+        self.assertEqual(summary["bridge_status_age_seconds"], 180)
+        self.assertEqual(summary["bridge_status_stale_after_seconds"], 120)
+        self.assertTrue(summary["bridge_status_stale"])
 
     def test_read_bridge_summary_masks_local_path_in_read_error(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -615,6 +664,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             "AUTOMOAT_RELAY_MAX_CONSECUTIVE_FAILURES": "5",
             "AUTOMOAT_RELAY_MAX_CONSECUTIVE_STALE_STATUSES": "6",
             "AUTOMOAT_STATUS_STALE_AFTER_SECONDS": "900",
+            "AUTOMOAT_BRIDGE_STATUS_STALE_AFTER_SECONDS": "240",
             "AUTOMOAT_BRIDGE_STATUS_FILE": "/tmp/custom-bridge-status.json",
         }
 
@@ -634,6 +684,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertEqual(args.max_consecutive_failures, 5)
         self.assertEqual(args.max_consecutive_stale_statuses, 6)
         self.assertEqual(args.status_stale_after_seconds, 900)
+        self.assertEqual(args.bridge_status_stale_after_seconds, 240)
         self.assertEqual(args.bridge_status_file, Path("/tmp/custom-bridge-status.json"))
 
     def test_validate_publisher_configuration_reports_bad_runtime_settings(self) -> None:
@@ -651,6 +702,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 max_consecutive_failures=-1,
                 max_consecutive_stale_statuses=-1,
                 status_stale_after_seconds=0,
+                bridge_status_stale_after_seconds=0,
                 status_file=tmp_path / "status.json",
                 pid_file=tmp_path / "loop.pid",
                 log_file=tmp_path / "loop.log",
@@ -674,6 +726,10 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             errors,
         )
         self.assertIn("--status-stale-after-seconds must be greater than 0", errors)
+        self.assertIn(
+            "--bridge-status-stale-after-seconds must be greater than 0",
+            errors,
+        )
         self.assertIn("--publisher-log must be a file path, not a directory", errors)
 
     def test_validate_publisher_configuration_accepts_documented_runtime_limits(self) -> None:
@@ -692,6 +748,9 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                     "max_consecutive_stale_statuses"
                 ],
                 status_stale_after_seconds=limits["status_stale_after_seconds"],
+                bridge_status_stale_after_seconds=limits[
+                    "bridge_status_stale_after_seconds"
+                ],
                 status_file=tmp_path / "status.json",
                 pid_file=tmp_path / "loop.pid",
                 log_file=tmp_path / "loop.log",
@@ -719,6 +778,10 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 ]
                 + 1,
                 status_stale_after_seconds=limits["status_stale_after_seconds"] + 1,
+                bridge_status_stale_after_seconds=limits[
+                    "bridge_status_stale_after_seconds"
+                ]
+                + 1,
                 status_file=tmp_path / "status.json",
                 pid_file=tmp_path / "loop.pid",
                 log_file=tmp_path / "loop.log",
@@ -737,6 +800,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 "--max-consecutive-failures must be less than or equal to 100",
                 "--max-consecutive-stale-statuses must be less than or equal to 100",
                 "--status-stale-after-seconds must be less than or equal to 3600",
+                "--bridge-status-stale-after-seconds must be less than or equal to 3600",
             ],
         )
 
@@ -1185,6 +1249,8 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                     "6",
                     "--status-stale-after-seconds",
                     "900",
+                    "--bridge-status-stale-after-seconds",
+                    "240",
                     "--status-file",
                     str(tmp_path / "status.json"),
                     "--pid-file",
@@ -1215,6 +1281,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertEqual(payload["config"]["max_consecutive_failures"], 5)
         self.assertEqual(payload["config"]["max_consecutive_stale_statuses"], 6)
         self.assertEqual(payload["config"]["status_stale_after_seconds"], 900)
+        self.assertEqual(payload["config"]["bridge_status_stale_after_seconds"], 240)
         self.assertEqual(payload["config"]["status_file"], "<external>/status.json")
         self.assertEqual(payload["config"]["pid_file"], "<external>/loop.pid")
         self.assertEqual(payload["config"]["log_file"], "<external>/loop.log")

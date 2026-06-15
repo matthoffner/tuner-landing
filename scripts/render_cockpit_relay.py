@@ -51,6 +51,7 @@ COCKPIT_HEALTH_LABELS = {
     "source_status_failing": "Source status is failing",
     "source_autonomy_policy_failed": "Autonomy policy failed",
     "source_cockpit_attention": "Source cockpit needs attention",
+    "source_bridge_status_stale": "Source bridge status is stale",
 }
 EMBEDDED_URL_RE = re.compile(r"https?://[^\s,;|]+")
 SENSITIVE_ASSIGNMENT_RE = re.compile(
@@ -366,6 +367,10 @@ def source_bridge_summary(status: dict[str, Any]) -> dict[str, Any]:
     int_fields = {
         "bridge_pid": bridge.get("bridge_pid"),
         "bridge_status_sequence": bridge.get("bridge_status_sequence"),
+        "bridge_status_age_seconds": bridge.get("bridge_status_age_seconds"),
+        "bridge_status_stale_after_seconds": bridge.get(
+            "bridge_status_stale_after_seconds"
+        ),
     }
     for key, value in int_fields.items():
         compact_value = compact_int(value)
@@ -375,6 +380,10 @@ def source_bridge_summary(status: dict[str, Any]) -> dict[str, Any]:
     interval = compact_float(bridge.get("interval"))
     if interval is not None:
         summary["interval"] = interval
+
+    bridge_status_stale = bridge.get("bridge_status_stale")
+    if isinstance(bridge_status_stale, bool):
+        summary["bridge_status_stale"] = bridge_status_stale
 
     bridge_health = bridge.get("bridge_health")
     if isinstance(bridge_health, dict):
@@ -576,6 +585,11 @@ def cockpit_health(
     if source_summary.get("operator_attention") is True:
         reasons.append("source_cockpit_attention")
     source_bridge_health = source_bridge.get("bridge_health")
+    if (
+        source_bridge.get("available") is True
+        and source_bridge.get("bridge_status_stale") is True
+    ):
+        reasons.append("source_bridge_status_stale")
     if (
         source_bridge.get("available") is True
         and isinstance(source_bridge_health, dict)
