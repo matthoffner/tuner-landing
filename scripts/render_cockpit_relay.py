@@ -51,6 +51,7 @@ COCKPIT_HEALTH_LABELS = {
     "source_status_failing": "Source status is failing",
     "source_autonomy_policy_failed": "Autonomy policy failed",
     "source_cockpit_attention": "Source cockpit needs attention",
+    "source_bridge_status_unavailable": "Source bridge status is unavailable",
     "source_bridge_status_stale": "Source bridge status is stale",
 }
 EMBEDDED_URL_RE = re.compile(r"https?://[^\s,;|]+")
@@ -590,6 +591,12 @@ def cockpit_health(
         and source_bridge.get("bridge_status_stale") is True
     ):
         reasons.append("source_bridge_status_stale")
+    if source_bridge.get("status_file_status") in {
+        "read_failed",
+        "invalid_json",
+        "not_object",
+    }:
+        reasons.append("source_bridge_status_unavailable")
     if (
         source_bridge.get("available") is True
         and isinstance(source_bridge_health, dict)
