@@ -1077,6 +1077,13 @@ def validate_publisher_configuration(args: argparse.Namespace) -> list[str]:
             errors.append("--relay-url must not include query strings or fragments")
         elif parsed_relay_url.path.strip("/"):
             errors.append("--relay-url must be a relay base URL without a path")
+        elif (
+            parsed_relay_url.scheme == "http"
+            and not local_http_host(parsed_relay_url.hostname)
+        ):
+            errors.append(
+                "--relay-url must use https:// unless the host is localhost or 127.0.0.1"
+            )
         else:
             host_port = parsed_relay_url.netloc.rsplit("@", 1)[-1]
             try:
@@ -1194,6 +1201,11 @@ def validate_publisher_configuration(args: argparse.Namespace) -> list[str]:
                 f"{label} parent path {repo_relative(blocking_path)} must be a directory"
             )
     return errors
+
+
+def local_http_host(hostname: str) -> bool:
+    normalized = hostname.lower().strip("[]")
+    return normalized in {"localhost", "127.0.0.1", "::1"}
 
 
 def blocking_parent_path_component(path: Path) -> Path | None:

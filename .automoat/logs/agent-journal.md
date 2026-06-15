@@ -4,6 +4,8 @@ This is the human-readable journal for repeated `automoat` work loops.
 
 Use short dated entries. Focus on decisions, changes, blockers, and next steps.
 
+- 2026-06-15T10:50:47Z: Tightened standalone cockpit relay publisher URL preflight so `AUTOMOAT_RELAY_URL` / `--relay-url` rejects non-local plaintext `http://` relay origins before any publish can move the relay token over cleartext; localhost, `127.0.0.1`, and `::1` remain allowed for local preflight. Added deterministic publisher coverage for remote HTTP rejection, local HTTP acceptance, and JSON `invalid_relay_url` diagnostics. Verified focused publisher tests, py_compile, full unit discovery, explicit remote HTTP publisher JSON preflight failure, landing sync, protected generated/raw and `.pxcode/preview.json` paths unchanged, `git diff --check`, and the summary-only Dallas readiness gate with JSON assertion for `ready`, `535` permits, `1082` inspections, `1625` source records, `535/535` operator corrections, `13/13` contract checks, and zero thin groups. No Dallas raw CSV rows were edited.
+
 ## 2026-04-25
 
 - Bootstrapped project direction: vision, use cases, MVP framing, and generated landing page.
