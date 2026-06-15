@@ -2157,12 +2157,15 @@ class RenderWorkerPreflightTest(unittest.TestCase):
 
     def test_check_env_json_reports_bridge_status_stale_threshold(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
-            bridge_status_file = Path(temp_dir) / "automoat-bridge-status.json"
+            workdir = Path(temp_dir) / "repo"
+            bridge_status_file = workdir / ".automoat" / "state" / "bridge-status.json"
             env = {
                 "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
                 "AUTOMOAT_RELAY_TOKEN": "relay-token",
                 "GITHUB_TOKEN": "github-token",
                 "CODEX_ACCESS_TOKEN": "codex-token",
+                "AUTOMOAT_WORKDIR": str(workdir),
+                "CODEX_HOME": str(Path(temp_dir) / "codex-home"),
                 "AUTOMOAT_BRIDGE_STATUS_FILE": str(bridge_status_file),
                 "AUTOMOAT_BRIDGE_STATUS_STALE_AFTER_SECONDS": "240",
             }
@@ -2183,7 +2186,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         )
         self.assertEqual(
             payload["config"]["bridge_status_file"],
-            "<external>/automoat-bridge-status.json",
+            ".automoat/state/bridge-status.json",
         )
         self.assertNotIn(str(bridge_status_file), output.getvalue())
 
@@ -2251,13 +2254,17 @@ class RenderWorkerPreflightTest(unittest.TestCase):
 
     def test_check_env_json_categorizes_bad_bridge_status_file_path(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
-            bridge_status_file = Path(temp_dir) / "bridge-status-dir"
+            workdir = Path(temp_dir) / "repo"
+            workdir.mkdir()
+            bridge_status_file = workdir / "bridge-status-dir"
             bridge_status_file.mkdir()
             env = {
                 "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
                 "AUTOMOAT_RELAY_TOKEN": "relay-token",
                 "GITHUB_TOKEN": "github-token",
                 "CODEX_ACCESS_TOKEN": "codex-token",
+                "AUTOMOAT_WORKDIR": str(workdir),
+                "CODEX_HOME": str(Path(temp_dir) / "codex-home"),
                 "AUTOMOAT_BRIDGE_STATUS_FILE": str(bridge_status_file),
             }
             output = io.StringIO()
@@ -2284,6 +2291,81 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             ["AUTOMOAT_BRIDGE_STATUS_FILE"],
         )
         self.assertNotIn(str(bridge_status_file), output.getvalue())
+        self.assertNotIn("github-token", output.getvalue())
+        self.assertNotIn("codex-token", output.getvalue())
+
+    def test_rejects_bridge_status_file_outside_workdir_before_publisher_preflight(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            workdir = temp_path / "repo"
+            workdir.mkdir()
+            outside_file = temp_path / "external" / "bridge-status.json"
+
+            for bridge_status_file in (
+                str(outside_file),
+                "../external/bridge-status.json",
+            ):
+                with self.subTest(bridge_status_file=bridge_status_file):
+                    errors = self.worker.validate_worker_environment(
+                        {
+                            "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+                            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+                            "GITHUB_TOKEN": "github-token",
+                            "CODEX_ACCESS_TOKEN": "codex-token",
+                            "AUTOMOAT_WORKDIR": str(workdir),
+                            "CODEX_HOME": str(temp_path / "codex-home"),
+                            "AUTOMOAT_BRIDGE_STATUS_FILE": bridge_status_file,
+                        },
+                        found_command,
+                    )
+
+                    self.assertEqual(
+                        errors,
+                        ["AUTOMOAT_BRIDGE_STATUS_FILE must stay inside AUTOMOAT_WORKDIR"],
+                    )
+
+    def test_check_env_json_routes_external_bridge_status_file_without_path_echo(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            workdir = temp_path / "repo"
+            workdir.mkdir()
+            outside_file = temp_path / "secret-external" / "bridge-status.json"
+            output = io.StringIO()
+
+            with redirect_stdout(output):
+                errors = self.worker.emit_environment_preflight(
+                    {
+                        "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+                        "AUTOMOAT_RELAY_TOKEN": "relay-token",
+                        "GITHUB_TOKEN": "github-token",
+                        "CODEX_ACCESS_TOKEN": "codex-token",
+                        "AUTOMOAT_WORKDIR": str(workdir),
+                        "CODEX_HOME": str(temp_path / "codex-home"),
+                        "AUTOMOAT_BRIDGE_STATUS_FILE": str(outside_file),
+                    },
+                    found_command,
+                    output_format="json",
+                )
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(
+            errors,
+            ["AUTOMOAT_BRIDGE_STATUS_FILE must stay inside AUTOMOAT_WORKDIR"],
+        )
+        self.assertEqual(payload["status"], "failed")
+        self.assertEqual(payload["diagnostics"]["error_categories"], ["invalid_file_path"])
+        self.assertEqual(
+            payload["diagnostics"]["failed_configuration_keys"],
+            ["AUTOMOAT_BRIDGE_STATUS_FILE"],
+        )
+        self.assertNotIn("secret-external", output.getvalue())
+        self.assertNotIn(str(outside_file), output.getvalue())
+        self.assertNotIn(str(workdir), output.getvalue())
+        self.assertNotIn("relay-token", output.getvalue())
         self.assertNotIn("github-token", output.getvalue())
         self.assertNotIn("codex-token", output.getvalue())
 
@@ -3095,8 +3177,10 @@ class RenderWorkerPreflightTest(unittest.TestCase):
 
     def test_start_publisher_logs_runtime_knobs_without_secret_values(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
-            bridge_status_file = Path(temp_dir) / "bridge-status.json"
+            workdir = Path(temp_dir) / "repo"
+            bridge_status_file = workdir / ".automoat" / "state" / "bridge-status.json"
             env = {
+                "AUTOMOAT_WORKDIR": str(workdir),
                 "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
                 "AUTOMOAT_RELAY_TOKEN": "relay-token",
                 "AUTOMOAT_RELAY_INTERVAL": "4.5",
@@ -3122,7 +3206,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertEqual(self.worker.CHILDREN, [fake_publisher])
         launched_command = popen.call_args.args[0]
         self.assertEqual(launched_command, self.worker.relay_publisher_command(env))
-        self.assertEqual(popen.call_args.kwargs["cwd"], self.worker.WORKDIR)
+        self.assertEqual(popen.call_args.kwargs["cwd"], workdir)
         self.assertEqual(popen.call_args.kwargs["env"]["AUTOMOAT_RELAY_TOKEN"], "relay-token")
         log_line = output.getvalue()
         self.assertIn("started relay publisher pid=303", log_line)
@@ -3130,7 +3214,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertIn("publisher_max_consecutive_stale_statuses=6", log_line)
         self.assertIn("publisher_bridge_status_stale_after_seconds=660", log_line)
         self.assertIn(
-            "publisher_bridge_status_file=<external>/bridge-status.json",
+            "publisher_bridge_status_file=.automoat/state/bridge-status.json",
             log_line,
         )
         self.assertNotIn(str(bridge_status_file), log_line)

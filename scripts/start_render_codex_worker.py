@@ -1058,6 +1058,20 @@ def validate_publisher_file_path_env_value(
     if conflicting_runtime_file is not None:
         errors.append(f"{name} must not be equal to or inside a reserved runtime file")
         return
+    try:
+        workdir, _codex_home = configured_worker_paths(env)
+        resolved_workdir = workdir.expanduser().resolve(strict=False)
+    except OSError as exc:
+        errors.append(f"{name} could not verify AUTOMOAT_WORKDIR containment: {exc}")
+        return
+    if (
+        resolved_workdir.is_absolute()
+        and len([part for part in resolved_workdir.parts if part != resolved_workdir.anchor])
+        >= 2
+        and not resolved_path.is_relative_to(resolved_workdir)
+    ):
+        errors.append(f"{name} must stay inside AUTOMOAT_WORKDIR")
+        return
     if resolved_path.exists() and resolved_path.is_dir():
         errors.append(f"{name} must be a file path, not a directory")
         return
