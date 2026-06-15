@@ -459,6 +459,35 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             ["AUTOMOAT_RELAY_URL must not include query strings or fragments"],
         )
 
+    def test_rejects_relay_url_with_endpoint_path(self) -> None:
+        errors = self.worker.validate_worker_environment(
+            {
+                "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example/ingest",
+                "AUTOMOAT_RELAY_TOKEN": "relay-token",
+                "GITHUB_TOKEN": "github-token",
+                "CODEX_ACCESS_TOKEN": "codex-token",
+            },
+            found_command,
+        )
+
+        self.assertEqual(
+            errors,
+            ["AUTOMOAT_RELAY_URL must be a relay base URL without a path"],
+        )
+
+    def test_accepts_relay_base_url_with_root_slashes(self) -> None:
+        errors = self.worker.validate_worker_environment(
+            {
+                "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example///",
+                "AUTOMOAT_RELAY_TOKEN": "relay-token",
+                "GITHUB_TOKEN": "github-token",
+                "CODEX_ACCESS_TOKEN": "codex-token",
+            },
+            found_command,
+        )
+
+        self.assertEqual(errors, [])
+
     def test_rejects_relay_url_with_leading_or_trailing_whitespace(self) -> None:
         errors = self.worker.validate_worker_environment(
             {
@@ -599,6 +628,31 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertEqual(payload["status"], "failed")
         self.assertEqual(payload["diagnostics"]["error_categories"], ["invalid_url"])
         self.assertNotIn("automoat-cockpit-relay.example:abc", output.getvalue())
+
+    def test_check_env_json_categorizes_relay_url_endpoint_path(self) -> None:
+        env = {
+            "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example/ingest",
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            "GITHUB_TOKEN": "github-token",
+            "CODEX_ACCESS_TOKEN": "codex-token",
+        }
+        output = io.StringIO()
+
+        with redirect_stdout(output):
+            errors = self.worker.emit_environment_preflight(
+                env,
+                found_command,
+                output_format="json",
+            )
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(
+            errors,
+            ["AUTOMOAT_RELAY_URL must be a relay base URL without a path"],
+        )
+        self.assertEqual(payload["status"], "failed")
+        self.assertEqual(payload["diagnostics"]["error_categories"], ["invalid_url"])
+        self.assertNotIn("automoat-cockpit-relay.example/ingest", output.getvalue())
 
     def test_rejects_git_repo_with_embedded_credentials(self) -> None:
         errors = self.worker.validate_worker_environment(

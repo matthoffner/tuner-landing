@@ -363,6 +363,7 @@ def validate_worker_environment(
         relay_url,
         errors,
         required=True,
+        require_no_path=True,
     )
     git_repo = env.get("AUTOMOAT_GIT_REPO", DEFAULT_REPO)
     validate_secret_safe_http_url(
@@ -492,6 +493,7 @@ def validate_secret_safe_http_url(
     *,
     required: bool,
     require_path: bool = False,
+    require_no_path: bool = False,
 ) -> None:
     if not value:
         if required:
@@ -525,6 +527,8 @@ def validate_secret_safe_http_url(
         errors.append(f"{name} must not include embedded credentials")
     elif parsed_value.query or parsed_value.fragment:
         errors.append(f"{name} must not include query strings or fragments")
+    elif require_no_path and parsed_value.path.strip("/"):
+        errors.append(f"{name} must be a relay base URL without a path")
     elif require_path and not parsed_value.path.strip("/"):
         errors.append(f"{name} must include a repository path")
     else:
