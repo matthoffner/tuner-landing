@@ -208,6 +208,73 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             ],
         )
 
+    def test_rejects_oversized_secret_values_before_auth_setup(self) -> None:
+        oversized_secret = "secret-" + ("x" * self.worker.MAX_SECRET_VALUE_CHARS)
+
+        errors = self.worker.validate_worker_environment(
+            {
+                "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+                "AUTOMOAT_RELAY_TOKEN": oversized_secret,
+                "GITHUB_TOKEN": oversized_secret,
+                "CODEX_AUTH_JSON_B64": oversized_secret,
+            },
+            found_command,
+        )
+
+        self.assertEqual(
+            errors,
+            [
+                (
+                    "AUTOMOAT_RELAY_TOKEN must be "
+                    f"{self.worker.MAX_SECRET_VALUE_CHARS} characters or fewer"
+                ),
+                (
+                    "GITHUB_TOKEN must be "
+                    f"{self.worker.MAX_SECRET_VALUE_CHARS} characters or fewer"
+                ),
+                (
+                    "CODEX_AUTH_JSON_B64 must be "
+                    f"{self.worker.MAX_SECRET_VALUE_CHARS} characters or fewer"
+                ),
+            ],
+        )
+
+    def test_check_env_json_routes_oversized_secret_without_echoing_value(self) -> None:
+        oversized_secret = "secret-codex-token-" + ("x" * self.worker.MAX_SECRET_VALUE_CHARS)
+        output = io.StringIO()
+
+        with redirect_stdout(output):
+            errors = self.worker.emit_environment_preflight(
+                {
+                    "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+                    "AUTOMOAT_RELAY_TOKEN": "relay-token",
+                    "GITHUB_TOKEN": "github-token",
+                    "CODEX_ACCESS_TOKEN": oversized_secret,
+                },
+                found_command,
+                output_format="json",
+            )
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(
+            errors,
+            [
+                (
+                    "CODEX_ACCESS_TOKEN must be "
+                    f"{self.worker.MAX_SECRET_VALUE_CHARS} characters or fewer"
+                ),
+            ],
+        )
+        self.assertEqual(payload["status"], "failed")
+        self.assertEqual(payload["diagnostics"]["error_categories"], ["invalid_secret"])
+        self.assertEqual(
+            payload["diagnostics"]["failed_configuration_keys"],
+            ["CODEX_ACCESS_TOKEN"],
+        )
+        self.assertNotIn("secret-codex-token", output.getvalue())
+        self.assertNotIn("relay-token", output.getvalue())
+        self.assertNotIn("github-token", output.getvalue())
+
     def test_rejects_bad_url_codex_auth_base64_and_intervals(self) -> None:
         errors = self.worker.validate_worker_environment(
             {

@@ -35,12 +35,14 @@ PUBLISHER_PREFLIGHT_MAX_OUTPUT_BYTES = 64 * 1024
 PUBLISHER_PREFLIGHT_DIAGNOSTIC_TOKEN_LIMIT = 12
 CODEX_AUTH_ENV_NAMES = ("CODEX_AUTH_JSON_B64", "CODEX_ACCESS_TOKEN", "OPENAI_API_KEY")
 GIT_AUTH_ENV_NAMES = ("GITHUB_TOKEN", "GH_TOKEN")
+SECRET_ENV_NAMES = ("AUTOMOAT_RELAY_TOKEN", *GIT_AUTH_ENV_NAMES, *CODEX_AUTH_ENV_NAMES)
 REQUIRED_COMMANDS = ("git", "codex")
 CODEX_CONFIG_ENV_DEFAULTS = {
     "AUTOMOAT_CODEX_MODEL": "gpt-5.5",
     "AUTOMOAT_CODEX_REASONING_EFFORT": "high",
 }
 MAX_CODEX_CONFIG_VALUE_CHARS = 120
+MAX_SECRET_VALUE_CHARS = 8192
 RUNTIME_CONFIG_LIMITS = {
     "AUTOMOAT_AGENT_INTERVAL": 3600,
     "AUTOMOAT_AGENT_ITERATIONS": 1000,
@@ -368,6 +370,9 @@ def validate_secret_value(
     if value != value.strip():
         errors.append(f"{name} must not include leading or trailing whitespace")
         return False
+    if len(value) > MAX_SECRET_VALUE_CHARS:
+        errors.append(f"{name} must be {MAX_SECRET_VALUE_CHARS} characters or fewer")
+        return False
     return True
 
 
@@ -417,7 +422,7 @@ def validate_worker_environment(
 
     invalid_secret_names = {
         name
-        for name in ("AUTOMOAT_RELAY_TOKEN", *GIT_AUTH_ENV_NAMES, *CODEX_AUTH_ENV_NAMES)
+        for name in SECRET_ENV_NAMES
         if not validate_secret_value(env, name, errors)
     }
 
@@ -627,6 +632,8 @@ def preflight_error_category(error: str) -> str:
         or "must not include leading or trailing whitespace" in error
     ):
         return "invalid_secret_or_identity"
+    if any(error.startswith(name) for name in SECRET_ENV_NAMES):
+        return "invalid_secret"
     if error.endswith(" executable is required on PATH"):
         return "missing_command"
     if error.startswith("AUTOMOAT_"):
