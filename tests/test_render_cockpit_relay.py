@@ -156,6 +156,8 @@ class RenderCockpitRelayTest(unittest.TestCase):
                     "loop_running": True,
                     "cockpit_summary": {
                         "operator_attention": True,
+                        "operator_attention_primary_reason": "artifact_health_not_loaded",
+                        "operator_attention_label": "Artifact health is not loaded",
                         "operator_attention_reasons": [
                             "artifact_health_not_loaded",
                             "import_readiness_not_ready",
@@ -180,10 +182,22 @@ class RenderCockpitRelayTest(unittest.TestCase):
             health["cockpit_health"]["source_cockpit_attention_reasons"],
             ["artifact_health_not_loaded", "import_readiness_not_ready"],
         )
+        self.assertEqual(
+            health["cockpit_health"]["source_cockpit_attention_primary_reason"],
+            "artifact_health_not_loaded",
+        )
+        self.assertEqual(
+            health["cockpit_health"]["source_cockpit_attention_label"],
+            "Artifact health is not loaded",
+        )
         self.assertFalse(status["cockpit_ok"])
         self.assertEqual(status["cockpit_status"], "degraded")
         self.assertEqual(
             status["cockpit_health"]["reasons"], ["source_cockpit_attention"]
+        )
+        self.assertEqual(
+            status["cockpit_health"]["source_cockpit_attention_label"],
+            "Artifact health is not loaded",
         )
 
     def test_status_and_health_report_unavailable_source_status_file(self) -> None:

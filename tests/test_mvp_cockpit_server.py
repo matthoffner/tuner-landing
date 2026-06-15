@@ -54,6 +54,17 @@ class MvpCockpitServerTest(unittest.TestCase):
         self.assertIsNone(self.cockpit.utc_timestamp_age_seconds("not a timestamp", now))
         self.assertIsNone(self.cockpit.utc_timestamp_age_seconds(None, now))
 
+    def test_operator_attention_label_uses_stable_labels_and_fallback(self) -> None:
+        self.assertEqual(
+            self.cockpit.operator_attention_label("autonomy_policy_failed"),
+            "Autonomy policy failed",
+        )
+        self.assertEqual(
+            self.cockpit.operator_attention_label("new_attention_reason"),
+            "new attention reason",
+        )
+        self.assertEqual(self.cockpit.operator_attention_label(None), "Clear")
+
     def test_cockpit_summary_extracts_operator_diagnostics(self) -> None:
         status = {
             "status": "passing",
@@ -96,6 +107,8 @@ class MvpCockpitServerTest(unittest.TestCase):
         self.assertTrue(summary["status_stale"])
         self.assertTrue(summary["operator_attention"])
         self.assertEqual(summary["operator_attention_reasons"], ["status_stale"])
+        self.assertEqual(summary["operator_attention_primary_reason"], "status_stale")
+        self.assertEqual(summary["operator_attention_label"], "Status is stale")
         self.assertEqual(summary["artifact_health"], "loaded")
         self.assertEqual(summary["import_readiness"], "ready")
         self.assertEqual(summary["readiness_blockers"], [])
@@ -143,6 +156,8 @@ class MvpCockpitServerTest(unittest.TestCase):
                 "coverage_thin_groups_present",
             ],
         )
+        self.assertEqual(summary["operator_attention_primary_reason"], "loop_not_running")
+        self.assertEqual(summary["operator_attention_label"], "Loop is not running")
         self.assertEqual(summary["readiness_blockers"], ["correction_ledger_incomplete"])
         self.assertEqual(summary["thin_group_count"], 2)
         self.assertEqual(
@@ -185,6 +200,7 @@ class MvpCockpitServerTest(unittest.TestCase):
 
         self.assertTrue(summary["operator_attention"])
         self.assertIn("autonomy_policy_failed", summary["operator_attention_reasons"])
+        self.assertEqual(summary["operator_attention_label"], "Autonomy policy failed")
         self.assertEqual(
             summary["policy_failure_reason"],
             "raw_dallas_csv_without_productive_work",
@@ -236,6 +252,10 @@ class MvpCockpitServerTest(unittest.TestCase):
             status["cockpit_summary"]["operator_attention_reasons"],
             ["loop_not_running"],
         )
+        self.assertEqual(
+            status["cockpit_summary"]["operator_attention_label"],
+            "Loop is not running",
+        )
         self.assertFalse(status["cockpit_summary"]["loop_running"])
 
     def test_cockpit_html_includes_operator_diagnostic_targets(self) -> None:
@@ -249,6 +269,8 @@ class MvpCockpitServerTest(unittest.TestCase):
                 "status_stale": False,
                 "operator_attention": True,
                 "operator_attention_reasons": ["status_stale"],
+                "operator_attention_primary_reason": "status_stale",
+                "operator_attention_label": "Status is stale",
             },
         }
 
@@ -263,6 +285,7 @@ class MvpCockpitServerTest(unittest.TestCase):
         self.assertIn("status.cockpit_summary", markup)
         self.assertIn("status_age_seconds", markup)
         self.assertIn("operator_attention_reasons", markup)
+        self.assertIn("operator_attention_label", markup)
         self.assertIn("operator_attention", markup)
 
     def test_access_log_redacts_query_strings_from_request_lines(self) -> None:

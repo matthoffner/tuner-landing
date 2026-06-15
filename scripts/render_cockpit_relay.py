@@ -118,6 +118,14 @@ def cockpit_health(
     source_attention_reasons = source_summary.get("operator_attention_reasons")
     if not isinstance(source_attention_reasons, list):
         source_attention_reasons = []
+    source_attention_primary_reason = source_summary.get(
+        "operator_attention_primary_reason"
+    )
+    if not isinstance(source_attention_primary_reason, str):
+        source_attention_primary_reason = None
+    source_attention_label = source_summary.get("operator_attention_label")
+    if not isinstance(source_attention_label, str):
+        source_attention_label = None
     startup = state.get("relay_startup")
     if isinstance(startup, dict) and startup.get("state_load_status") == "failed":
         reasons.append("relay_state_load_failed")
@@ -154,6 +162,8 @@ def cockpit_health(
         "source_cockpit_attention_reasons": [
             str(reason) for reason in source_attention_reasons if reason
         ],
+        "source_cockpit_attention_primary_reason": source_attention_primary_reason,
+        "source_cockpit_attention_label": source_attention_label,
     }
 
 

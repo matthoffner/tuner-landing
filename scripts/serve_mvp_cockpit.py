@@ -27,6 +27,16 @@ STATUS_FILE = ROOT / ".automoat" / "state" / "mvp-loop-status.json"
 PID_FILE = ROOT / ".automoat" / "state" / "mvp-loop.pid"
 MAX_CORRECTION_BYTES = 8192
 STATUS_STALE_AFTER_SECONDS = 120
+OPERATOR_ATTENTION_LABELS = {
+    "loop_not_running": "Loop is not running",
+    "status_failing": "Loop status is failing",
+    "autonomy_policy_failed": "Autonomy policy failed",
+    "status_stale": "Status is stale",
+    "artifact_health_not_loaded": "Artifact health is not loaded",
+    "import_readiness_not_ready": "Import readiness is not ready",
+    "import_readiness_blocked": "Import readiness is blocked",
+    "coverage_thin_groups_present": "Coverage has thin groups",
+}
 
 LOOP_PROCESS: subprocess.Popen[str] | None = None
 LOOP_LOCK = threading.Lock()
@@ -62,6 +72,12 @@ def as_string_list(value: object) -> list[str]:
     if not isinstance(value, list):
         return []
     return [str(item) for item in value if isinstance(item, (str, int, float))]
+
+
+def operator_attention_label(reason: str | None) -> str:
+    if reason is None:
+        return "Clear"
+    return OPERATOR_ATTENTION_LABELS.get(reason, reason.replace("_", " "))
 
 
 def failed_autonomy_policy_step(status: dict[str, object]) -> dict[str, object] | None:
@@ -140,10 +156,10 @@ def cockpit_summary(status: dict[str, object]) -> dict[str, object]:
     attention_reasons: list[str] = []
     if not loop_running:
         attention_reasons.append("loop_not_running")
-    if status_value in {"error", "failing", "invalid-status-json"}:
-        attention_reasons.append("status_failing")
     if policy_failure:
         attention_reasons.append("autonomy_policy_failed")
+    if status_value in {"error", "failing", "invalid-status-json"}:
+        attention_reasons.append("status_failing")
     if status_stale is True:
         attention_reasons.append("status_stale")
     if artifact_health_status != "loaded":
@@ -154,6 +170,7 @@ def cockpit_summary(status: dict[str, object]) -> dict[str, object]:
         attention_reasons.append("import_readiness_blocked")
     if thin_group_count > 0:
         attention_reasons.append("coverage_thin_groups_present")
+    primary_attention_reason = attention_reasons[0] if attention_reasons else None
 
     return {
         "status": status_value,
@@ -168,6 +185,8 @@ def cockpit_summary(status: dict[str, object]) -> dict[str, object]:
         "status_stale": status_stale,
         "operator_attention": bool(attention_reasons),
         "operator_attention_reasons": attention_reasons,
+        "operator_attention_primary_reason": primary_attention_reason,
+        "operator_attention_label": operator_attention_label(primary_attention_reason),
         "artifact_health": artifact_health_status,
         "import_readiness": import_readiness,
         "readiness_blockers": readiness_blockers,
@@ -592,7 +611,10 @@ def cockpit_html() -> str:
           freshness.textContent = "unknown";
         }}
         const reasons = Array.isArray(cockpit.operator_attention_reasons) ? cockpit.operator_attention_reasons : [];
-        attention.textContent = cockpit.operator_attention ? reasons.join(", ") || "required" : "clear";
+        attention.textContent = cockpit.operator_attention
+          ? cockpit.operator_attention_label || reasons.join(", ") || "Required"
+          : cockpit.operator_attention_label || "Clear";
+        attention.title = reasons.join(", ");
       }}
 
       const startButton = document.getElementById("start");
