@@ -2277,6 +2277,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                 "errors": ["--relay-url must be a relay base URL without a path"],
                 "diagnostics": {
                     "error_categories": ["invalid_relay_url"],
+                    "failed_configuration_keys": ["AUTOMOAT_RELAY_URL|--relay-url"],
                     "relay_token_configured": True,
                 },
             }
@@ -2302,9 +2303,45 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             ):
                 with self.assertRaisesRegex(
                     RuntimeError,
-                    "status=failed error_count=1 error_categories=invalid_relay_url",
+                    (
+                        "status=failed error_count=1 "
+                        "error_categories=invalid_relay_url "
+                        "failed_configuration_keys=AUTOMOAT_RELAY_URL\\|--relay-url"
+                    ),
                 ):
                     self.worker.check_relay_publisher_preflight()
+
+    def test_validate_publisher_preflight_output_omits_suspicious_diagnostics(self) -> None:
+        failed_payload = json.dumps(
+            {
+                "status": "failed",
+                "errors": ["--token must not include leading or trailing whitespace"],
+                "diagnostics": {
+                    "error_categories": [
+                        "invalid_secret",
+                        "token=relay-secret",
+                        "x" * 200,
+                    ],
+                    "failed_configuration_keys": [
+                        "AUTOMOAT_RELAY_TOKEN|--token",
+                        "https://relay.example/?token=secret",
+                    ],
+                },
+            }
+        )
+
+        with self.assertRaises(RuntimeError) as context:
+            self.worker.validate_publisher_preflight_output(failed_payload)
+
+        message = str(context.exception)
+        self.assertIn("error_categories=invalid_secret", message)
+        self.assertIn(
+            "failed_configuration_keys=AUTOMOAT_RELAY_TOKEN|--token",
+            message,
+        )
+        self.assertNotIn("relay-secret", message)
+        self.assertNotIn("relay.example", message)
+        self.assertNotIn("token=secret", message)
 
     def test_check_relay_publisher_preflight_rejects_non_standard_json_constants(
         self,

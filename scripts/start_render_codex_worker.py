@@ -1035,21 +1035,39 @@ def validate_publisher_preflight_output(output: str) -> None:
 
     if status == "failed":
         diagnostics = payload.get("diagnostics")
-        categories = (
-            diagnostics.get("error_categories")
-            if isinstance(diagnostics, dict)
-            else None
+        categories = publisher_preflight_diagnostic_tokens(diagnostics, "error_categories")
+        failed_keys = publisher_preflight_diagnostic_tokens(
+            diagnostics,
+            "failed_configuration_keys",
         )
         errors = payload.get("errors")
         error_count = len(errors) if isinstance(errors, list) else "unknown"
-        category_text = ",".join(str(category) for category in categories or [])
+        category_text = ",".join(categories)
+        failed_key_text = ",".join(failed_keys)
         raise RuntimeError(
             "relay publisher preflight reported status=failed "
             f"error_count={error_count} "
-            f"error_categories={category_text or 'unknown'}"
+            f"error_categories={category_text or 'unknown'} "
+            f"failed_configuration_keys={failed_key_text or 'unknown'}"
         )
 
     raise RuntimeError(f"relay publisher preflight reported status={status or 'missing'}")
+
+
+def publisher_preflight_diagnostic_tokens(diagnostics: Any, key: str) -> list[str]:
+    if not isinstance(diagnostics, dict):
+        return []
+    values = diagnostics.get(key)
+    if not isinstance(values, list):
+        return []
+
+    tokens: list[str] = []
+    for value in values:
+        if not isinstance(value, str) or not value or len(value) > 160:
+            continue
+        if all(character.isalnum() or character in "_-|" for character in value):
+            tokens.append(value)
+    return tokens
 
 
 def run_relay_publisher_preflight_command(command: list[str], *, cwd: Path) -> str:
