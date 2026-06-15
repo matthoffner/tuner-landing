@@ -334,6 +334,21 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
                 "https://example.local/dallas/inspections/ELZ-2026-9999/1"
             )
         )
+        self.assertTrue(
+            self.loop.synthetic_dallas_csv_row(
+                "ELZ-2027-0001,100 Example Ave,Dallas,TX,75208,electrical,"
+                "residential,single_family,Electrical repair,Active,"
+                "2026-06-01,2026-06-02,,12000,Example repair,Test Electric,"
+                "https://example.local/dallas?permit=ELZ-2027-0001"
+            )
+        )
+        self.assertTrue(
+            self.loop.synthetic_dallas_csv_row(
+                "elz-2026-9999,100 Example Ave,Dallas,electrical,"
+                "residential,Electrical repair,Finaled,"
+                "example.local/dallas#elz-2026-9999"
+            )
+        )
         self.assertFalse(
             self.loop.synthetic_dallas_csv_row(
                 "Dallas temporary power checklist,inspection_checklist,2026-06-01,"
@@ -347,6 +362,14 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
                 "residential,single_family,Residential electrical remodel,Active,"
                 "2026-06-01,2026-06-02,,12000,Example remodel,Test Electric,"
                 "https://example.local/dallas/permits/ELR-2026-9999"
+            )
+        )
+        self.assertFalse(
+            self.loop.synthetic_dallas_csv_row(
+                "ELZ-2026-9999,100 Example Ave,Dallas,TX,75208,electrical,"
+                "residential,single_family,Residential electrical repair,Active,"
+                "2026-06-01,2026-06-02,,12000,Example repair,Test Electric,"
+                "https://example.local/dallasian/permits/ELZ-2026-9999"
             )
         )
 
@@ -368,6 +391,29 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
         )
 
         self.assertEqual(self.loop.added_synthetic_rows_from_diff(diff_output), [])
+
+    def test_added_synthetic_rows_detects_query_style_elz_example_rows(self) -> None:
+        diff_output = "\n".join(
+            [
+                (
+                    "diff --git "
+                    "a/generated/raw/dallas-electrician-import-sample-v2/permits.csv "
+                    "b/generated/raw/dallas-electrician-import-sample-v2/permits.csv"
+                ),
+                "+++ b/generated/raw/dallas-electrician-import-sample-v2/permits.csv",
+                (
+                    "+ELZ-2027-0001,100 Example Ave,Dallas,TX,75208,electrical,"
+                    "residential,single_family,Residential electrical repair,Active,"
+                    "2026-06-01,2026-06-02,,12000,Example repair,Test Electric,"
+                    "https://example.local/dallas?permit=ELZ-2027-0001"
+                ),
+            ]
+        )
+
+        rows = self.loop.added_synthetic_rows_from_diff(diff_output)
+
+        self.assertEqual(len(rows), 1)
+        self.assertIn("ELZ-2027-0001", rows[0])
 
     def test_synthetic_row_detector_scans_untracked_raw_dallas_csv_fixtures(self) -> None:
         fixture_path = (

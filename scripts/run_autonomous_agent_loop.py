@@ -98,6 +98,14 @@ TOKEN_ASSIGNMENT_PATTERN = re.compile(
     r"[A-Za-z0-9_-]*)=([^,\s;]+)",
     re.IGNORECASE,
 )
+SYNTHETIC_DALLAS_PERMIT_PATTERN = re.compile(
+    r"\bELZ-\d{4}-[A-Za-z0-9-]+\b",
+    re.IGNORECASE,
+)
+EXAMPLE_LOCAL_DALLAS_PATTERN = re.compile(
+    r"(?:https?://)?example\.local/dallas(?:[/?#,\s]|$)",
+    re.IGNORECASE,
+)
 
 
 def utc_now() -> str:
@@ -458,7 +466,10 @@ def changed_dallas_raw_csv_paths(paths: list[str]) -> list[str]:
 
 def synthetic_dallas_csv_row(row: str) -> bool:
     """Return whether a raw CSV row is hidden Dallas example.local fixture growth."""
-    return "example.local/dallas/" in row and "ELZ-2026-" in row
+    return (
+        SYNTHETIC_DALLAS_PERMIT_PATTERN.search(row) is not None
+        and EXAMPLE_LOCAL_DALLAS_PATTERN.search(row) is not None
+    )
 
 
 def sanitized_policy_detail(text: str) -> str:
