@@ -198,6 +198,9 @@ def validate_codex_config_value(
         for character in value
     ):
         errors.append(f"{name} must be a single-line value without control characters")
+        return
+    if value != value.strip():
+        errors.append(f"{name} must not include leading or trailing whitespace")
 
 
 def validate_git_identity_value(
@@ -413,13 +416,13 @@ def preflight_error_category(error: str) -> str:
         return "invalid_path"
     if error.startswith("CODEX_AUTH_JSON_B64 must decode"):
         return "invalid_codex_auth_payload"
+    if error.startswith("AUTOMOAT_CODEX_"):
+        return "invalid_codex_config"
     if (
         "single-line value without control characters" in error
         or "must not include leading or trailing whitespace" in error
     ):
         return "invalid_secret_or_identity"
-    if error.startswith("AUTOMOAT_CODEX_"):
-        return "invalid_codex_config"
     if error.startswith("GIT_AUTHOR_") or error.startswith("GIT_COMMITTER_"):
         return "invalid_git_identity"
     if error.endswith(" executable is required on PATH"):

@@ -684,6 +684,62 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             ],
         )
 
+    def test_rejects_codex_config_values_with_surrounding_whitespace(self) -> None:
+        base_env = {
+            "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            "GITHUB_TOKEN": "github-token",
+            "CODEX_ACCESS_TOKEN": "codex-token",
+        }
+        errors = self.worker.validate_worker_environment(
+            {
+                **base_env,
+                "AUTOMOAT_CODEX_MODEL": " gpt-5.5-codex",
+                "AUTOMOAT_CODEX_REASONING_EFFORT": "medium ",
+            },
+            found_command,
+        )
+
+        self.assertEqual(
+            errors,
+            [
+                "AUTOMOAT_CODEX_MODEL must not include leading or trailing whitespace",
+                (
+                    "AUTOMOAT_CODEX_REASONING_EFFORT must not include leading or "
+                    "trailing whitespace"
+                ),
+            ],
+        )
+
+    def test_check_env_json_categorizes_codex_config_whitespace(self) -> None:
+        env = {
+            "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            "GITHUB_TOKEN": "github-token",
+            "CODEX_ACCESS_TOKEN": "codex-token",
+            "AUTOMOAT_CODEX_MODEL": " gpt-5.5-codex",
+        }
+        output = io.StringIO()
+
+        with redirect_stdout(output):
+            errors = self.worker.emit_environment_preflight(
+                env,
+                found_command,
+                output_format="json",
+            )
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(
+            errors,
+            ["AUTOMOAT_CODEX_MODEL must not include leading or trailing whitespace"],
+        )
+        self.assertEqual(payload["status"], "failed")
+        self.assertEqual(
+            payload["diagnostics"]["error_categories"],
+            ["invalid_codex_config"],
+        )
+        self.assertNotIn(" gpt-5.5-codex", output.getvalue())
+
     def test_rejects_bad_git_identity_values_before_git_config(self) -> None:
         base_env = {
             "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
