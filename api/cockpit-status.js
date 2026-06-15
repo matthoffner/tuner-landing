@@ -5,6 +5,7 @@ const {
   invalidUpstreamKeysHeader,
   invalidUpstreamsHeader,
   sendMethodNotAllowed,
+  sendOptionsResponse,
   sendProxyResponse,
   setProxyHeaders,
   setUpstreamSelectionHeaders,
@@ -35,7 +36,7 @@ module.exports = async function handler(request, response) {
   setProxyHeaders(response, "application/json; charset=utf-8");
 
   if (request.method === "OPTIONS") {
-    response.status(204).end();
+    sendOptionsResponse(response);
     return;
   }
 

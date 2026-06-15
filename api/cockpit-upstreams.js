@@ -246,6 +246,12 @@ function sendMethodNotAllowed(request, response, body) {
   sendProxyResponse(request, response, 405, body);
 }
 
+function sendOptionsResponse(response) {
+  response.setHeader("Allow", ALLOWED_PROXY_METHODS);
+  setUpstreamSelectionHeaders(response, "options", 0, []);
+  response.status(204).end();
+}
+
 async function readBoundedUpstreamText(upstream, maxBodyChars) {
   if (
     !Number.isInteger(maxBodyChars)
@@ -416,6 +422,7 @@ module.exports = {
   relayHeaderConfig,
   relayHeaders,
   sendMethodNotAllowed,
+  sendOptionsResponse,
   sendProxyResponse,
   setProxyHeaders,
   setUpstreamSelectionHeaders,

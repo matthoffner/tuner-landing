@@ -390,6 +390,7 @@ class CockpitApiProxyTest(unittest.TestCase):
               ALLOWED_PROXY_METHODS,
               EXPOSED_UPSTREAM_HEADERS,
               sendMethodNotAllowed,
+              sendOptionsResponse,
               sendProxyResponse,
               setProxyHeaders,
               setUpstreamSelectionHeaders,
@@ -464,6 +465,88 @@ class CockpitApiProxyTest(unittest.TestCase):
             assert.strictEqual(methodResponse.headers["X-Automoat-Upstream"], "method_not_allowed");
             assert.strictEqual(methodResponse.headers["X-Automoat-Upstream-Attempt-Count"], "0");
             assert.strictEqual(methodResponse.headers["X-Automoat-Upstream-Attempts"], "");
+
+            const optionsResponse = response();
+            setProxyHeaders(optionsResponse, "application/json; charset=utf-8");
+            sendOptionsResponse(optionsResponse);
+            assert.strictEqual(optionsResponse.statusCode, 204);
+            assert.strictEqual(optionsResponse.body, "");
+            assert.strictEqual(optionsResponse.headers.Allow, ALLOWED_PROXY_METHODS);
+            assert.strictEqual(optionsResponse.headers["X-Automoat-Upstream"], "options");
+            assert.strictEqual(optionsResponse.headers["X-Automoat-Upstream-Attempt-Count"], "0");
+            assert.strictEqual(optionsResponse.headers["X-Automoat-Upstream-Attempts"], "");
+            """
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_handlers_answer_options_without_fetching(self) -> None:
+        result = run_node(
+            """
+            const assert = require("assert");
+            const statusHandler = require("./api/cockpit-status");
+            const logHandler = require("./api/cockpit-log");
+            const { ALLOWED_PROXY_METHODS } = require("./api/cockpit-upstreams");
+
+            function response() {
+              return {
+                statusCode: null,
+                body: "",
+                headers: {},
+                setHeader(name, value) {
+                  this.headers[name] = value;
+                },
+                status(code) {
+                  this.statusCode = code;
+                  return this;
+                },
+                send(body) {
+                  this.body = String(body);
+                  return this;
+                },
+                end(body = "") {
+                  this.body = String(body);
+                  return this;
+                },
+              };
+            }
+
+            process.env.AUTOMOAT_RELAY_URL = "https://automoat-cockpit-relay.example";
+            process.env.AUTOMOAT_BRIDGE_URL = "https://legacy-bridge.example";
+            global.fetch = async () => {
+              throw new Error("fetch should not be called for proxy options");
+            };
+
+            (async () => {
+              const statusResponse = response();
+              await statusHandler({ method: "OPTIONS" }, statusResponse);
+              assert.strictEqual(statusResponse.statusCode, 204);
+              assert.strictEqual(statusResponse.body, "");
+              assert.strictEqual(statusResponse.headers.Allow, ALLOWED_PROXY_METHODS);
+              assert.strictEqual(
+                statusResponse.headers["Access-Control-Allow-Methods"],
+                ALLOWED_PROXY_METHODS,
+              );
+              assert.strictEqual(statusResponse.headers["X-Automoat-Upstream"], "options");
+              assert.strictEqual(
+                statusResponse.headers["X-Automoat-Upstream-Attempt-Count"],
+                "0",
+              );
+
+              const logResponse = response();
+              await logHandler({ method: "OPTIONS" }, logResponse);
+              assert.strictEqual(logResponse.statusCode, 204);
+              assert.strictEqual(logResponse.body, "");
+              assert.strictEqual(logResponse.headers.Allow, ALLOWED_PROXY_METHODS);
+              assert.strictEqual(logResponse.headers["X-Automoat-Upstream"], "options");
+              assert.strictEqual(
+                logResponse.headers["X-Automoat-Upstream-Attempt-Count"],
+                "0",
+              );
+            })().catch((error) => {
+              console.error(error.stack || error);
+              process.exit(1);
+            });
             """
         )
 
