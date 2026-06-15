@@ -151,6 +151,46 @@ class StartAutonomousCockpitRelayTest(unittest.TestCase):
 
         self.assertEqual(errors, ["--relay-url must include a host"])
 
+    def test_validate_startup_configuration_rejects_plain_http_remote_relay_url(self) -> None:
+        errors = self.launcher.validate_startup_configuration(
+            Namespace(
+                relay_url="http://automoat-cockpit-relay.example",
+                token="relay-token",
+                interval=300,
+                publish_interval=3,
+                port=4174,
+            )
+        )
+
+        self.assertEqual(
+            errors,
+            [
+                (
+                    "--relay-url must use https:// unless the host is localhost "
+                    "or 127.0.0.1"
+                )
+            ],
+        )
+
+    def test_validate_startup_configuration_accepts_plain_http_local_relay_url(self) -> None:
+        for relay_url in (
+            "http://localhost:4180",
+            "http://127.0.0.1:4180",
+            "http://[::1]:4180",
+        ):
+            with self.subTest(relay_url=relay_url):
+                errors = self.launcher.validate_startup_configuration(
+                    Namespace(
+                        relay_url=relay_url,
+                        token="relay-token",
+                        interval=300,
+                        publish_interval=3,
+                        port=4174,
+                    )
+                )
+
+                self.assertEqual(errors, [])
+
     def test_validate_startup_configuration_rejects_malformed_relay_url_values(self) -> None:
         cases = {
             " https://automoat-cockpit-relay.example": (
@@ -458,6 +498,46 @@ class StartAutonomousCockpitRelayTest(unittest.TestCase):
             ["invalid_relay_url"],
         )
         self.assertNotIn("automoat-cockpit-relay.example/;debug", output.getvalue())
+        self.assertNotIn("relay-token", output.getvalue())
+
+    def test_check_env_json_rejects_plain_http_remote_relay_url_without_printing_url(self) -> None:
+        output = io.StringIO()
+        env = {
+            "AUTOMOAT_RELAY_URL": "http://automoat-cockpit-relay.example",
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+        }
+        self.launcher.start_detached = lambda *args, **kwargs: self.fail("start_detached should not run")
+        self.launcher.publish_once = lambda *args, **kwargs: self.fail("publish_once should not run")
+
+        with patch.dict(os.environ, env, clear=True), patch.object(
+            sys,
+            "argv",
+            [
+                "start_autonomous_cockpit_relay.py",
+                "--check-env",
+                "--format",
+                "json",
+            ],
+        ), redirect_stdout(output):
+            status = self.launcher.main()
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(status, 2)
+        self.assertEqual(payload["status"], "failed")
+        self.assertEqual(
+            payload["errors"],
+            [
+                (
+                    "--relay-url must use https:// unless the host is localhost "
+                    "or 127.0.0.1"
+                )
+            ],
+        )
+        self.assertEqual(
+            payload["diagnostics"]["error_categories"],
+            ["invalid_relay_url"],
+        )
+        self.assertNotIn("http://automoat-cockpit-relay.example", output.getvalue())
         self.assertNotIn("relay-token", output.getvalue())
 
     def test_check_env_json_rejects_non_finite_intervals(self) -> None:

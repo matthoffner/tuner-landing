@@ -148,6 +148,11 @@ def normalized_relay_url(value: str) -> str:
     return stripped
 
 
+def local_http_host(hostname: str) -> bool:
+    normalized = hostname.lower().strip("[]")
+    return normalized in {"localhost", "127.0.0.1", "::1"}
+
+
 def validate_startup_configuration(args: argparse.Namespace) -> list[str]:
     errors: list[str] = []
     raw_relay_url = str(args.relay_url)
@@ -191,6 +196,14 @@ def validate_startup_configuration(args: argparse.Namespace) -> list[str]:
             errors.append("--relay-url must not include query strings or fragments")
         elif parsed_relay_url.path.strip("/"):
             errors.append("--relay-url must be a relay base URL without a path")
+        elif (
+            parsed_relay_url.scheme == "http"
+            and parsed_relay_url.hostname
+            and not local_http_host(parsed_relay_url.hostname)
+        ):
+            errors.append(
+                "--relay-url must use https:// unless the host is localhost or 127.0.0.1"
+            )
         elif parsed_relay_url.netloc.endswith(":") or parsed_relay_url.port == 0:
             errors.append("--relay-url must include a valid port when a port is specified")
 
