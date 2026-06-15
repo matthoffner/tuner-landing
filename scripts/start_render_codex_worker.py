@@ -1640,7 +1640,10 @@ def run_relay_publisher_preflight_command(command: list[str], *, cwd: Path) -> s
             ) from exc
         raise
     if result.returncode != 0:
-        raise RuntimeError(f"{printable} failed with status {result.returncode}")
+        raise RuntimeError(
+            f"{printable} failed with status {result.returncode}; "
+            "relay publisher preflight reported status=passed but exited nonzero"
+        )
     return output
 
 

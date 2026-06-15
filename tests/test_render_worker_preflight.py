@@ -4045,6 +4045,51 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertNotIn("relay-secret", str(context.exception))
         self.assertNotIn("token=", str(context.exception))
 
+    def test_check_relay_publisher_preflight_rejects_passed_json_with_nonzero_exit(
+        self,
+    ) -> None:
+        passed_payload = json.dumps(
+            {
+                "status": "passed",
+                "errors": [],
+                "config": {
+                    "relay_url": "https://automoat-cockpit-relay.example",
+                    "relay_token_configured": True,
+                },
+            }
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workdir = Path(temp_dir) / "runtime-repo"
+            workdir.mkdir()
+            env = {
+                "AUTOMOAT_WORKDIR": str(workdir),
+                "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+                "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            }
+
+            with patch.dict(self.worker.os.environ, env, clear=True), patch.object(
+                self.worker.subprocess,
+                "run",
+                return_value=self.worker.subprocess.CompletedProcess(
+                    args=self.worker.relay_publisher_preflight_command(env),
+                    returncode=7,
+                    stdout=passed_payload,
+                ),
+            ):
+                with self.assertRaisesRegex(
+                    RuntimeError,
+                    (
+                        "failed with status 7; relay publisher preflight reported "
+                        "status=passed but exited nonzero"
+                    ),
+                ) as context:
+                    self.worker.check_relay_publisher_preflight()
+
+        self.assertNotIn("relay-token", str(context.exception))
+        self.assertNotIn("automoat-cockpit-relay.example", str(context.exception))
+        self.assertNotIn(str(workdir), str(context.exception))
+
     def test_check_relay_publisher_preflight_rejects_failed_json_status(self) -> None:
         failed_payload = json.dumps(
             {
