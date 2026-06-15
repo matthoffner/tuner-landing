@@ -167,7 +167,7 @@ class CockpitApiProxyTest(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stderr)
 
-    def test_upstreams_reject_plain_http_remote_relay_but_allow_local(self) -> None:
+    def test_upstreams_reject_plain_http_remote_relay_and_bridge_but_allow_local(self) -> None:
         result = run_node(
             """
             const assert = require("assert");
@@ -186,6 +186,19 @@ class CockpitApiProxyTest(unittest.TestCase):
               error: "must use https:// unless the host is localhost, 127.0.0.1, or ::1",
             }]);
 
+            const legacyRemote = upstreams({
+              relayPath: "/api/status",
+              bridgePath: "/api/status",
+              env: {
+                AUTOMOAT_BRIDGE_URL: "http://legacy-bridge.example",
+              },
+            });
+            assert.deepStrictEqual(legacyRemote.configured, []);
+            assert.deepStrictEqual(legacyRemote.invalid, [{
+              kind: "legacy_bridge",
+              error: "must use https:// unless the host is localhost, 127.0.0.1, or ::1",
+            }]);
+
             for (const relayUrl of [
               "http://localhost:4180",
               "http://127.0.0.1:4180",
@@ -201,6 +214,23 @@ class CockpitApiProxyTest(unittest.TestCase):
               assert.deepStrictEqual(local.invalid, []);
               assert.strictEqual(local.configured.length, 1);
               assert.strictEqual(local.configured[0].kind, "relay");
+            }
+
+            for (const bridgeUrl of [
+              "http://localhost:4175",
+              "http://127.0.0.1:4175",
+              "http://[::1]:4175",
+            ]) {
+              const local = upstreams({
+                relayPath: "/api/status",
+                bridgePath: "/api/status",
+                env: {
+                  AUTOMOAT_BRIDGE_URL: bridgeUrl,
+                },
+              });
+              assert.deepStrictEqual(local.invalid, []);
+              assert.strictEqual(local.configured.length, 1);
+              assert.strictEqual(local.configured[0].kind, "legacy_bridge");
             }
             """
         )
@@ -523,6 +553,77 @@ class CockpitApiProxyTest(unittest.TestCase):
               assert(!logResponse.body.includes("automoat-cockpit-relay.example"));
               assert(!logResponse.body.includes("read-token"));
               assert(!logResponse.body.includes("write-token"));
+            })().catch((error) => {
+              console.error(error.stack || error);
+              process.exit(1);
+            });
+            """
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_handlers_reject_plain_http_remote_bridge_without_fetching(self) -> None:
+        result = run_node(
+            """
+            const assert = require("assert");
+            const statusHandler = require("./api/cockpit-status");
+            const logHandler = require("./api/cockpit-log");
+
+            function response() {
+              return {
+                statusCode: null,
+                body: "",
+                headers: {},
+                setHeader(name, value) {
+                  this.headers[name] = value;
+                },
+                status(code) {
+                  this.statusCode = code;
+                  return this;
+                },
+                send(body) {
+                  this.body = String(body);
+                  return this;
+                },
+                end(body = "") {
+                  this.body = String(body);
+                  return this;
+                },
+              };
+            }
+
+            process.env.AUTOMOAT_RELAY_URL = "";
+            process.env.AUTOMOAT_RELAY_READ_TOKEN = "";
+            process.env.AUTOMOAT_RELAY_TOKEN = "";
+            process.env.AUTOMOAT_BRIDGE_URL = "http://legacy-bridge.example";
+            global.fetch = async () => {
+              throw new Error("fetch should not be called for plaintext remote bridge URLs");
+            };
+
+            (async () => {
+              const statusResponse = response();
+              await statusHandler({ method: "GET" }, statusResponse);
+              assert.strictEqual(statusResponse.statusCode, 503);
+              assert(statusResponse.body.includes("cockpit_relay_invalid_configuration"));
+              assert(statusResponse.body.includes("legacy_bridge"));
+              assert(statusResponse.body.includes("must use https://"));
+              assert(!statusResponse.body.includes("legacy-bridge.example"));
+              assert.strictEqual(
+                statusResponse.headers["X-Automoat-Upstream-Invalid-Config"],
+                "legacy_bridge:must use https:// unless the host is localhost, 127.0.0.1, or ::1",
+              );
+
+              const logResponse = response();
+              await logHandler({ method: "GET" }, logResponse);
+              assert.strictEqual(logResponse.statusCode, 503);
+              assert(logResponse.body.includes("cockpit_relay_invalid_configuration"));
+              assert(logResponse.body.includes("legacy_bridge"));
+              assert(logResponse.body.includes("must use https://"));
+              assert(!logResponse.body.includes("legacy-bridge.example"));
+              assert.strictEqual(
+                logResponse.headers["X-Automoat-Upstream-Invalid-Config"],
+                "legacy_bridge:must use https:// unless the host is localhost, 127.0.0.1, or ::1",
+              );
             })().catch((error) => {
               console.error(error.stack || error);
               process.exit(1);

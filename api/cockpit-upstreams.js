@@ -299,7 +299,9 @@ function upstreams({ relayPath, bridgePath, env = process.env }) {
     invalid.push({ kind: "relay", error: relay.error });
   }
 
-  const bridge = normalizeBaseUrl(env.AUTOMOAT_BRIDGE_URL);
+  const bridge = normalizeBaseUrl(env.AUTOMOAT_BRIDGE_URL, {
+    requireHttpsUnlessLocal: true,
+  });
   if (bridge.url) {
     configured.push({
       kind: "legacy_bridge",
