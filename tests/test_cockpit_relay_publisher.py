@@ -734,6 +734,35 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             output.getvalue(),
         )
 
+    def test_check_env_rejects_relay_url_control_character_before_publish(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            env = {
+                "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example\n/ingest",
+                "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            }
+            output = io.StringIO()
+            self.publisher.publish_once = lambda _args: self.fail("publish_once should not run")
+            with patch.dict(os.environ, env, clear=True), patch.object(
+                sys,
+                "argv",
+                [
+                    "publish_cockpit_to_relay.py",
+                    "--check-env",
+                    "--publisher-log",
+                    str(tmp_path / "publisher.log"),
+                ],
+            ), redirect_stdout(output):
+                status = self.publisher.main()
+
+        self.assertEqual(status, 2)
+        self.assertIn("publisher environment preflight failed", output.getvalue())
+        self.assertIn(
+            "--relay-url must be a single-line URL without control characters",
+            output.getvalue(),
+        )
+        self.assertNotIn("automoat-cockpit-relay.example", output.getvalue())
+
     def test_check_env_rejects_bad_relay_token_before_publish(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)

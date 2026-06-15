@@ -835,6 +835,11 @@ def validate_publisher_configuration(args: argparse.Namespace) -> list[str]:
         errors.append("AUTOMOAT_RELAY_URL or --relay-url is required")
     elif relay_url_value != relay_url:
         errors.append("--relay-url must not include leading or trailing whitespace")
+    elif any(
+        character in "\r\n" or ord(character) < 32 or ord(character) == 127
+        for character in relay_url_value
+    ):
+        errors.append("--relay-url must be a single-line URL without control characters")
     elif not relay_url.startswith(("http://", "https://")):
         errors.append("--relay-url must start with http:// or https://")
     else:
