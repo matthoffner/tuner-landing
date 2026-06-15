@@ -278,6 +278,9 @@ class StartAutonomousCockpitRelayTest(unittest.TestCase):
             "relay-token\nsecond-line": (
                 "--token must be a single-line value without control characters"
             ),
+            "relay-token-" + ("x" * self.launcher.MAX_RELAY_TOKEN_CHARS): (
+                f"--token must be {self.launcher.MAX_RELAY_TOKEN_CHARS} characters or fewer"
+            ),
         }
 
         for token, expected_error in cases.items():
@@ -717,6 +720,43 @@ class StartAutonomousCockpitRelayTest(unittest.TestCase):
         )
         self.assertNotIn("relay-token", output.getvalue())
         self.assertNotIn("automoat-cockpit-relay.example:abc", output.getvalue())
+
+    def test_check_env_json_rejects_oversized_token_without_printing_value(self) -> None:
+        output = io.StringIO()
+        oversized_token = "secret-relay-token-" + ("x" * self.launcher.MAX_RELAY_TOKEN_CHARS)
+        env = {
+            "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+            "AUTOMOAT_RELAY_TOKEN": oversized_token,
+        }
+        self.launcher.start_detached = lambda *args, **kwargs: self.fail("start_detached should not run")
+        self.launcher.publish_once = lambda *args, **kwargs: self.fail("publish_once should not run")
+
+        with patch.dict(os.environ, env, clear=True), patch.object(
+            sys,
+            "argv",
+            [
+                "start_autonomous_cockpit_relay.py",
+                "--check-env",
+                "--format",
+                "json",
+            ],
+        ), redirect_stdout(output):
+            status = self.launcher.main()
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(status, 2)
+        self.assertEqual(payload["status"], "failed")
+        self.assertEqual(
+            payload["errors"],
+            [f"--token must be {self.launcher.MAX_RELAY_TOKEN_CHARS} characters or fewer"],
+        )
+        self.assertEqual(payload["diagnostics"]["error_categories"], ["invalid_secret"])
+        self.assertEqual(
+            payload["diagnostics"]["failed_configuration_keys"],
+            ["AUTOMOAT_RELAY_TOKEN|--token"],
+        )
+        self.assertTrue(payload["diagnostics"]["relay_token_configured"])
+        self.assertNotIn("secret-relay-token", output.getvalue())
 
     def test_json_format_is_only_supported_for_check_env(self) -> None:
         stderr = io.StringIO()

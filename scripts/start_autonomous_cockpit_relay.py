@@ -24,6 +24,7 @@ STATE_DIR = ROOT / ".automoat" / "state"
 COCKPIT_PID = STATE_DIR / "mvp-cockpit-server.pid"
 PUBLISHER_PID = STATE_DIR / "cockpit-relay-publisher.pid"
 BRIDGE_RUNNER_PID = STATE_DIR / "mvp-bridge-runner.pid"
+MAX_RELAY_TOKEN_CHARS = 8192
 
 
 def read_pid(path: Path) -> int | None:
@@ -247,6 +248,8 @@ def validate_startup_configuration(args: argparse.Namespace) -> list[str]:
         for character in token
     ):
         errors.append("--token must be a single-line value without control characters")
+    elif len(token) > MAX_RELAY_TOKEN_CHARS:
+        errors.append(f"--token must be {MAX_RELAY_TOKEN_CHARS} characters or fewer")
     if not math.isfinite(float(args.interval)):
         errors.append("--interval must be a finite number of seconds")
     elif args.interval <= 0:
