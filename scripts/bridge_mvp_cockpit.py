@@ -22,14 +22,59 @@ STATE_DIR = ROOT / ".automoat" / "state"
 BRIDGE_LOG = LOG_DIR / "mvp-bridge.log"
 BRIDGE_STATUS = STATE_DIR / "mvp-bridge-status.json"
 BRIDGE_PID = STATE_DIR / "mvp-bridge.pid"
+BRIDGE_HEALTH_LABELS = {
+    "bridge_status_unknown": "Bridge status is unknown",
+    "viewer_start_failed": "Read-only viewer failed to start",
+    "tunnel_url_unavailable": "Ngrok tunnel URL is unavailable",
+    "viewer_exited": "Read-only viewer exited",
+    "tunnel_exited": "Ngrok tunnel exited",
+    "bridge_error": "Bridge failed",
+}
 
 
 def utc_now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+def bridge_health_label(reason: str | None) -> str:
+    if reason is None:
+        return "Live"
+    return BRIDGE_HEALTH_LABELS.get(reason, reason.replace("_", " "))
+
+
+def bridge_health(payload: dict[str, object]) -> dict[str, object]:
+    status = payload.get("status")
+    error = payload.get("error")
+    reasons: list[str] = []
+    if status == "running":
+        pass
+    elif status == "viewer-exited":
+        reasons.append("viewer_exited")
+    elif status == "tunnel-exited":
+        reasons.append("tunnel_exited")
+    elif status == "error" and error == "read-only bridge viewer failed":
+        reasons.append("viewer_start_failed")
+    elif status == "error" and error == "ngrok did not report a public URL":
+        reasons.append("tunnel_url_unavailable")
+    elif status == "error":
+        reasons.append("bridge_error")
+    else:
+        reasons.append("bridge_status_unknown")
+
+    primary_reason = reasons[0] if reasons else None
+    health_status = "degraded" if reasons else "live"
+    return {
+        "status": health_status,
+        "ok": health_status == "live",
+        "reasons": reasons,
+        "primary_reason": primary_reason,
+        "label": bridge_health_label(primary_reason),
+    }
+
+
 def write_status(payload: dict[str, object]) -> None:
     STATE_DIR.mkdir(parents=True, exist_ok=True)
+    payload["bridge_health"] = bridge_health(payload)
     payload["updated_at"] = utc_now()
     with BRIDGE_STATUS.open("w", encoding="utf-8") as handle:
         json.dump(payload, handle, indent=2)
