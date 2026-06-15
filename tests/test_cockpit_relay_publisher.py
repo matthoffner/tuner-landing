@@ -1515,6 +1515,10 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             ["--publisher-log parent path <external>/blocked-parent must be a directory"],
         )
         self.assertEqual(payload["diagnostics"]["error_categories"], ["invalid_file_path"])
+        self.assertEqual(
+            payload["diagnostics"]["failed_configuration_keys"],
+            ["--publisher-log"],
+        )
         self.assertNotIn(str(tmp_path), output.getvalue())
         self.assertNotIn("relay-token", output.getvalue())
 
@@ -1555,6 +1559,10 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             ],
         )
         self.assertEqual(payload["diagnostics"]["error_categories"], ["invalid_file_path"])
+        self.assertEqual(
+            payload["diagnostics"]["failed_configuration_keys"],
+            ["AUTOMOAT_BRIDGE_STATUS_FILE|--bridge-status-file"],
+        )
         self.assertNotIn(str(tmp_path), output.getvalue())
         self.assertNotIn("relay-token", output.getvalue())
 
@@ -1706,6 +1714,14 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             payload["diagnostics"]["error_categories"],
             ["invalid_relay_url", "invalid_runtime_config", "invalid_secret"],
         )
+        self.assertEqual(
+            payload["diagnostics"]["failed_configuration_keys"],
+            [
+                "AUTOMOAT_RELAY_INTERVAL|--interval",
+                "AUTOMOAT_RELAY_TOKEN|--token",
+                "AUTOMOAT_RELAY_URL|--relay-url",
+            ],
+        )
         self.assertTrue(payload["diagnostics"]["relay_url_configured"])
         self.assertTrue(payload["diagnostics"]["relay_token_configured"])
         self.assertEqual(
@@ -1753,6 +1769,13 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertEqual(
             payload["diagnostics"]["error_categories"],
             ["invalid_runtime_config"],
+        )
+        self.assertEqual(
+            payload["diagnostics"]["failed_configuration_keys"],
+            [
+                "AUTOMOAT_RELAY_INTERVAL|--interval",
+                "AUTOMOAT_RELAY_TIMEOUT|--timeout",
+            ],
         )
         json.dumps(payload, allow_nan=False)
         self.assertNotIn("relay-token", output.getvalue())

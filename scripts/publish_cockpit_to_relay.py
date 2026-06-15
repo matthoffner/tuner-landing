@@ -1255,6 +1255,49 @@ def publisher_preflight_error_categories(errors: list[str]) -> list[str]:
     return sorted({publisher_preflight_error_category(error) for error in errors})
 
 
+def publisher_preflight_error_key(error: str) -> str:
+    if error == "AUTOMOAT_RELAY_URL or --relay-url is required":
+        return "AUTOMOAT_RELAY_URL|--relay-url"
+    if error == "AUTOMOAT_RELAY_TOKEN or --token is required":
+        return "AUTOMOAT_RELAY_TOKEN|--token"
+    error_key_prefixes = {
+        "--relay-url": "AUTOMOAT_RELAY_URL|--relay-url",
+        "--token": "AUTOMOAT_RELAY_TOKEN|--token",
+        "--interval": "AUTOMOAT_RELAY_INTERVAL|--interval",
+        "--timeout": "AUTOMOAT_RELAY_TIMEOUT|--timeout",
+        "--tail-lines": "AUTOMOAT_RELAY_TAIL_LINES|--tail-lines",
+        "--max-log-bytes": "AUTOMOAT_RELAY_MAX_LOG_BYTES|--max-log-bytes",
+        "--max-consecutive-failures": (
+            "AUTOMOAT_RELAY_MAX_CONSECUTIVE_FAILURES|"
+            "--max-consecutive-failures"
+        ),
+        "--max-consecutive-stale-statuses": (
+            "AUTOMOAT_RELAY_MAX_CONSECUTIVE_STALE_STATUSES|"
+            "--max-consecutive-stale-statuses"
+        ),
+        "--status-stale-after-seconds": (
+            "AUTOMOAT_STATUS_STALE_AFTER_SECONDS|--status-stale-after-seconds"
+        ),
+        "--bridge-status-stale-after-seconds": (
+            "AUTOMOAT_BRIDGE_STATUS_STALE_AFTER_SECONDS|"
+            "--bridge-status-stale-after-seconds"
+        ),
+        "--status-file": "--status-file",
+        "--pid-file": "--pid-file",
+        "--log-file": "--log-file",
+        "--publisher-log": "--publisher-log",
+        "--bridge-status-file": "AUTOMOAT_BRIDGE_STATUS_FILE|--bridge-status-file",
+    }
+    for prefix, key in error_key_prefixes.items():
+        if error.startswith(prefix):
+            return key
+    return "publisher_configuration"
+
+
+def publisher_preflight_error_keys(errors: list[str]) -> list[str]:
+    return sorted({publisher_preflight_error_key(error) for error in errors})
+
+
 def publisher_preflight_summary(
     args: argparse.Namespace,
     errors: list[str],
@@ -1267,6 +1310,7 @@ def publisher_preflight_summary(
         payload["diagnostics"] = {
             "error_count": len(errors),
             "error_categories": publisher_preflight_error_categories(errors),
+            "failed_configuration_keys": publisher_preflight_error_keys(errors),
             "relay_url_configured": bool(str(args.relay_url).strip()),
             "relay_token_configured": bool(str(args.token).strip()),
             "runtime_limits": PUBLISHER_CONFIG_LIMITS,
