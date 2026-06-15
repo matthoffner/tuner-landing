@@ -608,6 +608,12 @@ def validate_workdir_path(path: Path, errors: list[str], *, codex_home: Path | N
     if path_text != path_text.strip():
         errors.append("AUTOMOAT_WORKDIR must not include leading or trailing whitespace")
         return
+    if any(
+        character in "\r\n" or ord(character) < 32 or ord(character) == 127
+        for character in path_text
+    ):
+        errors.append("AUTOMOAT_WORKDIR must be a single-line path without control characters")
+        return
 
     raw_path = path_text.strip()
     if not raw_path:
@@ -654,6 +660,12 @@ def validate_codex_home_path(path: Path, workdir: Path, errors: list[str]) -> No
     path_text = str(path)
     if path_text != path_text.strip():
         errors.append("CODEX_HOME must not include leading or trailing whitespace")
+        return
+    if any(
+        character in "\r\n" or ord(character) < 32 or ord(character) == 127
+        for character in path_text
+    ):
+        errors.append("CODEX_HOME must be a single-line path without control characters")
         return
 
     raw_path = path_text.strip()

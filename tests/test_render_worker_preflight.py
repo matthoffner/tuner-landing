@@ -947,6 +947,26 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             ["AUTOMOAT_WORKDIR must not include leading or trailing whitespace"],
         )
 
+    def test_rejects_worker_paths_with_control_characters_before_startup(self) -> None:
+        base_env = {
+            "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            "GITHUB_TOKEN": "github-token",
+            "CODEX_ACCESS_TOKEN": "codex-token",
+            "AUTOMOAT_WORKDIR": "/work/auto\nmoat",
+            "CODEX_HOME": "/tmp/codex\t-home",
+        }
+
+        errors = self.worker.validate_worker_environment(base_env, found_command)
+
+        self.assertEqual(
+            errors,
+            [
+                "AUTOMOAT_WORKDIR must be a single-line path without control characters",
+                "CODEX_HOME must be a single-line path without control characters",
+            ],
+        )
+
     def test_validate_worker_environment_uses_supplied_path_env_values(self) -> None:
         base_env = {
             "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
@@ -1040,6 +1060,33 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             errors,
             ["CODEX_HOME must not include leading or trailing whitespace"],
         )
+
+    def test_check_env_json_categorizes_path_control_characters_as_invalid_path(self) -> None:
+        env = {
+            "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            "GITHUB_TOKEN": "github-token",
+            "CODEX_ACCESS_TOKEN": "codex-token",
+            "AUTOMOAT_WORKDIR": "/work/auto\nmoat",
+        }
+        output = io.StringIO()
+
+        with redirect_stdout(output):
+            errors = self.worker.emit_environment_preflight(
+                env,
+                found_command,
+                output_format="json",
+            )
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(
+            errors,
+            ["AUTOMOAT_WORKDIR must be a single-line path without control characters"],
+        )
+        self.assertEqual(payload["status"], "failed")
+        self.assertEqual(payload["diagnostics"]["error_categories"], ["invalid_path"])
+        self.assertNotIn("github-token", output.getvalue())
+        self.assertNotIn("codex-token", output.getvalue())
 
     def test_check_env_json_categorizes_path_whitespace_as_invalid_path(self) -> None:
         env = {
