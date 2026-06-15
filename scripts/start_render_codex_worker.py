@@ -61,6 +61,7 @@ GIT_IDENTITY_ENV_DEFAULTS = {
     "GIT_COMMITTER_NAME": "automoat-render-agent",
     "GIT_COMMITTER_EMAIL": "automoat-render-agent@users.noreply.github.com",
 }
+MAX_GIT_IDENTITY_VALUE_CHARS = 120
 PUBLISHER_RUNTIME_ENV_ARGS = (
     ("AUTOMOAT_RELAY_INTERVAL", "--interval", "3"),
     ("AUTOMOAT_RELAY_TIMEOUT", "--timeout", "8"),
@@ -321,6 +322,9 @@ def validate_git_identity_value(
         return
     if value != value.strip():
         errors.append(f"{name} must not include leading or trailing whitespace")
+        return
+    if len(value) > MAX_GIT_IDENTITY_VALUE_CHARS:
+        errors.append(f"{name} must be {MAX_GIT_IDENTITY_VALUE_CHARS} characters or fewer")
         return
     if name.endswith("_EMAIL") and not is_plain_git_email(value):
         errors.append(f"{name} must be a plain email address with one @")

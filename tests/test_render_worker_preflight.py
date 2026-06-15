@@ -2161,6 +2161,45 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         )
         self.assertNotIn(" automoat-render-bot", output.getvalue())
 
+    def test_check_env_json_routes_oversized_git_identity_without_echoing_value(self) -> None:
+        long_identity = "secret-render-agent-" * 8
+        output = io.StringIO()
+
+        with redirect_stdout(output):
+            errors = self.worker.emit_environment_preflight(
+                {
+                    "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+                    "AUTOMOAT_RELAY_TOKEN": "relay-token",
+                    "GITHUB_TOKEN": "github-token",
+                    "CODEX_ACCESS_TOKEN": "codex-token",
+                    "GIT_AUTHOR_NAME": long_identity,
+                },
+                found_command,
+                output_format="json",
+            )
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(
+            errors,
+            [
+                (
+                    "GIT_AUTHOR_NAME must be "
+                    f"{self.worker.MAX_GIT_IDENTITY_VALUE_CHARS} characters or fewer"
+                ),
+            ],
+        )
+        self.assertEqual(payload["status"], "failed")
+        self.assertEqual(
+            payload["diagnostics"]["error_categories"],
+            ["invalid_git_identity"],
+        )
+        self.assertEqual(
+            payload["diagnostics"]["failed_configuration_keys"],
+            ["GIT_AUTHOR_NAME"],
+        )
+        self.assertNotIn("secret-render-agent", output.getvalue())
+        self.assertNotIn("relay-token", output.getvalue())
+
     def test_rejects_malformed_git_identity_email_values_before_git_config(self) -> None:
         base_env = {
             "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
