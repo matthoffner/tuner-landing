@@ -582,7 +582,12 @@ def validate_git_branch_name(value: str, errors: list[str]) -> None:
 
 
 def validate_workdir_path(path: Path, errors: list[str]) -> None:
-    raw_path = str(path).strip()
+    path_text = str(path)
+    if path_text != path_text.strip():
+        errors.append("AUTOMOAT_WORKDIR must not include leading or trailing whitespace")
+        return
+
+    raw_path = path_text.strip()
     if not raw_path:
         errors.append("AUTOMOAT_WORKDIR must not be empty")
         return
@@ -623,7 +628,12 @@ def validate_workdir_path(path: Path, errors: list[str]) -> None:
 
 
 def validate_codex_home_path(path: Path, workdir: Path, errors: list[str]) -> None:
-    raw_path = str(path).strip()
+    path_text = str(path)
+    if path_text != path_text.strip():
+        errors.append("CODEX_HOME must not include leading or trailing whitespace")
+        return
+
+    raw_path = path_text.strip()
     if not raw_path:
         errors.append("CODEX_HOME must not be empty")
         return

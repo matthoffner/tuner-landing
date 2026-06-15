@@ -761,6 +761,22 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             [f"AUTOMOAT_WORKDIR path component {blocker} must be a directory"],
         )
 
+    def test_rejects_workdir_with_surrounding_whitespace_before_clone_cleanup(self) -> None:
+        base_env = {
+            "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            "GITHUB_TOKEN": "github-token",
+            "CODEX_ACCESS_TOKEN": "codex-token",
+        }
+        self.worker.WORKDIR = Path("/work/automoat ")
+
+        errors = self.worker.validate_worker_environment(base_env, found_command)
+
+        self.assertEqual(
+            errors,
+            ["AUTOMOAT_WORKDIR must not include leading or trailing whitespace"],
+        )
+
     def test_rejects_unsafe_codex_home_before_auth_setup(self) -> None:
         base_env = {
             "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
@@ -814,6 +830,50 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             errors,
             [f"CODEX_HOME path component {blocker} must be a directory"],
         )
+
+    def test_rejects_codex_home_with_surrounding_whitespace_before_auth_setup(self) -> None:
+        base_env = {
+            "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            "GITHUB_TOKEN": "github-token",
+            "CODEX_ACCESS_TOKEN": "codex-token",
+        }
+        self.worker.WORKDIR = Path("/work/automoat")
+        self.worker.CODEX_HOME = Path("/tmp/codex-home ")
+
+        errors = self.worker.validate_worker_environment(base_env, found_command)
+
+        self.assertEqual(
+            errors,
+            ["CODEX_HOME must not include leading or trailing whitespace"],
+        )
+
+    def test_check_env_json_categorizes_path_whitespace_as_invalid_path(self) -> None:
+        env = {
+            "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            "GITHUB_TOKEN": "github-token",
+            "CODEX_ACCESS_TOKEN": "codex-token",
+        }
+        self.worker.WORKDIR = Path("/work/automoat ")
+        output = io.StringIO()
+
+        with redirect_stdout(output):
+            errors = self.worker.emit_environment_preflight(
+                env,
+                found_command,
+                output_format="json",
+            )
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(
+            errors,
+            ["AUTOMOAT_WORKDIR must not include leading or trailing whitespace"],
+        )
+        self.assertEqual(payload["status"], "failed")
+        self.assertEqual(payload["diagnostics"]["error_categories"], ["invalid_path"])
+        self.assertNotIn("github-token", output.getvalue())
+        self.assertNotIn("codex-token", output.getvalue())
 
     def test_rejects_bad_reserved_runtime_file_paths_before_git_auth_setup(self) -> None:
         base_env = {
