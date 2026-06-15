@@ -933,7 +933,7 @@ def emit_environment_preflight(
     return []
 
 
-def run(command: list[str], *, cwd: Path | None = None, input_text: str | None = None) -> None:
+def run(command: list[str], *, cwd: Path | None = None, input_text: str | None = None) -> str:
     printable = " ".join(command)
     emit(f"$ {printable}")
     result = subprocess.run(
@@ -951,6 +951,43 @@ def run(command: list[str], *, cwd: Path | None = None, input_text: str | None =
             emit(f"  {line}")
     if result.returncode != 0:
         raise RuntimeError(f"{printable} failed with status {result.returncode}")
+    return result.stdout
+
+
+def reject_json_constant(value: str) -> None:
+    raise ValueError(f"invalid JSON constant: {value}")
+
+
+def validate_publisher_preflight_output(output: str) -> None:
+    try:
+        payload = json.loads(output.strip(), parse_constant=reject_json_constant)
+    except (TypeError, ValueError, json.JSONDecodeError) as exc:
+        raise RuntimeError("relay publisher preflight did not return valid JSON") from exc
+
+    if not isinstance(payload, dict):
+        raise RuntimeError("relay publisher preflight did not return a JSON object")
+
+    status = payload.get("status")
+    if status == "passed":
+        return
+
+    if status == "failed":
+        diagnostics = payload.get("diagnostics")
+        categories = (
+            diagnostics.get("error_categories")
+            if isinstance(diagnostics, dict)
+            else None
+        )
+        errors = payload.get("errors")
+        error_count = len(errors) if isinstance(errors, list) else "unknown"
+        category_text = ",".join(str(category) for category in categories or [])
+        raise RuntimeError(
+            "relay publisher preflight reported status=failed "
+            f"error_count={error_count} "
+            f"error_categories={category_text or 'unknown'}"
+        )
+
+    raise RuntimeError(f"relay publisher preflight reported status={status or 'missing'}")
 
 
 def write_codex_config() -> None:
@@ -1045,7 +1082,9 @@ def sync_repo() -> None:
 def check_relay_publisher_preflight() -> None:
     workdir, _codex_home = configured_worker_paths(os.environ)
     emit("checking checked-out relay publisher preflight")
-    run(relay_publisher_preflight_command(os.environ), cwd=workdir)
+    output = run(relay_publisher_preflight_command(os.environ), cwd=workdir)
+    validate_publisher_preflight_output(output)
+    emit("checked-out relay publisher preflight passed")
 
 
 def start_publisher() -> subprocess.Popen[object]:

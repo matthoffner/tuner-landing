@@ -2152,6 +2152,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             with patch.dict(self.worker.os.environ, env, clear=True), patch.object(
                 self.worker,
                 "run",
+                return_value='{"errors": [], "status": "passed"}',
             ) as run, redirect_stdout(output):
                 self.worker.check_relay_publisher_preflight()
 
@@ -2161,8 +2162,67 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         )
         self.assertEqual(run.call_args.kwargs["cwd"], workdir)
         self.assertIn("checking checked-out relay publisher preflight", output.getvalue())
+        self.assertIn("checked-out relay publisher preflight passed", output.getvalue())
         self.assertNotIn("relay-token", output.getvalue())
         self.assertNotIn("https://automoat-cockpit-relay.example", output.getvalue())
+
+    def test_check_relay_publisher_preflight_rejects_non_json_success(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workdir = Path(temp_dir) / "runtime-repo"
+            workdir.mkdir()
+            env = {
+                "AUTOMOAT_WORKDIR": str(workdir),
+                "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+                "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            }
+
+            with patch.dict(self.worker.os.environ, env, clear=True), patch.object(
+                self.worker,
+                "run",
+                return_value="publisher environment preflight passed",
+            ):
+                with self.assertRaisesRegex(RuntimeError, "did not return valid JSON"):
+                    self.worker.check_relay_publisher_preflight()
+
+    def test_check_relay_publisher_preflight_rejects_failed_json_status(self) -> None:
+        failed_payload = json.dumps(
+            {
+                "status": "failed",
+                "errors": ["--relay-url must be a relay base URL without a path"],
+                "diagnostics": {
+                    "error_categories": ["invalid_relay_url"],
+                    "relay_token_configured": True,
+                },
+            }
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workdir = Path(temp_dir) / "runtime-repo"
+            workdir.mkdir()
+            env = {
+                "AUTOMOAT_WORKDIR": str(workdir),
+                "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+                "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            }
+
+            with patch.dict(self.worker.os.environ, env, clear=True), patch.object(
+                self.worker,
+                "run",
+                return_value=failed_payload,
+            ):
+                with self.assertRaisesRegex(
+                    RuntimeError,
+                    "status=failed error_count=1 error_categories=invalid_relay_url",
+                ):
+                    self.worker.check_relay_publisher_preflight()
+
+    def test_check_relay_publisher_preflight_rejects_non_standard_json_constants(
+        self,
+    ) -> None:
+        with self.assertRaisesRegex(RuntimeError, "did not return valid JSON"):
+            self.worker.validate_publisher_preflight_output(
+                '{"status": "passed", "config": {"interval": NaN}}'
+            )
 
     def test_monitor_returns_loop_status_when_loop_exits_first(self) -> None:
         loop = FakeProcess(pid=101, initial_status=7)
