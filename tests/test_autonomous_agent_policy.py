@@ -616,6 +616,15 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
                 ],
             },
         )
+        self.assertEqual(
+            result["policy_summary"],
+            "status=failed route=dallas_synthetic_fixture_growth_disallowed "
+            "reason=synthetic_append_disallowed_by_snapshot "
+            "decision=dallas_ready_no_thin_groups "
+            "focus=autonomy_visibility_or_real_ingest synthetic_rows=1 "
+            "raw_csv_paths=1 productive_paths=0 preview_changed=false "
+            "allows_synthetic=false override=false",
+        )
 
     def test_synthetic_row_samples_are_bounded_and_secret_safe(self) -> None:
         rows = [
@@ -809,6 +818,13 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
             result["policy_diagnostics"]["productive_changed_path_count"],
             1,
         )
+        self.assertEqual(
+            result["policy_summary"],
+            "status=passed route=ok decision=dallas_ready_no_thin_groups "
+            "focus=autonomy_visibility_or_real_ingest synthetic_rows=0 "
+            "raw_csv_paths=1 productive_paths=1 preview_changed=false "
+            "allows_synthetic=false override=false",
+        )
 
     def test_policy_diagnostics_are_routeable_and_secret_safe(self) -> None:
         diagnostics = self.loop.autonomy_policy_diagnostics(
@@ -869,6 +885,37 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
             ["ELZ-2026-9999,https://example.local/dallas/9999"],
         )
         self.assertNotIn("secret", str(diagnostics))
+
+    def test_policy_summary_is_one_line_and_secret_safe(self) -> None:
+        summary = self.loop.autonomy_policy_summary(
+            {
+                "status": "failed",
+                "route_hint": "policy_failure",
+                "failure_reason": "blocked token=super-secret\nsecond line",
+                "decision_reason": "see https://user:pass@example.local/path?token=secret#debug",
+                "current_focus": "fix_import_readiness_blockers",
+                "synthetic_row_count": 7,
+                "raw_dallas_csv_changed_path_count": 8,
+                "productive_changed_path_count": 9,
+                "preview_json_changed": True,
+                "policy_allows_synthetic_append": False,
+                "policy_override": True,
+            }
+        )
+
+        self.assertIn("status=failed", summary)
+        self.assertIn("route=policy_failure", summary)
+        self.assertIn("reason=blocked token=<redacted> second line", summary)
+        self.assertIn("decision=see https://example.local/path", summary)
+        self.assertIn("synthetic_rows=7", summary)
+        self.assertIn("raw_csv_paths=8", summary)
+        self.assertIn("productive_paths=9", summary)
+        self.assertIn("preview_changed=true", summary)
+        self.assertIn("override=true", summary)
+        self.assertNotIn("super-secret", summary)
+        self.assertNotIn("user:pass", summary)
+        self.assertNotIn("token=secret", summary)
+        self.assertNotIn("\n", summary)
 
     def test_policy_route_hint_covers_known_failure_reasons(self) -> None:
         self.assertEqual(self.loop.autonomy_policy_route_hint(None), "ok")

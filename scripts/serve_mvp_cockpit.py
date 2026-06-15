@@ -545,6 +545,11 @@ def cockpit_summary(status: dict[str, object]) -> dict[str, object]:
     policy_diagnostics_current_focus = compact_policy_detail(
         policy_diagnostics.get("current_focus")
     )
+    policy_summary = (
+        compact_policy_detail(policy_step.get("policy_summary"), max_length=480)
+        if policy_step
+        else None
+    )
     policy_raw_csv_paths = (
         compact_policy_detail_list(
             first_string_list(
@@ -689,6 +694,7 @@ def cockpit_summary(status: dict[str, object]) -> dict[str, object]:
         "policy_reason": autonomy_policy.get("decision_reason"),
         "policy_failure_reason": policy_failure_reason,
         "policy_diagnostics_status": policy_diagnostics_status,
+        "policy_summary": policy_summary,
         "policy_route_hint": policy_route_hint,
         "policy_diagnostics_decision_reason": policy_diagnostics_decision_reason,
         "policy_diagnostics_current_focus": policy_diagnostics_current_focus,

@@ -1333,6 +1333,16 @@ class RenderCockpitRelayTest(unittest.TestCase):
                         ],
                         "policy_failure_reason": "synthetic_example_local_dallas_append_disallowed",
                         "policy_diagnostics_status": "failed",
+                        "policy_summary": (
+                            "status=failed "
+                            "route=raw_dallas_csv_changed_without_productive_companion "
+                            "reason=synthetic row token=summary-secret "
+                            "decision=dallas_ready_no_thin_groups "
+                            "focus=autonomy_visibility_or_real_ingest "
+                            "synthetic_rows=9 raw_csv_paths=7 "
+                            "productive_paths=2 preview_changed=false "
+                            "allows_synthetic=false override=true"
+                        ),
                         "policy_route_hint": "raw_dallas_csv_changed_without_productive_companion",
                         "policy_diagnostics_decision_reason": "dallas_ready_no_thin_groups",
                         "policy_diagnostics_current_focus": "autonomy_visibility_or_real_ingest",
@@ -1397,6 +1407,15 @@ class RenderCockpitRelayTest(unittest.TestCase):
             "available": True,
             "policy_failure_reason": "synthetic_example_local_dallas_append_disallowed",
             "policy_diagnostics_status": "failed",
+            "policy_summary": (
+                "status=failed "
+                "route=raw_dallas_csv_changed_without_productive_companion "
+                "reason=synthetic row token=[redacted] "
+                "decision=dallas_ready_no_thin_groups "
+                "focus=autonomy_visibility_or_real_ingest synthetic_rows=9 "
+                "raw_csv_paths=7 productive_paths=2 preview_changed=false "
+                "allows_synthetic=false override=true"
+            ),
             "policy_route_hint": "raw_dallas_csv_changed_without_productive_companion",
             "policy_diagnostics_decision_reason": "dallas_ready_no_thin_groups",
             "policy_diagnostics_current_focus": "autonomy_visibility_or_real_ingest",
@@ -1448,6 +1467,7 @@ class RenderCockpitRelayTest(unittest.TestCase):
         self.assertNotIn("row-secret", health_text)
         self.assertNotIn("another-secret", health_text)
         self.assertNotIn("productive-secret", health_text)
+        self.assertNotIn("summary-secret", health_text)
 
     def test_status_and_health_report_unavailable_source_status_file(self) -> None:
         self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"

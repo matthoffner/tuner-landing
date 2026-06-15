@@ -90,6 +90,7 @@ DALLAS_RAW_CSV_DIFF_PATHSPEC = (
 )
 MAX_POLICY_DETAIL_SAMPLES = 5
 MAX_POLICY_DETAIL_CHARS = 240
+MAX_POLICY_SUMMARY_CHARS = 480
 MAX_POLICY_LIST_ITEMS = 8
 MAX_ARTIFACT_HEALTH_DETAILS = 8
 MAX_ARTIFACT_HEALTH_DETAIL_CHARS = 240
@@ -474,7 +475,7 @@ def synthetic_dallas_csv_row(row: str) -> bool:
     )
 
 
-def sanitized_policy_detail(text: str) -> str:
+def sanitized_policy_detail(text: str, max_chars: int = MAX_POLICY_DETAIL_CHARS) -> str:
     """Return a bounded, secret-safe detail string for policy status payloads."""
 
     def sanitize_url(match: re.Match[str]) -> str:
@@ -495,8 +496,8 @@ def sanitized_policy_detail(text: str) -> str:
     sanitized = URL_TOKEN_PATTERN.sub(sanitize_url, text)
     sanitized = TOKEN_ASSIGNMENT_PATTERN.sub(r"\1=<redacted>", sanitized)
     sanitized = sanitized.replace("\r", " ").replace("\n", " ")
-    if len(sanitized) > MAX_POLICY_DETAIL_CHARS:
-        return sanitized[: MAX_POLICY_DETAIL_CHARS - 3] + "..."
+    if len(sanitized) > max_chars:
+        return sanitized[: max_chars - 3] + "..."
     return sanitized
 
 
@@ -868,6 +869,7 @@ def run_autonomy_policy_check(log_file: Path) -> dict[str, Any]:
         productive_paths=productive_paths,
         synthetic_row_samples=synthetic_row_samples,
     )
+    policy_summary = autonomy_policy_summary(policy_diagnostics)
     return {
         "name": name,
         "command": ["internal", "autonomy_policy_check"],
@@ -885,6 +887,7 @@ def run_autonomy_policy_check(log_file: Path) -> dict[str, Any]:
         "policy_override": allow_override,
         "policy_snapshot": policy_snapshot,
         "policy_diagnostics": policy_diagnostics,
+        "policy_summary": policy_summary,
         "failure_reason": failure_reason,
     }
 
@@ -947,6 +950,37 @@ def autonomy_policy_route_hint(failure_reason: str | None) -> str:
     if failure_reason:
         return "policy_failure"
     return "ok"
+
+
+def autonomy_policy_summary(policy_diagnostics: dict[str, Any]) -> str:
+    """Return a compact, secret-safe one-line summary for status and log readers."""
+    parts = [
+        f"status={sanitized_policy_detail(str(policy_diagnostics.get('status') or 'unknown'), 80)}",
+        f"route={sanitized_policy_detail(str(policy_diagnostics.get('route_hint') or 'unknown'), 120)}",
+    ]
+    failure_reason = policy_diagnostics.get("failure_reason")
+    if failure_reason:
+        parts.append(f"reason={sanitized_policy_detail(str(failure_reason), 120)}")
+    for key, label in (
+        ("decision_reason", "decision"),
+        ("current_focus", "focus"),
+    ):
+        value = policy_diagnostics.get(key)
+        if value is not None:
+            parts.append(f"{label}={sanitized_policy_detail(str(value), 120)}")
+    for key, label in (
+        ("synthetic_row_count", "synthetic_rows"),
+        ("raw_dallas_csv_changed_path_count", "raw_csv_paths"),
+        ("productive_changed_path_count", "productive_paths"),
+    ):
+        parts.append(f"{label}={int(policy_diagnostics.get(key) or 0)}")
+    for key, label in (
+        ("preview_json_changed", "preview_changed"),
+        ("policy_allows_synthetic_append", "allows_synthetic"),
+        ("policy_override", "override"),
+    ):
+        parts.append(f"{label}={str(bool(policy_diagnostics.get(key))).lower()}")
+    return sanitized_policy_detail(" ".join(parts), MAX_POLICY_SUMMARY_CHARS)
 
 
 def autonomy_policy_error_message(policy_step: dict[str, Any]) -> str:

@@ -907,6 +907,16 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                                     "policy_allows_synthetic_append": False,
                                     "policy_override": True,
                                 },
+                                "policy_summary": (
+                                    "status=failed "
+                                    "route=raw_dallas_csv_changed_without_productive_companion "
+                                    "reason=diagnostic failure token=diagnostic-secret "
+                                    "decision=dallas_ready_no_thin_groups "
+                                    "focus=autonomy_visibility_or_real_ingest "
+                                    "synthetic_rows=12 raw_csv_paths=9 "
+                                    "productive_paths=3 preview_changed=true "
+                                    "allows_synthetic=false override=true"
+                                ),
                                 "raw_dallas_csv_changed_paths": raw_paths,
                                 "productive_changed_paths": [
                                     "scripts/run_autonomous_agent_loop.py",
@@ -949,6 +959,16 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             "diagnostic failure token=[redacted]",
         )
         self.assertEqual(summary["policy_diagnostics_status"], "failed")
+        self.assertEqual(
+            summary["policy_summary"],
+            "status=failed "
+            "route=raw_dallas_csv_changed_without_productive_companion "
+            "reason=diagnostic failure token=[redacted] "
+            "decision=dallas_ready_no_thin_groups "
+            "focus=autonomy_visibility_or_real_ingest synthetic_rows=12 "
+            "raw_csv_paths=9 productive_paths=3 preview_changed=true "
+            "allows_synthetic=false override=true",
+        )
         self.assertEqual(
             summary["policy_route_hint"],
             "raw_dallas_csv_changed_without_productive_companion",
@@ -1130,6 +1150,14 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                                     "policy_allows_synthetic_append": False,
                                     "policy_override": False,
                                 },
+                                "policy_summary": (
+                                    "status=passed route=ok "
+                                    "decision=dallas_ready_no_thin_groups "
+                                    "focus=autonomy_visibility_or_real_ingest "
+                                    "synthetic_rows=0 raw_csv_paths=2 "
+                                    "productive_paths=2 preview_changed=false "
+                                    "allows_synthetic=false override=false"
+                                ),
                             }
                         ],
                         "artifacts": {
@@ -1164,6 +1192,13 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertEqual(summary["operator_attention_reasons"], [])
         self.assertIsNone(summary["policy_failure_reason"])
         self.assertEqual(summary["policy_diagnostics_status"], "passed")
+        self.assertEqual(
+            summary["policy_summary"],
+            "status=passed route=ok decision=dallas_ready_no_thin_groups "
+            "focus=autonomy_visibility_or_real_ingest synthetic_rows=0 "
+            "raw_csv_paths=2 productive_paths=2 preview_changed=false "
+            "allows_synthetic=false override=false",
+        )
         self.assertEqual(summary["policy_route_hint"], "ok")
         self.assertEqual(
             summary["policy_raw_dallas_csv_changed_paths"],

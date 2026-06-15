@@ -600,6 +600,7 @@ def source_policy_summary(status: dict[str, Any]) -> dict[str, Any]:
     text_fields = {
         "policy_failure_reason": source_summary.get("policy_failure_reason"),
         "policy_diagnostics_status": source_summary.get("policy_diagnostics_status"),
+        "policy_summary": source_summary.get("policy_summary"),
         "policy_route_hint": source_summary.get("policy_route_hint"),
         "policy_diagnostics_decision_reason": source_summary.get(
             "policy_diagnostics_decision_reason"
@@ -613,7 +614,8 @@ def source_policy_summary(status: dict[str, Any]) -> dict[str, Any]:
         "operator_attention_label": source_summary.get("operator_attention_label"),
     }
     for key, value in text_fields.items():
-        compact_value = compact_policy_detail(value, max_length=160)
+        max_length = 480 if key == "policy_summary" else 160
+        compact_value = compact_policy_detail(value, max_length=max_length)
         if compact_value is not None:
             summary[key] = compact_value
 
@@ -827,6 +829,7 @@ def sanitize_cockpit_summary_for_relay_response(summary: Any) -> dict[str, Any] 
         "contract_checks": summary.get("contract_checks"),
         "policy_failure_reason": summary.get("policy_failure_reason"),
         "policy_diagnostics_status": summary.get("policy_diagnostics_status"),
+        "policy_summary": summary.get("policy_summary"),
         "policy_route_hint": summary.get("policy_route_hint"),
         "policy_diagnostics_decision_reason": summary.get(
             "policy_diagnostics_decision_reason"
@@ -840,7 +843,8 @@ def sanitize_cockpit_summary_for_relay_response(summary: Any) -> dict[str, Any] 
         "operator_attention_label": summary.get("operator_attention_label"),
     }
     for key, value in text_fields.items():
-        compact_value = compact_policy_detail(value, max_length=160)
+        max_length = 480 if key == "policy_summary" else 160
+        compact_value = compact_policy_detail(value, max_length=max_length)
         if compact_value is not None:
             sanitized[key] = compact_value
 

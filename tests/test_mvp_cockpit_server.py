@@ -399,6 +399,14 @@ class MvpCockpitServerTest(unittest.TestCase):
                         "policy_allows_synthetic_append": False,
                         "policy_override": False,
                     },
+                    "policy_summary": (
+                        "status=failed route=dallas_raw_fixture_without_productive_companion "
+                        "reason=raw_dallas_csv_without_productive_work "
+                        "decision=dallas_ready_no_thin_groups token=diagnostic-secret "
+                        "focus=autonomy_visibility_or_real_ingest synthetic_rows=6 "
+                        "raw_csv_paths=9 productive_paths=9 preview_changed=false "
+                        "allows_synthetic=false override=false"
+                    ),
                     "synthetic_row_samples": [
                         "ELZ-2026-9999,100 Example Ave,https://user:pass@example.local/dallas/9999?token=secret#debug",
                         "ELZ-2026-9998,200 Example Ave,api_key=secret",
@@ -430,6 +438,15 @@ class MvpCockpitServerTest(unittest.TestCase):
             "raw_dallas_csv_without_productive_work token=[redacted]",
         )
         self.assertEqual(summary["policy_diagnostics_status"], "failed")
+        self.assertEqual(
+            summary["policy_summary"],
+            "status=failed route=dallas_raw_fixture_without_productive_companion "
+            "reason=raw_dallas_csv_without_productive_work "
+            "decision=dallas_ready_no_thin_groups token=[redacted] "
+            "focus=autonomy_visibility_or_real_ingest synthetic_rows=6 "
+            "raw_csv_paths=9 productive_paths=9 preview_changed=false "
+            "allows_synthetic=false override=false",
+        )
         self.assertEqual(
             summary["policy_route_hint"],
             "dallas_raw_fixture_without_productive_companion",
@@ -590,6 +607,12 @@ class MvpCockpitServerTest(unittest.TestCase):
                         "policy_allows_synthetic_append": False,
                         "policy_override": False,
                     },
+                    "policy_summary": (
+                        "status=passed route=ok decision=dallas_ready_no_thin_groups "
+                        "focus=autonomy_visibility_or_real_ingest synthetic_rows=0 "
+                        "raw_csv_paths=2 productive_paths=2 preview_changed=false "
+                        "allows_synthetic=false override=false"
+                    ),
                 },
             ],
             "artifacts": {
@@ -610,6 +633,13 @@ class MvpCockpitServerTest(unittest.TestCase):
         self.assertEqual(summary["operator_attention_reasons"], [])
         self.assertIsNone(summary["policy_failure_reason"])
         self.assertEqual(summary["policy_diagnostics_status"], "passed")
+        self.assertEqual(
+            summary["policy_summary"],
+            "status=passed route=ok decision=dallas_ready_no_thin_groups "
+            "focus=autonomy_visibility_or_real_ingest synthetic_rows=0 "
+            "raw_csv_paths=2 productive_paths=2 preview_changed=false "
+            "allows_synthetic=false override=false",
+        )
         self.assertEqual(summary["policy_route_hint"], "ok")
         self.assertEqual(
             summary["policy_raw_dallas_csv_changed_paths"],
