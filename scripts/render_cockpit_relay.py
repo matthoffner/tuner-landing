@@ -528,7 +528,7 @@ def source_bridge_summary(status: dict[str, Any]) -> dict[str, Any]:
         "mode": bridge.get("mode"),
     }
     for key, value in text_fields.items():
-        compact_value = compact_text(value, max_length=240)
+        compact_value = compact_policy_detail(value, max_length=240)
         if compact_value is not None:
             summary[key] = compact_value
 
@@ -932,23 +932,7 @@ def sanitize_status_for_relay_response(status: dict[str, Any]) -> dict[str, Any]
 
     bridge_summary = response_status.get("bridge_summary")
     if isinstance(bridge_summary, dict):
-        sanitized_bridge = dict(bridge_summary)
-        status_file = compact_path_label(sanitized_bridge.get("status_file"))
-        if status_file is not None:
-            sanitized_bridge["status_file"] = status_file
-        status_file_error = compact_path_diagnostic(
-            sanitized_bridge.get("status_file_error")
-        )
-        if status_file_error is not None:
-            sanitized_bridge["status_file_error"] = status_file_error
-        for key in ("public_url", "local_read_only_url", "ngrok_api_url"):
-            compact_value = compact_url(sanitized_bridge.get(key), max_length=240)
-            if compact_value is not None:
-                sanitized_bridge[key] = compact_value
-        bridge_health = compact_bridge_health(sanitized_bridge.get("bridge_health"))
-        if bridge_health is not None:
-            sanitized_bridge["bridge_health"] = bridge_health
-        response_status["bridge_summary"] = sanitized_bridge
+        response_status["bridge_summary"] = source_bridge_summary(response_status)
 
     cockpit_summary = sanitize_cockpit_summary_for_relay_response(
         response_status.get("cockpit_summary")

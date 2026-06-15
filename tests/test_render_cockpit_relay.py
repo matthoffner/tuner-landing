@@ -591,6 +591,62 @@ class RenderCockpitRelayTest(unittest.TestCase):
         self.assertNotIn("local-secret", health_text)
         self.assertNotIn("api-secret", health_text)
 
+    def test_status_and_health_sanitize_source_bridge_text_fields(self) -> None:
+        self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
+        self.relay.update_state(
+            {
+                "pushed_at": "2026-06-14T19:59:30Z",
+                "status": {
+                    "status": "running",
+                    "loop_running": True,
+                    "bridge_summary": {
+                        "available": True,
+                        "status_file_status": "loaded relay_token=file-secret",
+                        "status": (
+                            "running https://user:status-secret@example.local"
+                            "/viewer?token=status-token#debug"
+                        ),
+                        "updated_at": "2026-06-14T19:59:30Z\nrelay_token=time-secret",
+                        "bridge_started_at": (
+                            "2026-06-14T19:58:00Z token=start-secret"
+                        ),
+                        "mode": "read_only token=mode-secret",
+                    },
+                },
+                "log_tail": "bridge summary text fields copied secrets\n",
+            }
+        )
+        self.relay.utc_now = lambda: "2026-06-14T20:00:00Z"
+
+        health = self.relay.health_payload()
+        status = self.relay.relay_status_payload()
+
+        expected_bridge = {
+            "available": True,
+            "status_file_status": "loaded relay_token=[redacted]",
+            "status": "running https://example.local/viewer?[redacted]#[redacted]",
+            "updated_at": "2026-06-14T19:59:30Z relay_token=[redacted]",
+            "bridge_started_at": "2026-06-14T19:58:00Z token=[redacted]",
+            "mode": "read_only token=[redacted]",
+        }
+        self.assertEqual(health["cockpit_health"]["source_bridge"], expected_bridge)
+        self.assertEqual(status["bridge_summary"], expected_bridge)
+        self.assertEqual(status["cockpit_health"]["source_bridge"], expected_bridge)
+
+        response_text = json.dumps(
+            {"health": health, "status": status},
+            sort_keys=True,
+        )
+        for unsafe_text in (
+            "file-secret",
+            "status-secret",
+            "status-token",
+            "time-secret",
+            "start-secret",
+            "mode-secret",
+        ):
+            self.assertNotIn(unsafe_text, response_text)
+
     def test_status_and_health_sanitize_publisher_file_path_diagnostics(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             source_status_file = Path(tmp) / "mvp-loop-status.json"
