@@ -172,6 +172,67 @@ class RenderCockpitRelayTest(unittest.TestCase):
         self.assertEqual(status["cockpit_status"], "degraded")
         self.assertEqual(status["cockpit_health"]["reasons"], ["source_status_stale"])
 
+    def test_status_and_health_include_publisher_source_health(self) -> None:
+        self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
+        self.relay.update_state(
+            {
+                "pushed_at": "2026-06-14T19:59:30Z",
+                "status": {
+                    "status": "running",
+                    "loop_running": True,
+                },
+                "log_tail": "publisher summarized a stale source loop\n",
+                "publisher": {
+                    "host": "worker-1",
+                    "source_health": {
+                        "status": "degraded",
+                        "ok": False,
+                        "reasons": [
+                            "source_status_stale",
+                            "source_loop_not_running",
+                        ],
+                        "primary_reason": "source_status_stale",
+                        "label": "Source status is stale",
+                    },
+                },
+            }
+        )
+        self.relay.utc_now = lambda: "2026-06-14T20:00:00Z"
+
+        health = self.relay.health_payload()
+        status = self.relay.relay_status_payload()
+
+        expected_source_health = {
+            "status": "degraded",
+            "ok": False,
+            "reasons": [
+                "source_status_stale",
+                "source_loop_not_running",
+            ],
+            "primary_reason": "source_status_stale",
+            "label": "Source status is stale",
+        }
+        self.assertTrue(health["ok"])
+        self.assertFalse(health["cockpit_ok"])
+        self.assertEqual(health["cockpit_status"], "degraded")
+        self.assertEqual(
+            health["cockpit_health"]["reasons"],
+            ["source_status_stale", "source_loop_not_running"],
+        )
+        self.assertEqual(
+            health["cockpit_health"]["source_health"],
+            expected_source_health,
+        )
+        self.assertEqual(health["cockpit_health_label"], "Source status is stale")
+        self.assertEqual(
+            status["cockpit_health"]["source_health"],
+            expected_source_health,
+        )
+        self.assertEqual(
+            status["relay"]["publisher"]["source_health"],
+            expected_source_health,
+        )
+
     def test_status_and_health_report_source_cockpit_attention(self) -> None:
         self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
         self.relay.update_state(

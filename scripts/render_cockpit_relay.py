@@ -125,12 +125,51 @@ def cockpit_health_label(reason: str | None, source_attention_label: str | None 
     return COCKPIT_HEALTH_LABELS.get(reason, reason.replace("_", " "))
 
 
+def publisher_source_health(state: dict[str, Any]) -> dict[str, Any]:
+    publisher = state.get("publisher")
+    if not isinstance(publisher, dict):
+        return {}
+    source_health = publisher.get("source_health")
+    if not isinstance(source_health, dict):
+        return {}
+
+    reasons = source_health.get("reasons")
+    if not isinstance(reasons, list):
+        reasons = []
+    normalized_reasons = [str(reason) for reason in reasons if reason]
+    primary_reason = source_health.get("primary_reason")
+    if not isinstance(primary_reason, str) or not primary_reason:
+        primary_reason = normalized_reasons[0] if normalized_reasons else None
+
+    status = source_health.get("status")
+    if status not in {"live", "degraded"}:
+        status = "degraded" if normalized_reasons else "live"
+    ok = source_health.get("ok")
+    if not isinstance(ok, bool):
+        ok = status == "live"
+    label = source_health.get("label")
+    if not isinstance(label, str) or not label.strip():
+        label = cockpit_health_label(primary_reason)
+
+    return {
+        "status": status,
+        "ok": ok,
+        "reasons": normalized_reasons,
+        "primary_reason": primary_reason,
+        "label": label,
+    }
+
+
 def cockpit_health(
     state: dict[str, Any],
     status: dict[str, Any],
     freshness: dict[str, Any],
 ) -> dict[str, Any]:
     reasons: list[str] = []
+    source_health = publisher_source_health(state)
+    source_health_reasons = source_health.get("reasons")
+    if not isinstance(source_health_reasons, list):
+        source_health_reasons = []
     source_summary = status.get("cockpit_summary")
     if not isinstance(source_summary, dict):
         source_summary = {}
@@ -169,6 +208,9 @@ def cockpit_health(
         reasons.append("source_status_failing")
     if source_summary.get("operator_attention") is True:
         reasons.append("source_cockpit_attention")
+    for source_health_reason in source_health_reasons:
+        if source_health_reason not in reasons:
+            reasons.append(source_health_reason)
 
     if not state.get("received_at"):
         health_status = "waiting"
@@ -188,6 +230,7 @@ def cockpit_health(
         ],
         "source_cockpit_attention_primary_reason": source_attention_primary_reason,
         "source_cockpit_attention_label": source_attention_label,
+        "source_health": source_health,
     }
 
 
