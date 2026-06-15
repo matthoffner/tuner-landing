@@ -38,6 +38,7 @@ class RenderCockpitRelayTest(unittest.TestCase):
                 "max_ingest_bytes": 1024 * 1024,
                 "max_log_chars": 160 * 1024,
                 "max_status_bytes": 128 * 1024,
+                "max_publisher_bytes": 64 * 1024,
                 "stale_after_seconds": 120,
             }
         )
@@ -1146,6 +1147,7 @@ class RenderCockpitRelayTest(unittest.TestCase):
             "AUTOMOAT_RELAY_MAX_BYTES": "bad",
             "AUTOMOAT_RELAY_MAX_LOG_CHARS": "0",
             "AUTOMOAT_RELAY_MAX_STATUS_BYTES": "-2",
+            "AUTOMOAT_RELAY_MAX_PUBLISHER_BYTES": "bad",
             "AUTOMOAT_RELAY_STALE_AFTER_SECONDS": "-1",
         }
         with patch.dict(os.environ, env, clear=True), patch.object(
@@ -1161,6 +1163,7 @@ class RenderCockpitRelayTest(unittest.TestCase):
         self.assertIn("--max-ingest-bytes must be an integer", errors)
         self.assertIn("--max-log-chars must be greater than 0", errors)
         self.assertIn("--max-status-bytes must be greater than 0", errors)
+        self.assertIn("--max-publisher-bytes must be an integer", errors)
         self.assertIn("--stale-after-seconds must be greater than 0", errors)
 
     def test_relay_preflight_rejects_malformed_token_before_serving(self) -> None:
@@ -1221,6 +1224,7 @@ class RenderCockpitRelayTest(unittest.TestCase):
             "AUTOMOAT_RELAY_MAX_BYTES": str(limits["max_ingest_bytes"]),
             "AUTOMOAT_RELAY_MAX_LOG_CHARS": str(limits["max_log_chars"]),
             "AUTOMOAT_RELAY_MAX_STATUS_BYTES": str(limits["max_status_bytes"]),
+            "AUTOMOAT_RELAY_MAX_PUBLISHER_BYTES": str(limits["max_publisher_bytes"]),
             "AUTOMOAT_RELAY_STALE_AFTER_SECONDS": str(limits["stale_after_seconds"]),
         }
         with patch.dict(os.environ, env, clear=True), patch.object(
@@ -1241,6 +1245,9 @@ class RenderCockpitRelayTest(unittest.TestCase):
             "AUTOMOAT_RELAY_MAX_BYTES": str(limits["max_ingest_bytes"] + 1),
             "AUTOMOAT_RELAY_MAX_LOG_CHARS": str(limits["max_log_chars"] + 1),
             "AUTOMOAT_RELAY_MAX_STATUS_BYTES": str(limits["max_status_bytes"] + 1),
+            "AUTOMOAT_RELAY_MAX_PUBLISHER_BYTES": str(
+                limits["max_publisher_bytes"] + 1
+            ),
             "AUTOMOAT_RELAY_STALE_AFTER_SECONDS": str(limits["stale_after_seconds"] + 1),
         }
         with patch.dict(os.environ, env, clear=True), patch.object(
@@ -1257,6 +1264,7 @@ class RenderCockpitRelayTest(unittest.TestCase):
                 "--max-ingest-bytes must be less than or equal to 4194304",
                 "--max-log-chars must be less than or equal to 1048576",
                 "--max-status-bytes must be less than or equal to 524288",
+                "--max-publisher-bytes must be less than or equal to 262144",
                 "--stale-after-seconds must be less than or equal to 3600",
             ],
         )
@@ -1392,6 +1400,47 @@ class RenderCockpitRelayTest(unittest.TestCase):
 
         self.assertEqual(self.relay.snapshot(), before)
 
+    def test_update_state_rejects_oversized_publisher_without_mutating_snapshot(self) -> None:
+        self.relay.CONFIG["max_publisher_bytes"] = 128
+        before = self.relay.snapshot()
+
+        with self.assertRaisesRegex(
+            ValueError,
+            r"publisher metadata exceeds max publisher bytes \(\d+ > 128\)",
+        ):
+            self.relay.update_state(
+                {
+                    "status": {"status": "running", "loop_running": True},
+                    "log_tail": "new log\n",
+                    "publisher": {
+                        "host": "worker-1",
+                        "oversized_diagnostic": "x" * 240,
+                    },
+                }
+            )
+
+        self.assertEqual(self.relay.snapshot(), before)
+
+    def test_update_state_rejects_non_finite_publisher_without_mutating_snapshot(self) -> None:
+        before = self.relay.snapshot()
+
+        with self.assertRaisesRegex(
+            ValueError,
+            "Out of range float values are not JSON compliant",
+        ):
+            self.relay.update_state(
+                {
+                    "status": {"status": "running", "loop_running": True},
+                    "log_tail": "new log\n",
+                    "publisher": {
+                        "host": "worker-1",
+                        "bad_metric": float("nan"),
+                    },
+                }
+            )
+
+        self.assertEqual(self.relay.snapshot(), before)
+
     def test_check_env_exits_without_serving_when_relay_config_is_valid(self) -> None:
         env = {
             "AUTOMOAT_RELAY_TOKEN": "relay-token",
@@ -1410,6 +1459,7 @@ class RenderCockpitRelayTest(unittest.TestCase):
         self.assertIn("relay environment preflight passed", stdout.getvalue())
         self.assertIn("state_file=memory-only", stdout.getvalue())
         self.assertIn("max_status_bytes=131072", stdout.getvalue())
+        self.assertIn("max_publisher_bytes=65536", stdout.getvalue())
         self.assertIn("runtime_limits=", stdout.getvalue())
 
     def test_check_env_json_reports_safe_machine_readable_summary(self) -> None:
@@ -1418,6 +1468,7 @@ class RenderCockpitRelayTest(unittest.TestCase):
             "PORT": "4180",
             "AUTOMOAT_RELAY_STATE_FILE": "",
             "AUTOMOAT_RELAY_MAX_STATUS_BYTES": "65536",
+            "AUTOMOAT_RELAY_MAX_PUBLISHER_BYTES": "32768",
         }
         stdout = io.StringIO()
         with patch.dict(os.environ, env, clear=True), patch.object(
@@ -1435,6 +1486,7 @@ class RenderCockpitRelayTest(unittest.TestCase):
         self.assertEqual(payload["config"]["port"], 4180)
         self.assertEqual(payload["config"]["state_file"], "memory-only")
         self.assertEqual(payload["config"]["max_status_bytes"], 65536)
+        self.assertEqual(payload["config"]["max_publisher_bytes"], 32768)
         self.assertTrue(payload["config"]["relay_token_configured"])
         self.assertEqual(
             payload["config"]["runtime_limits"],

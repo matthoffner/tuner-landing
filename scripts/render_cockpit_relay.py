@@ -25,11 +25,13 @@ CONFIG: dict[str, Any] = {}
 DEFAULT_MAX_INGEST_BYTES = 1024 * 1024
 DEFAULT_MAX_LOG_CHARS = 160 * 1024
 DEFAULT_MAX_STATUS_BYTES = 128 * 1024
+DEFAULT_MAX_PUBLISHER_BYTES = 64 * 1024
 DEFAULT_STALE_AFTER_SECONDS = 120
 RELAY_CONFIG_LIMITS = {
     "max_ingest_bytes": 4 * 1024 * 1024,
     "max_log_chars": 1024 * 1024,
     "max_status_bytes": 512 * 1024,
+    "max_publisher_bytes": 256 * 1024,
     "stale_after_seconds": 3600,
 }
 HTTP_REQUEST_METHODS = {
@@ -868,6 +870,13 @@ def update_state(payload: dict[str, Any]) -> dict[str, Any]:
     publisher = dict(publisher)
     if payload.get("pushed_at"):
         publisher["pushed_at"] = payload["pushed_at"]
+    publisher_size_bytes = encoded_json_size(publisher)
+    max_publisher_bytes = int(CONFIG["max_publisher_bytes"])
+    if publisher_size_bytes > max_publisher_bytes:
+        raise ValueError(
+            "publisher metadata exceeds max publisher bytes "
+            f"({publisher_size_bytes} > {max_publisher_bytes})"
+        )
 
     next_state = {
         "relay_status": "live",
@@ -1080,6 +1089,12 @@ def validate_relay_configuration(
         maximum=RELAY_CONFIG_LIMITS["max_status_bytes"],
     )
     parse_positive_int(
+        "--max-publisher-bytes",
+        args.max_publisher_bytes,
+        errors,
+        maximum=RELAY_CONFIG_LIMITS["max_publisher_bytes"],
+    )
+    parse_positive_int(
         "--stale-after-seconds",
         args.stale_after_seconds,
         errors,
@@ -1101,6 +1116,7 @@ def relay_preflight_error_category(error: str) -> str:
         error.startswith("--max-ingest-bytes")
         or error.startswith("--max-log-chars")
         or error.startswith("--max-status-bytes")
+        or error.startswith("--max-publisher-bytes")
         or error.startswith("--stale-after-seconds")
     ):
         return "invalid_runtime_config"
@@ -1142,6 +1158,7 @@ def relay_preflight_summary(
         "max_ingest_bytes": int(args.max_ingest_bytes),
         "max_log_chars": int(args.max_log_chars),
         "max_status_bytes": int(args.max_status_bytes),
+        "max_publisher_bytes": int(args.max_publisher_bytes),
         "stale_after_seconds": int(args.stale_after_seconds),
         "relay_token_configured": bool(
             str(env.get("AUTOMOAT_RELAY_TOKEN", "")).strip()
@@ -1182,6 +1199,7 @@ def emit_relay_preflight(
         f"max_ingest_bytes={int(args.max_ingest_bytes)} "
         f"max_log_chars={int(args.max_log_chars)} "
         f"max_status_bytes={int(args.max_status_bytes)} "
+        f"max_publisher_bytes={int(args.max_publisher_bytes)} "
         f"stale_after_seconds={int(args.stale_after_seconds)} "
         f"runtime_limits={json.dumps(RELAY_CONFIG_LIMITS, sort_keys=True)}",
         flush=True,
@@ -1374,6 +1392,14 @@ def parse_args() -> argparse.Namespace:
         help="reject ingest payloads whose status object exceeds this serialized size",
     )
     parser.add_argument(
+        "--max-publisher-bytes",
+        default=os.environ.get(
+            "AUTOMOAT_RELAY_MAX_PUBLISHER_BYTES",
+            str(DEFAULT_MAX_PUBLISHER_BYTES),
+        ),
+        help="reject ingest payloads whose publisher metadata exceeds this serialized size",
+    )
+    parser.add_argument(
         "--stale-after-seconds",
         default=os.environ.get("AUTOMOAT_RELAY_STALE_AFTER_SECONDS", str(DEFAULT_STALE_AFTER_SECONDS)),
         help="mark relay snapshots stale when they are older than this many seconds",
@@ -1414,6 +1440,7 @@ def main() -> int:
             "max_ingest_bytes": int(args.max_ingest_bytes),
             "max_log_chars": int(args.max_log_chars),
             "max_status_bytes": int(args.max_status_bytes),
+            "max_publisher_bytes": int(args.max_publisher_bytes),
             "stale_after_seconds": int(args.stale_after_seconds),
         }
     )
