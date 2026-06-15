@@ -216,6 +216,9 @@ def validate_git_identity_value(
         for character in value
     ):
         errors.append(f"{name} must be a single-line value without control characters")
+        return
+    if value != value.strip():
+        errors.append(f"{name} must not include leading or trailing whitespace")
 
 
 def validate_secret_value(

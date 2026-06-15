@@ -711,6 +711,33 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             ],
         )
 
+    def test_rejects_git_identity_values_with_surrounding_whitespace(self) -> None:
+        base_env = {
+            "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            "GITHUB_TOKEN": "github-token",
+            "CODEX_ACCESS_TOKEN": "codex-token",
+        }
+        errors = self.worker.validate_worker_environment(
+            {
+                **base_env,
+                "GIT_AUTHOR_NAME": " automoat-render-bot",
+                "GIT_AUTHOR_EMAIL": "automoat-render-bot@example.com ",
+                "GIT_COMMITTER_NAME": "automoat-render-bot",
+                "GIT_COMMITTER_EMAIL": " automoat-render-bot@example.com",
+            },
+            found_command,
+        )
+
+        self.assertEqual(
+            errors,
+            [
+                "GIT_AUTHOR_NAME must not include leading or trailing whitespace",
+                "GIT_AUTHOR_EMAIL must not include leading or trailing whitespace",
+                "GIT_COMMITTER_EMAIL must not include leading or trailing whitespace",
+            ],
+        )
+
     def test_write_codex_config_escapes_string_values(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             self.worker.CODEX_HOME = Path(temp_dir) / "codex-home"
