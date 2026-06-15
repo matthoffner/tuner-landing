@@ -1114,6 +1114,10 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             "@": "AUTOMOAT_GIT_BRANCH must be a valid git branch name",
             ".hidden": "AUTOMOAT_GIT_BRANCH must be a valid git branch name",
             "feature/.hidden": "AUTOMOAT_GIT_BRANCH must be a valid git branch name",
+            "release./candidate": "AUTOMOAT_GIT_BRANCH must be a valid git branch name",
+            "feature/name./candidate": (
+                "AUTOMOAT_GIT_BRANCH must be a valid git branch name"
+            ),
             "release.lock/candidate": "AUTOMOAT_GIT_BRANCH must be a valid git branch name",
             "release..candidate": "AUTOMOAT_GIT_BRANCH must be a valid git branch name",
             "feature/@{bad}": "AUTOMOAT_GIT_BRANCH must be a valid git branch name",

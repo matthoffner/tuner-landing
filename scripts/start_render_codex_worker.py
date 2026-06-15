@@ -749,8 +749,8 @@ def validate_git_branch_name(value: str, errors: list[str]) -> None:
         branch == "@"
         or branch.startswith("/")
         or branch.endswith("/")
-        or branch.endswith(".")
         or any(component.startswith(".") for component in branch_components)
+        or any(component.endswith(".") for component in branch_components)
         or any(component.endswith(".lock") for component in branch_components)
         or any(fragment in branch for fragment in invalid_fragments)
         or any(character in invalid_characters for character in branch)
