@@ -424,6 +424,74 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertNotIn("local-secret", summary_text)
         self.assertNotIn("api-secret", summary_text)
 
+    def test_read_bridge_summary_sanitizes_bridge_health_for_remote_snapshots(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            bridge_status_file = Path(tmp) / "mvp-bridge-status.json"
+            bridge_status_file.write_text(
+                json.dumps(
+                    {
+                        "status": "running",
+                        "bridge_health": {
+                            "status": "degraded token=status-secret",
+                            "ok": False,
+                            "reasons": [
+                                (
+                                    "tunnel failed\n"
+                                    "authorization: Bearer reason-secret "
+                                    "https://bridge.example/debug?token=url-secret#trace"
+                                ),
+                                "relay_token=reason-two-secret retrying",
+                                "reason-3",
+                                "reason-4",
+                                "reason-5",
+                                "reason-6-token=overflow-secret",
+                            ],
+                            "primary_reason": (
+                                "ngrok_api_unreachable token=primary-secret"
+                            ),
+                            "label": (
+                                "Bridge degraded "
+                                "https://user:pass@bridge.example/status"
+                                "?token=label-secret#debug"
+                            ),
+                        },
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            summary = self.publisher.read_bridge_summary(bridge_status_file)
+            summary_text = json.dumps(summary, sort_keys=True)
+
+        health = summary["bridge_health"]
+        self.assertEqual(health["status"], "degraded token=[redacted]")
+        self.assertEqual(
+            health["primary_reason"],
+            "ngrok_api_unreachable token=[redacted]",
+        )
+        self.assertEqual(len(health["reasons"]), 5)
+        self.assertIn("authorization: Bearer [redacted]", health["reasons"][0])
+        self.assertIn(
+            "https://bridge.example/debug?[redacted]#[redacted]",
+            health["reasons"][0],
+        )
+        self.assertEqual(health["reasons"][1], "relay_token=[redacted] retrying")
+        self.assertEqual(
+            health["label"],
+            "Bridge degraded https://bridge.example/status?[redacted]#[redacted]",
+        )
+        self.assertNotIn("status-secret", summary_text)
+        self.assertNotIn("reason-secret", summary_text)
+        self.assertNotIn("url-secret", summary_text)
+        self.assertNotIn("reason-two-secret", summary_text)
+        self.assertNotIn("primary-secret", summary_text)
+        self.assertNotIn("label-secret", summary_text)
+        self.assertNotIn("user:pass", summary_text)
+        self.assertNotIn("overflow-secret", summary_text)
+        self.assertNotIn("reason-6", summary_text)
+        self.assertNotIn("\n", summary_text)
+
     def test_read_bridge_summary_marks_loaded_stale_status(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)

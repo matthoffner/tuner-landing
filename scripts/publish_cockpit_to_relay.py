@@ -327,15 +327,21 @@ def compact_float(value: Any) -> float | None:
 
 def bridge_health_summary(value: Any) -> dict[str, Any]:
     health = value if isinstance(value, dict) else {}
-    reasons = as_string_list(health.get("reasons"))
-    primary_reason = compact_text(health.get("primary_reason"))
+    reasons = compact_policy_detail_list(
+        health.get("reasons"),
+        max_items=5,
+        max_length=160,
+    )
+    primary_reason = compact_policy_detail(health.get("primary_reason"), max_length=160)
     if primary_reason is None and reasons:
         primary_reason = reasons[0]
-    status = compact_text(health.get("status")) or ("degraded" if reasons else "unknown")
+    status = compact_policy_detail(health.get("status"), max_length=80) or (
+        "degraded" if reasons else "unknown"
+    )
     ok = health.get("ok")
     if not isinstance(ok, bool):
         ok = status == "live"
-    label = compact_text(health.get("label")) or (
+    label = compact_policy_detail(health.get("label"), max_length=160) or (
         "Live" if primary_reason is None else primary_reason.replace("_", " ")
     )
     return {
