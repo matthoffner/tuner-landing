@@ -125,6 +125,19 @@ class StartAutonomousCockpitRelayTest(unittest.TestCase):
 
         self.assertEqual(errors, ["--relay-url must be a relay base URL without a path"])
 
+    def test_validate_startup_configuration_rejects_relay_url_path_parameters(self) -> None:
+        errors = self.launcher.validate_startup_configuration(
+            Namespace(
+                relay_url="https://automoat-cockpit-relay.example/;debug",
+                token="relay-token",
+                interval=300,
+                publish_interval=3,
+                port=4174,
+            )
+        )
+
+        self.assertEqual(errors, ["--relay-url must not include path parameters"])
+
     def test_validate_startup_configuration_rejects_relay_url_without_host(self) -> None:
         errors = self.launcher.validate_startup_configuration(
             Namespace(
@@ -410,6 +423,41 @@ class StartAutonomousCockpitRelayTest(unittest.TestCase):
             ["invalid_relay_url"],
         )
         self.assertNotIn("automoat-cockpit-relay.example/ingest", output.getvalue())
+        self.assertNotIn("relay-token", output.getvalue())
+
+    def test_check_env_json_rejects_relay_url_path_parameters_without_printing_url(self) -> None:
+        output = io.StringIO()
+        env = {
+            "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example/;debug",
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+        }
+        self.launcher.start_detached = lambda *args, **kwargs: self.fail("start_detached should not run")
+        self.launcher.publish_once = lambda *args, **kwargs: self.fail("publish_once should not run")
+
+        with patch.dict(os.environ, env, clear=True), patch.object(
+            sys,
+            "argv",
+            [
+                "start_autonomous_cockpit_relay.py",
+                "--check-env",
+                "--format",
+                "json",
+            ],
+        ), redirect_stdout(output):
+            status = self.launcher.main()
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(status, 2)
+        self.assertEqual(payload["status"], "failed")
+        self.assertEqual(
+            payload["errors"],
+            ["--relay-url must not include path parameters"],
+        )
+        self.assertEqual(
+            payload["diagnostics"]["error_categories"],
+            ["invalid_relay_url"],
+        )
+        self.assertNotIn("automoat-cockpit-relay.example/;debug", output.getvalue())
         self.assertNotIn("relay-token", output.getvalue())
 
     def test_check_env_json_rejects_non_finite_intervals(self) -> None:

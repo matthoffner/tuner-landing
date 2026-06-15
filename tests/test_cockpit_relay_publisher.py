@@ -1250,6 +1250,9 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 "https://automoat-cockpit-relay.example:0": (
                     "--relay-url must include a valid port when a port is specified"
                 ),
+                "https://automoat-cockpit-relay.example/;debug": (
+                    "--relay-url must not include path parameters"
+                ),
                 "https://:443/status": "--relay-url must include a host",
                 "https://[::1": "--relay-url must be a valid URL",
             }
@@ -1340,6 +1343,39 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         )
         self.assertEqual(payload["diagnostics"]["error_categories"], ["invalid_relay_url"])
         self.assertNotIn("automoat-cockpit-relay.example/ingest", output.getvalue())
+        self.assertNotIn("relay-token", output.getvalue())
+
+    def test_check_env_json_rejects_relay_url_path_parameters(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            env = {
+                "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example/;debug",
+                "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            }
+            output = io.StringIO()
+            self.publisher.publish_once = lambda _args: self.fail("publish_once should not run")
+            with patch.dict(os.environ, env, clear=True), patch.object(
+                sys,
+                "argv",
+                [
+                    "publish_cockpit_to_relay.py",
+                    "--check-env",
+                    "--format",
+                    "json",
+                    "--publisher-log",
+                    str(tmp_path / "publisher.log"),
+                ],
+            ), redirect_stdout(output):
+                status = self.publisher.main()
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(status, 2)
+        self.assertEqual(
+            payload["errors"],
+            ["--relay-url must not include path parameters"],
+        )
+        self.assertEqual(payload["diagnostics"]["error_categories"], ["invalid_relay_url"])
+        self.assertNotIn("automoat-cockpit-relay.example/;debug", output.getvalue())
         self.assertNotIn("relay-token", output.getvalue())
 
     def test_check_env_json_rejects_blocked_publisher_log_parent(self) -> None:

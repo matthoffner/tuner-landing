@@ -1071,6 +1071,8 @@ def validate_publisher_configuration(args: argparse.Namespace) -> list[str]:
             errors.append("--relay-url must include a host")
         elif parsed_relay_url.username or parsed_relay_url.password:
             errors.append("--relay-url must not include embedded credentials")
+        elif parsed_relay_url.params:
+            errors.append("--relay-url must not include path parameters")
         elif parsed_relay_url.query or parsed_relay_url.fragment:
             errors.append("--relay-url must not include query strings or fragments")
         elif parsed_relay_url.path.strip("/"):
