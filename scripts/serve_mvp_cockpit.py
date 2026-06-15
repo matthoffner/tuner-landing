@@ -466,6 +466,19 @@ def cockpit_summary(status: dict[str, object]) -> dict[str, object]:
         if policy_failure
         else 0
     )
+    policy_productive_paths = (
+        compact_policy_detail_list(
+            policy_failure.get("productive_changed_paths"),
+            max_items=POLICY_RAW_PATH_SAMPLE_LIMIT,
+        )
+        if policy_failure
+        else []
+    )
+    policy_productive_path_count = (
+        len(as_string_list(policy_failure.get("productive_changed_paths")))
+        if policy_failure
+        else 0
+    )
     policy_synthetic_row_samples = (
         compact_policy_detail_list(
             policy_failure.get("synthetic_row_samples"),
@@ -531,6 +544,8 @@ def cockpit_summary(status: dict[str, object]) -> dict[str, object]:
         "policy_failure_reason": policy_failure_reason,
         "policy_raw_dallas_csv_changed_paths": policy_raw_csv_paths,
         "policy_raw_dallas_csv_changed_path_count": policy_raw_csv_path_count,
+        "policy_productive_changed_paths": policy_productive_paths,
+        "policy_productive_changed_path_count": policy_productive_path_count,
         "policy_synthetic_row_samples": policy_synthetic_row_samples,
         "policy_synthetic_row_count": policy_synthetic_row_count,
         "dallas_pipeline_ready": autonomy_policy.get("dallas_pipeline_ready"),
@@ -1022,10 +1037,17 @@ def cockpit_html() -> str:
         const policySyntheticRowCount = typeof cockpit.policy_synthetic_row_count === "number"
           ? cockpit.policy_synthetic_row_count
           : policySamples.length;
+        const policyProductivePaths = Array.isArray(cockpit.policy_productive_changed_paths)
+          ? cockpit.policy_productive_changed_paths
+          : [];
+        const policyProductivePathCount = typeof cockpit.policy_productive_changed_path_count === "number"
+          ? cockpit.policy_productive_changed_path_count
+          : policyProductivePaths.length;
         attention.title = [
           reasons.join(", "),
           cockpit.policy_failure_reason ? `policy: ${{cockpit.policy_failure_reason}}` : "",
           policyRawPaths.length ? `raw csv (${{policyRawPathCount}}): ${{policyRawPaths.join(", ")}}` : "",
+          policyProductivePaths.length ? `productive (${{policyProductivePathCount}}): ${{policyProductivePaths.join(", ")}}` : "",
           policySamples.length ? `synthetic rows (${{policySyntheticRowCount}}): ${{policySamples.join(" | ")}}` : "",
         ].filter(Boolean).join(" | ");
         const handoff = cockpit.import_handoff || {{}};

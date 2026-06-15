@@ -273,6 +273,17 @@ class MvpCockpitServerTest(unittest.TestCase):
                         "generated/raw/dallas-electrician-import-sample-v1/contractors.csv",
                         "generated/raw/dallas-electrician-import-sample-v1/rule_documents.csv",
                     ],
+                    "productive_changed_paths": [
+                        "scripts/import_dallas_permit_extracts.py",
+                        "tests/test_dallas_import_pipeline.py",
+                        "https://user:pass@example.local/product?token=secret#debug",
+                        "implementation-spec.md",
+                        "schema.md",
+                        "evals.md",
+                        "discovery-artifacts.md",
+                        "render.yaml",
+                        "Dockerfile",
+                    ],
                     "synthetic_row_count": 6,
                     "synthetic_row_samples": [
                         "ELZ-2026-9999,100 Example Ave,https://user:pass@example.local/dallas/9999?token=secret#debug",
@@ -318,6 +329,20 @@ class MvpCockpitServerTest(unittest.TestCase):
             ],
         )
         self.assertEqual(summary["policy_raw_dallas_csv_changed_path_count"], 9)
+        self.assertEqual(
+            summary["policy_productive_changed_paths"],
+            [
+                "scripts/import_dallas_permit_extracts.py",
+                "tests/test_dallas_import_pipeline.py",
+                "https://example.local/product?[redacted]#[redacted]",
+                "implementation-spec.md",
+                "schema.md",
+                "evals.md",
+                "discovery-artifacts.md",
+                "render.yaml",
+            ],
+        )
+        self.assertEqual(summary["policy_productive_changed_path_count"], 9)
         self.assertEqual(
             summary["policy_synthetic_row_samples"],
             [
@@ -582,6 +607,9 @@ class MvpCockpitServerTest(unittest.TestCase):
                 "policy_raw_dallas_csv_changed_paths": [
                     "generated/raw/dallas-electrician-import-sample-v2/permits.csv",
                 ],
+                "policy_productive_changed_paths": [
+                    "scripts/import_dallas_permit_extracts.py",
+                ],
                 "policy_synthetic_row_samples": [
                     "ELZ-2026-9999,100 Example Ave,https://example.local/dallas/9999",
                 ],
@@ -629,6 +657,8 @@ class MvpCockpitServerTest(unittest.TestCase):
         self.assertIn("policy_failure_reason", markup)
         self.assertIn("policy_raw_dallas_csv_changed_paths", markup)
         self.assertIn("policy_raw_dallas_csv_changed_path_count", markup)
+        self.assertIn("policy_productive_changed_paths", markup)
+        self.assertIn("policy_productive_changed_path_count", markup)
         self.assertIn("policy_synthetic_row_samples", markup)
         self.assertIn("policy_synthetic_row_count", markup)
         self.assertIn("import_handoff", markup)
@@ -637,6 +667,7 @@ class MvpCockpitServerTest(unittest.TestCase):
         self.assertIn("artifact_statuses", markup)
         self.assertIn("artifact_problem_artifacts", markup)
         self.assertIn("artifactProblems.join", markup)
+        self.assertIn("policyProductivePaths.join", markup)
         self.assertIn("policySamples.join", markup)
 
     def test_access_log_redacts_query_strings_from_request_lines(self) -> None:
