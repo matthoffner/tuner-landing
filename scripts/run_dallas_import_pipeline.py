@@ -1334,12 +1334,22 @@ def raw_handoff_verification(raw_dir, summary_path=SUMMARY_JSON_PATH):
         ),
     }
 
+    def finalize_verification():
+        failed_checks = [
+            check_name
+            for check_name, passed in checks.items()
+            if passed is not True
+        ]
+        verification["failed_checks"] = failed_checks
+        verification["mismatch_count"] = len(verification.get("mismatches", []))
+        return verification
+
     if not summary_path.exists():
         add_mismatch(
             "summary_available",
             "durable Dallas import pipeline summary is missing",
         )
-        return verification
+        return finalize_verification()
 
     try:
         summary = load_json(summary_path)
@@ -1349,7 +1359,7 @@ def raw_handoff_verification(raw_dir, summary_path=SUMMARY_JSON_PATH):
             "durable Dallas import pipeline summary is unreadable",
             error=str(error),
         )
-        return verification
+        return finalize_verification()
 
     checks["summary_available"] = True
     handoff = summary.get("next_import_record_handoff")
@@ -1358,7 +1368,7 @@ def raw_handoff_verification(raw_dir, summary_path=SUMMARY_JSON_PATH):
             "next_import_record_handoff_available",
             "durable summary does not contain next_import_record_handoff",
         )
-        return verification
+        return finalize_verification()
 
     checks["next_import_record_handoff_available"] = True
     expected_raw_dir = handoff.get("raw_dir")
@@ -1460,7 +1470,7 @@ def raw_handoff_verification(raw_dir, summary_path=SUMMARY_JSON_PATH):
             "Raw CSV handoff matches the durable summary; append new Dallas rows at "
             "`expected_raw_file_next_append_rows`, then run `after_edit_command`."
         )
-    return verification
+    return finalize_verification()
 
 
 def next_import_record_handoff(raw_dir):
@@ -3027,6 +3037,11 @@ def print_raw_handoff_verification(verification, output_format="text"):
     print(f"raw_dir: {verification.get('raw_dir')}")
     print(f"expected_raw_dir: {verification.get('expected_raw_dir')}")
     print(f"checks: {json.dumps(verification.get('checks', {}), sort_keys=True)}")
+    print(
+        "failed_checks: "
+        f"{json.dumps(verification.get('failed_checks', []), sort_keys=False)}"
+    )
+    print(f"mismatch_count: {verification.get('mismatch_count')}")
     mismatches = verification.get("mismatches", [])
     print(
         "mismatches: "
