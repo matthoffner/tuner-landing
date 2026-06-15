@@ -60,6 +60,31 @@ class CockpitApiProxyTest(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_upstreams_reject_relay_endpoint_path_but_allow_bridge_base_path(self) -> None:
+        result = run_node(
+            """
+            const assert = require("assert");
+            const { upstreams } = require("./api/cockpit-upstreams");
+            const result = upstreams({
+              relayPath: "/api/status",
+              bridgePath: "/api/status",
+              env: {
+                AUTOMOAT_RELAY_URL: "https://automoat-cockpit-relay.example/ingest",
+                AUTOMOAT_BRIDGE_URL: "https://legacy-bridge.example/base/",
+              },
+            });
+            assert.deepStrictEqual(result.invalid, [{
+              kind: "relay",
+              error: "must be a relay base URL without a path",
+            }]);
+            assert.strictEqual(result.configured.length, 1);
+            assert.strictEqual(result.configured[0].kind, "legacy_bridge");
+            assert.strictEqual(result.configured[0].url, "https://legacy-bridge.example/base/api/status");
+            """
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_upstreams_validate_configured_timeout(self) -> None:
         result = run_node(
             """

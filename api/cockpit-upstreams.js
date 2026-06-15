@@ -10,7 +10,7 @@ const EXPOSED_UPSTREAM_HEADERS = [
 ].join(", ");
 const NOT_CONFIGURED_UPSTREAMS_HEADER = "relay,legacy_bridge";
 
-function normalizeBaseUrl(value) {
+function normalizeBaseUrl(value, options = {}) {
   const raw = (value || "").trim();
   if (!raw) {
     return { url: "", error: null };
@@ -37,6 +37,9 @@ function normalizeBaseUrl(value) {
   }
 
   const pathname = parsed.pathname.replace(/\/+$/, "");
+  if (options.requireNoPath && pathname) {
+    return { url: "", error: "must be a relay base URL without a path" };
+  }
   return { url: `${parsed.origin}${pathname === "/" ? "" : pathname}`, error: null };
 }
 
@@ -211,7 +214,7 @@ function upstreams({ relayPath, bridgePath, env = process.env }) {
     invalid.push({ kind: "timeout", error: timeout.error });
   }
 
-  const relay = normalizeBaseUrl(env.AUTOMOAT_RELAY_URL);
+  const relay = normalizeBaseUrl(env.AUTOMOAT_RELAY_URL, { requireNoPath: true });
   if (relay.url) {
     configured.push({
       kind: "relay",
