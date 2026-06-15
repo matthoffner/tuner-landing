@@ -502,6 +502,10 @@ def validate_secret_safe_http_url(
     elif require_path and not parsed_value.path.strip("/"):
         errors.append(f"{name} must include a repository path")
     else:
+        if require_path and parsed_value.hostname == "github.com":
+            path_parts = [part for part in parsed_value.path.split("/") if part]
+            if len(path_parts) < 2:
+                errors.append(f"{name} must include owner and repository path")
         host_port = parsed_value.netloc.rsplit("@", 1)[-1]
         try:
             port = parsed_value.port

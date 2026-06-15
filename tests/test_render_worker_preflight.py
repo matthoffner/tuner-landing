@@ -624,6 +624,37 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                     ["AUTOMOAT_GIT_REPO must include a repository path"],
                 )
 
+    def test_rejects_github_repo_without_owner_and_repository_before_clone(self) -> None:
+        errors = self.worker.validate_worker_environment(
+            {
+                "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+                "AUTOMOAT_RELAY_TOKEN": "relay-token",
+                "AUTOMOAT_GIT_REPO": "https://github.com/example-owner",
+                "GITHUB_TOKEN": "github-token",
+                "CODEX_ACCESS_TOKEN": "codex-token",
+            },
+            found_command,
+        )
+
+        self.assertEqual(
+            errors,
+            ["AUTOMOAT_GIT_REPO must include owner and repository path"],
+        )
+
+    def test_accepts_single_segment_non_github_git_repo_path(self) -> None:
+        errors = self.worker.validate_worker_environment(
+            {
+                "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+                "AUTOMOAT_RELAY_TOKEN": "relay-token",
+                "AUTOMOAT_GIT_REPO": "https://git.example.internal/automoat.git",
+                "GITHUB_TOKEN": "github-token",
+                "CODEX_ACCESS_TOKEN": "codex-token",
+            },
+            found_command,
+        )
+
+        self.assertEqual(errors, [])
+
     def test_check_env_json_categorizes_git_repo_without_repository_path(self) -> None:
         env = {
             "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
@@ -647,6 +678,32 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertEqual(payload["diagnostics"]["error_categories"], ["invalid_url"])
         self.assertNotIn("github-token", output.getvalue())
         self.assertNotIn("codex-token", output.getvalue())
+
+    def test_check_env_json_categorizes_github_repo_without_repository(self) -> None:
+        env = {
+            "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            "AUTOMOAT_GIT_REPO": "https://github.com/example-owner",
+            "GITHUB_TOKEN": "github-token",
+            "CODEX_ACCESS_TOKEN": "codex-token",
+        }
+        output = io.StringIO()
+
+        with redirect_stdout(output):
+            errors = self.worker.emit_environment_preflight(
+                env,
+                found_command,
+                output_format="json",
+            )
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(
+            errors,
+            ["AUTOMOAT_GIT_REPO must include owner and repository path"],
+        )
+        self.assertEqual(payload["status"], "failed")
+        self.assertEqual(payload["diagnostics"]["error_categories"], ["invalid_url"])
+        self.assertNotIn("example-owner", output.getvalue())
 
     def test_rejects_invalid_git_branch_before_clone(self) -> None:
         base_env = {
