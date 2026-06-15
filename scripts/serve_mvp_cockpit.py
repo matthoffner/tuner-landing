@@ -64,6 +64,20 @@ def as_string_list(value: object) -> list[str]:
     return [str(item) for item in value if isinstance(item, (str, int, float))]
 
 
+def failed_autonomy_policy_step(status: dict[str, object]) -> dict[str, object] | None:
+    steps = status.get("steps")
+    if not isinstance(steps, list):
+        return None
+    for step in reversed(steps):
+        if not isinstance(step, dict):
+            continue
+        if step.get("name") != "autonomy policy check":
+            continue
+        if step.get("exit_status") != 0:
+            return step
+    return None
+
+
 def utc_timestamp_age_seconds(value: object, now: datetime | None = None) -> int | None:
     if not isinstance(value, str) or not value.strip():
         return None
@@ -107,6 +121,17 @@ def cockpit_summary(status: dict[str, object]) -> dict[str, object]:
     artifact_health_status = artifact_health.get("status") or "unknown"
     import_readiness = readiness.get("status") or "unknown"
     readiness_blockers = as_string_list(readiness.get("blockers"))
+    policy_failure = failed_autonomy_policy_step(status)
+    policy_failure_reason = (
+        str(policy_failure.get("failure_reason"))
+        if policy_failure and policy_failure.get("failure_reason")
+        else None
+    )
+    policy_raw_csv_paths = (
+        as_string_list(policy_failure.get("raw_dallas_csv_changed_paths"))
+        if policy_failure
+        else []
+    )
     thin_group_categories = as_string_list(autonomy_policy.get("thin_group_categories"))
     thin_group_count = autonomy_policy.get("thin_group_count")
     if not isinstance(thin_group_count, int):
@@ -117,6 +142,8 @@ def cockpit_summary(status: dict[str, object]) -> dict[str, object]:
         attention_reasons.append("loop_not_running")
     if status_value in {"error", "failing", "invalid-status-json"}:
         attention_reasons.append("status_failing")
+    if policy_failure:
+        attention_reasons.append("autonomy_policy_failed")
     if status_stale is True:
         attention_reasons.append("status_stale")
     if artifact_health_status != "loaded":
@@ -147,6 +174,8 @@ def cockpit_summary(status: dict[str, object]) -> dict[str, object]:
         "ready_for_next_import_records": readiness.get("ready_for_next_import_records"),
         "current_focus": autonomy_policy.get("current_focus") or "mvp_loop",
         "policy_reason": autonomy_policy.get("decision_reason"),
+        "policy_failure_reason": policy_failure_reason,
+        "policy_raw_dallas_csv_changed_paths": policy_raw_csv_paths,
         "dallas_pipeline_ready": autonomy_policy.get("dallas_pipeline_ready"),
         "thin_group_count": thin_group_count,
         "thin_group_categories": thin_group_categories,

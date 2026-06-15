@@ -4,6 +4,12 @@ Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
 - lane: editor
+- status: made autonomous policy rejections directly cockpit-visible so `/api/status.cockpit_summary.operator_attention_reasons` includes `autonomy_policy_failed` and exposes `policy_failure_reason` plus changed raw Dallas CSV paths from the failed policy-check step; no Dallas raw CSV rows were edited
+- files: scripts/serve_mvp_cockpit.py, tests/test_mvp_cockpit_server.py, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- checks: `python3 -m unittest tests.test_mvp_cockpit_server -v`; `python3 -m py_compile scripts/serve_mvp_cockpit.py tests/test_mvp_cockpit_server.py`; `python3 -m unittest discover -s tests -v`; `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json`; `cmp -s generated/landing.html index.html`; raw Dallas CSV diff check returned no changes
+- next: when the local or relayed cockpit reports `operator_attention_reasons` containing `autonomy_policy_failed`, inspect `cockpit_summary.policy_failure_reason` and `policy_raw_dallas_csv_changed_paths` before opening loop logs
+
+- lane: editor
 - status: added local cockpit status freshness diagnostics so `/api/status.cockpit_summary` exposes `updated_at`, `status_age_seconds`, `status_stale_after_seconds`, and `status_stale`, and the cockpit status card renders fresh/stale age for live-loop visibility; no Dallas raw CSV rows were edited
 - files: scripts/serve_mvp_cockpit.py, tests/test_mvp_cockpit_server.py, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
 - checks: `python3 -m unittest tests.test_mvp_cockpit_server`; `python3 -m py_compile scripts/serve_mvp_cockpit.py tests/test_mvp_cockpit_server.py`; `python3 -m unittest discover -s tests`; `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json`; `cmp -s generated/landing.html index.html`; `git diff --check`

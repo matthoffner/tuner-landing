@@ -149,6 +149,54 @@ class MvpCockpitServerTest(unittest.TestCase):
             summary["thin_group_categories"], ["failure_reasons", "result_states"]
         )
 
+    def test_cockpit_summary_reports_autonomy_policy_failure_details(self) -> None:
+        status = {
+            "status": "failing",
+            "phase": "autonomy_policy_failed",
+            "updated_at": "2026-06-15T00:00:00Z",
+            "loop_running": True,
+            "steps": [
+                {
+                    "name": "codex bounded improvement",
+                    "exit_status": 0,
+                },
+                {
+                    "name": "autonomy policy check",
+                    "exit_status": 1,
+                    "failure_reason": "raw_dallas_csv_without_productive_work",
+                    "raw_dallas_csv_changed_paths": [
+                        "generated/raw/dallas-electrician-import-sample-v2/permits.csv",
+                        "generated/raw/dallas-electrician-import-sample-v2/inspections.csv",
+                    ],
+                },
+            ],
+            "artifacts": {
+                "artifact_health": {"status": "loaded"},
+                "import_pipeline": {
+                    "execution_readiness": {
+                        "status": "ready",
+                        "blockers": [],
+                    }
+                },
+            },
+        }
+
+        summary = self.cockpit.cockpit_summary(status)
+
+        self.assertTrue(summary["operator_attention"])
+        self.assertIn("autonomy_policy_failed", summary["operator_attention_reasons"])
+        self.assertEqual(
+            summary["policy_failure_reason"],
+            "raw_dallas_csv_without_productive_work",
+        )
+        self.assertEqual(
+            summary["policy_raw_dallas_csv_changed_paths"],
+            [
+                "generated/raw/dallas-electrician-import-sample-v2/permits.csv",
+                "generated/raw/dallas-electrician-import-sample-v2/inspections.csv",
+            ],
+        )
+
     def test_read_status_adds_cockpit_summary(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
@@ -215,6 +263,7 @@ class MvpCockpitServerTest(unittest.TestCase):
         self.assertIn("status.cockpit_summary", markup)
         self.assertIn("status_age_seconds", markup)
         self.assertIn("operator_attention_reasons", markup)
+        self.assertIn("operator_attention", markup)
 
     def test_access_log_redacts_query_strings_from_request_lines(self) -> None:
         request_line = "GET /api/status?token=secret&relay=abc HTTP/1.1"
