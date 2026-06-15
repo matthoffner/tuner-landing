@@ -1666,6 +1666,11 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertEqual(status, 0)
         self.assertIn("publisher environment preflight passed", output.getvalue())
         self.assertIn("relay_url=https://automoat-cockpit-relay.example", output.getvalue())
+        self.assertIn("runtime_configured_keys=[]", output.getvalue())
+        self.assertIn(
+            'file_configured_keys=["--status-file", "--pid-file", "--log-file", "--publisher-log"]',
+            output.getvalue(),
+        )
         self.assertIn("runtime_limits=", output.getvalue())
 
     def test_check_env_rejects_malformed_relay_url_before_publish(self) -> None:
@@ -2262,6 +2267,41 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertEqual(payload["config"]["max_consecutive_stale_statuses"], 6)
         self.assertEqual(payload["config"]["status_stale_after_seconds"], 900)
         self.assertEqual(payload["config"]["bridge_status_stale_after_seconds"], 240)
+        self.assertEqual(
+            payload["config"]["runtime_configured_keys"],
+            [
+                "AUTOMOAT_RELAY_INTERVAL|--interval",
+                "AUTOMOAT_RELAY_TIMEOUT|--timeout",
+                "AUTOMOAT_RELAY_TAIL_LINES|--tail-lines",
+                "AUTOMOAT_RELAY_MAX_LOG_BYTES|--max-log-bytes",
+                (
+                    "AUTOMOAT_RELAY_MAX_CONSECUTIVE_FAILURES|"
+                    "--max-consecutive-failures"
+                ),
+                (
+                    "AUTOMOAT_RELAY_MAX_CONSECUTIVE_STALE_STATUSES|"
+                    "--max-consecutive-stale-statuses"
+                ),
+                (
+                    "AUTOMOAT_STATUS_STALE_AFTER_SECONDS|"
+                    "--status-stale-after-seconds"
+                ),
+                (
+                    "AUTOMOAT_BRIDGE_STATUS_STALE_AFTER_SECONDS|"
+                    "--bridge-status-stale-after-seconds"
+                ),
+            ],
+        )
+        self.assertEqual(
+            payload["config"]["file_configured_keys"],
+            [
+                "--status-file",
+                "--pid-file",
+                "--log-file",
+                "--publisher-log",
+                "AUTOMOAT_BRIDGE_STATUS_FILE|--bridge-status-file",
+            ],
+        )
         self.assertEqual(payload["config"]["status_file"], "<external>/status.json")
         self.assertEqual(payload["config"]["pid_file"], "<external>/loop.pid")
         self.assertEqual(payload["config"]["log_file"], "<external>/loop.log")
@@ -2317,6 +2357,14 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 "AUTOMOAT_RELAY_TOKEN|--token",
                 "AUTOMOAT_RELAY_URL|--relay-url",
             ],
+        )
+        self.assertEqual(
+            payload["diagnostics"]["runtime_configured_keys"],
+            ["AUTOMOAT_RELAY_INTERVAL|--interval"],
+        )
+        self.assertEqual(
+            payload["diagnostics"]["file_configured_keys"],
+            ["--publisher-log"],
         )
         self.assertTrue(payload["diagnostics"]["relay_url_configured"])
         self.assertTrue(payload["diagnostics"]["relay_token_configured"])

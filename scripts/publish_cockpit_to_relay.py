@@ -31,6 +31,54 @@ DEFAULT_MAX_CONSECUTIVE_FAILURES = 3
 DEFAULT_MAX_CONSECUTIVE_STALE_STATUSES = 0
 DEFAULT_STATUS_STALE_AFTER_SECONDS = 660
 DEFAULT_BRIDGE_STATUS_STALE_AFTER_SECONDS = 660
+PUBLISHER_RUNTIME_DEFAULTS = {
+    "interval": 3.0,
+    "timeout": 8.0,
+    "tail_lines": 180,
+    "max_log_bytes": 256 * 1024,
+    "max_consecutive_failures": DEFAULT_MAX_CONSECUTIVE_FAILURES,
+    "max_consecutive_stale_statuses": DEFAULT_MAX_CONSECUTIVE_STALE_STATUSES,
+    "status_stale_after_seconds": DEFAULT_STATUS_STALE_AFTER_SECONDS,
+    "bridge_status_stale_after_seconds": DEFAULT_BRIDGE_STATUS_STALE_AFTER_SECONDS,
+}
+PUBLISHER_RUNTIME_CONFIG_KEYS = (
+    ("interval", "AUTOMOAT_RELAY_INTERVAL", "--interval"),
+    ("timeout", "AUTOMOAT_RELAY_TIMEOUT", "--timeout"),
+    ("tail_lines", "AUTOMOAT_RELAY_TAIL_LINES", "--tail-lines"),
+    ("max_log_bytes", "AUTOMOAT_RELAY_MAX_LOG_BYTES", "--max-log-bytes"),
+    (
+        "max_consecutive_failures",
+        "AUTOMOAT_RELAY_MAX_CONSECUTIVE_FAILURES",
+        "--max-consecutive-failures",
+    ),
+    (
+        "max_consecutive_stale_statuses",
+        "AUTOMOAT_RELAY_MAX_CONSECUTIVE_STALE_STATUSES",
+        "--max-consecutive-stale-statuses",
+    ),
+    (
+        "status_stale_after_seconds",
+        "AUTOMOAT_STATUS_STALE_AFTER_SECONDS",
+        "--status-stale-after-seconds",
+    ),
+    (
+        "bridge_status_stale_after_seconds",
+        "AUTOMOAT_BRIDGE_STATUS_STALE_AFTER_SECONDS",
+        "--bridge-status-stale-after-seconds",
+    ),
+)
+PUBLISHER_FILE_CONFIG_KEYS = (
+    ("status_file", None, "--status-file", STATUS_FILE),
+    ("pid_file", None, "--pid-file", PID_FILE),
+    ("log_file", None, "--log-file", LOG_FILE),
+    ("publisher_log", None, "--publisher-log", PUBLISHER_LOG),
+    (
+        "bridge_status_file",
+        "AUTOMOAT_BRIDGE_STATUS_FILE",
+        "AUTOMOAT_BRIDGE_STATUS_FILE|--bridge-status-file",
+        BRIDGE_STATUS_FILE,
+    ),
+)
 PUBLISHER_CONFIG_LIMITS = {
     "interval": 60,
     "timeout": 60,
@@ -1591,6 +1639,45 @@ def publisher_preflight_error_keys(errors: list[str]) -> list[str]:
     return sorted({publisher_preflight_error_key(error) for error in errors})
 
 
+def paths_equal(left: Path, right: Path) -> bool:
+    try:
+        return left.expanduser().resolve(strict=False) == right.expanduser().resolve(
+            strict=False
+        )
+    except OSError:
+        return left.expanduser() == right.expanduser()
+
+
+def publisher_runtime_configured_keys(
+    args: argparse.Namespace,
+    env: os._Environ[str] | dict[str, str] | None = None,
+) -> list[str]:
+    env = env if env is not None else os.environ
+    configured_keys: list[str] = []
+    for attr, env_name, option in PUBLISHER_RUNTIME_CONFIG_KEYS:
+        value = getattr(args, attr)
+        default = PUBLISHER_RUNTIME_DEFAULTS[attr]
+        if env.get(env_name, "").strip() or value != default:
+            configured_keys.append(f"{env_name}|{option}")
+    return configured_keys
+
+
+def publisher_file_configured_keys(
+    args: argparse.Namespace,
+    env: os._Environ[str] | dict[str, str] | None = None,
+) -> list[str]:
+    env = env if env is not None else os.environ
+    configured_keys: list[str] = []
+    for attr, env_name, key, default_path in PUBLISHER_FILE_CONFIG_KEYS:
+        value = getattr(args, attr, default_path)
+        if (env_name and env.get(env_name, "").strip()) or not paths_equal(
+            Path(value),
+            default_path,
+        ):
+            configured_keys.append(key)
+    return configured_keys
+
+
 def publisher_preflight_summary(
     args: argparse.Namespace,
     errors: list[str],
@@ -1606,6 +1693,8 @@ def publisher_preflight_summary(
             "failed_configuration_keys": publisher_preflight_error_keys(errors),
             "relay_url_configured": bool(str(args.relay_url).strip()),
             "relay_token_configured": bool(str(args.token).strip()),
+            "runtime_configured_keys": publisher_runtime_configured_keys(args),
+            "file_configured_keys": publisher_file_configured_keys(args),
             "runtime_limits": PUBLISHER_CONFIG_LIMITS,
         }
         return payload
@@ -1629,6 +1718,8 @@ def publisher_preflight_summary(
         "max_consecutive_stale_statuses": int(
             args.max_consecutive_stale_statuses
         ),
+        "runtime_configured_keys": publisher_runtime_configured_keys(args),
+        "file_configured_keys": publisher_file_configured_keys(args),
         "status_file": repo_relative(args.status_file),
         "pid_file": repo_relative(args.pid_file),
         "log_file": repo_relative(args.log_file),
@@ -1674,6 +1765,8 @@ def emit_publisher_preflight(
         f"bridge_status_stale_after_seconds={getattr(args, 'bridge_status_stale_after_seconds', DEFAULT_BRIDGE_STATUS_STALE_AFTER_SECONDS)} "
         f"max_consecutive_failures={args.max_consecutive_failures} "
         f"max_consecutive_stale_statuses={args.max_consecutive_stale_statuses} "
+        f"runtime_configured_keys={json.dumps(publisher_runtime_configured_keys(args), sort_keys=True)} "
+        f"file_configured_keys={json.dumps(publisher_file_configured_keys(args), sort_keys=True)} "
         f"status_file={repo_relative(args.status_file)} "
         f"pid_file={repo_relative(args.pid_file)} "
         f"log_file={repo_relative(args.log_file)} "
@@ -1688,8 +1781,22 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--relay-url", default=os.environ.get("AUTOMOAT_RELAY_URL", ""))
     parser.add_argument("--token", default=os.environ.get("AUTOMOAT_RELAY_TOKEN", ""))
-    parser.add_argument("--interval", type=float, default=os.environ.get("AUTOMOAT_RELAY_INTERVAL", "3"))
-    parser.add_argument("--timeout", type=float, default=os.environ.get("AUTOMOAT_RELAY_TIMEOUT", "8"))
+    parser.add_argument(
+        "--interval",
+        type=float,
+        default=os.environ.get(
+            "AUTOMOAT_RELAY_INTERVAL",
+            str(PUBLISHER_RUNTIME_DEFAULTS["interval"]),
+        ),
+    )
+    parser.add_argument(
+        "--timeout",
+        type=float,
+        default=os.environ.get(
+            "AUTOMOAT_RELAY_TIMEOUT",
+            str(PUBLISHER_RUNTIME_DEFAULTS["timeout"]),
+        ),
+    )
     parser.add_argument("--once", action="store_true")
     parser.add_argument(
         "--check-env",
@@ -1702,11 +1809,21 @@ def parse_args() -> argparse.Namespace:
         default="text",
         help="output format for --check-env preflight results",
     )
-    parser.add_argument("--tail-lines", type=int, default=os.environ.get("AUTOMOAT_RELAY_TAIL_LINES", "180"))
+    parser.add_argument(
+        "--tail-lines",
+        type=int,
+        default=os.environ.get(
+            "AUTOMOAT_RELAY_TAIL_LINES",
+            str(PUBLISHER_RUNTIME_DEFAULTS["tail_lines"]),
+        ),
+    )
     parser.add_argument(
         "--max-log-bytes",
         type=int,
-        default=os.environ.get("AUTOMOAT_RELAY_MAX_LOG_BYTES", str(256 * 1024)),
+        default=os.environ.get(
+            "AUTOMOAT_RELAY_MAX_LOG_BYTES",
+            str(PUBLISHER_RUNTIME_DEFAULTS["max_log_bytes"]),
+        ),
     )
     parser.add_argument("--status-file", type=Path, default=STATUS_FILE)
     parser.add_argument("--pid-file", type=Path, default=PID_FILE)
@@ -1725,7 +1842,7 @@ def parse_args() -> argparse.Namespace:
         type=int,
         default=os.environ.get(
             "AUTOMOAT_STATUS_STALE_AFTER_SECONDS",
-            str(DEFAULT_STATUS_STALE_AFTER_SECONDS),
+            str(PUBLISHER_RUNTIME_DEFAULTS["status_stale_after_seconds"]),
         ),
         help="mark the source loop status stale when updated_at is older than this many seconds",
     )
@@ -1734,7 +1851,7 @@ def parse_args() -> argparse.Namespace:
         type=int,
         default=os.environ.get(
             "AUTOMOAT_BRIDGE_STATUS_STALE_AFTER_SECONDS",
-            str(DEFAULT_BRIDGE_STATUS_STALE_AFTER_SECONDS),
+            str(PUBLISHER_RUNTIME_DEFAULTS["bridge_status_stale_after_seconds"]),
         ),
         help=(
             "mark the bridge status stale when updated_at is older than this many seconds"
@@ -1745,7 +1862,7 @@ def parse_args() -> argparse.Namespace:
         type=int,
         default=os.environ.get(
             "AUTOMOAT_RELAY_MAX_CONSECUTIVE_FAILURES",
-            str(DEFAULT_MAX_CONSECUTIVE_FAILURES),
+            str(PUBLISHER_RUNTIME_DEFAULTS["max_consecutive_failures"]),
         ),
         help=(
             "exit nonzero after this many consecutive publish failures; "
@@ -1757,7 +1874,7 @@ def parse_args() -> argparse.Namespace:
         type=int,
         default=os.environ.get(
             "AUTOMOAT_RELAY_MAX_CONSECUTIVE_STALE_STATUSES",
-            str(DEFAULT_MAX_CONSECUTIVE_STALE_STATUSES),
+            str(PUBLISHER_RUNTIME_DEFAULTS["max_consecutive_stale_statuses"]),
         ),
         help=(
             "exit nonzero after this many consecutive successful publishes whose "
