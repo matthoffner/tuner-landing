@@ -1,3 +1,5 @@
+const { isIP } = require("node:net");
+
 const DEFAULT_UPSTREAM_TIMEOUT_MS = 8000;
 const MAX_UPSTREAM_TIMEOUT_MS = 15000;
 const ALLOWED_PROXY_METHODS = "GET, HEAD, OPTIONS";
@@ -47,6 +49,9 @@ function normalizeBaseUrl(value, options = {}) {
   }
   if (!parsed.host) {
     return { url: "", error: "must include a host" };
+  }
+  if (!isValidUrlHostname(parsed.hostname)) {
+    return { url: "", error: "must include a valid host" };
   }
   if (parsed.username || parsed.password) {
     return { url: "", error: "must not include embedded credentials" };
@@ -125,6 +130,28 @@ function explicitPortValue(rawUrl) {
 function isLocalHttpHost(hostname) {
   const normalized = String(hostname || "").toLowerCase().replace(/^\[|\]$/g, "");
   return normalized === "localhost" || normalized === "127.0.0.1" || normalized === "::1";
+}
+
+function isValidUrlHostname(hostname) {
+  const normalized = String(hostname || "").toLowerCase().replace(/^\[|\]$/g, "").replace(/\.$/, "");
+  if (!normalized) {
+    return false;
+  }
+  if (isLocalHttpHost(normalized)) {
+    return true;
+  }
+  if (isIP(normalized)) {
+    return true;
+  }
+  if (normalized.length > 253) {
+    return false;
+  }
+  return normalized.split(".").every((label) => {
+    if (!label || label.length > 63 || label.startsWith("-") || label.endsWith("-")) {
+      return false;
+    }
+    return /^[a-z0-9-]+$/.test(label);
+  });
 }
 
 function normalizeUpstreamTimeoutMs(value) {
@@ -512,6 +539,7 @@ module.exports = {
   invalidUpstreamKeysHeader,
   hasExplicitEmptyPort,
   isLocalHttpHost,
+  isValidUrlHostname,
   normalizeBaseUrl,
   normalizeUpstreamTimeoutMs,
   readBoundedUpstreamText,

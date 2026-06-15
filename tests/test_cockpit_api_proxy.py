@@ -248,6 +248,75 @@ class CockpitApiProxyTest(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_upstreams_reject_malformed_hostnames_before_fetching(self) -> None:
+        result = run_node(
+            """
+            const assert = require("assert");
+            const {
+              invalidUpstreamKeysHeader,
+              isValidUrlHostname,
+              upstreams,
+            } = require("./api/cockpit-upstreams");
+
+            for (const hostname of [
+              "automoat-cockpit-relay.example",
+              "render-worker",
+              "localhost",
+              "127.0.0.1",
+              "::1",
+            ]) {
+              assert.strictEqual(isValidUrlHostname(hostname), true, hostname);
+            }
+            for (const hostname of [
+              "",
+              "relay_host.example",
+              "-relay.example",
+              "relay-.example",
+              "relay..example",
+            ]) {
+              assert.strictEqual(isValidUrlHostname(hostname), false, hostname);
+            }
+
+            const result = upstreams({
+              relayPath: "/api/status",
+              bridgePath: "/api/status",
+              env: {
+                AUTOMOAT_RELAY_URL: "https://relay_host.example",
+                AUTOMOAT_BRIDGE_URL: "https://-legacy-bridge.example",
+              },
+            });
+            assert.deepStrictEqual(result.configured, []);
+            assert.deepStrictEqual(result.invalid, [
+              {
+                kind: "relay",
+                error: "must include a valid host",
+              },
+              {
+                kind: "legacy_bridge",
+                error: "must include a valid host",
+              },
+            ]);
+            assert.strictEqual(
+              invalidUpstreamKeysHeader(result.invalid),
+              "AUTOMOAT_RELAY_URL,AUTOMOAT_BRIDGE_URL",
+            );
+
+            const valid = upstreams({
+              relayPath: "/api/status",
+              bridgePath: "/api/status",
+              env: {
+                AUTOMOAT_RELAY_URL: "https://render-worker",
+                AUTOMOAT_BRIDGE_URL: "https://legacy-bridge.example",
+              },
+            });
+            assert.deepStrictEqual(valid.invalid, []);
+            assert.strictEqual(valid.configured[0].url, "https://render-worker/api/status");
+            assert.strictEqual(valid.configured[1].url, "https://legacy-bridge.example/api/status");
+            """
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_upstreams_reject_whitespace_and_control_characters_before_parsing(self) -> None:
         result = run_node(
             """
