@@ -88,6 +88,12 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             payload["status"]["cockpit_summary"]["operator_attention_reasons"],
             ["loop_not_running", "artifact_health_not_loaded", "import_readiness_not_ready"],
         )
+        self.assertIn("bridge_summary", payload["status"])
+        self.assertFalse(payload["status"]["bridge_summary"]["available"])
+        self.assertEqual(
+            payload["status"]["bridge_summary"]["status_file_status"],
+            "missing",
+        )
         self.assertEqual(payload["log_tail"], "second\nthird\n")
         self.assertEqual(payload["publisher"]["repo"], ".")
         self.assertEqual(payload["publisher"]["status_file"], "<external>/custom-status.json")
@@ -151,6 +157,64 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 "import_readiness_not_ready",
             ],
         )
+        self.assertFalse(status["bridge_summary"]["available"])
+        self.assertEqual(status["bridge_summary"]["status_file_status"], "missing")
+
+    def test_read_bridge_summary_compacts_loaded_status_for_remote_snapshots(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            bridge_status_file = tmp_path / "mvp-bridge-status.json"
+            bridge_status_file.write_text(
+                json.dumps(
+                    {
+                        "status": "running",
+                        "public_url": "https://automoat-test.ngrok.app",
+                        "local_read_only_url": "http://127.0.0.1:4181/",
+                        "ngrok_api_url": "http://127.0.0.1:4041/api/tunnels",
+                        "updated_at": "2026-06-15T03:20:00Z",
+                        "bridge_started_at": "2026-06-15T03:19:00Z",
+                        "bridge_pid": "12345",
+                        "bridge_status_sequence": "4",
+                        "interval": "5.5",
+                        "mode": "read-only",
+                        "bridge_health": {
+                            "status": "live",
+                            "ok": True,
+                            "reasons": [],
+                            "primary_reason": None,
+                            "label": "Live",
+                        },
+                        "debug_path": "/tmp/local-only/path",
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            summary = self.publisher.read_bridge_summary(bridge_status_file)
+
+        self.assertTrue(summary["available"])
+        self.assertEqual(summary["status_file_status"], "loaded")
+        self.assertEqual(summary["status"], "running")
+        self.assertEqual(summary["public_url"], "https://automoat-test.ngrok.app")
+        self.assertEqual(summary["local_read_only_url"], "http://127.0.0.1:4181/")
+        self.assertEqual(summary["ngrok_api_url"], "http://127.0.0.1:4041/api/tunnels")
+        self.assertEqual(summary["bridge_pid"], 12345)
+        self.assertEqual(summary["bridge_status_sequence"], 4)
+        self.assertEqual(summary["interval"], 5.5)
+        self.assertEqual(summary["mode"], "read-only")
+        self.assertEqual(
+            summary["bridge_health"],
+            {
+                "status": "live",
+                "ok": True,
+                "reasons": [],
+                "primary_reason": None,
+                "label": "Live",
+            },
+        )
+        self.assertNotIn("debug_path", summary)
+        self.assertNotIn(str(tmp_path), json.dumps(summary, sort_keys=True))
 
     def test_read_status_derives_cockpit_summary_for_remote_attention(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

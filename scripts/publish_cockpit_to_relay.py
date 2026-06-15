@@ -25,6 +25,7 @@ STATUS_FILE = ROOT / ".automoat" / "state" / "mvp-loop-status.json"
 PID_FILE = ROOT / ".automoat" / "state" / "mvp-loop.pid"
 LOG_FILE = ROOT / ".automoat" / "logs" / "mvp-loop.log"
 PUBLISHER_LOG = ROOT / ".automoat" / "logs" / "cockpit-relay-publisher.log"
+BRIDGE_STATUS_FILE = ROOT / ".automoat" / "state" / "mvp-bridge-status.json"
 DEFAULT_MAX_CONSECUTIVE_FAILURES = 3
 DEFAULT_MAX_CONSECUTIVE_STALE_STATUSES = 0
 DEFAULT_STATUS_STALE_AFTER_SECONDS = 660
@@ -163,6 +164,133 @@ def as_string_list(value: Any) -> list[str]:
     if not isinstance(value, list):
         return []
     return [str(item) for item in value if isinstance(item, (str, int, float))]
+
+
+def compact_text(value: Any, *, max_length: int = 180) -> str | None:
+    if not isinstance(value, (str, int, float)):
+        return None
+    text = str(value).strip()
+    if not text:
+        return None
+    text = "".join(
+        " "
+        if character in "\r\n" or ord(character) < 32 or ord(character) == 127
+        else character
+        for character in text
+    )
+    text = " ".join(text.split())
+    return text[:max_length] if text else None
+
+
+def compact_int(value: Any) -> int | None:
+    if isinstance(value, bool):
+        return None
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed >= 0 else None
+
+
+def compact_float(value: Any) -> float | None:
+    if isinstance(value, bool):
+        return None
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed >= 0 else None
+
+
+def bridge_health_summary(value: Any) -> dict[str, Any]:
+    health = value if isinstance(value, dict) else {}
+    reasons = as_string_list(health.get("reasons"))
+    primary_reason = compact_text(health.get("primary_reason"))
+    if primary_reason is None and reasons:
+        primary_reason = reasons[0]
+    status = compact_text(health.get("status")) or ("degraded" if reasons else "unknown")
+    ok = health.get("ok")
+    if not isinstance(ok, bool):
+        ok = status == "live"
+    label = compact_text(health.get("label")) or (
+        "Live" if primary_reason is None else primary_reason.replace("_", " ")
+    )
+    return {
+        "status": status,
+        "ok": ok,
+        "reasons": reasons,
+        "primary_reason": primary_reason,
+        "label": label,
+    }
+
+
+def read_bridge_summary(path: Path | None = None) -> dict[str, Any]:
+    if path is None:
+        path = BRIDGE_STATUS_FILE
+    status_file = repo_relative(path)
+    if not path.exists():
+        return {
+            "available": False,
+            "status_file": status_file,
+            "status_file_status": "missing",
+        }
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except OSError as exc:
+        return {
+            "available": False,
+            "status_file": status_file,
+            "status_file_status": "read_failed",
+            "status_file_error": compact_text(str(exc)),
+        }
+    except json.JSONDecodeError as exc:
+        return {
+            "available": False,
+            "status_file": status_file,
+            "status_file_status": "invalid_json",
+            "status_file_error": f"line {exc.lineno} column {exc.colno}: {exc.msg}",
+        }
+    if not isinstance(payload, dict):
+        return {
+            "available": False,
+            "status_file": status_file,
+            "status_file_status": "not_object",
+            "status_file_error": type(payload).__name__,
+        }
+
+    summary: dict[str, Any] = {
+        "available": True,
+        "status_file": status_file,
+        "status_file_status": "loaded",
+        "bridge_health": bridge_health_summary(payload.get("bridge_health")),
+    }
+    text_fields = {
+        "status": payload.get("status"),
+        "public_url": payload.get("public_url"),
+        "local_read_only_url": payload.get("local_read_only_url"),
+        "ngrok_api_url": payload.get("ngrok_api_url"),
+        "updated_at": payload.get("updated_at"),
+        "bridge_started_at": payload.get("bridge_started_at"),
+        "mode": payload.get("mode"),
+    }
+    for key, value in text_fields.items():
+        compact_value = compact_text(value)
+        if compact_value is not None:
+            summary[key] = compact_value
+
+    int_fields = {
+        "bridge_pid": payload.get("bridge_pid"),
+        "bridge_status_sequence": payload.get("bridge_status_sequence"),
+    }
+    for key, value in int_fields.items():
+        compact_value = compact_int(value)
+        if compact_value is not None:
+            summary[key] = compact_value
+
+    interval = compact_float(payload.get("interval"))
+    if interval is not None:
+        summary["interval"] = interval
+    return summary
 
 
 def operator_attention_label(reason: str | None) -> str:
@@ -305,6 +433,7 @@ def read_status(
     status["loop_pid"] = pid
     status["publisher_updated_at"] = utc_now()
     status["cockpit_summary"] = publisher_cockpit_summary(status)
+    status["bridge_summary"] = read_bridge_summary()
     return status
 
 
