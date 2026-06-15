@@ -6,8 +6,10 @@ from __future__ import annotations
 import contextlib
 import importlib.util
 import io
+import json
 from pathlib import Path
 import sys
+import tempfile
 import unittest
 
 
@@ -30,6 +32,100 @@ def load_cockpit_module():
 class MvpCockpitServerTest(unittest.TestCase):
     def setUp(self) -> None:
         self.cockpit = load_cockpit_module()
+
+    def test_cockpit_summary_extracts_operator_diagnostics(self) -> None:
+        status = {
+            "status": "passing",
+            "phase": "published",
+            "mode": "autonomous_codex",
+            "iteration": 7,
+            "loop_running": True,
+            "loop_pid": 12345,
+            "autonomy_policy": {
+                "current_focus": "autonomy_visibility_or_real_ingest",
+                "decision_reason": "dallas_ready_no_thin_groups",
+                "dallas_pipeline_ready": True,
+            },
+            "artifacts": {
+                "artifact_health": {"status": "loaded"},
+                "contract": {"passed_checks": 13, "total_checks": 13},
+                "workflow": {"queue_items": 535},
+                "import_pipeline": {
+                    "execution_readiness": {
+                        "status": "ready",
+                        "ready_for_next_import_records": True,
+                    }
+                },
+            },
+        }
+
+        summary = self.cockpit.cockpit_summary(status)
+
+        self.assertEqual(summary["status"], "passing")
+        self.assertEqual(summary["phase"], "published")
+        self.assertEqual(summary["mode"], "autonomous_codex")
+        self.assertTrue(summary["loop_running"])
+        self.assertEqual(summary["loop_pid"], 12345)
+        self.assertEqual(summary["iteration"], 7)
+        self.assertEqual(summary["artifact_health"], "loaded")
+        self.assertEqual(summary["import_readiness"], "ready")
+        self.assertTrue(summary["ready_for_next_import_records"])
+        self.assertEqual(summary["current_focus"], "autonomy_visibility_or_real_ingest")
+        self.assertEqual(summary["policy_reason"], "dallas_ready_no_thin_groups")
+        self.assertTrue(summary["dallas_pipeline_ready"])
+        self.assertEqual(summary["contract_checks"], "13/13")
+        self.assertEqual(summary["queue_items"], 535)
+
+    def test_read_status_adds_cockpit_summary(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            self.cockpit.STATUS_FILE = tmp_path / "status.json"
+            self.cockpit.PID_FILE = tmp_path / "mvp-loop.pid"
+            self.cockpit.LOOP_PROCESS = None
+            self.cockpit.STATUS_FILE.write_text(
+                json.dumps(
+                    {
+                        "status": "running",
+                        "phase": "codex_exec",
+                        "iteration": 2,
+                        "artifacts": {
+                            "artifact_health": {"status": "loaded"},
+                            "import_pipeline": {
+                                "execution_readiness": {"status": "ready"}
+                            },
+                        },
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            status = self.cockpit.read_status()
+
+        self.assertIn("cockpit_summary", status)
+        self.assertEqual(status["cockpit_summary"]["status"], "running")
+        self.assertEqual(status["cockpit_summary"]["phase"], "codex_exec")
+        self.assertEqual(status["cockpit_summary"]["iteration"], 2)
+        self.assertEqual(status["cockpit_summary"]["import_readiness"], "ready")
+        self.assertFalse(status["cockpit_summary"]["loop_running"])
+
+    def test_cockpit_html_includes_operator_diagnostic_targets(self) -> None:
+        self.cockpit.read_status = lambda: {
+            "status": "passing",
+            "mode": "autonomous_codex",
+            "cockpit_summary": {
+                "import_readiness": "ready",
+                "current_focus": "autonomy_visibility_or_real_ingest",
+            },
+        }
+
+        markup = self.cockpit.cockpit_html()
+
+        self.assertIn('id="readiness"', markup)
+        self.assertIn('id="focus"', markup)
+        self.assertIn('id="phase"', markup)
+        self.assertIn('id="artifactHealth"', markup)
+        self.assertIn("status.cockpit_summary", markup)
 
     def test_access_log_redacts_query_strings_from_request_lines(self) -> None:
         request_line = "GET /api/status?token=secret&relay=abc HTTP/1.1"

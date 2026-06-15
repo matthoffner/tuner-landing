@@ -53,6 +53,43 @@ def tail_lines(path: Path, limit: int = 160) -> list[str]:
     return lines[-limit:]
 
 
+def as_dict(value: object) -> dict[str, object]:
+    return value if isinstance(value, dict) else {}
+
+
+def cockpit_summary(status: dict[str, object]) -> dict[str, object]:
+    artifacts = as_dict(status.get("artifacts"))
+    artifact_health = as_dict(artifacts.get("artifact_health"))
+    contract = as_dict(artifacts.get("contract"))
+    workflow = as_dict(artifacts.get("workflow"))
+    import_pipeline = as_dict(artifacts.get("import_pipeline"))
+    readiness = as_dict(import_pipeline.get("execution_readiness"))
+    autonomy_policy = as_dict(status.get("autonomy_policy"))
+
+    passed_checks = contract.get("passed_checks")
+    total_checks = contract.get("total_checks")
+    contract_checks = None
+    if passed_checks is not None and total_checks is not None:
+        contract_checks = f"{passed_checks}/{total_checks}"
+
+    return {
+        "status": status.get("status") or "waiting",
+        "phase": status.get("phase"),
+        "mode": status.get("mode") or SERVER_CONFIG.get("loop_mode", "mvp"),
+        "loop_running": bool(status.get("loop_running")),
+        "loop_pid": status.get("loop_pid"),
+        "iteration": status.get("iteration") or 0,
+        "artifact_health": artifact_health.get("status") or "unknown",
+        "import_readiness": readiness.get("status") or "unknown",
+        "ready_for_next_import_records": readiness.get("ready_for_next_import_records"),
+        "current_focus": autonomy_policy.get("current_focus") or "mvp_loop",
+        "policy_reason": autonomy_policy.get("decision_reason"),
+        "dallas_pipeline_ready": autonomy_policy.get("dallas_pipeline_ready"),
+        "contract_checks": contract_checks,
+        "queue_items": workflow.get("queue_items"),
+    }
+
+
 def read_status() -> dict[str, object]:
     if STATUS_FILE.exists():
         try:
@@ -74,6 +111,7 @@ def read_status() -> dict[str, object]:
             pid = None
     status["loop_running"] = running
     status["loop_pid"] = pid
+    status["cockpit_summary"] = cockpit_summary(status)
     return status
 
 
@@ -314,6 +352,30 @@ def cockpit_html() -> str:
         color: var(--muted);
         font: 0.82rem "Helvetica Neue", Arial, sans-serif;
       }}
+      .detail-grid {{
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        margin-top: 14px;
+      }}
+      .detail {{
+        border-top: 1px solid var(--line);
+        padding-top: 10px;
+        min-width: 0;
+      }}
+      .detail span {{
+        display: block;
+        color: var(--muted);
+        font: 0.72rem "Helvetica Neue", Arial, sans-serif;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }}
+      .detail strong {{
+        display: block;
+        margin-top: 4px;
+        overflow-wrap: anywhere;
+        font: 700 0.92rem "Helvetica Neue", Arial, sans-serif;
+      }}
       pre {{
         height: 590px;
         margin: 0;
@@ -374,6 +436,12 @@ def cockpit_html() -> str:
               <div class="metric"><strong id="contract">...</strong><span>contract checks</span></div>
               <div class="metric"><strong id="queue">...</strong><span>queue items</span></div>
             </div>
+            <div class="detail-grid">
+              <div class="detail"><span>import readiness</span><strong id="readiness">...</strong></div>
+              <div class="detail"><span>policy focus</span><strong id="focus">...</strong></div>
+              <div class="detail"><span>phase</span><strong id="phase">...</strong></div>
+              <div class="detail"><span>artifact health</span><strong id="artifactHealth">...</strong></div>
+            </div>
             <div class="links">
               <a href="/.automoat/logs/mvp-loop.log">raw loop log</a>
               <a href="/.automoat/state/mvp-loop-status.json">status json</a>
@@ -394,6 +462,10 @@ def cockpit_html() -> str:
       const iteration = document.getElementById("iteration");
       const contract = document.getElementById("contract");
       const queue = document.getElementById("queue");
+      const readiness = document.getElementById("readiness");
+      const focus = document.getElementById("focus");
+      const phase = document.getElementById("phase");
+      const artifactHealth = document.getElementById("artifactHealth");
 
       async function post(path) {{
         const response = await fetch(path, {{ method: "POST" }});
@@ -404,12 +476,17 @@ def cockpit_html() -> str:
       async function refreshStatus() {{
         const response = await fetch("/api/status", {{ cache: "no-store" }});
         const status = await response.json();
-        summary.textContent = `Current status: ${{status.status || "waiting"}}`;
-        loop.textContent = status.loop_running ? `running #${{status.loop_pid}}` : "stopped";
-        iteration.textContent = status.iteration || "0";
+        const cockpit = status.cockpit_summary || {{}};
+        summary.textContent = `Current status: ${{cockpit.status || status.status || "waiting"}}`;
+        loop.textContent = cockpit.loop_running ? `running #${{cockpit.loop_pid}}` : "stopped";
+        iteration.textContent = cockpit.iteration || status.iteration || "0";
         const checks = status.artifacts?.contract;
-        contract.textContent = checks ? `${{checks.passed_checks}}/${{checks.total_checks}}` : "...";
-        queue.textContent = status.artifacts?.workflow?.queue_items || "...";
+        contract.textContent = cockpit.contract_checks || (checks ? `${{checks.passed_checks}}/${{checks.total_checks}}` : "...");
+        queue.textContent = cockpit.queue_items ?? status.artifacts?.workflow?.queue_items ?? "...";
+        readiness.textContent = cockpit.import_readiness || "unknown";
+        focus.textContent = cockpit.current_focus || "mvp_loop";
+        phase.textContent = cockpit.phase || "...";
+        artifactHealth.textContent = cockpit.artifact_health || "unknown";
       }}
 
       const startButton = document.getElementById("start");
