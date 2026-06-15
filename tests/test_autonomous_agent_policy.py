@@ -720,6 +720,146 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
         self.assertIn(".pxcode/preview.json", message)
         self.assertIn("must stay untouched", message)
 
+    def test_run_iteration_syncs_landing_before_policy_failure(self) -> None:
+        calls = []
+        status_calls = []
+
+        self.loop.utc_now = lambda: "2026-06-15T10:45:00Z"
+        self.loop.run_stamp = lambda: "20260615T104500Z"
+        self.loop.latest_handoff_status = lambda: "ready"
+        self.loop.write_status = lambda *args, **kwargs: self._record_status(
+            status_calls,
+            *args,
+            **kwargs,
+        )
+        self.loop.stream_command = lambda *args, **kwargs: {
+            "name": "codex autonomous bounded improvement",
+            "command": ["codex", "exec"],
+            "exit_status": 0,
+            "seconds": 0.1,
+        }
+
+        def fake_sync_landing(_log_file):
+            calls.append("sync")
+            return {
+                "name": "sync landing",
+                "command": ["cp", "generated/landing.html", "index.html"],
+                "exit_status": 0,
+                "seconds": 0.01,
+            }
+
+        def fake_policy_check(_log_file):
+            calls.append("policy")
+            return {
+                "name": "autonomy policy check",
+                "command": ["internal", "autonomy_policy_check"],
+                "exit_status": 1,
+                "seconds": 0.01,
+                "failure_reason": "preview_json_changed",
+                "synthetic_row_count": 0,
+                "raw_dallas_csv_changed_paths": [],
+            }
+
+        self.loop.sync_landing = fake_sync_landing
+        self.loop.run_autonomy_policy_check = fake_policy_check
+
+        with tempfile.TemporaryDirectory() as tmp:
+            payload = self.loop.run_iteration(
+                Path(tmp) / "loop.log",
+                Path(tmp) / "events.jsonl",
+                1,
+                "run-1",
+                "prompt",
+                30,
+            )
+
+        self.assertEqual(calls, ["sync", "policy"])
+        self.assertEqual(payload["phase"], "autonomy_policy_failed")
+        self.assertEqual(status_calls[-1]["phase"], "autonomy_policy_failed")
+        self.assertEqual(
+            status_calls[-1]["step_names"],
+            [
+                "codex autonomous bounded improvement",
+                "sync landing",
+                "autonomy policy check",
+            ],
+        )
+
+    def test_run_iteration_stops_before_policy_when_landing_sync_fails(self) -> None:
+        status_calls = []
+
+        self.loop.utc_now = lambda: "2026-06-15T10:50:00Z"
+        self.loop.run_stamp = lambda: "20260615T105000Z"
+        self.loop.latest_handoff_status = lambda: "ready"
+        self.loop.write_status = lambda *args, **kwargs: self._record_status(
+            status_calls,
+            *args,
+            **kwargs,
+        )
+        self.loop.stream_command = lambda *args, **kwargs: {
+            "name": "codex autonomous bounded improvement",
+            "command": ["codex", "exec"],
+            "exit_status": 0,
+            "seconds": 0.1,
+        }
+        self.loop.sync_landing = lambda _log_file: {
+            "name": "sync landing",
+            "command": ["cp", "generated/landing.html", "index.html"],
+            "exit_status": 1,
+            "seconds": 0.01,
+        }
+
+        def fail_policy(_log_file):
+            self.fail("policy check should not run after landing sync failure")
+
+        self.loop.run_autonomy_policy_check = fail_policy
+
+        with tempfile.TemporaryDirectory() as tmp:
+            payload = self.loop.run_iteration(
+                Path(tmp) / "loop.log",
+                Path(tmp) / "events.jsonl",
+                1,
+                "run-1",
+                "prompt",
+                30,
+            )
+
+        self.assertEqual(payload["status"], "failing")
+        self.assertEqual(payload["phase"], "landing_sync_failed")
+        self.assertEqual(payload["error"], "Landing page sync failed")
+        self.assertEqual(
+            status_calls[-1]["step_names"],
+            ["codex autonomous bounded improvement", "sync landing"],
+        )
+
+    def _record_status(
+        self,
+        status_calls,
+        _event_file,
+        _run_id,
+        _iteration,
+        status,
+        phase,
+        _started_at,
+        steps,
+        error=None,
+    ):
+        payload = {
+            "status": status,
+            "phase": phase,
+            "error": error,
+            "git": {"dirty_count_excluding_preview": len(steps)},
+        }
+        status_calls.append(
+            {
+                "status": status,
+                "phase": phase,
+                "error": error,
+                "step_names": [step.get("name") for step in steps],
+            }
+        )
+        return payload
+
 
 if __name__ == "__main__":
     unittest.main()

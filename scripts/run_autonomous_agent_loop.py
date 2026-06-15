@@ -953,6 +953,27 @@ def run_iteration(
         )
         return payload
 
+    landing_step = sync_landing(log_file)
+    steps.append(landing_step)
+    if landing_step["exit_status"] != 0:
+        payload = write_status(
+            event_file,
+            run_id,
+            iteration,
+            "failing",
+            "landing_sync_failed",
+            started_at,
+            steps,
+            "Landing page sync failed",
+        )
+        emit(
+            log_file,
+            "iteration "
+            f"{iteration} end status=failing phase=landing_sync_failed "
+            f"dirty_paths_excluding_preview={payload['git']['dirty_count_excluding_preview']}",
+        )
+        return payload
+
     policy_step = run_autonomy_policy_check(log_file)
     steps.append(policy_step)
     if policy_step["exit_status"] != 0:
@@ -974,7 +995,6 @@ def run_iteration(
         )
         return payload
 
-    steps.append(sync_landing(log_file))
     readiness_step = run_check(
         log_file,
         "refresh Dallas import readiness summary",
