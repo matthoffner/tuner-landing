@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import selectors
 import signal
 import subprocess
@@ -14,6 +15,7 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit, urlunsplit
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -85,6 +87,9 @@ DALLAS_RAW_CSV_PREFIX = "generated/raw/dallas-electrician-import-sample-"
 DALLAS_RAW_CSV_DIFF_PATHSPEC = (
     ":(glob)generated/raw/dallas-electrician-import-sample-*/*.csv"
 )
+MAX_POLICY_DETAIL_SAMPLES = 5
+MAX_POLICY_DETAIL_CHARS = 240
+URL_TOKEN_PATTERN = re.compile(r"https?://[^\s,]+", re.IGNORECASE)
 
 
 def utc_now() -> str:
@@ -391,6 +396,39 @@ def synthetic_dallas_csv_row(row: str) -> bool:
     )
 
 
+def sanitized_policy_detail(text: str) -> str:
+    """Return a bounded, secret-safe detail string for policy status payloads."""
+
+    def sanitize_url(match: re.Match[str]) -> str:
+        raw_url = match.group(0)
+        try:
+            parsed = urlsplit(raw_url)
+            host = parsed.hostname
+            port = parsed.port
+        except ValueError:
+            return "<redacted-url>"
+        if not host:
+            return "<redacted-url>"
+        netloc = host
+        if port is not None:
+            netloc += f":{port}"
+        return urlunsplit((parsed.scheme, netloc, parsed.path, "", ""))
+
+    sanitized = URL_TOKEN_PATTERN.sub(sanitize_url, text)
+    sanitized = sanitized.replace("\r", " ").replace("\n", " ")
+    if len(sanitized) > MAX_POLICY_DETAIL_CHARS:
+        return sanitized[: MAX_POLICY_DETAIL_CHARS - 3] + "..."
+    return sanitized
+
+
+def synthetic_dallas_row_samples(rows: list[str]) -> list[str]:
+    """Return bounded, sanitized synthetic row examples for cockpit diagnostics."""
+    return [
+        sanitized_policy_detail(row)
+        for row in rows[:MAX_POLICY_DETAIL_SAMPLES]
+    ]
+
+
 def untracked_dallas_raw_csv_paths() -> list[str]:
     """Return untracked raw Dallas CSV fixture paths that policy checks must scan."""
     result = shell(
@@ -633,6 +671,7 @@ def run_autonomy_policy_check(log_file: Path) -> dict[str, Any]:
     preview_changed = preview_json_changed(all_paths)
     raw_csv_paths = changed_dallas_raw_csv_paths(paths)
     synthetic_rows = added_synthetic_dallas_rows()
+    synthetic_row_samples = synthetic_dallas_row_samples(synthetic_rows)
     productive_paths = productive_changed_paths(paths)
     productive_change = bool(productive_paths)
     policy_snapshot = autonomy_policy_snapshot()
@@ -658,8 +697,8 @@ def run_autonomy_policy_check(log_file: Path) -> dict[str, Any]:
             "policy violation: supervisor snapshot disallows synthetic Dallas "
             "example.local row appends for the current readiness state",
         )
-        for row in synthetic_rows[:5]:
-            emit(log_file, "  synthetic row: " + row[:240])
+        for row in synthetic_row_samples:
+            emit(log_file, "  synthetic row: " + row)
     elif raw_csv_paths and not productive_change and not allow_override:
         exit_status = 1
         failure_reason = "raw_dallas_csv_without_productive_work"
@@ -679,8 +718,8 @@ def run_autonomy_policy_check(log_file: Path) -> dict[str, Any]:
             "policy violation: synthetic Dallas example.local row append without "
             "code, ingest, infra, test, or durable spec companion work",
         )
-        for row in synthetic_rows[:5]:
-            emit(log_file, "  synthetic row: " + row[:240])
+        for row in synthetic_row_samples:
+            emit(log_file, "  synthetic row: " + row)
     else:
         emit(
             log_file,
@@ -703,6 +742,7 @@ def run_autonomy_policy_check(log_file: Path) -> dict[str, Any]:
         "dirty_paths_excluding_preview": paths,
         "preview_json_changed": preview_changed,
         "synthetic_row_count": len(synthetic_rows),
+        "synthetic_row_samples": synthetic_row_samples,
         "raw_dallas_csv_changed_paths": raw_csv_paths,
         "productive_change": productive_change,
         "productive_changed_paths": productive_paths,

@@ -309,7 +309,8 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
         ]
         self.loop.added_synthetic_dallas_rows = lambda: [
             "ELZ-2026-9999,100 Example Ave,Dallas,electrical,"
-            "residential,Electrical repair,Finaled,example.local/dallas/9999"
+            "residential,Electrical repair,Finaled,"
+            "https://user:pass@example.local/dallas/9999?token=secret#debug"
         ]
 
         with tempfile.TemporaryDirectory() as tmp:
@@ -331,8 +332,49 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
                 "generated/raw/dallas-electrician-import-sample-v2/permits.csv",
             ],
         )
+        self.assertEqual(
+            result["synthetic_row_samples"],
+            [
+                "ELZ-2026-9999,100 Example Ave,Dallas,electrical,"
+                "residential,Electrical repair,Finaled,"
+                "https://example.local/dallas/9999"
+            ],
+        )
         self.assertEqual(result["productive_changed_paths"], [])
         self.assertIn("policy_snapshot", result)
+
+    def test_synthetic_row_samples_are_bounded_and_secret_safe(self) -> None:
+        rows = [
+            (
+                "ELZ-2026-9999,100 Example Ave,"
+                "https://user:pass@example.local/dallas/permits/ELZ-2026-9999"
+                "?token=secret#debug,"
+                + ("x" * 260)
+            ),
+            (
+                "ELZ-2026-9998,200 Example Ave,"
+                "https://example.local/dallas/permits/ELZ-2026-9998\r\n"
+                "second-line"
+            ),
+            "ELZ-2026-9997,300 Example Ave,https://example.local/dallas/9997?api_key=secret",
+            "ELZ-2026-9996,400 Example Ave,https://example.local/dallas/9996#secret",
+            "ELZ-2026-9995,500 Example Ave,https://example.local/dallas/9995",
+            "ELZ-2026-9994,600 Example Ave,https://example.local/dallas/9994",
+        ]
+
+        samples = self.loop.synthetic_dallas_row_samples(rows)
+
+        self.assertEqual(len(samples), 5)
+        for sample in samples:
+            self.assertLessEqual(len(sample), 240)
+            self.assertNotIn("user:pass", sample)
+            self.assertNotIn("token=secret", sample)
+            self.assertNotIn("api_key=secret", sample)
+            self.assertNotIn("#secret", sample)
+            self.assertNotIn("\r", sample)
+            self.assertNotIn("\n", sample)
+        self.assertIn("https://example.local/dallas/permits/ELZ-2026-9999", samples[0])
+        self.assertNotIn("ELZ-2026-9994", "\n".join(samples))
 
     def test_policy_check_rejects_docs_only_raw_dallas_csv_edit(self) -> None:
         self.loop.dirty_paths_excluding_preview = lambda: [
