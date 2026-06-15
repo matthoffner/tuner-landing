@@ -2040,6 +2040,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             payload["diagnostics"]["command_paths"],
             {"git": "/usr/bin/git", "codex": "/usr/bin/codex"},
         )
+        self.assertEqual(payload["diagnostics"]["runtime_configured_keys"], [])
         self.assertEqual(
             payload["diagnostics"]["runtime_limits"],
             self.worker.RUNTIME_CONFIG_LIMITS,
@@ -2098,6 +2099,13 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertEqual(
             payload["diagnostics"]["command_paths"],
             {"git": "/usr/bin/git", "codex": "/usr/bin/codex"},
+        )
+        self.assertEqual(
+            payload["diagnostics"]["runtime_configured_keys"],
+            [
+                "AUTOMOAT_AGENT_INTERVAL",
+                "AUTOMOAT_BRIDGE_STATUS_STALE_AFTER_SECONDS",
+            ],
         )
         self.assertNotIn("config", payload)
         self.assertNotIn("relay-token", output.getvalue())
@@ -3034,6 +3042,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             {"git": "/usr/bin/git", "codex": None},
         )
         self.assertEqual(payload["diagnostics"]["missing_commands"], ["codex"])
+        self.assertEqual(payload["diagnostics"]["runtime_configured_keys"], [])
         self.assertEqual(payload["diagnostics"]["git_auth_selected"], "GH_TOKEN")
         self.assertEqual(
             payload["diagnostics"]["codex_auth_selected"],

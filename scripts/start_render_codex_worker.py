@@ -638,6 +638,15 @@ def missing_required_commands(command_paths: dict[str, str | None]) -> list[str]
     return [command for command in REQUIRED_COMMANDS if not command_paths.get(command)]
 
 
+def configured_runtime_keys(env: os._Environ[str] | dict[str, str]) -> list[str]:
+    """Return nonsecret runtime override keys present in the worker environment."""
+    return sorted(
+        name
+        for name in (*RUNTIME_CONFIG_LIMITS, *PUBLISHER_FILE_PATH_ENV_NAMES)
+        if name in env
+    )
+
+
 def validate_secret_safe_http_url(
     name: str,
     value: str,
@@ -1118,6 +1127,7 @@ def environment_preflight_summary(
             "commands": list(REQUIRED_COMMANDS),
             "command_paths": command_paths,
             "missing_commands": missing_required_commands(command_paths),
+            "runtime_configured_keys": configured_runtime_keys(env),
             "runtime_limits": RUNTIME_CONFIG_LIMITS,
         }
         return payload
