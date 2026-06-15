@@ -23,6 +23,7 @@ WORKDIR = Path(os.environ.get("AUTOMOAT_WORKDIR", "/work/automoat"))
 CODEX_HOME = Path(os.environ.get("CODEX_HOME", "/tmp/codex-home"))
 GIT_ASKPASS = Path("/tmp/automoat-git-askpass.sh")
 GITHUB_TOKEN_FILE = Path("/tmp/automoat-github-token")
+RESERVED_RUNTIME_FILE_PATHS = (GIT_ASKPASS, GITHUB_TOKEN_FILE)
 
 CHILDREN: list[subprocess.Popen[object]] = []
 STOP_REQUESTED = False
@@ -492,6 +493,14 @@ def validate_workdir_path(path: Path, errors: list[str]) -> None:
 
     if resolved_path == resolved_codex_home:
         errors.append("AUTOMOAT_WORKDIR must not equal CODEX_HOME")
+        return
+
+    conflicting_runtime_file = reserved_runtime_file_conflict(resolved_path)
+    if conflicting_runtime_file is not None:
+        errors.append(
+            "AUTOMOAT_WORKDIR must not be equal to or inside reserved runtime file "
+            f"{conflicting_runtime_file}"
+        )
 
 
 def validate_codex_home_path(path: Path, workdir: Path, errors: list[str]) -> None:
@@ -516,6 +525,14 @@ def validate_codex_home_path(path: Path, workdir: Path, errors: list[str]) -> No
         errors.append("CODEX_HOME must not be filesystem root or a top-level directory")
         return
 
+    conflicting_runtime_file = reserved_runtime_file_conflict(resolved_path)
+    if conflicting_runtime_file is not None:
+        errors.append(
+            "CODEX_HOME must not be equal to or inside reserved runtime file "
+            f"{conflicting_runtime_file}"
+        )
+        return
+
     expanded_workdir = workdir.expanduser()
     workdir_named_parts = [
         part for part in expanded_workdir.parts if part != expanded_workdir.anchor
@@ -535,6 +552,17 @@ def validate_codex_home_path(path: Path, workdir: Path, errors: list[str]) -> No
         return
     if resolved_workdir.is_relative_to(resolved_path):
         errors.append("CODEX_HOME must not contain AUTOMOAT_WORKDIR")
+
+
+def reserved_runtime_file_conflict(path: Path) -> Path | None:
+    for runtime_file in RESERVED_RUNTIME_FILE_PATHS:
+        try:
+            resolved_runtime_file = runtime_file.expanduser().resolve(strict=False)
+        except OSError:
+            resolved_runtime_file = runtime_file.expanduser().absolute()
+        if path == resolved_runtime_file or path.is_relative_to(resolved_runtime_file):
+            return resolved_runtime_file
+    return None
 
 
 def environment_preflight_summary(

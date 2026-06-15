@@ -488,6 +488,14 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             ),
             Path("relative/repo"): "AUTOMOAT_WORKDIR must be an absolute path",
             self.worker.CODEX_HOME: "AUTOMOAT_WORKDIR must not equal CODEX_HOME",
+            self.worker.GITHUB_TOKEN_FILE: (
+                "AUTOMOAT_WORKDIR must not be equal to or inside reserved runtime file "
+                f"{self.worker.GITHUB_TOKEN_FILE}"
+            ),
+            self.worker.GIT_ASKPASS / "repo": (
+                "AUTOMOAT_WORKDIR must not be equal to or inside reserved runtime file "
+                f"{self.worker.GIT_ASKPASS}"
+            ),
         }
 
         for workdir, expected_error in cases.items():
@@ -509,6 +517,14 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             Path("/"): "CODEX_HOME must not be filesystem root or a top-level directory",
             Path("/tmp"): "CODEX_HOME must not be filesystem root or a top-level directory",
             Path("relative/codex-home"): "CODEX_HOME must be an absolute path",
+            self.worker.GITHUB_TOKEN_FILE: (
+                "CODEX_HOME must not be equal to or inside reserved runtime file "
+                f"{self.worker.GITHUB_TOKEN_FILE}"
+            ),
+            self.worker.GIT_ASKPASS / "codex-home": (
+                "CODEX_HOME must not be equal to or inside reserved runtime file "
+                f"{self.worker.GIT_ASKPASS}"
+            ),
             Path("/work/automoat/repo/.codex-home"): (
                 "CODEX_HOME must not be inside AUTOMOAT_WORKDIR"
             ),
