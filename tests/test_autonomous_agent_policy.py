@@ -37,6 +37,8 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
 
     def test_policy_snapshot_shifts_to_autonomy_when_dallas_is_ready(self) -> None:
         self.loop.import_pipeline_snapshot = lambda: {
+            "status": "loaded",
+            "summary_path": "generated/pipeline/dallas-import-pipeline-summary-v1/summary.json",
             "execution_readiness": {
                 "status": "ready",
                 "ready_for_next_import_records": True,
@@ -55,6 +57,12 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
 
         self.assertEqual(snapshot["current_focus"], "autonomy_visibility_or_real_ingest")
         self.assertEqual(snapshot["decision_reason"], "dallas_ready_no_thin_groups")
+        self.assertEqual(snapshot["import_pipeline_status"], "loaded")
+        self.assertEqual(
+            snapshot["import_pipeline_summary_path"],
+            "generated/pipeline/dallas-import-pipeline-summary-v1/summary.json",
+        )
+        self.assertIsNone(snapshot["import_pipeline_error"])
         self.assertTrue(snapshot["dallas_pipeline_ready"])
         self.assertEqual(snapshot["readiness_status"], "ready")
         self.assertTrue(snapshot["ready_for_next_import_records"])
@@ -105,6 +113,37 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
         self.assertEqual(snapshot["readiness_blocker_count"], 1)
         self.assertEqual(snapshot["readiness_blockers"], ["correction_ledger_incomplete"])
         self.assertEqual(snapshot["thin_group_count"], 0)
+
+    def test_policy_snapshot_surfaces_invalid_import_pipeline_artifact_safely(self) -> None:
+        long_error = "invalid token=super-secret " + ("x" * 320)
+        self.loop.import_pipeline_snapshot = lambda: {
+            "status": "invalid",
+            "summary_path": "generated/pipeline/dallas-import-pipeline-summary-v1/summary.json",
+            "error": long_error
+            + " https://user:pass@example.local/dallas?api_key=hidden#debug",
+            "execution_readiness": {
+                "status": "blocked",
+                "ready_for_next_import_records": False,
+                "blockers": ["pipeline_summary_invalid"],
+            },
+        }
+
+        snapshot = self.loop.autonomy_policy_snapshot()
+        prompt = self.loop.build_iteration_prompt("base")
+
+        self.assertEqual(snapshot["current_focus"], "fix_import_readiness_blockers")
+        self.assertEqual(snapshot["decision_reason"], "import_readiness_not_ready")
+        self.assertEqual(snapshot["import_pipeline_status"], "invalid")
+        self.assertEqual(
+            snapshot["import_pipeline_summary_path"],
+            "generated/pipeline/dallas-import-pipeline-summary-v1/summary.json",
+        )
+        self.assertIn("token=<redacted>", snapshot["import_pipeline_error"])
+        self.assertLessEqual(len(snapshot["import_pipeline_error"]), 240)
+        self.assertEqual(snapshot["readiness_blockers"], ["pipeline_summary_invalid"])
+        self.assertNotIn("super-secret", prompt)
+        self.assertNotIn("user:pass", prompt)
+        self.assertNotIn("api_key=hidden", prompt)
 
     def test_policy_snapshot_sanitizes_bounded_artifact_details(self) -> None:
         long_blocker = "blocked " + ("x" * 320)

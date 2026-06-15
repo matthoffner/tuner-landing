@@ -583,6 +583,7 @@ def synthetic_dallas_appends_allowed_by_policy() -> bool:
 
 def autonomy_policy_snapshot() -> dict[str, Any]:
     import_pipeline = import_pipeline_snapshot()
+    import_pipeline_status = import_pipeline.get("status")
     readiness = import_pipeline.get("execution_readiness", {})
     coverage = import_pipeline.get("coverage", {})
     thin_groups = coverage.get("thin_groups", {})
@@ -616,6 +617,11 @@ def autonomy_policy_snapshot() -> dict[str, Any]:
             else "fix_import_readiness_blockers"
         ),
         "decision_reason": decision_reason,
+        "import_pipeline_status": sanitized_policy_scalar(import_pipeline_status),
+        "import_pipeline_summary_path": sanitized_policy_scalar(
+            import_pipeline.get("summary_path")
+        ),
+        "import_pipeline_error": sanitized_policy_scalar(import_pipeline.get("error")),
         "dallas_pipeline_ready": ready,
         "readiness_status": sanitized_policy_scalar(readiness.get("status")),
         "ready_for_next_import_records": readiness.get("ready_for_next_import_records"),
