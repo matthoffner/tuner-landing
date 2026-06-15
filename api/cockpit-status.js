@@ -4,6 +4,7 @@ const {
   fetchUpstreamText,
   invalidUpstreamKeysHeader,
   invalidUpstreamsHeader,
+  sendMethodNotAllowed,
   sendProxyResponse,
   setProxyHeaders,
   setUpstreamSelectionHeaders,
@@ -39,7 +40,7 @@ module.exports = async function handler(request, response) {
   }
 
   if (request.method !== "GET" && request.method !== "HEAD") {
-    sendProxyResponse(request, response, 405, JSON.stringify({ error: "method_not_allowed" }));
+    sendMethodNotAllowed(request, response, JSON.stringify({ error: "method_not_allowed" }));
     return;
   }
 

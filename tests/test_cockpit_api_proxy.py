@@ -387,7 +387,9 @@ class CockpitApiProxyTest(unittest.TestCase):
             """
             const assert = require("assert");
             const {
+              ALLOWED_PROXY_METHODS,
               EXPOSED_UPSTREAM_HEADERS,
+              sendMethodNotAllowed,
               sendProxyResponse,
               setProxyHeaders,
               setUpstreamSelectionHeaders,
@@ -444,6 +446,98 @@ class CockpitApiProxyTest(unittest.TestCase):
             assert.strictEqual(headResponse.statusCode, 503);
             assert.strictEqual(headResponse.body, "");
             assert.strictEqual(headResponse.headers["Content-Type"], "text/plain; charset=utf-8");
+
+            const methodResponse = response();
+            setProxyHeaders(methodResponse, "application/json; charset=utf-8");
+            sendMethodNotAllowed(
+              { method: "POST" },
+              methodResponse,
+              '{"error":"method_not_allowed"}',
+            );
+            assert.strictEqual(methodResponse.statusCode, 405);
+            assert.strictEqual(methodResponse.body, '{"error":"method_not_allowed"}');
+            assert.strictEqual(methodResponse.headers.Allow, ALLOWED_PROXY_METHODS);
+            assert.strictEqual(
+              methodResponse.headers["Access-Control-Allow-Methods"],
+              ALLOWED_PROXY_METHODS,
+            );
+            assert.strictEqual(methodResponse.headers["X-Automoat-Upstream"], "method_not_allowed");
+            assert.strictEqual(methodResponse.headers["X-Automoat-Upstream-Attempt-Count"], "0");
+            assert.strictEqual(methodResponse.headers["X-Automoat-Upstream-Attempts"], "");
+            """
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_handlers_reject_unsupported_methods_without_fetching(self) -> None:
+        result = run_node(
+            """
+            const assert = require("assert");
+            const statusHandler = require("./api/cockpit-status");
+            const logHandler = require("./api/cockpit-log");
+            const { ALLOWED_PROXY_METHODS } = require("./api/cockpit-upstreams");
+
+            function response() {
+              return {
+                statusCode: null,
+                body: "",
+                headers: {},
+                setHeader(name, value) {
+                  this.headers[name] = value;
+                },
+                status(code) {
+                  this.statusCode = code;
+                  return this;
+                },
+                send(body) {
+                  this.body = String(body);
+                  return this;
+                },
+                end(body = "") {
+                  this.body = String(body);
+                  return this;
+                },
+              };
+            }
+
+            process.env.AUTOMOAT_RELAY_URL = "https://automoat-cockpit-relay.example";
+            process.env.AUTOMOAT_BRIDGE_URL = "https://legacy-bridge.example";
+            global.fetch = async () => {
+              throw new Error("fetch should not be called for unsupported proxy methods");
+            };
+
+            (async () => {
+              const statusResponse = response();
+              await statusHandler({ method: "POST" }, statusResponse);
+              assert.strictEqual(statusResponse.statusCode, 405);
+              assert.deepStrictEqual(JSON.parse(statusResponse.body), {
+                error: "method_not_allowed",
+              });
+              assert.strictEqual(statusResponse.headers.Allow, ALLOWED_PROXY_METHODS);
+              assert.strictEqual(
+                statusResponse.headers["Access-Control-Allow-Methods"],
+                ALLOWED_PROXY_METHODS,
+              );
+              assert.strictEqual(statusResponse.headers["X-Automoat-Upstream"], "method_not_allowed");
+              assert.strictEqual(
+                statusResponse.headers["X-Automoat-Upstream-Attempt-Count"],
+                "0",
+              );
+
+              const logResponse = response();
+              await logHandler({ method: "PUT" }, logResponse);
+              assert.strictEqual(logResponse.statusCode, 405);
+              assert.strictEqual(logResponse.body, "method_not_allowed\\n");
+              assert.strictEqual(logResponse.headers.Allow, ALLOWED_PROXY_METHODS);
+              assert.strictEqual(logResponse.headers["X-Automoat-Upstream"], "method_not_allowed");
+              assert.strictEqual(
+                logResponse.headers["X-Automoat-Upstream-Attempt-Count"],
+                "0",
+              );
+            })().catch((error) => {
+              console.error(error.stack || error);
+              process.exit(1);
+            });
             """
         )
 

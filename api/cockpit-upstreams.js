@@ -1,5 +1,6 @@
 const DEFAULT_UPSTREAM_TIMEOUT_MS = 8000;
 const MAX_UPSTREAM_TIMEOUT_MS = 15000;
+const ALLOWED_PROXY_METHODS = "GET, HEAD, OPTIONS";
 const EXPOSED_UPSTREAM_HEADERS = [
   "X-Automoat-Upstream",
   "X-Automoat-Upstream-Fallback-Count",
@@ -216,7 +217,7 @@ function invalidUpstreamKeysHeader(invalid) {
 
 function setProxyHeaders(response, contentType) {
   response.setHeader("Access-Control-Allow-Origin", "*");
-  response.setHeader("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS");
+  response.setHeader("Access-Control-Allow-Methods", ALLOWED_PROXY_METHODS);
   response.setHeader("Access-Control-Allow-Headers", "content-type");
   response.setHeader("Access-Control-Expose-Headers", EXPOSED_UPSTREAM_HEADERS);
   response.setHeader("Cache-Control", "no-store");
@@ -237,6 +238,12 @@ function sendProxyResponse(request, response, statusCode, body) {
     return;
   }
   response.send(body);
+}
+
+function sendMethodNotAllowed(request, response, body) {
+  response.setHeader("Allow", ALLOWED_PROXY_METHODS);
+  setUpstreamSelectionHeaders(response, "method_not_allowed", 0, []);
+  sendProxyResponse(request, response, 405, body);
 }
 
 async function readBoundedUpstreamText(upstream, maxBodyChars) {
@@ -393,6 +400,7 @@ function upstreams({ relayPath, bridgePath, env = process.env }) {
 }
 
 module.exports = {
+  ALLOWED_PROXY_METHODS,
   DEFAULT_UPSTREAM_TIMEOUT_MS,
   EXPOSED_UPSTREAM_HEADERS,
   MAX_UPSTREAM_TIMEOUT_MS,
@@ -407,6 +415,7 @@ module.exports = {
   readBoundedUpstreamText,
   relayHeaderConfig,
   relayHeaders,
+  sendMethodNotAllowed,
   sendProxyResponse,
   setProxyHeaders,
   setUpstreamSelectionHeaders,
