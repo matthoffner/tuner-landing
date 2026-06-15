@@ -2009,6 +2009,8 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             "OPENAI_API_KEY": "api-key",
             "AUTOMOAT_GIT_BRANCH": "release/2026.06",
             "AUTOMOAT_AGENT_ITERATIONS": "12",
+            "GIT_AUTHOR_NAME": "automoat-render-bot",
+            "GIT_AUTHOR_EMAIL": "automoat-render-bot@example.com",
         }
         self.worker.WORKDIR = Path("/work/automoat")
         self.worker.CODEX_HOME = Path("/tmp/codex-home")
@@ -2027,6 +2029,10 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertIn("codex_auth_selected=CODEX_ACCESS_TOKEN", output.getvalue())
         self.assertIn('runtime_configured_keys=["AUTOMOAT_AGENT_ITERATIONS"]', output.getvalue())
         self.assertIn("path_configured_keys=[]", output.getvalue())
+        self.assertIn(
+            'git_identity_configured_keys=["GIT_AUTHOR_EMAIL", "GIT_AUTHOR_NAME"]',
+            output.getvalue(),
+        )
         self.assertIn("agent_iterations=12", output.getvalue())
         self.assertIn(
             'command_paths={"codex": "<found>", "git": "<found>"}',
@@ -2034,6 +2040,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         )
         self.assertNotIn("workdir=/work/automoat", output.getvalue())
         self.assertNotIn("codex_home=/tmp/codex-home", output.getvalue())
+        self.assertNotIn("automoat-render-bot@example.com", output.getvalue())
         self.assertNotIn("/usr/bin", output.getvalue())
 
     def test_check_env_json_reports_safe_machine_readable_summary(self) -> None:
@@ -2046,6 +2053,8 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             "OPENAI_API_KEY": "api-key",
             "AUTOMOAT_GIT_BRANCH": "release/2026.06",
             "AUTOMOAT_AGENT_ITERATIONS": "12",
+            "GIT_AUTHOR_NAME": "automoat-render-bot",
+            "GIT_AUTHOR_EMAIL": "automoat-render-bot@example.com",
         }
         self.worker.WORKDIR = Path("/work/automoat")
         self.worker.CODEX_HOME = Path("/tmp/codex-home")
@@ -2077,6 +2086,10 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             ["AUTOMOAT_AGENT_ITERATIONS"],
         )
         self.assertEqual(payload["config"]["path_configured_keys"], [])
+        self.assertEqual(
+            payload["config"]["git_identity_configured_keys"],
+            ["GIT_AUTHOR_EMAIL", "GIT_AUTHOR_NAME"],
+        )
         self.assertEqual(payload["config"]["agent_iterations"], "12")
         self.assertEqual(payload["config"]["commands"], ["git", "codex"])
         self.assertEqual(
@@ -2088,6 +2101,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertNotIn("alternate-github-token", output.getvalue())
         self.assertNotIn("codex-token", output.getvalue())
         self.assertNotIn("api-key", output.getvalue())
+        self.assertNotIn("automoat-render-bot@example.com", output.getvalue())
         self.assertNotIn('"/work/automoat"', output.getvalue())
         self.assertNotIn('"/tmp/codex-home"', output.getvalue())
         self.assertNotIn("/usr/bin", output.getvalue())
@@ -3224,6 +3238,10 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         )
         self.assertEqual(
             payload["diagnostics"]["failed_configuration_keys"],
+            ["GIT_AUTHOR_NAME"],
+        )
+        self.assertEqual(
+            payload["diagnostics"]["git_identity_configured_keys"],
             ["GIT_AUTHOR_NAME"],
         )
         self.assertNotIn("Secret Render Agent", output.getvalue())

@@ -665,6 +665,11 @@ def configured_worker_path_keys(env: os._Environ[str] | dict[str, str]) -> list[
     return sorted(name for name in WORKER_PATH_ENV_NAMES if name in env)
 
 
+def configured_git_identity_keys(env: os._Environ[str] | dict[str, str]) -> list[str]:
+    """Return configured Git identity keys without exposing names or emails."""
+    return sorted(name for name in GIT_IDENTITY_ENV_DEFAULTS if name in env)
+
+
 def validate_secret_safe_http_url(
     name: str,
     value: str,
@@ -1168,6 +1173,7 @@ def environment_preflight_summary(
             "missing_commands": missing_required_commands(command_paths),
             "runtime_configured_keys": configured_runtime_keys(env),
             "path_configured_keys": configured_worker_path_keys(env),
+            "git_identity_configured_keys": configured_git_identity_keys(env),
             "runtime_limits": RUNTIME_CONFIG_LIMITS,
         }
         return payload
@@ -1184,6 +1190,7 @@ def environment_preflight_summary(
         "codex_auth_selected": selected_name(env, CODEX_AUTH_ENV_NAMES),
         "runtime_configured_keys": configured_runtime_keys(env),
         "path_configured_keys": configured_worker_path_keys(env),
+        "git_identity_configured_keys": configured_git_identity_keys(env),
         "agent_interval": env.get("AUTOMOAT_AGENT_INTERVAL", "300"),
         "agent_iterations": env.get("AUTOMOAT_AGENT_ITERATIONS", "0"),
         "relay_interval": env.get("AUTOMOAT_RELAY_INTERVAL", "3"),
@@ -1270,6 +1277,8 @@ def emit_environment_preflight(
         f"{json.dumps(configured_runtime_keys(env), sort_keys=True)} "
         f"path_configured_keys="
         f"{json.dumps(configured_worker_path_keys(env), sort_keys=True)} "
+        f"git_identity_configured_keys="
+        f"{json.dumps(configured_git_identity_keys(env), sort_keys=True)} "
         f"agent_interval={env.get('AUTOMOAT_AGENT_INTERVAL', '300')} "
         f"agent_iterations={env.get('AUTOMOAT_AGENT_ITERATIONS', '0')} "
         f"relay_interval={env.get('AUTOMOAT_RELAY_INTERVAL', '3')} "
