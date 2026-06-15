@@ -76,6 +76,9 @@ class BridgeMvpCockpitTest(unittest.TestCase):
             },
         )
         self.assertIn("updated_at", payload)
+        self.assertEqual(payload["bridge_status_sequence"], 1)
+        self.assertIsInstance(payload["bridge_pid"], int)
+        self.assertTrue(payload["bridge_started_at"].endswith("Z"))
 
     def test_write_status_summarizes_bridge_failures(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -95,6 +98,45 @@ class BridgeMvpCockpitTest(unittest.TestCase):
         self.assertEqual(payload["bridge_health"]["reasons"], ["tunnel_url_unavailable"])
         self.assertEqual(payload["bridge_health"]["primary_reason"], "tunnel_url_unavailable")
         self.assertEqual(payload["bridge_health"]["label"], "Ngrok tunnel URL is unavailable")
+        self.assertEqual(payload["bridge_status_sequence"], 1)
+
+    def test_invalid_runtime_configuration_writes_inspectable_status(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            self.isolate_state(Path(tmp))
+
+            with patch.object(
+                self.bridge.subprocess,
+                "Popen",
+                side_effect=AssertionError("Popen should not run"),
+            ), patch.object(
+                self.bridge.shutil,
+                "which",
+                return_value="/usr/local/bin/ngrok",
+            ), patch.object(
+                sys,
+                "argv",
+                [
+                    "bridge_mvp_cockpit.py",
+                    "--port",
+                    "0",
+                    "--ngrok-web-port",
+                    "4041",
+                    "--interval",
+                    "4.5",
+                ],
+            ):
+                status = self.bridge.main()
+
+            payload = json.loads(self.bridge.BRIDGE_STATUS.read_text(encoding="utf-8"))
+
+        self.assertEqual(status, 2)
+        self.assertEqual(payload["status"], "error")
+        self.assertEqual(payload["error"], "--port must be greater than 0")
+        self.assertEqual(payload["local_read_only_url"], "http://127.0.0.1:0/")
+        self.assertEqual(payload["ngrok_api_url"], "http://127.0.0.1:4041/api/tunnels")
+        self.assertEqual(payload["interval"], 4.5)
+        self.assertEqual(payload["mode"], "read-only")
+        self.assertEqual(payload["bridge_health"]["primary_reason"], "bridge_error")
 
     def test_check_env_json_reports_safe_machine_readable_summary(self) -> None:
         output = io.StringIO()
@@ -218,6 +260,13 @@ class BridgeMvpCockpitTest(unittest.TestCase):
         self.assertIn("--web-addr", commands[1])
         self.assertIn("127.0.0.1:4041", commands[1])
         self.assertEqual(status_payload["status"], "tunnel-exited")
+        self.assertEqual(status_payload["local_read_only_url"], "http://127.0.0.1:4181/")
+        self.assertEqual(status_payload["ngrok_api_url"], "http://127.0.0.1:4041/api/tunnels")
+        self.assertEqual(status_payload["interval"], 5.0)
+        self.assertEqual(status_payload["mode"], "read-only")
+        self.assertEqual(status_payload["bridge_status_sequence"], 2)
+        self.assertEqual(status_payload["bridge_pid"], self.bridge.os.getpid())
+        self.assertTrue(status_payload["bridge_started_at"].endswith("Z"))
         self.assertEqual(status_payload["bridge_health"]["status"], "degraded")
         self.assertEqual(status_payload["bridge_health"]["primary_reason"], "tunnel_exited")
         self.assertEqual(status_payload["bridge_health"]["label"], "Ngrok tunnel exited")

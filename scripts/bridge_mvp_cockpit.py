@@ -36,6 +36,10 @@ def utc_now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+BRIDGE_STARTED_AT = utc_now()
+BRIDGE_STATUS_SEQUENCE = 0
+
+
 def bridge_health_label(reason: str | None) -> str:
     if reason is None:
         return "Live"
@@ -72,12 +76,40 @@ def bridge_health(payload: dict[str, object]) -> dict[str, object]:
     }
 
 
-def write_status(payload: dict[str, object]) -> None:
+def next_bridge_status_sequence() -> int:
+    global BRIDGE_STATUS_SEQUENCE
+    BRIDGE_STATUS_SEQUENCE += 1
+    return BRIDGE_STATUS_SEQUENCE
+
+
+def bridge_runtime_config(args: argparse.Namespace) -> dict[str, object]:
+    return {
+        "bridge_pid": os.getpid(),
+        "bridge_started_at": BRIDGE_STARTED_AT,
+        "local_read_only_url": f"http://127.0.0.1:{args.port}/",
+        "ngrok_api_url": f"http://127.0.0.1:{args.ngrok_web_port}/api/tunnels",
+        "interval": float(args.interval),
+        "mode": "read-only",
+    }
+
+
+def write_status(
+    payload: dict[str, object],
+    *,
+    runtime_config: dict[str, object] | None = None,
+) -> None:
     STATE_DIR.mkdir(parents=True, exist_ok=True)
-    payload["bridge_health"] = bridge_health(payload)
-    payload["updated_at"] = utc_now()
+    status_payload = dict(runtime_config or {})
+    status_payload.update(payload)
+    status_payload["bridge_pid"] = int(status_payload.get("bridge_pid") or os.getpid())
+    status_payload["bridge_started_at"] = str(
+        status_payload.get("bridge_started_at") or BRIDGE_STARTED_AT
+    )
+    status_payload["bridge_status_sequence"] = next_bridge_status_sequence()
+    status_payload["bridge_health"] = bridge_health(status_payload)
+    status_payload["updated_at"] = utc_now()
     with BRIDGE_STATUS.open("w", encoding="utf-8") as handle:
-        json.dump(payload, handle, indent=2)
+        json.dump(status_payload, handle, indent=2)
         handle.write("\n")
 
 
@@ -226,12 +258,13 @@ def main() -> int:
         return 2
 
     errors = validate_bridge_configuration(args)
+    runtime_config = bridge_runtime_config(args)
     if args.check_env:
         return 0 if not emit_bridge_preflight(args, output_format=args.format) else 2
     if errors:
         for error in errors:
             emit(error)
-        write_status({"status": "error", "error": errors[0]})
+        write_status({"status": "error", "error": errors[0]}, runtime_config=runtime_config)
         return 2
 
     ngrok = shutil.which("ngrok")
@@ -260,7 +293,14 @@ def main() -> int:
         emit("read-only bridge viewer did not start")
         if output:
             emit(output.strip())
-        write_status({"status": "error", "error": "read-only bridge viewer failed"})
+        write_status(
+            {
+                "status": "error",
+                "error": "read-only bridge viewer failed",
+                "viewer_pid": viewer.pid,
+            },
+            runtime_config=runtime_config,
+        )
         viewer.terminate()
         return 1
 
@@ -295,7 +335,15 @@ def main() -> int:
         emit("ngrok did not report a public URL")
         if output:
             emit(output.strip())
-        write_status({"status": "error", "error": "ngrok did not report a public URL"})
+        write_status(
+            {
+                "status": "error",
+                "error": "ngrok did not report a public URL",
+                "viewer_pid": viewer.pid,
+                "ngrok_pid": tunnel.pid,
+            },
+            runtime_config=runtime_config,
+        )
         tunnel.terminate()
         viewer.terminate()
         return 1
@@ -303,23 +351,26 @@ def main() -> int:
     payload = {
         "status": "running",
         "public_url": public_url,
-        "local_read_only_url": f"http://127.0.0.1:{args.port}/",
-        "ngrok_api_url": f"http://127.0.0.1:{args.ngrok_web_port}/api/tunnels",
         "viewer_pid": viewer.pid,
         "ngrok_pid": tunnel.pid,
-        "mode": "read-only",
     }
-    write_status(payload)
+    write_status(payload, runtime_config=runtime_config)
     emit(f"remote bridge ready: {public_url}")
     try:
         while True:
             if viewer.poll() is not None:
                 emit(f"read-only viewer exited status={viewer.returncode}")
-                write_status({**payload, "status": "viewer-exited", "viewer_status": viewer.returncode})
+                write_status(
+                    {**payload, "status": "viewer-exited", "viewer_status": viewer.returncode},
+                    runtime_config=runtime_config,
+                )
                 return int(viewer.returncode or 1)
             if tunnel.poll() is not None:
                 emit(f"ngrok exited status={tunnel.returncode}")
-                write_status({**payload, "status": "tunnel-exited", "ngrok_status": tunnel.returncode})
+                write_status(
+                    {**payload, "status": "tunnel-exited", "ngrok_status": tunnel.returncode},
+                    runtime_config=runtime_config,
+                )
                 return int(tunnel.returncode or 1)
             time.sleep(2)
     except KeyboardInterrupt:
