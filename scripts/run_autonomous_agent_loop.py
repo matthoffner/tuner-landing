@@ -89,7 +89,13 @@ DALLAS_RAW_CSV_DIFF_PATHSPEC = (
 )
 MAX_POLICY_DETAIL_SAMPLES = 5
 MAX_POLICY_DETAIL_CHARS = 240
+MAX_POLICY_LIST_ITEMS = 8
 URL_TOKEN_PATTERN = re.compile(r"https?://[^\s,]+", re.IGNORECASE)
+TOKEN_ASSIGNMENT_PATTERN = re.compile(
+    r"\b([A-Za-z0-9_-]*(?:token|secret|password|api[_-]?key|access[_-]?key)"
+    r"[A-Za-z0-9_-]*)=([^,\s;]+)",
+    re.IGNORECASE,
+)
 
 
 def utc_now() -> str:
@@ -415,10 +421,26 @@ def sanitized_policy_detail(text: str) -> str:
         return urlunsplit((parsed.scheme, netloc, parsed.path, "", ""))
 
     sanitized = URL_TOKEN_PATTERN.sub(sanitize_url, text)
+    sanitized = TOKEN_ASSIGNMENT_PATTERN.sub(r"\1=<redacted>", sanitized)
     sanitized = sanitized.replace("\r", " ").replace("\n", " ")
     if len(sanitized) > MAX_POLICY_DETAIL_CHARS:
         return sanitized[: MAX_POLICY_DETAIL_CHARS - 3] + "..."
     return sanitized
+
+
+def bounded_sanitized_policy_list(values: list[Any]) -> list[str]:
+    """Return a bounded list of secret-safe policy detail values."""
+    return [
+        sanitized_policy_detail(str(value))
+        for value in values[:MAX_POLICY_LIST_ITEMS]
+    ]
+
+
+def sanitized_policy_scalar(value: Any) -> Any:
+    """Return a secret-safe scalar policy value while preserving missing values."""
+    if value is None:
+        return None
+    return sanitized_policy_detail(str(value))
 
 
 def synthetic_dallas_row_samples(rows: list[str]) -> list[str]:
@@ -479,13 +501,12 @@ def autonomy_policy_snapshot() -> dict[str, Any]:
         readiness = {}
     if not isinstance(thin_groups, dict):
         thin_groups = {}
-    blockers = readiness.get("blockers", [])
-    if not isinstance(blockers, list):
-        blockers = []
+    raw_blockers = readiness.get("blockers", [])
+    blockers = raw_blockers if isinstance(raw_blockers, list) else []
     thin_group_count = sum(
         len(value) for value in thin_groups.values() if isinstance(value, list)
     )
-    thin_group_categories = sorted(
+    raw_thin_group_categories = sorted(
         key for key, value in thin_groups.items() if isinstance(value, list) and value
     )
     ready = (
@@ -507,12 +528,14 @@ def autonomy_policy_snapshot() -> dict[str, Any]:
         ),
         "decision_reason": decision_reason,
         "dallas_pipeline_ready": ready,
-        "readiness_status": readiness.get("status"),
+        "readiness_status": sanitized_policy_scalar(readiness.get("status")),
         "ready_for_next_import_records": readiness.get("ready_for_next_import_records"),
-        "readiness_blockers": blockers,
+        "readiness_blocker_count": len(blockers),
+        "readiness_blockers": bounded_sanitized_policy_list(blockers),
         "synthetic_example_local_dallas_appends_allowed": False,
         "thin_group_count": thin_group_count,
-        "thin_group_categories": thin_group_categories,
+        "thin_group_category_count": len(raw_thin_group_categories),
+        "thin_group_categories": bounded_sanitized_policy_list(raw_thin_group_categories),
         "policy": (
             "When Dallas readiness is already green, do not append another "
             "synthetic ELZ fixture row unless paired with a real product, "

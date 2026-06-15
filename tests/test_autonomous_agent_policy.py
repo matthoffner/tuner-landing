@@ -102,8 +102,53 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
         self.assertFalse(snapshot["dallas_pipeline_ready"])
         self.assertEqual(snapshot["readiness_status"], "blocked")
         self.assertFalse(snapshot["ready_for_next_import_records"])
+        self.assertEqual(snapshot["readiness_blocker_count"], 1)
         self.assertEqual(snapshot["readiness_blockers"], ["correction_ledger_incomplete"])
         self.assertEqual(snapshot["thin_group_count"], 0)
+
+    def test_policy_snapshot_sanitizes_bounded_artifact_details(self) -> None:
+        long_blocker = "blocked " + ("x" * 320)
+        blockers = [
+            "needs token=super-secret\nsecond line",
+            "see https://user:pass@example.local/dallas?token=secret#debug",
+            long_blocker,
+            "extra-1",
+            "extra-2",
+            "extra-3",
+            "extra-4",
+            "extra-5",
+            "extra-6",
+        ]
+        self.loop.import_pipeline_snapshot = lambda: {
+            "execution_readiness": {
+                "status": "blocked\napi_key=hidden",
+                "ready_for_next_import_records": False,
+                "blockers": blockers,
+            },
+            "coverage": {
+                "thin_groups": {
+                    "result_states\nsecret=value": ["cancelled"],
+                    "pattern_slices": ["late_reinspection"],
+                },
+            },
+        }
+
+        snapshot = self.loop.autonomy_policy_snapshot()
+        prompt = self.loop.build_iteration_prompt("base")
+
+        self.assertEqual(snapshot["readiness_blocker_count"], len(blockers))
+        self.assertEqual(len(snapshot["readiness_blockers"]), 8)
+        self.assertEqual(snapshot["thin_group_category_count"], 2)
+        self.assertNotIn("super-secret", prompt)
+        self.assertNotIn("user:pass", prompt)
+        self.assertNotIn("token=secret", prompt)
+        self.assertNotIn("api_key=hidden", prompt)
+        self.assertNotIn("secret=value", prompt)
+        self.assertNotIn("\nsecond line", prompt)
+        self.assertIn("token=<redacted>", snapshot["readiness_blockers"][0])
+        self.assertIn("https://example.local/dallas", snapshot["readiness_blockers"][1])
+        self.assertLessEqual(len(snapshot["readiness_blockers"][2]), 240)
+        self.assertNotIn("extra-6", snapshot["readiness_blockers"])
 
     def test_docs_and_status_files_do_not_make_synthetic_rows_productive(self) -> None:
         paths = [
