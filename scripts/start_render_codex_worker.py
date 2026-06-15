@@ -213,6 +213,15 @@ def relay_publisher_preflight_command(
     return [*relay_publisher_command(env), "--check-env", "--format", "json"]
 
 
+def autonomous_loop_runtime_config(
+    env: os._Environ[str] | dict[str, str],
+) -> dict[str, str]:
+    return {
+        "interval": env.get("AUTOMOAT_AGENT_INTERVAL", "300"),
+        "iterations": env.get("AUTOMOAT_AGENT_ITERATIONS", "0"),
+    }
+
+
 def env_has_any(env: os._Environ[str] | dict[str, str], names: tuple[str, ...]) -> bool:
     return any(env.get(name, "").strip() for name in names)
 
@@ -1677,19 +1686,21 @@ def start_publisher() -> subprocess.Popen[object]:
 
 def start_loop() -> subprocess.Popen[object]:
     workdir, _codex_home = configured_worker_paths(os.environ)
-    interval = os.environ.get("AUTOMOAT_AGENT_INTERVAL", "300")
-    iterations = os.environ.get("AUTOMOAT_AGENT_ITERATIONS", "0")
+    runtime_config = autonomous_loop_runtime_config(os.environ)
     command = [
         sys.executable,
         "scripts/run_autonomous_agent_loop.py",
         "--iterations",
-        iterations,
+        runtime_config["iterations"],
         "--interval",
-        interval,
+        runtime_config["interval"],
     ]
     process = subprocess.Popen(command, cwd=workdir, env=os.environ.copy())
     CHILDREN.append(process)
-    emit(f"started autonomous loop pid={process.pid}")
+    runtime_fields = " ".join(
+        f"loop_{key}={value}" for key, value in runtime_config.items()
+    )
+    emit(f"started autonomous loop pid={process.pid} {runtime_fields}")
     return process
 
 

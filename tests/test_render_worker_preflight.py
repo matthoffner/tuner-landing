@@ -2383,7 +2383,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                 self.worker.subprocess,
                 "Popen",
                 side_effect=[fake_publisher, fake_loop],
-            ) as popen, redirect_stdout(io.StringIO()):
+            ) as popen, redirect_stdout(io.StringIO()) as output:
                 publisher = self.worker.start_publisher()
                 loop = self.worker.start_loop()
 
@@ -2402,6 +2402,12 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                 "44",
             ],
         )
+        log_output = output.getvalue()
+        self.assertIn("started autonomous loop pid=404", log_output)
+        self.assertIn("loop_interval=44", log_output)
+        self.assertIn("loop_iterations=2", log_output)
+        self.assertNotIn("relay-token", log_output)
+        self.assertNotIn("https://automoat-cockpit-relay.example", log_output)
 
     def test_check_env_json_failure_does_not_print_invalid_url_values(self) -> None:
         env = {
