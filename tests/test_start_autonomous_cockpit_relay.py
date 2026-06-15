@@ -7,6 +7,7 @@ from argparse import Namespace
 from contextlib import redirect_stdout
 import importlib.util
 import io
+import json
 import os
 from pathlib import Path
 import sys
@@ -159,6 +160,114 @@ class StartAutonomousCockpitRelayTest(unittest.TestCase):
         self.assertIn("--relay-url must not include embedded credentials", output.getvalue())
         self.assertNotIn("relay-user", output.getvalue())
         self.assertNotIn("relay-pass", output.getvalue())
+
+    def test_check_env_json_reports_safe_machine_readable_summary(self) -> None:
+        output = io.StringIO()
+        env = {
+            "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example///",
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+        }
+        self.launcher.start_detached = lambda *args, **kwargs: self.fail("start_detached should not run")
+        self.launcher.publish_once = lambda *args, **kwargs: self.fail("publish_once should not run")
+
+        with patch.dict(os.environ, env, clear=True), patch.object(
+            sys,
+            "argv",
+            [
+                "start_autonomous_cockpit_relay.py",
+                "--check-env",
+                "--format",
+                "json",
+                "--interval",
+                "120",
+                "--publish-interval",
+                "5",
+                "--port",
+                "4182",
+                "--keep-legacy-bridge",
+                "--no-stop-existing",
+            ],
+        ), redirect_stdout(output):
+            status = self.launcher.main()
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(status, 0)
+        self.assertEqual(payload["status"], "passed")
+        self.assertEqual(payload["errors"], [])
+        self.assertEqual(
+            payload["config"]["relay_url"],
+            "https://automoat-cockpit-relay.example",
+        )
+        self.assertEqual(payload["config"]["local_port"], 4182)
+        self.assertEqual(payload["config"]["agent_interval"], 120.0)
+        self.assertEqual(payload["config"]["publish_interval"], 5.0)
+        self.assertTrue(payload["config"]["keep_legacy_bridge"])
+        self.assertFalse(payload["config"]["stop_existing"])
+        self.assertTrue(payload["config"]["relay_token_configured"])
+        self.assertNotIn("relay-token", output.getvalue())
+
+    def test_check_env_json_failure_groups_errors_without_printing_secrets(self) -> None:
+        output = io.StringIO()
+        env = {
+            "AUTOMOAT_RELAY_URL": "https://relay-user:relay-pass@automoat-cockpit-relay.example",
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+        }
+        self.launcher.start_detached = lambda *args, **kwargs: self.fail("start_detached should not run")
+        self.launcher.publish_once = lambda *args, **kwargs: self.fail("publish_once should not run")
+
+        with patch.dict(os.environ, env, clear=True), patch.object(
+            sys,
+            "argv",
+            [
+                "start_autonomous_cockpit_relay.py",
+                "--check-env",
+                "--format",
+                "json",
+                "--interval",
+                "0",
+            ],
+        ), redirect_stdout(output):
+            status = self.launcher.main()
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(status, 2)
+        self.assertEqual(payload["status"], "failed")
+        self.assertEqual(
+            payload["errors"],
+            [
+                "--relay-url must not include embedded credentials",
+                "--interval must be greater than 0",
+            ],
+        )
+        self.assertEqual(payload["diagnostics"]["error_count"], 2)
+        self.assertEqual(
+            payload["diagnostics"]["error_categories"],
+            ["invalid_relay_url", "invalid_runtime_config"],
+        )
+        self.assertTrue(payload["diagnostics"]["relay_url_configured"])
+        self.assertTrue(payload["diagnostics"]["relay_token_configured"])
+        self.assertNotIn("relay-token", output.getvalue())
+        self.assertNotIn("relay-user", output.getvalue())
+        self.assertNotIn("relay-pass", output.getvalue())
+
+    def test_json_format_is_only_supported_for_check_env(self) -> None:
+        stderr = io.StringIO()
+        env = {
+            "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+        }
+        self.launcher.start_detached = lambda *args, **kwargs: self.fail("start_detached should not run")
+        self.launcher.publish_once = lambda *args, **kwargs: self.fail("publish_once should not run")
+
+        with patch.dict(os.environ, env, clear=True), patch.object(
+            sys,
+            "argv",
+            ["start_autonomous_cockpit_relay.py", "--format", "json"],
+        ), patch("sys.stderr", stderr):
+            status = self.launcher.main()
+
+        self.assertEqual(status, 2)
+        self.assertIn("--format json is only supported with --check-env", stderr.getvalue())
 
 
 if __name__ == "__main__":

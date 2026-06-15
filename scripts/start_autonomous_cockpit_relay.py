@@ -4,12 +4,14 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import signal
 import subprocess
 import sys
 import time
 from pathlib import Path
+from typing import Any
 from urllib.parse import urlparse
 from urllib.request import urlopen
 
@@ -125,6 +127,12 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="validate local relay launcher configuration without starting processes",
     )
+    parser.add_argument(
+        "--format",
+        choices=("text", "json"),
+        default="text",
+        help="output format for --check-env preflight results",
+    )
     return parser.parse_args()
 
 
@@ -165,8 +173,56 @@ def validate_startup_configuration(args: argparse.Namespace) -> list[str]:
     return errors
 
 
-def emit_startup_preflight(args: argparse.Namespace) -> list[str]:
+def startup_preflight_error_category(error: str) -> str:
+    if error.endswith("is required"):
+        return "missing_required"
+    if error.startswith("--relay-url"):
+        return "invalid_relay_url"
+    if error.startswith("--interval") or error.startswith("--publish-interval") or error.startswith("--port"):
+        return "invalid_runtime_config"
+    return "invalid_configuration"
+
+
+def startup_preflight_error_categories(errors: list[str]) -> list[str]:
+    return sorted({startup_preflight_error_category(error) for error in errors})
+
+
+def startup_preflight_summary(args: argparse.Namespace, errors: list[str]) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "status": "failed" if errors else "passed",
+        "errors": errors,
+    }
+    if errors:
+        payload["diagnostics"] = {
+            "error_count": len(errors),
+            "error_categories": startup_preflight_error_categories(errors),
+            "relay_url_configured": bool(str(args.relay_url).strip()),
+            "relay_token_configured": bool(str(args.token).strip()),
+        }
+        return payload
+
+    payload["config"] = {
+        "relay_url": normalized_relay_url(str(args.relay_url)),
+        "local_port": int(args.port),
+        "agent_interval": float(args.interval),
+        "publish_interval": float(args.publish_interval),
+        "keep_legacy_bridge": bool(args.keep_legacy_bridge),
+        "stop_existing": not bool(args.no_stop_existing),
+        "relay_token_configured": bool(str(args.token).strip()),
+    }
+    return payload
+
+
+def emit_startup_preflight(
+    args: argparse.Namespace,
+    *,
+    output_format: str = "text",
+) -> list[str]:
     errors = validate_startup_configuration(args)
+    if output_format == "json":
+        print(json.dumps(startup_preflight_summary(args, errors), sort_keys=True), flush=True)
+        return errors
+
     if errors:
         print("autonomous relay startup preflight failed")
         for error in errors:
@@ -186,9 +242,13 @@ def emit_startup_preflight(args: argparse.Namespace) -> list[str]:
 
 def main() -> int:
     args = parse_args()
+    if args.format == "json" and not args.check_env:
+        print("--format json is only supported with --check-env", file=sys.stderr)
+        return 2
+
     errors = validate_startup_configuration(args)
     if args.check_env:
-        return 0 if not emit_startup_preflight(args) else 2
+        return 0 if not emit_startup_preflight(args, output_format=args.format) else 2
     if errors:
         for error in errors:
             print(error, file=sys.stderr)
