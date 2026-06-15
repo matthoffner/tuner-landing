@@ -445,9 +445,12 @@ def run_publish_loop(args: argparse.Namespace) -> int:
 
 def validate_publisher_configuration(args: argparse.Namespace) -> list[str]:
     errors: list[str] = []
-    relay_url = str(args.relay_url).strip()
+    relay_url_value = str(args.relay_url)
+    relay_url = relay_url_value.strip()
     if not relay_url:
         errors.append("AUTOMOAT_RELAY_URL or --relay-url is required")
+    elif relay_url_value != relay_url:
+        errors.append("--relay-url must not include leading or trailing whitespace")
     elif not relay_url.startswith(("http://", "https://")):
         errors.append("--relay-url must start with http:// or https://")
     else:
@@ -459,8 +462,17 @@ def validate_publisher_configuration(args: argparse.Namespace) -> list[str]:
         elif parsed_relay_url.query or parsed_relay_url.fragment:
             errors.append("--relay-url must not include query strings or fragments")
 
-    if not str(args.token).strip():
+    token_value = str(args.token)
+    token = token_value.strip()
+    if not token:
         errors.append("AUTOMOAT_RELAY_TOKEN or --token is required")
+    elif any(
+        character in "\r\n" or ord(character) < 32 or ord(character) == 127
+        for character in token_value
+    ):
+        errors.append("--token must be a single-line value without control characters")
+    elif token_value != token:
+        errors.append("--token must not include leading or trailing whitespace")
     if args.interval <= 0:
         errors.append("--interval must be greater than 0")
     elif args.interval > PUBLISHER_CONFIG_LIMITS["interval"]:

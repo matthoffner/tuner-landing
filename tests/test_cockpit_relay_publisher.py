@@ -420,6 +420,70 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertIn("--relay-url must not include query strings or fragments", output.getvalue())
         self.assertNotIn("relay-secret", output.getvalue())
 
+    def test_check_env_rejects_relay_url_whitespace_before_publish(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            env = {
+                "AUTOMOAT_RELAY_URL": " https://automoat-cockpit-relay.example\n",
+                "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            }
+            output = io.StringIO()
+            self.publisher.publish_once = lambda _args: self.fail("publish_once should not run")
+            with patch.dict(os.environ, env, clear=True), patch.object(
+                sys,
+                "argv",
+                [
+                    "publish_cockpit_to_relay.py",
+                    "--check-env",
+                    "--publisher-log",
+                    str(tmp_path / "publisher.log"),
+                ],
+            ), redirect_stdout(output):
+                status = self.publisher.main()
+
+        self.assertEqual(status, 2)
+        self.assertIn("publisher environment preflight failed", output.getvalue())
+        self.assertIn(
+            "--relay-url must not include leading or trailing whitespace",
+            output.getvalue(),
+        )
+
+    def test_check_env_rejects_bad_relay_token_before_publish(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            cases = {
+                " relay-token": "--token must not include leading or trailing whitespace",
+                "relay-token\nsecond-line": (
+                    "--token must be a single-line value without control characters"
+                ),
+            }
+            for token, expected_error in cases.items():
+                with self.subTest(token=repr(token)):
+                    env = {
+                        "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+                        "AUTOMOAT_RELAY_TOKEN": token,
+                    }
+                    output = io.StringIO()
+                    self.publisher.publish_once = (
+                        lambda _args: self.fail("publish_once should not run")
+                    )
+                    with patch.dict(os.environ, env, clear=True), patch.object(
+                        sys,
+                        "argv",
+                        [
+                            "publish_cockpit_to_relay.py",
+                            "--check-env",
+                            "--publisher-log",
+                            str(tmp_path / "publisher.log"),
+                        ],
+                    ), redirect_stdout(output):
+                        status = self.publisher.main()
+
+                    self.assertEqual(status, 2)
+                    self.assertIn("publisher environment preflight failed", output.getvalue())
+                    self.assertIn(expected_error, output.getvalue())
+                    self.assertNotIn("relay-token", output.getvalue())
+
     def test_publish_once_logs_source_status_freshness(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             publisher_log = Path(tmp) / "publisher.log"
