@@ -1192,6 +1192,54 @@ class RenderCockpitRelayTest(unittest.TestCase):
                             "append_preflight_blockers": [
                                 "contractor export token=handoff-secret",
                             ],
+                            "append_sequence": [
+                                {
+                                    "file_name": "permits.csv",
+                                    "status": "ready",
+                                    "file_path": (
+                                        "generated/raw/dallas-electrician-import-sample-v2/"
+                                        "permits.csv"
+                                    ),
+                                    "csv_row_number": "538",
+                                    "template_line": (
+                                        "ELZ-2026-0737 token=permit-line-secret"
+                                    ),
+                                },
+                                {
+                                    "file_name": "inspections.csv",
+                                    "status": "ready",
+                                    "file_path": (
+                                        "generated/raw/dallas-electrician-import-sample-v2/"
+                                        "inspections.csv"
+                                    ),
+                                    "csv_row_number": 1085,
+                                    "template_line": (
+                                        "ELZ-2026-0737 final "
+                                        "https://relay.example/inspect?"
+                                        "token=inspection-line-secret#debug"
+                                    ),
+                                },
+                                {
+                                    "file_name": "contractors.csv",
+                                    "status": "unchanged",
+                                    "file_path": "generated/raw/contractors.csv",
+                                    "csv_row_number": "3",
+                                },
+                                {
+                                    "file_name": "rule_documents.csv",
+                                    "status": "unchanged",
+                                    "file_path": "generated/raw/rule_documents.csv",
+                                    "csv_row_number": 4,
+                                },
+                                {
+                                    "file_name": "extra.csv",
+                                    "status": "omitted",
+                                    "file_path": "generated/raw/extra.csv",
+                                    "csv_row_number": 5,
+                                    "template_line": "extra token=extra-line-secret",
+                                },
+                                "ignored",
+                            ],
                             "ready_for_append": False,
                             "raw_dir": (
                                 "generated/raw/dallas-electrician-import-sample-v2"
@@ -1272,6 +1320,44 @@ class RenderCockpitRelayTest(unittest.TestCase):
                     "contractor export token=[redacted]",
                 ],
                 "append_preflight_blockers_count": 1,
+                "append_sequence": [
+                    {
+                        "file_name": "permits.csv",
+                        "status": "ready",
+                        "file_path": (
+                            "generated/raw/dallas-electrician-import-sample-v2/"
+                            "permits.csv"
+                        ),
+                        "template_line": "ELZ-2026-0737 token=[redacted]",
+                        "csv_row_number": 538,
+                    },
+                    {
+                        "file_name": "inspections.csv",
+                        "status": "ready",
+                        "file_path": (
+                            "generated/raw/dallas-electrician-import-sample-v2/"
+                            "inspections.csv"
+                        ),
+                        "template_line": (
+                            "ELZ-2026-0737 final "
+                            "https://relay.example/inspect?[redacted]#[redacted]"
+                        ),
+                        "csv_row_number": 1085,
+                    },
+                    {
+                        "file_name": "contractors.csv",
+                        "status": "unchanged",
+                        "file_path": "generated/raw/contractors.csv",
+                        "csv_row_number": 3,
+                    },
+                    {
+                        "file_name": "rule_documents.csv",
+                        "status": "unchanged",
+                        "file_path": "generated/raw/rule_documents.csv",
+                        "csv_row_number": 4,
+                    },
+                ],
+                "append_sequence_count": 5,
             },
             "readiness_blockers": [
                 "coverage has thin group token=[redacted]",
@@ -1314,6 +1400,10 @@ class RenderCockpitRelayTest(unittest.TestCase):
         self.assertNotIn("check-secret", health_text)
         self.assertNotIn("command-secret", health_text)
         self.assertNotIn("url-secret", health_text)
+        self.assertNotIn("permit-line-secret", health_text)
+        self.assertNotIn("inspection-line-secret", health_text)
+        self.assertNotIn("extra-line-secret", health_text)
+        self.assertNotIn("extra.csv", health_text)
 
     def test_status_and_health_promote_autonomy_policy_attention(self) -> None:
         self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"

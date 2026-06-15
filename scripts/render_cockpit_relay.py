@@ -27,6 +27,7 @@ DEFAULT_MAX_LOG_CHARS = 160 * 1024
 DEFAULT_MAX_STATUS_BYTES = 128 * 1024
 DEFAULT_MAX_PUBLISHER_BYTES = 64 * 1024
 DEFAULT_STALE_AFTER_SECONDS = 120
+IMPORT_APPEND_SEQUENCE_SAMPLE_LIMIT = 4
 MAX_RELAY_TOKEN_CHARS = 8192
 MAX_RUNTIME_CONFIG_VALUE_CHARS = 64
 RELAY_CONFIG_LIMITS = {
@@ -733,6 +734,34 @@ def source_import_handoff_summary(source_summary: dict[str, Any]) -> dict[str, A
         ]
         summary["append_preflight_blockers"] = compact_blockers
         summary["append_preflight_blockers_count"] = len(blockers)
+
+    append_sequence = handoff.get("append_sequence")
+    if isinstance(append_sequence, list):
+        compact_sequence: list[dict[str, Any]] = []
+        for item in append_sequence:
+            if not isinstance(item, dict):
+                continue
+            compact_item: dict[str, Any] = {}
+            for key in ("file_name", "status", "file_path", "template_line"):
+                compact_value = compact_policy_detail(item.get(key), max_length=240)
+                if compact_value is not None:
+                    compact_item[key] = compact_value
+            row_number = compact_int(item.get("csv_row_number"))
+            if row_number is not None:
+                compact_item["csv_row_number"] = row_number
+            if compact_item:
+                compact_sequence.append(compact_item)
+            if len(compact_sequence) >= IMPORT_APPEND_SEQUENCE_SAMPLE_LIMIT:
+                break
+        if compact_sequence:
+            summary["append_sequence"] = compact_sequence
+        source_sequence_count = compact_int(handoff.get("append_sequence_count"))
+        if source_sequence_count is not None:
+            summary["append_sequence_count"] = source_sequence_count
+        else:
+            summary["append_sequence_count"] = len(
+                [item for item in append_sequence if isinstance(item, dict)]
+            )
 
     summary["available"] = any(key != "available" for key in summary)
     return summary
