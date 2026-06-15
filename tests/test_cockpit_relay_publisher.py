@@ -890,7 +890,11 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             self.publisher.build_payload = lambda _args: payload
             self.publisher.post_payload = lambda _args, _body: {
                 "ok": False,
-                "error": "relay_backpressure\ninternal detail trimmed",
+                "error": (
+                    "relay_backpressure\n"
+                    "callback=https://relay.example/fail?token=relay-secret#debug "
+                    "access_token=payload-secret"
+                ),
             }
 
             result = self.publisher.publish_once_result(args)
@@ -901,10 +905,17 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             {"published": False, "source_status_stale": False},
         )
         self.assertIn("publish failed relay_ok=False", log_text)
-        self.assertIn("reason=relay_backpressure internal detail trimmed", log_text)
+        self.assertIn(
+            "reason=relay_backpressure "
+            "callback=https://relay.example/fail?[redacted]#[redacted] "
+            "access_token=[redacted]",
+            log_text,
+        )
         self.assertIn("source_status=running", log_text)
         self.assertIn("source_loop_running=True", log_text)
         self.assertIn("source_status_stale=False", log_text)
+        self.assertNotIn("relay-secret", log_text)
+        self.assertNotIn("payload-secret", log_text)
         self.assertNotIn("published relay snapshot ok=False", log_text)
 
     def test_publish_once_logs_http_error_without_response_body(self) -> None:

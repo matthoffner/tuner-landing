@@ -472,7 +472,7 @@ def source_status_log_fields(payload: dict[str, Any]) -> dict[str, Any]:
 
 def relay_response_failure_reason(response: dict[str, Any]) -> str:
     reason = response.get("error") or response.get("message") or "relay_response_not_ok"
-    return str(reason).replace("\r", " ").replace("\n", " ")[:200]
+    return sanitize_error_for_log(RuntimeError(str(reason)))[:200]
 
 
 def format_number(value: float | int) -> str:
