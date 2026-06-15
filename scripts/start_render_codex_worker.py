@@ -1298,7 +1298,15 @@ def run_relay_publisher_preflight_command(command: list[str], *, cwd: Path) -> s
     if output:
         emit(f"  <stdout captured: {output_size} bytes>")
 
-    validate_publisher_preflight_output(output)
+    try:
+        validate_publisher_preflight_output(output)
+    except RuntimeError as exc:
+        if result.returncode != 0 and "did not return valid JSON" in str(exc):
+            raise RuntimeError(
+                f"{printable} failed with status {result.returncode}; "
+                "relay publisher preflight did not return valid JSON"
+            ) from exc
+        raise
     if result.returncode != 0:
         raise RuntimeError(f"{printable} failed with status {result.returncode}")
     return output

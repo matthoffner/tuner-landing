@@ -3056,6 +3056,46 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                 with self.assertRaisesRegex(RuntimeError, "did not return valid JSON"):
                     self.worker.check_relay_publisher_preflight()
 
+    def test_check_relay_publisher_preflight_reports_non_json_failure_status(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workdir = Path(temp_dir) / "runtime-repo"
+            workdir.mkdir()
+            env = {
+                "AUTOMOAT_WORKDIR": str(workdir),
+                "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+                "AUTOMOAT_RELAY_TOKEN": "relay-token",
+                "AUTOMOAT_BRIDGE_STATUS_FILE": str(
+                    workdir / ".automoat" / "state" / "bridge-status.json"
+                ),
+            }
+            output = io.StringIO()
+
+            with patch.dict(self.worker.os.environ, env, clear=True), patch.object(
+                self.worker.subprocess,
+                "run",
+                return_value=self.worker.subprocess.CompletedProcess(
+                    args=self.worker.relay_publisher_preflight_command(env),
+                    returncode=2,
+                    stdout="publisher argparse usage with token=relay-secret",
+                ),
+            ), redirect_stdout(output):
+                with self.assertRaisesRegex(
+                    RuntimeError,
+                    "failed with status 2; relay publisher preflight did not return valid JSON",
+                ) as context:
+                    self.worker.check_relay_publisher_preflight()
+
+        self.assertIn("<stdout captured:", output.getvalue())
+        self.assertIn(
+            "--bridge-status-file .automoat/state/bridge-status.json",
+            str(context.exception),
+        )
+        self.assertNotIn("relay-secret", str(context.exception))
+        self.assertNotIn("token=", str(context.exception))
+        self.assertNotIn(str(workdir), str(context.exception))
+
     def test_check_relay_publisher_preflight_rejects_passed_json_with_errors(
         self,
     ) -> None:
