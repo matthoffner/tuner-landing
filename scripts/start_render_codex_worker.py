@@ -54,6 +54,7 @@ CODEX_CONFIG_ENV_DEFAULTS = {
 }
 MAX_CODEX_CONFIG_VALUE_CHARS = 120
 MAX_SECRET_VALUE_CHARS = 8192
+MAX_RUNTIME_CONFIG_VALUE_CHARS = 64
 RUNTIME_CONFIG_LIMITS = {
     "AUTOMOAT_AGENT_INTERVAL": 3600,
     "AUTOMOAT_AGENT_ITERATIONS": 1000,
@@ -281,6 +282,9 @@ def validated_runtime_env_value(
         for character in value
     ):
         errors.append(f"{name} must be a single-line runtime value without control characters")
+        return None
+    if len(value) > MAX_RUNTIME_CONFIG_VALUE_CHARS:
+        errors.append(f"{name} must be {MAX_RUNTIME_CONFIG_VALUE_CHARS} characters or fewer")
         return None
     return value
 

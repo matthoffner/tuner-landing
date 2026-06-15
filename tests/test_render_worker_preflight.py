@@ -397,6 +397,80 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         )
         self.assertNotIn(" relay-token", output.getvalue())
 
+    def test_rejects_oversized_runtime_knobs_before_numeric_parsing(self) -> None:
+        oversized_value = "9" * (self.worker.MAX_RUNTIME_CONFIG_VALUE_CHARS + 1)
+
+        errors = self.worker.validate_worker_environment(
+            {
+                "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+                "AUTOMOAT_RELAY_TOKEN": "relay-token",
+                "GITHUB_TOKEN": "github-token",
+                "CODEX_ACCESS_TOKEN": "codex-token",
+                "AUTOMOAT_RELAY_INTERVAL": oversized_value,
+                "AUTOMOAT_AGENT_INTERVAL": oversized_value,
+            },
+            found_command,
+        )
+
+        self.assertEqual(
+            errors,
+            [
+                (
+                    "AUTOMOAT_RELAY_INTERVAL must be "
+                    f"{self.worker.MAX_RUNTIME_CONFIG_VALUE_CHARS} characters or fewer"
+                ),
+                (
+                    "AUTOMOAT_AGENT_INTERVAL must be "
+                    f"{self.worker.MAX_RUNTIME_CONFIG_VALUE_CHARS} characters or fewer"
+                ),
+            ],
+        )
+
+    def test_json_preflight_routes_oversized_runtime_knob_without_echoing_value(self) -> None:
+        oversized_value = "1234567890" * 7
+        output = io.StringIO()
+
+        with redirect_stdout(output):
+            errors = self.worker.emit_environment_preflight(
+                {
+                    "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+                    "AUTOMOAT_RELAY_TOKEN": "relay-token",
+                    "GITHUB_TOKEN": "github-token",
+                    "CODEX_ACCESS_TOKEN": "codex-token",
+                    "AUTOMOAT_RELAY_INTERVAL": oversized_value,
+                },
+                found_command,
+                output_format="json",
+            )
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(
+            errors,
+            [
+                (
+                    "AUTOMOAT_RELAY_INTERVAL must be "
+                    f"{self.worker.MAX_RUNTIME_CONFIG_VALUE_CHARS} characters or fewer"
+                )
+            ],
+        )
+        self.assertEqual(payload["status"], "failed")
+        self.assertEqual(
+            payload["diagnostics"]["error_categories"],
+            ["invalid_runtime_config"],
+        )
+        self.assertEqual(
+            payload["diagnostics"]["failed_configuration_keys"],
+            ["AUTOMOAT_RELAY_INTERVAL"],
+        )
+        self.assertEqual(
+            payload["diagnostics"]["runtime_configured_keys"],
+            ["AUTOMOAT_RELAY_INTERVAL"],
+        )
+        self.assertNotIn(oversized_value, output.getvalue())
+        self.assertNotIn("relay-token", output.getvalue())
+        self.assertNotIn("github-token", output.getvalue())
+        self.assertNotIn("codex-token", output.getvalue())
+
     def test_accepts_runtime_knobs_at_documented_worker_limits(self) -> None:
         limits = self.worker.RUNTIME_CONFIG_LIMITS
 
