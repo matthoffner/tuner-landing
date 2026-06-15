@@ -525,6 +525,8 @@ def validate_secret_safe_http_url(
         errors.append(f"{name} must include a host")
     elif parsed_value.username or parsed_value.password:
         errors.append(f"{name} must not include embedded credentials")
+    elif parsed_value.params:
+        errors.append(f"{name} must not include path parameters")
     elif parsed_value.query or parsed_value.fragment:
         errors.append(f"{name} must not include query strings or fragments")
     elif require_no_path and parsed_value.path.strip("/"):

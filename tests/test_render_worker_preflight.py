@@ -564,6 +564,26 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             ],
         )
 
+    def test_rejects_urls_with_path_parameters_before_startup(self) -> None:
+        errors = self.worker.validate_worker_environment(
+            {
+                "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example/;debug",
+                "AUTOMOAT_RELAY_TOKEN": "relay-token",
+                "AUTOMOAT_GIT_REPO": "https://github.com/example/private.git;branch=main",
+                "GITHUB_TOKEN": "github-token",
+                "CODEX_ACCESS_TOKEN": "codex-token",
+            },
+            found_command,
+        )
+
+        self.assertEqual(
+            errors,
+            [
+                "AUTOMOAT_RELAY_URL must not include path parameters",
+                "AUTOMOAT_GIT_REPO must not include path parameters",
+            ],
+        )
+
     def test_rejects_urls_with_empty_or_zero_ports_before_startup(self) -> None:
         errors = self.worker.validate_worker_environment(
             {
