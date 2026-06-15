@@ -28,6 +28,15 @@ PUBLISHER_LOG = ROOT / ".automoat" / "logs" / "cockpit-relay-publisher.log"
 DEFAULT_MAX_CONSECUTIVE_FAILURES = 3
 DEFAULT_MAX_CONSECUTIVE_STALE_STATUSES = 0
 DEFAULT_STATUS_STALE_AFTER_SECONDS = 660
+PUBLISHER_CONFIG_LIMITS = {
+    "interval": 60,
+    "timeout": 60,
+    "tail_lines": 2000,
+    "max_log_bytes": 1024 * 1024,
+    "max_consecutive_failures": 100,
+    "max_consecutive_stale_statuses": 100,
+    "status_stale_after_seconds": 3600,
+}
 URL_TEXT_PATTERN = re.compile(r"https?://[^\s'\"<>]+")
 BEARER_SECRET_PATTERN = re.compile(
     r"\b(authorization\s*[:=]\s*bearer)\s+[^\s,;]+",
@@ -267,6 +276,11 @@ def relay_response_failure_reason(response: dict[str, Any]) -> str:
     return str(reason).replace("\r", " ").replace("\n", " ")[:200]
 
 
+def format_number(value: float | int) -> str:
+    parsed = float(value)
+    return str(int(parsed)) if parsed.is_integer() else str(parsed)
+
+
 def http_error_summary(exc: HTTPError) -> dict[str, Any]:
     try:
         body_bytes = len(exc.read())
@@ -449,20 +463,63 @@ def validate_publisher_configuration(args: argparse.Namespace) -> list[str]:
         errors.append("AUTOMOAT_RELAY_TOKEN or --token is required")
     if args.interval <= 0:
         errors.append("--interval must be greater than 0")
+    elif args.interval > PUBLISHER_CONFIG_LIMITS["interval"]:
+        errors.append(
+            "--interval must be less than or equal to "
+            f"{format_number(PUBLISHER_CONFIG_LIMITS['interval'])}"
+        )
     if args.timeout <= 0:
         errors.append("--timeout must be greater than 0")
+    elif args.timeout > PUBLISHER_CONFIG_LIMITS["timeout"]:
+        errors.append(
+            "--timeout must be less than or equal to "
+            f"{format_number(PUBLISHER_CONFIG_LIMITS['timeout'])}"
+        )
     if args.tail_lines <= 0:
         errors.append("--tail-lines must be greater than 0")
+    elif args.tail_lines > PUBLISHER_CONFIG_LIMITS["tail_lines"]:
+        errors.append(
+            f"--tail-lines must be less than or equal to {PUBLISHER_CONFIG_LIMITS['tail_lines']}"
+        )
     if args.max_log_bytes <= 0:
         errors.append("--max-log-bytes must be greater than 0")
+    elif args.max_log_bytes > PUBLISHER_CONFIG_LIMITS["max_log_bytes"]:
+        errors.append(
+            "--max-log-bytes must be less than or equal to "
+            f"{PUBLISHER_CONFIG_LIMITS['max_log_bytes']}"
+        )
     if args.max_consecutive_failures < 0:
         errors.append("--max-consecutive-failures must be greater than or equal to 0")
+    elif (
+        args.max_consecutive_failures
+        > PUBLISHER_CONFIG_LIMITS["max_consecutive_failures"]
+    ):
+        errors.append(
+            "--max-consecutive-failures must be less than or equal to "
+            f"{PUBLISHER_CONFIG_LIMITS['max_consecutive_failures']}"
+        )
     if args.max_consecutive_stale_statuses < 0:
         errors.append(
             "--max-consecutive-stale-statuses must be greater than or equal to 0"
         )
+    elif (
+        args.max_consecutive_stale_statuses
+        > PUBLISHER_CONFIG_LIMITS["max_consecutive_stale_statuses"]
+    ):
+        errors.append(
+            "--max-consecutive-stale-statuses must be less than or equal to "
+            f"{PUBLISHER_CONFIG_LIMITS['max_consecutive_stale_statuses']}"
+        )
     if args.status_stale_after_seconds <= 0:
         errors.append("--status-stale-after-seconds must be greater than 0")
+    elif (
+        args.status_stale_after_seconds
+        > PUBLISHER_CONFIG_LIMITS["status_stale_after_seconds"]
+    ):
+        errors.append(
+            "--status-stale-after-seconds must be less than or equal to "
+            f"{PUBLISHER_CONFIG_LIMITS['status_stale_after_seconds']}"
+        )
 
     configured_file_args = {
         "--status-file": args.status_file,
@@ -496,7 +553,8 @@ def emit_publisher_preflight(args: argparse.Namespace) -> list[str]:
         f"max_log_bytes={args.max_log_bytes} "
         f"status_stale_after_seconds={args.status_stale_after_seconds} "
         f"max_consecutive_failures={args.max_consecutive_failures} "
-        f"max_consecutive_stale_statuses={args.max_consecutive_stale_statuses}"
+        f"max_consecutive_stale_statuses={args.max_consecutive_stale_statuses} "
+        f"runtime_limits={json.dumps(PUBLISHER_CONFIG_LIMITS, sort_keys=True)}"
     )
     return []
 

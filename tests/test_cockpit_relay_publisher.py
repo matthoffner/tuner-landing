@@ -221,6 +221,70 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertIn("--status-stale-after-seconds must be greater than 0", errors)
         self.assertIn("--publisher-log must be a file path, not a directory", errors)
 
+    def test_validate_publisher_configuration_accepts_documented_runtime_limits(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            limits = self.publisher.PUBLISHER_CONFIG_LIMITS
+            args = Namespace(
+                relay_url="https://automoat-cockpit-relay.example",
+                token="relay-token",
+                interval=limits["interval"],
+                timeout=limits["timeout"],
+                tail_lines=limits["tail_lines"],
+                max_log_bytes=limits["max_log_bytes"],
+                max_consecutive_failures=limits["max_consecutive_failures"],
+                max_consecutive_stale_statuses=limits[
+                    "max_consecutive_stale_statuses"
+                ],
+                status_stale_after_seconds=limits["status_stale_after_seconds"],
+                status_file=tmp_path / "status.json",
+                pid_file=tmp_path / "loop.pid",
+                log_file=tmp_path / "loop.log",
+                publisher_log=tmp_path / "publisher.log",
+            )
+
+            errors = self.publisher.validate_publisher_configuration(args)
+
+        self.assertEqual(errors, [])
+
+    def test_validate_publisher_configuration_rejects_oversized_runtime_settings(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            limits = self.publisher.PUBLISHER_CONFIG_LIMITS
+            args = Namespace(
+                relay_url="https://automoat-cockpit-relay.example",
+                token="relay-token",
+                interval=limits["interval"] + 1,
+                timeout=limits["timeout"] + 1,
+                tail_lines=limits["tail_lines"] + 1,
+                max_log_bytes=limits["max_log_bytes"] + 1,
+                max_consecutive_failures=limits["max_consecutive_failures"] + 1,
+                max_consecutive_stale_statuses=limits[
+                    "max_consecutive_stale_statuses"
+                ]
+                + 1,
+                status_stale_after_seconds=limits["status_stale_after_seconds"] + 1,
+                status_file=tmp_path / "status.json",
+                pid_file=tmp_path / "loop.pid",
+                log_file=tmp_path / "loop.log",
+                publisher_log=tmp_path / "publisher.log",
+            )
+
+            errors = self.publisher.validate_publisher_configuration(args)
+
+        self.assertEqual(
+            errors,
+            [
+                "--interval must be less than or equal to 60",
+                "--timeout must be less than or equal to 60",
+                "--tail-lines must be less than or equal to 2000",
+                "--max-log-bytes must be less than or equal to 1048576",
+                "--max-consecutive-failures must be less than or equal to 100",
+                "--max-consecutive-stale-statuses must be less than or equal to 100",
+                "--status-stale-after-seconds must be less than or equal to 3600",
+            ],
+        )
+
     def test_check_env_validates_without_publishing(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
@@ -251,6 +315,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertEqual(status, 0)
         self.assertIn("publisher environment preflight passed", output.getvalue())
         self.assertIn("relay_url=https://automoat-cockpit-relay.example", output.getvalue())
+        self.assertIn("runtime_limits=", output.getvalue())
 
     def test_check_env_rejects_malformed_relay_url_before_publish(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
