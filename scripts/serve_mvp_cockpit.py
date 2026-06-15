@@ -322,6 +322,11 @@ def cockpit_summary(status: dict[str, object]) -> dict[str, object]:
         if policy_failure
         else []
     )
+    policy_synthetic_row_samples = (
+        as_string_list(policy_failure.get("synthetic_row_samples"))[:5]
+        if policy_failure
+        else []
+    )
     thin_group_categories = as_string_list(autonomy_policy.get("thin_group_categories"))
     thin_group_count = autonomy_policy.get("thin_group_count")
     if not isinstance(thin_group_count, int):
@@ -371,6 +376,7 @@ def cockpit_summary(status: dict[str, object]) -> dict[str, object]:
         "policy_reason": autonomy_policy.get("decision_reason"),
         "policy_failure_reason": policy_failure_reason,
         "policy_raw_dallas_csv_changed_paths": policy_raw_csv_paths,
+        "policy_synthetic_row_samples": policy_synthetic_row_samples,
         "dallas_pipeline_ready": autonomy_policy.get("dallas_pipeline_ready"),
         "thin_group_count": thin_group_count,
         "thin_group_categories": thin_group_categories,
@@ -806,7 +812,18 @@ def cockpit_html() -> str:
         attention.textContent = cockpit.operator_attention
           ? cockpit.operator_attention_label || reasons.join(", ") || "Required"
           : cockpit.operator_attention_label || "Clear";
-        attention.title = reasons.join(", ");
+        const policySamples = Array.isArray(cockpit.policy_synthetic_row_samples)
+          ? cockpit.policy_synthetic_row_samples
+          : [];
+        const policyRawPaths = Array.isArray(cockpit.policy_raw_dallas_csv_changed_paths)
+          ? cockpit.policy_raw_dallas_csv_changed_paths
+          : [];
+        attention.title = [
+          reasons.join(", "),
+          cockpit.policy_failure_reason ? `policy: ${{cockpit.policy_failure_reason}}` : "",
+          policyRawPaths.length ? `raw csv: ${{policyRawPaths.join(", ")}}` : "",
+          policySamples.length ? `synthetic rows: ${{policySamples.join(" | ")}}` : "",
+        ].filter(Boolean).join(" | ");
         bridgeHealth.textContent = bridge.available
           ? bridgeCompact.label || bridgeCompact.status || bridge.status || "Live"
           : bridge.status_file_status || "missing";

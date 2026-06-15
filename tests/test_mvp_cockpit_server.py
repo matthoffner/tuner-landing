@@ -204,6 +204,9 @@ class MvpCockpitServerTest(unittest.TestCase):
                         "generated/raw/dallas-electrician-import-sample-v2/permits.csv",
                         "generated/raw/dallas-electrician-import-sample-v2/inspections.csv",
                     ],
+                    "synthetic_row_samples": [
+                        "ELZ-2026-9999,100 Example Ave,https://example.local/dallas/9999",
+                    ],
                 },
             ],
             "artifacts": {
@@ -231,6 +234,12 @@ class MvpCockpitServerTest(unittest.TestCase):
             [
                 "generated/raw/dallas-electrician-import-sample-v2/permits.csv",
                 "generated/raw/dallas-electrician-import-sample-v2/inspections.csv",
+            ],
+        )
+        self.assertEqual(
+            summary["policy_synthetic_row_samples"],
+            [
+                "ELZ-2026-9999,100 Example Ave,https://example.local/dallas/9999",
             ],
         )
 
@@ -384,6 +393,13 @@ class MvpCockpitServerTest(unittest.TestCase):
                 "operator_attention_reasons": ["status_stale"],
                 "operator_attention_primary_reason": "status_stale",
                 "operator_attention_label": "Status is stale",
+                "policy_failure_reason": "synthetic_append_disallowed_by_snapshot",
+                "policy_raw_dallas_csv_changed_paths": [
+                    "generated/raw/dallas-electrician-import-sample-v2/permits.csv",
+                ],
+                "policy_synthetic_row_samples": [
+                    "ELZ-2026-9999,100 Example Ave,https://example.local/dallas/9999",
+                ],
             },
             "bridge_summary": {
                 "available": True,
@@ -413,9 +429,13 @@ class MvpCockpitServerTest(unittest.TestCase):
         self.assertIn("operator_attention_reasons", markup)
         self.assertIn("operator_attention_label", markup)
         self.assertIn("operator_attention", markup)
+        self.assertIn("policy_failure_reason", markup)
+        self.assertIn("policy_raw_dallas_csv_changed_paths", markup)
+        self.assertIn("policy_synthetic_row_samples", markup)
         self.assertIn("artifact_statuses", markup)
         self.assertIn("artifact_problem_artifacts", markup)
         self.assertIn("artifactProblems.join", markup)
+        self.assertIn("policySamples.join", markup)
 
     def test_access_log_redacts_query_strings_from_request_lines(self) -> None:
         request_line = "GET /api/status?token=secret&relay=abc HTTP/1.1"
