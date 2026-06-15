@@ -459,6 +459,13 @@ def operator_attention_label(reason: str | None) -> str:
 
 
 def failed_autonomy_policy_step(status: dict[str, Any]) -> dict[str, Any] | None:
+    step = latest_autonomy_policy_step(status)
+    if step is not None and step.get("exit_status") != 0:
+        return step
+    return None
+
+
+def latest_autonomy_policy_step(status: dict[str, Any]) -> dict[str, Any] | None:
     steps = status.get("steps")
     if not isinstance(steps, list):
         return None
@@ -467,8 +474,7 @@ def failed_autonomy_policy_step(status: dict[str, Any]) -> dict[str, Any] | None
             continue
         if step.get("name") != "autonomy policy check":
             continue
-        if step.get("exit_status") != 0:
-            return step
+        return step
     return None
 
 
@@ -535,9 +541,14 @@ def publisher_cockpit_summary(status: dict[str, Any]) -> dict[str, Any]:
     artifact_health_status = artifact_health.get("status") or "unknown"
     import_readiness = readiness.get("status") or "unknown"
     readiness_blockers = as_string_list(readiness.get("blockers"))
-    policy_failure = failed_autonomy_policy_step(status)
+    policy_step = latest_autonomy_policy_step(status)
+    policy_failure = (
+        policy_step
+        if policy_step is not None and policy_step.get("exit_status") != 0
+        else None
+    )
     policy_diagnostics = (
-        as_dict(policy_failure.get("policy_diagnostics")) if policy_failure else {}
+        as_dict(policy_step.get("policy_diagnostics")) if policy_step else {}
     )
     policy_failure_reason = (
         compact_policy_detail(
@@ -549,78 +560,78 @@ def publisher_cockpit_summary(status: dict[str, Any]) -> dict[str, Any]:
     )
     policy_diagnostics_status = (
         compact_policy_detail(policy_diagnostics.get("status"), max_length=80)
-        if policy_failure
+        if policy_step
         else None
     )
     policy_route_hint = (
         compact_policy_detail(policy_diagnostics.get("route_hint"), max_length=120)
-        if policy_failure
+        if policy_step
         else None
     )
     policy_diagnostics_decision_reason = (
         compact_policy_detail(policy_diagnostics.get("decision_reason"))
-        if policy_failure
+        if policy_step
         else None
     )
     policy_diagnostics_current_focus = (
         compact_policy_detail(policy_diagnostics.get("current_focus"))
-        if policy_failure
+        if policy_step
         else None
     )
     policy_raw_csv_paths = (
         compact_policy_detail_list(
             first_string_list(
-                policy_failure.get("raw_dallas_csv_changed_paths"),
+                policy_step.get("raw_dallas_csv_changed_paths"),
                 policy_diagnostics.get("raw_dallas_csv_changed_path_samples"),
             )
         )
-        if policy_failure
+        if policy_step
         else []
     )
     policy_raw_csv_path_count = (
         first_compact_int(
             policy_diagnostics.get("raw_dallas_csv_changed_path_count"),
-            len(as_string_list(policy_failure.get("raw_dallas_csv_changed_paths"))),
+            len(as_string_list(policy_step.get("raw_dallas_csv_changed_paths"))),
         )
-        if policy_failure
+        if policy_step
         else 0
     )
     policy_productive_paths = (
         compact_policy_detail_list(
             first_string_list(
-                policy_failure.get("productive_changed_paths"),
+                policy_step.get("productive_changed_paths"),
                 policy_diagnostics.get("productive_changed_path_samples"),
             )
         )
-        if policy_failure
+        if policy_step
         else []
     )
     policy_productive_path_count = (
         first_compact_int(
             policy_diagnostics.get("productive_changed_path_count"),
-            len(as_string_list(policy_failure.get("productive_changed_paths"))),
+            len(as_string_list(policy_step.get("productive_changed_paths"))),
         )
-        if policy_failure
+        if policy_step
         else 0
     )
     policy_synthetic_row_samples = (
         compact_policy_detail_list(
             first_string_list(
-                policy_failure.get("synthetic_row_samples"),
+                policy_step.get("synthetic_row_samples"),
                 policy_diagnostics.get("synthetic_row_samples"),
             ),
             max_items=POLICY_ROW_SAMPLE_LIMIT,
             max_length=240,
         )
-        if policy_failure
+        if policy_step
         else []
     )
     policy_synthetic_row_count = (
         first_compact_int(
             policy_diagnostics.get("synthetic_row_count"),
-            policy_failure.get("synthetic_row_count"),
+            policy_step.get("synthetic_row_count"),
         )
-        if policy_failure
+        if policy_step
         else None
     )
     if policy_synthetic_row_count is None:
@@ -628,25 +639,25 @@ def publisher_cockpit_summary(status: dict[str, Any]) -> dict[str, Any]:
     policy_preview_changed = (
         first_bool(
             policy_diagnostics.get("preview_json_changed"),
-            policy_failure.get("preview_json_changed"),
+            policy_step.get("preview_json_changed"),
         )
-        if policy_failure
+        if policy_step
         else None
     )
     policy_allows_synthetic_append = (
         first_bool(
             policy_diagnostics.get("policy_allows_synthetic_append"),
-            policy_failure.get("policy_allows_synthetic_append"),
+            policy_step.get("policy_allows_synthetic_append"),
         )
-        if policy_failure
+        if policy_step
         else None
     )
     policy_override = (
         first_bool(
             policy_diagnostics.get("policy_override"),
-            policy_failure.get("policy_override"),
+            policy_step.get("policy_override"),
         )
-        if policy_failure
+        if policy_step
         else None
     )
     thin_group_categories = as_string_list(autonomy_policy.get("thin_group_categories"))

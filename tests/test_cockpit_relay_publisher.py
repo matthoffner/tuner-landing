@@ -1038,6 +1038,96 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertNotIn("row-secret", summary_text)
         self.assertNotIn("sample-secret", summary_text)
 
+    def test_read_status_reports_passed_policy_raw_csv_visibility(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            status_file = tmp_path / "status.json"
+            status_file.write_text(
+                json.dumps(
+                    {
+                        "status": "passing",
+                        "updated_at": "2026-06-14T19:30:00Z",
+                        "steps": [
+                            {
+                                "name": "autonomy policy check",
+                                "exit_status": 0,
+                                "raw_dallas_csv_changed_paths": [
+                                    "generated/raw/dallas-electrician-import-sample-v2/rule_documents.csv",
+                                    "https://source.example/raw.csv?token=raw-secret#debug",
+                                ],
+                                "productive_changed_paths": [
+                                    "scripts/import_dallas_permit_extracts.py",
+                                    "tests/test_dallas_import_pipeline.py",
+                                ],
+                                "policy_diagnostics": {
+                                    "status": "passed",
+                                    "route_hint": "ok",
+                                    "decision_reason": "dallas_ready_no_thin_groups",
+                                    "current_focus": "autonomy_visibility_or_real_ingest",
+                                    "raw_dallas_csv_changed_path_count": 2,
+                                    "productive_changed_path_count": 2,
+                                    "synthetic_row_count": 0,
+                                    "preview_json_changed": False,
+                                    "policy_allows_synthetic_append": False,
+                                    "policy_override": False,
+                                },
+                            }
+                        ],
+                        "artifacts": {
+                            "artifact_health": {"status": "loaded"},
+                            "import_pipeline": {
+                                "execution_readiness": {
+                                    "status": "ready",
+                                    "blockers": [],
+                                }
+                            },
+                        },
+                        "autonomy_policy": {
+                            "thin_group_count": 0,
+                            "thin_group_categories": [],
+                        },
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            self.publisher.utc_now = lambda: "2026-06-14T19:31:00Z"
+            self.publisher.local_loop_pid = lambda _pid_file: 4242
+
+            status = self.publisher.read_status(
+                status_file,
+                tmp_path / "loop.pid",
+                status_stale_after_seconds=120,
+            )
+
+        summary = status["cockpit_summary"]
+        self.assertFalse(summary["operator_attention"])
+        self.assertEqual(summary["operator_attention_reasons"], [])
+        self.assertIsNone(summary["policy_failure_reason"])
+        self.assertEqual(summary["policy_diagnostics_status"], "passed")
+        self.assertEqual(summary["policy_route_hint"], "ok")
+        self.assertEqual(
+            summary["policy_raw_dallas_csv_changed_paths"],
+            [
+                "generated/raw/dallas-electrician-import-sample-v2/rule_documents.csv",
+                "https://source.example/raw.csv?[redacted]#[redacted]",
+            ],
+        )
+        self.assertEqual(summary["policy_raw_dallas_csv_changed_path_count"], 2)
+        self.assertEqual(
+            summary["policy_productive_changed_paths"],
+            [
+                "scripts/import_dallas_permit_extracts.py",
+                "tests/test_dallas_import_pipeline.py",
+            ],
+        )
+        self.assertEqual(summary["policy_productive_changed_path_count"], 2)
+        self.assertEqual(summary["policy_synthetic_row_count"], 0)
+        self.assertFalse(summary["policy_preview_json_changed"])
+        self.assertFalse(summary["policy_allows_synthetic_append"])
+        self.assertFalse(summary["policy_override"])
+        self.assertNotIn("raw-secret", json.dumps(summary, sort_keys=True))
+
     def test_publisher_source_health_reports_live_source_status(self) -> None:
         status = {
             "status": "passing",
