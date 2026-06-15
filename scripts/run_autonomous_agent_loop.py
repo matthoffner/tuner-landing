@@ -811,9 +811,17 @@ def run_autonomy_policy_check(log_file: Path) -> dict[str, Any]:
         )
         for row in synthetic_row_samples:
             emit(log_file, "  synthetic row: " + row)
-    elif raw_csv_paths and not productive_change and not (
-        synthetic_rows and allow_override
-    ):
+    elif synthetic_rows and not productive_change:
+        exit_status = 1
+        failure_reason = "synthetic_append_without_productive_work"
+        emit(
+            log_file,
+            "policy violation: synthetic Dallas example.local row append without "
+            "code, ingest, infra, test, or durable spec companion work",
+        )
+        for row in synthetic_row_samples:
+            emit(log_file, "  synthetic row: " + row)
+    elif raw_csv_paths and not productive_change:
         exit_status = 1
         failure_reason = "raw_dallas_csv_without_productive_work"
         emit(
@@ -824,16 +832,6 @@ def run_autonomy_policy_check(log_file: Path) -> dict[str, Any]:
         )
         for path in raw_csv_paths[:8]:
             emit(log_file, "  raw csv path: " + path)
-    elif synthetic_rows and not productive_change and not allow_override:
-        exit_status = 1
-        failure_reason = "synthetic_append_without_productive_work"
-        emit(
-            log_file,
-            "policy violation: synthetic Dallas example.local row append without "
-            "code, ingest, infra, test, or durable spec companion work",
-        )
-        for row in synthetic_row_samples:
-            emit(log_file, "  synthetic row: " + row)
     else:
         emit(
             log_file,
