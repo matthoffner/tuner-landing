@@ -106,8 +106,34 @@ function normalizeUpstreamTimeoutMs(value) {
 }
 
 function relayHeaders(env = process.env) {
-  const token = (env.AUTOMOAT_RELAY_READ_TOKEN || env.AUTOMOAT_RELAY_TOKEN || "").trim();
-  return token ? { "X-Automoat-Relay-Token": token } : {};
+  return relayHeaderConfig(env).headers;
+}
+
+function relayHeaderConfig(env = process.env) {
+  const tokenName = env.AUTOMOAT_RELAY_READ_TOKEN !== undefined
+    && String(env.AUTOMOAT_RELAY_READ_TOKEN) !== ""
+    ? "AUTOMOAT_RELAY_READ_TOKEN"
+    : "AUTOMOAT_RELAY_TOKEN";
+  const rawValue = String(env[tokenName] || "");
+  if (!rawValue) {
+    return { headers: {}, error: null };
+  }
+  if (!rawValue.trim()) {
+    return { headers: {}, error: `${tokenName} must not be empty` };
+  }
+  if (rawValue !== rawValue.trim()) {
+    return {
+      headers: {},
+      error: `${tokenName} must not include leading or trailing whitespace`,
+    };
+  }
+  if (/[\r\n\x00-\x1f\x7f]/.test(rawValue)) {
+    return {
+      headers: {},
+      error: `${tokenName} must be a single-line value without control characters`,
+    };
+  }
+  return { headers: { "X-Automoat-Relay-Token": rawValue }, error: null };
 }
 
 function classifyUpstreamError(error) {
@@ -259,11 +285,16 @@ function upstreams({ relayPath, bridgePath, env = process.env }) {
     requireHttpsUnlessLocal: true,
   });
   if (relay.url) {
-    configured.push({
-      kind: "relay",
-      url: `${relay.url}${relayPath}`,
-      headers: relayHeaders(env),
-    });
+    const relayAuth = relayHeaderConfig(env);
+    if (relayAuth.error) {
+      invalid.push({ kind: "relay_auth", error: relayAuth.error });
+    } else {
+      configured.push({
+        kind: "relay",
+        url: `${relay.url}${relayPath}`,
+        headers: relayAuth.headers,
+      });
+    }
   } else if (relay.error) {
     invalid.push({ kind: "relay", error: relay.error });
   }
@@ -293,6 +324,7 @@ module.exports = {
   isLocalHttpHost,
   normalizeBaseUrl,
   normalizeUpstreamTimeoutMs,
+  relayHeaderConfig,
   relayHeaders,
   sendProxyResponse,
   setProxyHeaders,

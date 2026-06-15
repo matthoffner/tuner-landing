@@ -85,6 +85,59 @@ class CockpitApiProxyTest(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_upstreams_reject_malformed_relay_tokens_before_fetching(self) -> None:
+        result = run_node(
+            """
+            const assert = require("assert");
+            const { upstreams } = require("./api/cockpit-upstreams");
+
+            const readToken = upstreams({
+              relayPath: "/api/status",
+              bridgePath: "/api/status",
+              env: {
+                AUTOMOAT_RELAY_URL: "https://automoat-cockpit-relay.example",
+                AUTOMOAT_RELAY_READ_TOKEN: " read-token",
+                AUTOMOAT_RELAY_TOKEN: "write-token",
+              },
+            });
+            assert.deepStrictEqual(readToken.configured, []);
+            assert.deepStrictEqual(readToken.invalid, [{
+              kind: "relay_auth",
+              error: "AUTOMOAT_RELAY_READ_TOKEN must not include leading or trailing whitespace",
+            }]);
+
+            const writeToken = upstreams({
+              relayPath: "/api/status",
+              bridgePath: "/api/status",
+              env: {
+                AUTOMOAT_RELAY_URL: "https://automoat-cockpit-relay.example",
+                AUTOMOAT_RELAY_TOKEN: "write\\ntoken",
+              },
+            });
+            assert.deepStrictEqual(writeToken.configured, []);
+            assert.deepStrictEqual(writeToken.invalid, [{
+              kind: "relay_auth",
+              error: "AUTOMOAT_RELAY_TOKEN must be a single-line value without control characters",
+            }]);
+
+            const emptyReadTokenFallsBack = upstreams({
+              relayPath: "/api/status",
+              bridgePath: "/api/status",
+              env: {
+                AUTOMOAT_RELAY_URL: "https://automoat-cockpit-relay.example",
+                AUTOMOAT_RELAY_READ_TOKEN: "",
+                AUTOMOAT_RELAY_TOKEN: "write-token",
+              },
+            });
+            assert.deepStrictEqual(emptyReadTokenFallsBack.invalid, []);
+            assert.deepStrictEqual(emptyReadTokenFallsBack.configured[0].headers, {
+              "X-Automoat-Relay-Token": "write-token",
+            });
+            """
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_upstreams_reject_path_parameters_before_fetching(self) -> None:
         result = run_node(
             """
@@ -344,6 +397,71 @@ class CockpitApiProxyTest(unittest.TestCase):
             assert.strictEqual(headResponse.statusCode, 503);
             assert.strictEqual(headResponse.body, "");
             assert.strictEqual(headResponse.headers["Content-Type"], "text/plain; charset=utf-8");
+            """
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_handlers_reject_malformed_relay_tokens_without_fetching(self) -> None:
+        result = run_node(
+            """
+            const assert = require("assert");
+            const statusHandler = require("./api/cockpit-status");
+            const logHandler = require("./api/cockpit-log");
+
+            function response() {
+              return {
+                statusCode: null,
+                body: "",
+                headers: {},
+                setHeader(name, value) {
+                  this.headers[name] = value;
+                },
+                status(code) {
+                  this.statusCode = code;
+                  return this;
+                },
+                send(body) {
+                  this.body = String(body);
+                  return this;
+                },
+                end(body = "") {
+                  this.body = String(body);
+                  return this;
+                },
+              };
+            }
+
+            process.env.AUTOMOAT_RELAY_URL = "https://automoat-cockpit-relay.example";
+            process.env.AUTOMOAT_RELAY_READ_TOKEN = " read-secret";
+            process.env.AUTOMOAT_RELAY_TOKEN = "write-secret";
+            process.env.AUTOMOAT_BRIDGE_URL = "";
+            global.fetch = async () => {
+              throw new Error("fetch should not be called for malformed relay tokens");
+            };
+
+            (async () => {
+              const statusResponse = response();
+              await statusHandler({ method: "GET" }, statusResponse);
+              assert.strictEqual(statusResponse.statusCode, 503);
+              assert(statusResponse.body.includes("cockpit_relay_invalid_configuration"));
+              assert(statusResponse.body.includes("relay_auth"));
+              assert(statusResponse.body.includes("AUTOMOAT_RELAY_READ_TOKEN"));
+              assert(!statusResponse.body.includes("read-secret"));
+              assert(!statusResponse.body.includes("write-secret"));
+
+              const logResponse = response();
+              await logHandler({ method: "GET" }, logResponse);
+              assert.strictEqual(logResponse.statusCode, 503);
+              assert(logResponse.body.includes("cockpit_relay_invalid_configuration"));
+              assert(logResponse.body.includes("relay_auth"));
+              assert(logResponse.body.includes("AUTOMOAT_RELAY_READ_TOKEN"));
+              assert(!logResponse.body.includes("read-secret"));
+              assert(!logResponse.body.includes("write-secret"));
+            })().catch((error) => {
+              console.error(error.stack || error);
+              process.exit(1);
+            });
             """
         )
 
