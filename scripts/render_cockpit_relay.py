@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 import threading
 from datetime import datetime, timezone
@@ -50,6 +51,13 @@ COCKPIT_HEALTH_LABELS = {
     "source_autonomy_policy_failed": "Autonomy policy failed",
     "source_cockpit_attention": "Source cockpit needs attention",
 }
+EMBEDDED_URL_RE = re.compile(r"https?://[^\s,;|]+")
+SENSITIVE_ASSIGNMENT_RE = re.compile(
+    r"(?i)\b("
+    r"access_token|api_key|codex_access_token|gh_token|github_token|password|"
+    r"passwd|relay_token|secret|token|key"
+    r")=([^\s,;|]+)"
+)
 
 
 class RelayPersistenceError(RuntimeError):
@@ -172,6 +180,18 @@ def compact_text(value: Any, *, max_length: int = 160) -> str | None:
         for character in text
     )
     text = " ".join(text.split())
+    return text[:max_length] if text else None
+
+
+def compact_policy_detail(value: Any, *, max_length: int = 240) -> str | None:
+    text = compact_text(value, max_length=max_length * 2)
+    if text is None:
+        return None
+    text = EMBEDDED_URL_RE.sub(lambda match: sanitize_url_value(match.group(0)), text)
+    text = SENSITIVE_ASSIGNMENT_RE.sub(
+        lambda match: f"{match.group(1)}=[redacted]",
+        text,
+    )
     return text[:max_length] if text else None
 
 
@@ -359,6 +379,50 @@ def source_bridge_summary(status: dict[str, Any]) -> dict[str, Any]:
     return summary
 
 
+def source_policy_summary(status: dict[str, Any]) -> dict[str, Any]:
+    source_summary = status.get("cockpit_summary")
+    if not isinstance(source_summary, dict):
+        return {"available": False}
+
+    summary: dict[str, Any] = {"available": False}
+    text_fields = {
+        "policy_failure_reason": source_summary.get("policy_failure_reason"),
+        "operator_attention_primary_reason": source_summary.get(
+            "operator_attention_primary_reason"
+        ),
+        "operator_attention_label": source_summary.get("operator_attention_label"),
+    }
+    for key, value in text_fields.items():
+        compact_value = compact_policy_detail(value, max_length=160)
+        if compact_value is not None:
+            summary[key] = compact_value
+
+    list_fields = {
+        "operator_attention_reasons": source_summary.get("operator_attention_reasons"),
+        "raw_dallas_csv_changed_paths": source_summary.get(
+            "policy_raw_dallas_csv_changed_paths"
+        ),
+        "synthetic_row_samples": source_summary.get("policy_synthetic_row_samples"),
+    }
+    for key, value in list_fields.items():
+        if not isinstance(value, list):
+            continue
+        compact_values = [
+            compact_value
+            for compact_value in (
+                compact_policy_detail(item, max_length=240)
+                for item in value[:5]
+            )
+            if compact_value is not None
+        ]
+        if compact_values:
+            summary[key] = compact_values
+            summary[f"{key}_count"] = len(value)
+
+    summary["available"] = any(key != "available" for key in summary)
+    return summary
+
+
 def cockpit_health(
     state: dict[str, Any],
     status: dict[str, Any],
@@ -367,6 +431,7 @@ def cockpit_health(
     reasons: list[str] = []
     source_health = publisher_source_health(state)
     source_bridge = source_bridge_summary(status)
+    source_policy = source_policy_summary(status)
     source_health_reasons = source_health.get("reasons")
     if not isinstance(source_health_reasons, list):
         source_health_reasons = []
@@ -439,6 +504,7 @@ def cockpit_health(
         "source_cockpit_attention_label": source_attention_label,
         "source_status_diagnostics": source_status_diagnostics(status),
         "source_bridge": source_bridge,
+        "source_policy": source_policy,
         "source_health": source_health,
         "publisher_identity": publisher_identity(state),
     }

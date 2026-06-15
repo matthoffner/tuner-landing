@@ -474,6 +474,13 @@ class RenderCockpitRelayTest(unittest.TestCase):
                         "policy_raw_dallas_csv_changed_paths": [
                             "generated/raw/dallas-electrician-import-sample-v2/permits.csv",
                         ],
+                        "policy_synthetic_row_samples": [
+                            (
+                                "generated/raw/dallas-electrician-import-sample-v2/permits.csv:538 "
+                                "ELZ-2026-0737 https://user:secret@example.local/path?token=row-secret#debug "
+                                "relay_token=another-secret"
+                            ),
+                        ],
                     },
                 },
                 "log_tail": "autonomy policy check failed\n",
@@ -508,6 +515,37 @@ class RenderCockpitRelayTest(unittest.TestCase):
             health["cockpit_health"]["source_cockpit_attention_reasons"],
             ["autonomy_policy_failed", "policy_raw_dallas_csv_changed"],
         )
+        expected_source_policy = {
+            "available": True,
+            "policy_failure_reason": "synthetic_example_local_dallas_append_disallowed",
+            "operator_attention_primary_reason": "autonomy_policy_failed",
+            "operator_attention_label": "Autonomy policy failed",
+            "operator_attention_reasons": [
+                "autonomy_policy_failed",
+                "policy_raw_dallas_csv_changed",
+            ],
+            "operator_attention_reasons_count": 2,
+            "raw_dallas_csv_changed_paths": [
+                "generated/raw/dallas-electrician-import-sample-v2/permits.csv",
+            ],
+            "raw_dallas_csv_changed_paths_count": 1,
+            "synthetic_row_samples": [
+                (
+                    "generated/raw/dallas-electrician-import-sample-v2/permits.csv:538 "
+                    "ELZ-2026-0737 https://example.local/path?[redacted]#[redacted] "
+                    "relay_token=[redacted]"
+                ),
+            ],
+            "synthetic_row_samples_count": 1,
+        }
+        self.assertEqual(
+            health["cockpit_health"]["source_policy"],
+            expected_source_policy,
+        )
+        self.assertEqual(
+            status["cockpit_health"]["source_policy"],
+            expected_source_policy,
+        )
         self.assertEqual(
             status["cockpit_health"]["reasons"],
             health["cockpit_health"]["reasons"],
@@ -516,6 +554,9 @@ class RenderCockpitRelayTest(unittest.TestCase):
             "source_autonomy_policy_failed",
             status["cockpit_health"]["reasons"],
         )
+        health_text = json.dumps(health, sort_keys=True)
+        self.assertNotIn("row-secret", health_text)
+        self.assertNotIn("another-secret", health_text)
 
     def test_status_and_health_report_unavailable_source_status_file(self) -> None:
         self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
