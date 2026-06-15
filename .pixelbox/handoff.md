@@ -4,6 +4,12 @@ Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
 - lane: editor
+- status: added local cockpit status freshness diagnostics so `/api/status.cockpit_summary` exposes `updated_at`, `status_age_seconds`, `status_stale_after_seconds`, and `status_stale`, and the cockpit status card renders fresh/stale age for live-loop visibility; no Dallas raw CSV rows were edited
+- files: scripts/serve_mvp_cockpit.py, tests/test_mvp_cockpit_server.py, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- checks: `python3 -m unittest tests.test_mvp_cockpit_server`; `python3 -m py_compile scripts/serve_mvp_cockpit.py tests/test_mvp_cockpit_server.py`; `python3 -m unittest discover -s tests`; `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json`; `cmp -s generated/landing.html index.html`; `git diff --check`
+- next: use `/api/status.cockpit_summary.status_stale` and `status_age_seconds` to distinguish a fresh cockpit snapshot from a stale or stopped loop writer before digging into full status artifacts or logs
+
+- lane: editor
 - status: made the Vercel cockpit status proxy reject HTML-like upstream success bodies with the stable `status_payload_must_not_be_html` diagnostic before JSON parsing, so fallback headers and unreachable JSON distinguish offline/misrouted HTML from generic invalid JSON; no Dallas raw CSV rows were edited
 - files: api/cockpit-status.js, tests/test_cockpit_api_proxy.py, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
 - checks: `python3 -m unittest tests.test_cockpit_api_proxy -v`; `node --check api/cockpit-status.js`; `node --check api/cockpit-log.js`; `node --check api/cockpit-upstreams.js`; `python3 -m unittest discover -s tests -v`; `python3 -m py_compile tests/test_cockpit_api_proxy.py`; `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json > /tmp/automoat-status-proxy-html-ready.json`; JSON assertion for readiness `ready`, `535/535` corrections, `535` permits, `1082` inspections, `1093` tasks, `541` label reviews, `1625` source records, and zero thin groups; `cmp -s generated/landing.html index.html`; `git diff --exit-code -- .pxcode/preview.json`; raw Dallas CSV diff check returned no changes; `git diff --check`

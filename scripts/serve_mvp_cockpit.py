@@ -26,6 +26,7 @@ LOG_FILE = ROOT / ".automoat" / "logs" / "mvp-loop.log"
 STATUS_FILE = ROOT / ".automoat" / "state" / "mvp-loop-status.json"
 PID_FILE = ROOT / ".automoat" / "state" / "mvp-loop.pid"
 MAX_CORRECTION_BYTES = 8192
+STATUS_STALE_AFTER_SECONDS = 120
 
 LOOP_PROCESS: subprocess.Popen[str] | None = None
 LOOP_LOCK = threading.Lock()
@@ -57,6 +58,23 @@ def as_dict(value: object) -> dict[str, object]:
     return value if isinstance(value, dict) else {}
 
 
+def utc_timestamp_age_seconds(value: object, now: datetime | None = None) -> int | None:
+    if not isinstance(value, str) or not value.strip():
+        return None
+    normalized = value.strip()
+    if normalized.endswith("Z"):
+        normalized = normalized[:-1] + "+00:00"
+    try:
+        timestamp = datetime.fromisoformat(normalized)
+    except ValueError:
+        return None
+    if timestamp.tzinfo is None:
+        timestamp = timestamp.replace(tzinfo=timezone.utc)
+    current = now or datetime.now(timezone.utc)
+    age = int((current - timestamp.astimezone(timezone.utc)).total_seconds())
+    return max(age, 0)
+
+
 def cockpit_summary(status: dict[str, object]) -> dict[str, object]:
     artifacts = as_dict(status.get("artifacts"))
     artifact_health = as_dict(artifacts.get("artifact_health"))
@@ -72,6 +90,12 @@ def cockpit_summary(status: dict[str, object]) -> dict[str, object]:
     if passed_checks is not None and total_checks is not None:
         contract_checks = f"{passed_checks}/{total_checks}"
 
+    updated_at = status.get("updated_at")
+    status_age_seconds = utc_timestamp_age_seconds(updated_at)
+    status_stale = None
+    if status_age_seconds is not None:
+        status_stale = status_age_seconds > STATUS_STALE_AFTER_SECONDS
+
     return {
         "status": status.get("status") or "waiting",
         "phase": status.get("phase"),
@@ -79,6 +103,10 @@ def cockpit_summary(status: dict[str, object]) -> dict[str, object]:
         "loop_running": bool(status.get("loop_running")),
         "loop_pid": status.get("loop_pid"),
         "iteration": status.get("iteration") or 0,
+        "updated_at": updated_at,
+        "status_age_seconds": status_age_seconds,
+        "status_stale_after_seconds": STATUS_STALE_AFTER_SECONDS,
+        "status_stale": status_stale,
         "artifact_health": artifact_health.get("status") or "unknown",
         "import_readiness": readiness.get("status") or "unknown",
         "ready_for_next_import_records": readiness.get("ready_for_next_import_records"),
@@ -441,6 +469,7 @@ def cockpit_html() -> str:
               <div class="detail"><span>policy focus</span><strong id="focus">...</strong></div>
               <div class="detail"><span>phase</span><strong id="phase">...</strong></div>
               <div class="detail"><span>artifact health</span><strong id="artifactHealth">...</strong></div>
+              <div class="detail"><span>status freshness</span><strong id="freshness">...</strong></div>
             </div>
             <div class="links">
               <a href="/.automoat/logs/mvp-loop.log">raw loop log</a>
@@ -466,6 +495,7 @@ def cockpit_html() -> str:
       const focus = document.getElementById("focus");
       const phase = document.getElementById("phase");
       const artifactHealth = document.getElementById("artifactHealth");
+      const freshness = document.getElementById("freshness");
 
       async function post(path) {{
         const response = await fetch(path, {{ method: "POST" }});
@@ -487,6 +517,12 @@ def cockpit_html() -> str:
         focus.textContent = cockpit.current_focus || "mvp_loop";
         phase.textContent = cockpit.phase || "...";
         artifactHealth.textContent = cockpit.artifact_health || "unknown";
+        const age = cockpit.status_age_seconds;
+        if (typeof age === "number") {{
+          freshness.textContent = cockpit.status_stale ? `stale ${{age}}s` : `fresh ${{age}}s`;
+        }} else {{
+          freshness.textContent = "unknown";
+        }}
       }}
 
       const startButton = document.getElementById("start");

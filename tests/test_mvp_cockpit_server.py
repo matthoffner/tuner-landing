@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import contextlib
+from datetime import datetime, timezone
 import importlib.util
 import io
 import json
@@ -33,12 +34,33 @@ class MvpCockpitServerTest(unittest.TestCase):
     def setUp(self) -> None:
         self.cockpit = load_cockpit_module()
 
+    def test_utc_timestamp_age_seconds_parses_zulu_and_offsets(self) -> None:
+        now = datetime(2026, 6, 15, 0, 2, 0, tzinfo=timezone.utc)
+
+        self.assertEqual(
+            self.cockpit.utc_timestamp_age_seconds("2026-06-15T00:01:30Z", now),
+            30,
+        )
+        self.assertEqual(
+            self.cockpit.utc_timestamp_age_seconds(
+                "2026-06-14T19:01:00-05:00", now
+            ),
+            60,
+        )
+        self.assertEqual(
+            self.cockpit.utc_timestamp_age_seconds("2026-06-15T00:03:00Z", now),
+            0,
+        )
+        self.assertIsNone(self.cockpit.utc_timestamp_age_seconds("not a timestamp", now))
+        self.assertIsNone(self.cockpit.utc_timestamp_age_seconds(None, now))
+
     def test_cockpit_summary_extracts_operator_diagnostics(self) -> None:
         status = {
             "status": "passing",
             "phase": "published",
             "mode": "autonomous_codex",
             "iteration": 7,
+            "updated_at": "2000-01-01T00:00:00Z",
             "loop_running": True,
             "loop_pid": 12345,
             "autonomy_policy": {
@@ -67,6 +89,10 @@ class MvpCockpitServerTest(unittest.TestCase):
         self.assertTrue(summary["loop_running"])
         self.assertEqual(summary["loop_pid"], 12345)
         self.assertEqual(summary["iteration"], 7)
+        self.assertEqual(summary["updated_at"], "2000-01-01T00:00:00Z")
+        self.assertIsInstance(summary["status_age_seconds"], int)
+        self.assertEqual(summary["status_stale_after_seconds"], 120)
+        self.assertTrue(summary["status_stale"])
         self.assertEqual(summary["artifact_health"], "loaded")
         self.assertEqual(summary["import_readiness"], "ready")
         self.assertTrue(summary["ready_for_next_import_records"])
@@ -88,6 +114,7 @@ class MvpCockpitServerTest(unittest.TestCase):
                         "status": "running",
                         "phase": "codex_exec",
                         "iteration": 2,
+                        "updated_at": "not a timestamp",
                         "artifacts": {
                             "artifact_health": {"status": "loaded"},
                             "import_pipeline": {
@@ -107,6 +134,8 @@ class MvpCockpitServerTest(unittest.TestCase):
         self.assertEqual(status["cockpit_summary"]["phase"], "codex_exec")
         self.assertEqual(status["cockpit_summary"]["iteration"], 2)
         self.assertEqual(status["cockpit_summary"]["import_readiness"], "ready")
+        self.assertIsNone(status["cockpit_summary"]["status_age_seconds"])
+        self.assertIsNone(status["cockpit_summary"]["status_stale"])
         self.assertFalse(status["cockpit_summary"]["loop_running"])
 
     def test_cockpit_html_includes_operator_diagnostic_targets(self) -> None:
@@ -116,6 +145,8 @@ class MvpCockpitServerTest(unittest.TestCase):
             "cockpit_summary": {
                 "import_readiness": "ready",
                 "current_focus": "autonomy_visibility_or_real_ingest",
+                "status_age_seconds": 14,
+                "status_stale": False,
             },
         }
 
@@ -125,7 +156,9 @@ class MvpCockpitServerTest(unittest.TestCase):
         self.assertIn('id="focus"', markup)
         self.assertIn('id="phase"', markup)
         self.assertIn('id="artifactHealth"', markup)
+        self.assertIn('id="freshness"', markup)
         self.assertIn("status.cockpit_summary", markup)
+        self.assertIn("status_age_seconds", markup)
 
     def test_access_log_redacts_query_strings_from_request_lines(self) -> None:
         request_line = "GET /api/status?token=secret&relay=abc HTTP/1.1"
