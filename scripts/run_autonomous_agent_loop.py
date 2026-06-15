@@ -848,6 +848,10 @@ def run_autonomy_policy_check(log_file: Path) -> dict[str, Any]:
         policy_allows_synthetic_append=policy_allows_synthetic_append,
         allow_override=allow_override,
         policy_snapshot=policy_snapshot,
+        dirty_paths_excluding_preview=paths,
+        raw_csv_paths=raw_csv_paths,
+        productive_paths=productive_paths,
+        synthetic_row_samples=synthetic_row_samples,
     )
     return {
         "name": name,
@@ -881,8 +885,12 @@ def autonomy_policy_diagnostics(
     policy_allows_synthetic_append: bool,
     allow_override: bool,
     policy_snapshot: dict[str, Any],
+    dirty_paths_excluding_preview: list[str] | None = None,
+    raw_csv_paths: list[str] | None = None,
+    productive_paths: list[str] | None = None,
+    synthetic_row_samples: list[str] | None = None,
 ) -> dict[str, Any]:
-    """Return compact routeable counts for the policy step status payload."""
+    """Return compact routeable details for the policy step status payload."""
     return {
         "status": "passed" if exit_status == 0 else "failed",
         "failure_reason": failure_reason,
@@ -897,6 +905,18 @@ def autonomy_policy_diagnostics(
         "productive_changed_path_count": productive_path_count,
         "policy_allows_synthetic_append": policy_allows_synthetic_append,
         "policy_override": allow_override,
+        "dirty_path_samples": bounded_sanitized_policy_list(
+            dirty_paths_excluding_preview or []
+        ),
+        "raw_dallas_csv_changed_path_samples": bounded_sanitized_policy_list(
+            raw_csv_paths or []
+        ),
+        "productive_changed_path_samples": bounded_sanitized_policy_list(
+            productive_paths or []
+        ),
+        "synthetic_row_samples": bounded_sanitized_policy_list(
+            synthetic_row_samples or []
+        ),
     }
 
 

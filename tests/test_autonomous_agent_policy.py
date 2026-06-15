@@ -438,6 +438,20 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
                 "productive_changed_path_count": 0,
                 "policy_allows_synthetic_append": False,
                 "policy_override": False,
+                "dirty_path_samples": [
+                    "README.md",
+                    "NEXT_TASK.md",
+                    "generated/raw/dallas-electrician-import-sample-v2/permits.csv",
+                ],
+                "raw_dallas_csv_changed_path_samples": [
+                    "generated/raw/dallas-electrician-import-sample-v2/permits.csv",
+                ],
+                "productive_changed_path_samples": [],
+                "synthetic_row_samples": [
+                    "ELZ-2026-9999,100 Example Ave,Dallas,electrical,"
+                    "residential,Electrical repair,Finaled,"
+                    "https://example.local/dallas/9999"
+                ],
             },
         )
 
@@ -648,6 +662,19 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
                 "decision_reason": "blocked token=secret\nsecond line",
                 "current_focus": "fix_import_readiness_blockers",
             },
+            dirty_paths_excluding_preview=[
+                "scripts/run_autonomous_agent_loop.py",
+                "https://user:pass@example.local/path?token=secret#debug",
+            ],
+            raw_csv_paths=[
+                "generated/raw/dallas-electrician-import-sample-v2/permits.csv",
+            ],
+            productive_paths=[
+                "tests/test_autonomous_agent_policy.py",
+            ],
+            synthetic_row_samples=[
+                "ELZ-2026-9999,https://user:pass@example.local/dallas/9999?api_key=hidden#debug",
+            ],
         )
 
         self.assertEqual(diagnostics["status"], "failed")
@@ -659,6 +686,26 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
         self.assertEqual(diagnostics["synthetic_row_count"], 2)
         self.assertEqual(diagnostics["raw_dallas_csv_changed_path_count"], 3)
         self.assertEqual(diagnostics["productive_changed_path_count"], 4)
+        self.assertEqual(
+            diagnostics["dirty_path_samples"][0],
+            "scripts/run_autonomous_agent_loop.py",
+        )
+        self.assertEqual(
+            diagnostics["dirty_path_samples"][1],
+            "https://example.local/path",
+        )
+        self.assertEqual(
+            diagnostics["raw_dallas_csv_changed_path_samples"],
+            ["generated/raw/dallas-electrician-import-sample-v2/permits.csv"],
+        )
+        self.assertEqual(
+            diagnostics["productive_changed_path_samples"],
+            ["tests/test_autonomous_agent_policy.py"],
+        )
+        self.assertEqual(
+            diagnostics["synthetic_row_samples"],
+            ["ELZ-2026-9999,https://example.local/dallas/9999"],
+        )
         self.assertNotIn("secret", str(diagnostics))
 
     def test_policy_route_hint_covers_known_failure_reasons(self) -> None:
