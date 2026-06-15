@@ -435,6 +435,7 @@ class CockpitApiProxyTest(unittest.TestCase):
             assert.strictEqual(getResponse.headers["X-Automoat-Upstream"], "legacy_bridge");
             assert.strictEqual(getResponse.headers["X-Automoat-Upstream-Fallback-Count"], "1");
             assert.strictEqual(getResponse.headers["X-Automoat-Upstream-Attempt-Count"], "2");
+            assert.strictEqual(getResponse.headers["X-Automoat-Upstream-Status-Code"], "200");
             assert.strictEqual(
               getResponse.headers["X-Automoat-Upstream-Attempts"],
               "relay:503,legacy_bridge:200",
@@ -464,6 +465,7 @@ class CockpitApiProxyTest(unittest.TestCase):
             );
             assert.strictEqual(methodResponse.headers["X-Automoat-Upstream"], "method_not_allowed");
             assert.strictEqual(methodResponse.headers["X-Automoat-Upstream-Attempt-Count"], "0");
+            assert.strictEqual(methodResponse.headers["X-Automoat-Upstream-Status-Code"], "");
             assert.strictEqual(methodResponse.headers["X-Automoat-Upstream-Attempts"], "");
 
             const optionsResponse = response();
@@ -474,6 +476,7 @@ class CockpitApiProxyTest(unittest.TestCase):
             assert.strictEqual(optionsResponse.headers.Allow, ALLOWED_PROXY_METHODS);
             assert.strictEqual(optionsResponse.headers["X-Automoat-Upstream"], "options");
             assert.strictEqual(optionsResponse.headers["X-Automoat-Upstream-Attempt-Count"], "0");
+            assert.strictEqual(optionsResponse.headers["X-Automoat-Upstream-Status-Code"], "");
             assert.strictEqual(optionsResponse.headers["X-Automoat-Upstream-Attempts"], "");
             """
         )
@@ -1038,13 +1041,14 @@ class CockpitApiProxyTest(unittest.TestCase):
               assert.strictEqual(statusResponse.headers["X-Automoat-Upstream"], "legacy_bridge");
               assert.strictEqual(statusResponse.headers["X-Automoat-Upstream-Fallback-Count"], "1");
               assert.strictEqual(statusResponse.headers["X-Automoat-Upstream-Attempt-Count"], "2");
+              assert.strictEqual(statusResponse.headers["X-Automoat-Upstream-Status-Code"], "200");
               assert.strictEqual(
                 statusResponse.headers["X-Automoat-Upstream-Attempts"],
                 "relay:timeout,legacy_bridge:200",
               );
               assert.strictEqual(
                 statusResponse.headers["Access-Control-Expose-Headers"],
-                "X-Automoat-Upstream, X-Automoat-Upstream-Fallback-Count, X-Automoat-Upstream-Attempt-Count, X-Automoat-Upstream-Attempts, X-Automoat-Upstream-Timeout-Ms, X-Automoat-Upstream-Invalid-Config, X-Automoat-Upstream-Invalid-Keys, X-Automoat-Upstream-Not-Configured",
+                "X-Automoat-Upstream, X-Automoat-Upstream-Fallback-Count, X-Automoat-Upstream-Attempt-Count, X-Automoat-Upstream-Status-Code, X-Automoat-Upstream-Attempts, X-Automoat-Upstream-Timeout-Ms, X-Automoat-Upstream-Invalid-Config, X-Automoat-Upstream-Invalid-Keys, X-Automoat-Upstream-Not-Configured",
               );
               assert.strictEqual(statusResponse.headers["X-Automoat-Upstream-Timeout-Ms"], "5");
 
@@ -1055,13 +1059,14 @@ class CockpitApiProxyTest(unittest.TestCase):
               assert.strictEqual(logResponse.headers["X-Automoat-Upstream"], "legacy_bridge");
               assert.strictEqual(logResponse.headers["X-Automoat-Upstream-Fallback-Count"], "1");
               assert.strictEqual(logResponse.headers["X-Automoat-Upstream-Attempt-Count"], "2");
+              assert.strictEqual(logResponse.headers["X-Automoat-Upstream-Status-Code"], "200");
               assert.strictEqual(
                 logResponse.headers["X-Automoat-Upstream-Attempts"],
                 "relay:timeout,legacy_bridge:200",
               );
               assert.strictEqual(
                 logResponse.headers["Access-Control-Expose-Headers"],
-                "X-Automoat-Upstream, X-Automoat-Upstream-Fallback-Count, X-Automoat-Upstream-Attempt-Count, X-Automoat-Upstream-Attempts, X-Automoat-Upstream-Timeout-Ms, X-Automoat-Upstream-Invalid-Config, X-Automoat-Upstream-Invalid-Keys, X-Automoat-Upstream-Not-Configured",
+                "X-Automoat-Upstream, X-Automoat-Upstream-Fallback-Count, X-Automoat-Upstream-Attempt-Count, X-Automoat-Upstream-Status-Code, X-Automoat-Upstream-Attempts, X-Automoat-Upstream-Timeout-Ms, X-Automoat-Upstream-Invalid-Config, X-Automoat-Upstream-Invalid-Keys, X-Automoat-Upstream-Not-Configured",
               );
               assert.strictEqual(logResponse.headers["X-Automoat-Upstream-Timeout-Ms"], "5");
 
@@ -1954,6 +1959,7 @@ class CockpitApiProxyTest(unittest.TestCase):
               assert.strictEqual(statusResponse.headers["X-Automoat-Upstream"], "relay");
               assert.strictEqual(statusResponse.headers["X-Automoat-Upstream-Fallback-Count"], "0");
               assert.strictEqual(statusResponse.headers["X-Automoat-Upstream-Attempt-Count"], "1");
+              assert.strictEqual(statusResponse.headers["X-Automoat-Upstream-Status-Code"], "200");
               assert.strictEqual(statusResponse.headers["X-Automoat-Upstream-Attempts"], "relay:200");
               assert.strictEqual(statusResponse.headers["X-Automoat-Upstream-Timeout-Ms"], "8000");
               assert.strictEqual(
@@ -1968,6 +1974,7 @@ class CockpitApiProxyTest(unittest.TestCase):
               assert.strictEqual(logResponse.headers["X-Automoat-Upstream"], "relay");
               assert.strictEqual(logResponse.headers["X-Automoat-Upstream-Fallback-Count"], "0");
               assert.strictEqual(logResponse.headers["X-Automoat-Upstream-Attempt-Count"], "1");
+              assert.strictEqual(logResponse.headers["X-Automoat-Upstream-Status-Code"], "200");
               assert.strictEqual(logResponse.headers["X-Automoat-Upstream-Attempts"], "relay:200");
               assert.strictEqual(logResponse.headers["X-Automoat-Upstream-Timeout-Ms"], "8000");
               assert.strictEqual(logResponse.headers["Content-Type"], "text/plain; charset=utf-8");
@@ -2005,6 +2012,10 @@ class CockpitApiProxyTest(unittest.TestCase):
                 "1",
               );
               assert.strictEqual(
+                fallbackStatusResponse.headers["X-Automoat-Upstream-Status-Code"],
+                "200",
+              );
+              assert.strictEqual(
                 fallbackStatusResponse.headers["X-Automoat-Upstream-Attempts"],
                 "relay:503,legacy_bridge:200",
               );
@@ -2024,6 +2035,10 @@ class CockpitApiProxyTest(unittest.TestCase):
               assert.strictEqual(
                 fallbackLogResponse.headers["X-Automoat-Upstream-Fallback-Count"],
                 "1",
+              );
+              assert.strictEqual(
+                fallbackLogResponse.headers["X-Automoat-Upstream-Status-Code"],
+                "200",
               );
               assert.strictEqual(
                 fallbackLogResponse.headers["X-Automoat-Upstream-Attempts"],
@@ -2082,12 +2097,16 @@ class CockpitApiProxyTest(unittest.TestCase):
                 "0",
               );
               assert.strictEqual(
+                invalidStatusResponse.headers["X-Automoat-Upstream-Status-Code"],
+                "",
+              );
+              assert.strictEqual(
                 invalidStatusResponse.headers["X-Automoat-Upstream-Attempts"],
                 "",
               );
               assert.strictEqual(
                 invalidStatusResponse.headers["Access-Control-Expose-Headers"],
-                "X-Automoat-Upstream, X-Automoat-Upstream-Fallback-Count, X-Automoat-Upstream-Attempt-Count, X-Automoat-Upstream-Attempts, X-Automoat-Upstream-Timeout-Ms, X-Automoat-Upstream-Invalid-Config, X-Automoat-Upstream-Invalid-Keys, X-Automoat-Upstream-Not-Configured",
+                "X-Automoat-Upstream, X-Automoat-Upstream-Fallback-Count, X-Automoat-Upstream-Attempt-Count, X-Automoat-Upstream-Status-Code, X-Automoat-Upstream-Attempts, X-Automoat-Upstream-Timeout-Ms, X-Automoat-Upstream-Invalid-Config, X-Automoat-Upstream-Invalid-Keys, X-Automoat-Upstream-Not-Configured",
               );
 
               const invalidLogResponse = response();
@@ -2119,12 +2138,16 @@ class CockpitApiProxyTest(unittest.TestCase):
                 "0",
               );
               assert.strictEqual(
+                invalidLogResponse.headers["X-Automoat-Upstream-Status-Code"],
+                "",
+              );
+              assert.strictEqual(
                 invalidLogResponse.headers["X-Automoat-Upstream-Attempts"],
                 "",
               );
               assert.strictEqual(
                 invalidLogResponse.headers["Access-Control-Expose-Headers"],
-                "X-Automoat-Upstream, X-Automoat-Upstream-Fallback-Count, X-Automoat-Upstream-Attempt-Count, X-Automoat-Upstream-Attempts, X-Automoat-Upstream-Timeout-Ms, X-Automoat-Upstream-Invalid-Config, X-Automoat-Upstream-Invalid-Keys, X-Automoat-Upstream-Not-Configured",
+                "X-Automoat-Upstream, X-Automoat-Upstream-Fallback-Count, X-Automoat-Upstream-Attempt-Count, X-Automoat-Upstream-Status-Code, X-Automoat-Upstream-Attempts, X-Automoat-Upstream-Timeout-Ms, X-Automoat-Upstream-Invalid-Config, X-Automoat-Upstream-Invalid-Keys, X-Automoat-Upstream-Not-Configured",
               );
             })().catch((error) => {
               console.error(error.stack || error);
@@ -2190,10 +2213,11 @@ class CockpitApiProxyTest(unittest.TestCase):
                 "0",
               );
               assert.strictEqual(statusResponse.headers["X-Automoat-Upstream-Attempt-Count"], "0");
+              assert.strictEqual(statusResponse.headers["X-Automoat-Upstream-Status-Code"], "");
               assert.strictEqual(statusResponse.headers["X-Automoat-Upstream-Attempts"], "");
               assert.strictEqual(
                 statusResponse.headers["Access-Control-Expose-Headers"],
-                "X-Automoat-Upstream, X-Automoat-Upstream-Fallback-Count, X-Automoat-Upstream-Attempt-Count, X-Automoat-Upstream-Attempts, X-Automoat-Upstream-Timeout-Ms, X-Automoat-Upstream-Invalid-Config, X-Automoat-Upstream-Invalid-Keys, X-Automoat-Upstream-Not-Configured",
+                "X-Automoat-Upstream, X-Automoat-Upstream-Fallback-Count, X-Automoat-Upstream-Attempt-Count, X-Automoat-Upstream-Status-Code, X-Automoat-Upstream-Attempts, X-Automoat-Upstream-Timeout-Ms, X-Automoat-Upstream-Invalid-Config, X-Automoat-Upstream-Invalid-Keys, X-Automoat-Upstream-Not-Configured",
               );
 
               const logResponse = response();
@@ -2210,10 +2234,11 @@ class CockpitApiProxyTest(unittest.TestCase):
                 "0",
               );
               assert.strictEqual(logResponse.headers["X-Automoat-Upstream-Attempt-Count"], "0");
+              assert.strictEqual(logResponse.headers["X-Automoat-Upstream-Status-Code"], "");
               assert.strictEqual(logResponse.headers["X-Automoat-Upstream-Attempts"], "");
               assert.strictEqual(
                 logResponse.headers["Access-Control-Expose-Headers"],
-                "X-Automoat-Upstream, X-Automoat-Upstream-Fallback-Count, X-Automoat-Upstream-Attempt-Count, X-Automoat-Upstream-Attempts, X-Automoat-Upstream-Timeout-Ms, X-Automoat-Upstream-Invalid-Config, X-Automoat-Upstream-Invalid-Keys, X-Automoat-Upstream-Not-Configured",
+                "X-Automoat-Upstream, X-Automoat-Upstream-Fallback-Count, X-Automoat-Upstream-Attempt-Count, X-Automoat-Upstream-Status-Code, X-Automoat-Upstream-Attempts, X-Automoat-Upstream-Timeout-Ms, X-Automoat-Upstream-Invalid-Config, X-Automoat-Upstream-Invalid-Keys, X-Automoat-Upstream-Not-Configured",
               );
 
               const headStatusResponse = response();
