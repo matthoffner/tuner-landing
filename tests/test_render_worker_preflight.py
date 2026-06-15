@@ -4384,6 +4384,31 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             output.getvalue(),
         )
 
+    def test_stop_children_continues_when_child_poll_raises(self) -> None:
+        missing_child = PollRaisesProcess(pid=202)
+        running_child = FakeProcess(pid=101)
+        self.worker.CHILDREN.extend([missing_child, running_child])
+        output = io.StringIO()
+
+        with patch.object(self.worker.time, "sleep"), redirect_stdout(output):
+            self.worker.stop_children()
+
+        self.assertTrue(running_child.terminated)
+        self.assertIn("could not poll child pid=202: OSError", output.getvalue())
+        self.assertNotIn("secret-token", output.getvalue())
+
+    def test_stop_children_logs_terminate_failures_without_exception_text(self) -> None:
+        stubborn_child = TerminateRaisesProcess(pid=303)
+        self.worker.CHILDREN.append(stubborn_child)
+        output = io.StringIO()
+
+        with patch.object(self.worker.time, "sleep"), redirect_stdout(output):
+            self.worker.stop_children()
+
+        self.assertTrue(stubborn_child.terminate_attempted)
+        self.assertIn("could not terminate child pid=303: OSError", output.getvalue())
+        self.assertNotIn("secret-token", output.getvalue())
+
 
 class FakeProcess:
     def __init__(self, *, pid: int, initial_status: int | None = None) -> None:
@@ -4402,6 +4427,22 @@ class FakeProcess:
     def kill(self) -> None:
         self.killed = True
         self.returncode = -9
+
+
+class PollRaisesProcess(FakeProcess):
+    def poll(self) -> int | None:
+        raise OSError("secret-token poll failure")
+
+
+class TerminateRaisesProcess(FakeProcess):
+    def __init__(self, *, pid: int) -> None:
+        super().__init__(pid=pid)
+        self.terminate_attempted = False
+
+    def terminate(self) -> None:
+        self.terminate_attempted = True
+        self.returncode = 0
+        raise OSError("secret-token terminate failure")
 
 
 if __name__ == "__main__":

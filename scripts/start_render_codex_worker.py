@@ -1851,16 +1851,40 @@ def parse_args() -> argparse.Namespace:
 
 def stop_children() -> None:
     for child in list(CHILDREN):
-        if child.poll() is None:
-            child.terminate()
+        try:
+            child_running = child.poll() is None
+        except OSError as exc:
+            emit(f"could not poll child pid={child.pid}: {type(exc).__name__}")
+            continue
+        if child_running:
+            try:
+                child.terminate()
+            except OSError as exc:
+                emit(f"could not terminate child pid={child.pid}: {type(exc).__name__}")
     deadline = time.monotonic() + 15
     while time.monotonic() < deadline:
-        if all(child.poll() is not None for child in CHILDREN):
+        if all(child_exited(child) for child in CHILDREN):
             return
         time.sleep(0.2)
     for child in list(CHILDREN):
-        if child.poll() is None:
-            child.kill()
+        try:
+            child_running = child.poll() is None
+        except OSError as exc:
+            emit(f"could not poll child pid={child.pid}: {type(exc).__name__}")
+            continue
+        if child_running:
+            try:
+                child.kill()
+            except OSError as exc:
+                emit(f"could not kill child pid={child.pid}: {type(exc).__name__}")
+
+
+def child_exited(child: subprocess.Popen[object]) -> bool:
+    try:
+        return child.poll() is not None
+    except OSError as exc:
+        emit(f"could not poll child pid={child.pid}: {type(exc).__name__}")
+        return True
 
 
 def request_stop(_signum: int, _frame: object) -> None:
