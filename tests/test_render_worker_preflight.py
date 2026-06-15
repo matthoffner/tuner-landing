@@ -442,6 +442,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             "GITHUB_TOKEN": "github-token",
             "CODEX_ACCESS_TOKEN": "codex-token",
             "AUTOMOAT_GIT_BRANCH": "release/2026.06",
+            "AUTOMOAT_AGENT_ITERATIONS": "12",
         }
         self.worker.WORKDIR = Path("/work/automoat")
         self.worker.CODEX_HOME = Path("/tmp/codex-home")
@@ -454,6 +455,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertIn("git_branch=release/2026.06", output.getvalue())
         self.assertIn("workdir=/work/automoat", output.getvalue())
         self.assertIn("codex_home=/tmp/codex-home", output.getvalue())
+        self.assertIn("agent_iterations=12", output.getvalue())
 
     def test_check_env_json_reports_safe_machine_readable_summary(self) -> None:
         env = {
@@ -462,6 +464,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             "GITHUB_TOKEN": "github-token",
             "CODEX_ACCESS_TOKEN": "codex-token",
             "AUTOMOAT_GIT_BRANCH": "release/2026.06",
+            "AUTOMOAT_AGENT_ITERATIONS": "12",
         }
         self.worker.WORKDIR = Path("/work/automoat")
         self.worker.CODEX_HOME = Path("/tmp/codex-home")
@@ -483,6 +486,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertEqual(payload["config"]["codex_home"], "/tmp/codex-home")
         self.assertEqual(payload["config"]["git_auth"], ["GITHUB_TOKEN"])
         self.assertEqual(payload["config"]["codex_auth"], ["CODEX_ACCESS_TOKEN"])
+        self.assertEqual(payload["config"]["agent_iterations"], "12")
         self.assertEqual(payload["config"]["commands"], ["git", "codex"])
         self.assertEqual(payload["config"]["runtime_limits"], self.worker.RUNTIME_CONFIG_LIMITS)
         self.assertNotIn("github-token", output.getvalue())

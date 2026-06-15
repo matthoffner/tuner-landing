@@ -534,6 +534,7 @@ def environment_preflight_summary(
         "git_auth": configured_names(env, GIT_AUTH_ENV_NAMES),
         "codex_auth": configured_names(env, CODEX_AUTH_ENV_NAMES),
         "agent_interval": env.get("AUTOMOAT_AGENT_INTERVAL", "300"),
+        "agent_iterations": env.get("AUTOMOAT_AGENT_ITERATIONS", "0"),
         "relay_interval": env.get("AUTOMOAT_RELAY_INTERVAL", "3"),
         "relay_timeout": env.get("AUTOMOAT_RELAY_TIMEOUT", "8"),
         "relay_max_consecutive_failures": env.get(
@@ -592,6 +593,7 @@ def emit_environment_preflight(
         f"git_auth={','.join(configured_names(env, GIT_AUTH_ENV_NAMES))} "
         f"codex_auth={','.join(configured_names(env, CODEX_AUTH_ENV_NAMES))} "
         f"agent_interval={env.get('AUTOMOAT_AGENT_INTERVAL', '300')} "
+        f"agent_iterations={env.get('AUTOMOAT_AGENT_ITERATIONS', '0')} "
         f"relay_interval={env.get('AUTOMOAT_RELAY_INTERVAL', '3')} "
         f"relay_timeout={env.get('AUTOMOAT_RELAY_TIMEOUT', '8')} "
         f"relay_max_consecutive_failures="
