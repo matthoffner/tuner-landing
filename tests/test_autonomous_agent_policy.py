@@ -6,6 +6,7 @@ from __future__ import annotations
 import importlib.util
 import os
 from pathlib import Path
+from types import SimpleNamespace
 import tempfile
 import unittest
 
@@ -172,6 +173,64 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
         self.assertEqual(
             result["dirty_paths_excluding_preview"],
             ["scripts/run_autonomous_agent_loop.py"],
+        )
+
+    def test_synthetic_row_detector_scans_all_raw_dallas_csv_fixtures(self) -> None:
+        commands = []
+        v1_diff_header = (
+            "diff --git "
+            "a/generated/raw/dallas-electrician-import-sample-v1/permits.csv "
+            "b/generated/raw/dallas-electrician-import-sample-v1/permits.csv"
+        )
+        v1_added_permit = (
+            "+ELZ-2026-9998,100 Example Ave,Dallas,TX,75208,electrical,"
+            "residential,single_family,Residential electrical repair,Active,"
+            "2026-06-01,2026-06-02,,12000,Example repair,Test Electric,"
+            "https://example.local/dallas/permits/ELZ-2026-9998"
+        )
+        v2_diff_header = (
+            "diff --git "
+            "a/generated/raw/dallas-electrician-import-sample-v2/inspections.csv "
+            "b/generated/raw/dallas-electrician-import-sample-v2/inspections.csv"
+        )
+        v2_added_inspection = (
+            "+ELZ-2026-9999,2026-06-03,Rough-in,Fail,Example failure,"
+            "Inspector Lane,true,"
+            "https://example.local/dallas/inspections/ELZ-2026-9999/1"
+        )
+
+        def fake_shell(command):
+            commands.append(command)
+            return SimpleNamespace(
+                stdout="\n".join(
+                    [
+                        v1_diff_header,
+                        "+++ b/generated/raw/dallas-electrician-import-sample-v1/permits.csv",
+                        v1_added_permit,
+                        v2_diff_header,
+                        "+++ b/generated/raw/dallas-electrician-import-sample-v2/inspections.csv",
+                        v2_added_inspection,
+                    ]
+                )
+            )
+
+        self.loop.shell = fake_shell
+
+        rows = self.loop.added_synthetic_dallas_rows()
+
+        self.assertEqual(len(rows), 2)
+        self.assertIn("ELZ-2026-9998", rows[0])
+        self.assertIn("ELZ-2026-9999", rows[1])
+        self.assertEqual(
+            commands,
+            [
+                [
+                    "git",
+                    "diff",
+                    "--",
+                    ":(glob)generated/raw/dallas-electrician-import-sample-*/*.csv",
+                ]
+            ],
         )
 
     def test_policy_check_rejects_docs_only_synthetic_row_append(self) -> None:

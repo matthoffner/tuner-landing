@@ -81,11 +81,10 @@ PRODUCTIVE_CHANGE_FILES = {
     "mvp.md",
     "render.yaml",
 }
-SYNTHETIC_DALLAS_RAW_FILES = (
-    "generated/raw/dallas-electrician-import-sample-v2/permits.csv",
-    "generated/raw/dallas-electrician-import-sample-v2/inspections.csv",
-)
 DALLAS_RAW_CSV_PREFIX = "generated/raw/dallas-electrician-import-sample-"
+DALLAS_RAW_CSV_DIFF_PATHSPEC = (
+    ":(glob)generated/raw/dallas-electrician-import-sample-*/*.csv"
+)
 
 
 def utc_now() -> str:
@@ -386,7 +385,7 @@ def changed_dallas_raw_csv_paths(paths: list[str]) -> list[str]:
 
 
 def added_synthetic_dallas_rows() -> list[str]:
-    result = shell(["git", "diff", "--", *SYNTHETIC_DALLAS_RAW_FILES])
+    result = shell(["git", "diff", "--", DALLAS_RAW_CSV_DIFF_PATHSPEC])
     rows: list[str] = []
     for line in result.stdout.splitlines():
         if not line.startswith("+") or line.startswith("+++"):
