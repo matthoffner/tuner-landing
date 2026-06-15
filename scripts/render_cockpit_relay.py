@@ -465,8 +465,83 @@ def validate_relay_configuration(
     return errors
 
 
-def emit_relay_preflight(args: argparse.Namespace) -> list[str]:
+def relay_preflight_error_category(error: str) -> str:
+    if error == "AUTOMOAT_RELAY_TOKEN is required":
+        return "missing_required"
+    if error.startswith("--port"):
+        return "invalid_port"
+    if error.startswith("--state-file"):
+        return "invalid_state_file"
+    if (
+        error.startswith("--max-ingest-bytes")
+        or error.startswith("--max-log-chars")
+        or error.startswith("--max-status-bytes")
+        or error.startswith("--stale-after-seconds")
+    ):
+        return "invalid_runtime_config"
+    if error.startswith("--host"):
+        return "invalid_host"
+    return "invalid_configuration"
+
+
+def relay_preflight_error_categories(errors: list[str]) -> list[str]:
+    return sorted({relay_preflight_error_category(error) for error in errors})
+
+
+def relay_preflight_summary(
+    args: argparse.Namespace,
+    errors: list[str],
+    env: os._Environ[str] | dict[str, str] | None = None,
+) -> dict[str, Any]:
+    env = env if env is not None else os.environ
+    payload: dict[str, Any] = {
+        "status": "failed" if errors else "passed",
+        "errors": errors,
+    }
+    if errors:
+        payload["diagnostics"] = {
+            "error_count": len(errors),
+            "error_categories": relay_preflight_error_categories(errors),
+            "relay_token_configured": bool(
+                str(env.get("AUTOMOAT_RELAY_TOKEN", "")).strip()
+            ),
+            "runtime_limits": RELAY_CONFIG_LIMITS,
+        }
+        return payload
+
+    state_file = str(args.state_file).strip() or "memory-only"
+    payload["config"] = {
+        "host": str(args.host),
+        "port": int(args.port),
+        "state_file": state_file,
+        "max_ingest_bytes": int(args.max_ingest_bytes),
+        "max_log_chars": int(args.max_log_chars),
+        "max_status_bytes": int(args.max_status_bytes),
+        "stale_after_seconds": int(args.stale_after_seconds),
+        "relay_token_configured": bool(
+            str(env.get("AUTOMOAT_RELAY_TOKEN", "")).strip()
+        ),
+        "runtime_limits": RELAY_CONFIG_LIMITS,
+    }
+    return payload
+
+
+def emit_relay_preflight(
+    args: argparse.Namespace,
+    *,
+    output_format: str = "text",
+) -> list[str]:
     errors = validate_relay_configuration(args)
+    if output_format == "json":
+        print(
+            json.dumps(
+                relay_preflight_summary(args, errors),
+                sort_keys=True,
+            ),
+            flush=True,
+        )
+        return errors
+
     if errors:
         print("relay environment preflight failed", file=sys.stderr)
         for error in errors:
@@ -678,14 +753,24 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="validate relay startup configuration and exit without serving",
     )
+    parser.add_argument(
+        "--format",
+        choices=("text", "json"),
+        default="text",
+        help="output format for --check-env preflight results",
+    )
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
+    if args.format == "json" and not args.check_env:
+        print("--format json is only supported with --check-env", file=sys.stderr)
+        return 2
+
     errors = validate_relay_configuration(args)
     if args.check_env:
-        return 2 if emit_relay_preflight(args) else 0
+        return 2 if emit_relay_preflight(args, output_format=args.format) else 0
     if errors:
         for error in errors:
             print(error, file=sys.stderr)

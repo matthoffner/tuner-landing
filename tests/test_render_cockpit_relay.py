@@ -6,6 +6,7 @@ from __future__ import annotations
 import contextlib
 import io
 import importlib.util
+import json
 import os
 from pathlib import Path
 import sys
@@ -581,6 +582,72 @@ class RenderCockpitRelayTest(unittest.TestCase):
         self.assertIn("state_file=memory-only", stdout.getvalue())
         self.assertIn("max_status_bytes=131072", stdout.getvalue())
         self.assertIn("runtime_limits=", stdout.getvalue())
+
+    def test_check_env_json_reports_safe_machine_readable_summary(self) -> None:
+        env = {
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            "PORT": "4180",
+            "AUTOMOAT_RELAY_STATE_FILE": "",
+            "AUTOMOAT_RELAY_MAX_STATUS_BYTES": "65536",
+        }
+        stdout = io.StringIO()
+        with patch.dict(os.environ, env, clear=True), patch.object(
+            sys,
+            "argv",
+            ["render_cockpit_relay.py", "--check-env", "--format", "json"],
+        ), contextlib.redirect_stdout(stdout):
+            status = self.relay.main()
+
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(status, 0)
+        self.assertEqual(payload["status"], "passed")
+        self.assertEqual(payload["errors"], [])
+        self.assertEqual(payload["config"]["host"], "127.0.0.1")
+        self.assertEqual(payload["config"]["port"], 4180)
+        self.assertEqual(payload["config"]["state_file"], "memory-only")
+        self.assertEqual(payload["config"]["max_status_bytes"], 65536)
+        self.assertTrue(payload["config"]["relay_token_configured"])
+        self.assertEqual(
+            payload["config"]["runtime_limits"],
+            self.relay.RELAY_CONFIG_LIMITS,
+        )
+        self.assertNotIn("relay-token", stdout.getvalue())
+
+    def test_check_env_json_failure_groups_errors_without_printing_token(self) -> None:
+        env = {
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            "PORT": "not-a-port",
+            "AUTOMOAT_RELAY_MAX_BYTES": "bad",
+            "AUTOMOAT_RELAY_MAX_STATUS_BYTES": "0",
+        }
+        stdout = io.StringIO()
+        with patch.dict(os.environ, env, clear=True), patch.object(
+            sys,
+            "argv",
+            ["render_cockpit_relay.py", "--check-env", "--format", "json"],
+        ), contextlib.redirect_stdout(stdout):
+            status = self.relay.main()
+
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(status, 2)
+        self.assertEqual(payload["status"], "failed")
+        self.assertIn("--port must be an integer", payload["errors"])
+        self.assertIn("--max-ingest-bytes must be an integer", payload["errors"])
+        self.assertIn(
+            "--max-status-bytes must be greater than 0",
+            payload["errors"],
+        )
+        self.assertEqual(payload["diagnostics"]["error_count"], 3)
+        self.assertEqual(
+            payload["diagnostics"]["error_categories"],
+            ["invalid_port", "invalid_runtime_config"],
+        )
+        self.assertTrue(payload["diagnostics"]["relay_token_configured"])
+        self.assertEqual(
+            payload["diagnostics"]["runtime_limits"],
+            self.relay.RELAY_CONFIG_LIMITS,
+        )
+        self.assertNotIn("relay-token", stdout.getvalue())
 
 
 if __name__ == "__main__":
