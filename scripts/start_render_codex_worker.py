@@ -8,6 +8,7 @@ import base64
 import json
 import math
 import os
+import shlex
 import shutil
 import signal
 import subprocess
@@ -998,11 +999,12 @@ def configure_git_auth() -> None:
         raise RuntimeError("GITHUB_TOKEN or GH_TOKEN is required")
     GITHUB_TOKEN_FILE.write_text(token + "\n", encoding="utf-8")
     GITHUB_TOKEN_FILE.chmod(0o600)
+    token_file = shlex.quote(str(GITHUB_TOKEN_FILE))
     GIT_ASKPASS.write_text(
         "#!/bin/sh\n"
         "case \"$1\" in\n"
         "*Username*) echo x-access-token ;;\n"
-        "*Password*) cat /tmp/automoat-github-token ;;\n"
+        f"*Password*) cat {token_file} ;;\n"
         "*) echo ;;\n"
         "esac\n",
         encoding="utf-8",

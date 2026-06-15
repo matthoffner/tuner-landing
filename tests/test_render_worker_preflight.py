@@ -1436,6 +1436,35 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         )
         self.assertEqual(configured_codex_home, str(codex_home))
 
+    def test_configure_git_auth_askpass_reads_configured_token_file(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            askpass_path = temp_path / "custom-askpass.sh"
+            token_path = temp_path / "custom-github-token"
+            self.worker.GIT_ASKPASS = askpass_path
+            self.worker.GITHUB_TOKEN_FILE = token_path
+            with patch.dict(
+                self.worker.os.environ,
+                {"GITHUB_TOKEN": "github-token"},
+                clear=True,
+            ), patch.object(self.worker, "run") as run:
+                self.worker.configure_git_auth()
+
+                askpass = askpass_path.read_text(encoding="utf-8")
+                token = token_path.read_text(encoding="utf-8")
+                git_askpass_env = self.worker.os.environ["GIT_ASKPASS"]
+                git_terminal_prompt = self.worker.os.environ["GIT_TERMINAL_PROMPT"]
+
+        self.assertIn(f"*Password*) cat {token_path} ;;", askpass)
+        self.assertNotIn("/tmp/automoat-github-token", askpass)
+        self.assertEqual(token, "github-token\n")
+        self.assertEqual(git_askpass_env, str(askpass_path))
+        self.assertEqual(git_terminal_prompt, "0")
+        self.assertEqual(
+            run.call_args_list[0].args[0],
+            ["git", "config", "--global", "user.name", "automoat-render-agent"],
+        )
+
     def test_sync_repo_uses_supplied_runtime_workdir_env_value(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             workdir = Path(temp_dir) / "runtime-repo"
