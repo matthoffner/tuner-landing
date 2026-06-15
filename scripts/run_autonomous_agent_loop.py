@@ -458,9 +458,7 @@ def changed_dallas_raw_csv_paths(paths: list[str]) -> list[str]:
 
 def synthetic_dallas_csv_row(row: str) -> bool:
     """Return whether a raw CSV row is hidden Dallas example.local fixture growth."""
-    return "example.local/dallas/" in row and (
-        "ELZ-2026-" in row or ",ELZ-2026-" not in row
-    )
+    return "example.local/dallas/" in row and "ELZ-2026-" in row
 
 
 def sanitized_policy_detail(text: str) -> str:

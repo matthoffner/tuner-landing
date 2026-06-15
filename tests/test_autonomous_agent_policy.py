@@ -318,6 +318,57 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
             ],
         )
 
+    def test_synthetic_row_detector_only_flags_elz_example_rows(self) -> None:
+        self.assertTrue(
+            self.loop.synthetic_dallas_csv_row(
+                "ELZ-2026-9999,100 Example Ave,Dallas,TX,75208,electrical,"
+                "residential,single_family,Electrical repair,Active,"
+                "2026-06-01,2026-06-02,,12000,Example repair,Test Electric,"
+                "https://example.local/dallas/permits/ELZ-2026-9999"
+            )
+        )
+        self.assertTrue(
+            self.loop.synthetic_dallas_csv_row(
+                "ELZ-2026-9999,2026-06-03,Rough-in,Fail,Example failure,"
+                "Inspector Lane,true,"
+                "https://example.local/dallas/inspections/ELZ-2026-9999/1"
+            )
+        )
+        self.assertFalse(
+            self.loop.synthetic_dallas_csv_row(
+                "Dallas temporary power checklist,inspection_checklist,2026-06-01,"
+                "https://example.local/dallas/rules/temporary-power,"
+                "Temporary service must have approved grounding and clearance."
+            )
+        )
+        self.assertFalse(
+            self.loop.synthetic_dallas_csv_row(
+                "ELR-2026-9999,100 Example Ave,Dallas,TX,75208,electrical,"
+                "residential,single_family,Residential electrical remodel,Active,"
+                "2026-06-01,2026-06-02,,12000,Example remodel,Test Electric,"
+                "https://example.local/dallas/permits/ELR-2026-9999"
+            )
+        )
+
+    def test_added_synthetic_rows_ignores_documented_non_elz_source_rows(self) -> None:
+        diff_output = "\n".join(
+            [
+                (
+                    "diff --git "
+                    "a/generated/raw/dallas-electrician-import-sample-v2/rule_documents.csv "
+                    "b/generated/raw/dallas-electrician-import-sample-v2/rule_documents.csv"
+                ),
+                "+++ b/generated/raw/dallas-electrician-import-sample-v2/rule_documents.csv",
+                (
+                    "+Dallas temporary power checklist,inspection_checklist,2026-06-01,"
+                    "https://example.local/dallas/rules/temporary-power,"
+                    "Temporary service must have approved grounding and clearance."
+                ),
+            ]
+        )
+
+        self.assertEqual(self.loop.added_synthetic_rows_from_diff(diff_output), [])
+
     def test_synthetic_row_detector_scans_untracked_raw_dallas_csv_fixtures(self) -> None:
         fixture_path = (
             "generated/raw/dallas-electrician-import-sample-v3/permits.csv"
