@@ -211,6 +211,65 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertIn("AUTOMOAT_RELAY_MAX_LOG_BYTES must be greater than 0", errors)
         self.assertIn("AUTOMOAT_STATUS_STALE_AFTER_SECONDS must be greater than 0", errors)
 
+    def test_rejects_runtime_knobs_with_empty_or_surrounding_whitespace(self) -> None:
+        errors = self.worker.validate_worker_environment(
+            {
+                "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+                "AUTOMOAT_RELAY_TOKEN": "relay-token",
+                "GITHUB_TOKEN": "github-token",
+                "CODEX_ACCESS_TOKEN": "codex-token",
+                "AUTOMOAT_AGENT_INTERVAL": " 300",
+                "AUTOMOAT_AGENT_ITERATIONS": "0 ",
+                "AUTOMOAT_RELAY_INTERVAL": "   ",
+                "AUTOMOAT_RELAY_TIMEOUT": "8\t",
+                "AUTOMOAT_RELAY_MAX_CONSECUTIVE_FAILURES": "\n3",
+            },
+            found_command,
+        )
+
+        self.assertEqual(
+            errors,
+            [
+                "AUTOMOAT_RELAY_INTERVAL must not be empty",
+                "AUTOMOAT_RELAY_TIMEOUT must not include leading or trailing whitespace",
+                (
+                    "AUTOMOAT_RELAY_MAX_CONSECUTIVE_FAILURES must not include "
+                    "leading or trailing whitespace"
+                ),
+                "AUTOMOAT_AGENT_INTERVAL must not include leading or trailing whitespace",
+                "AUTOMOAT_AGENT_ITERATIONS must not include leading or trailing whitespace",
+            ],
+        )
+
+    def test_json_preflight_categorizes_runtime_whitespace_as_runtime_config(self) -> None:
+        env = {
+            "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            "GITHUB_TOKEN": "github-token",
+            "CODEX_ACCESS_TOKEN": "codex-token",
+            "AUTOMOAT_RELAY_INTERVAL": " 3",
+        }
+        output = io.StringIO()
+
+        with redirect_stdout(output):
+            errors = self.worker.emit_environment_preflight(
+                env,
+                found_command,
+                output_format="json",
+            )
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(
+            errors,
+            ["AUTOMOAT_RELAY_INTERVAL must not include leading or trailing whitespace"],
+        )
+        self.assertEqual(payload["status"], "failed")
+        self.assertEqual(
+            payload["diagnostics"]["error_categories"],
+            ["invalid_runtime_config"],
+        )
+        self.assertNotIn(" relay-token", output.getvalue())
+
     def test_accepts_runtime_knobs_at_documented_worker_limits(self) -> None:
         limits = self.worker.RUNTIME_CONFIG_LIMITS
 

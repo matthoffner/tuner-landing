@@ -119,6 +119,29 @@ def decode_codex_auth_json_b64(value: str) -> bytes:
     return decoded
 
 
+def validated_runtime_env_value(
+    env: os._Environ[str] | dict[str, str],
+    name: str,
+    errors: list[str],
+) -> str | None:
+    if name not in env:
+        return None
+    value = env.get(name, "")
+    if not value.strip():
+        errors.append(f"{name} must not be empty")
+        return None
+    if value != value.strip():
+        errors.append(f"{name} must not include leading or trailing whitespace")
+        return None
+    if any(
+        character in "\r\n" or ord(character) < 32 or ord(character) == 127
+        for character in value
+    ):
+        errors.append(f"{name} must be a single-line runtime value without control characters")
+        return None
+    return value
+
+
 def validate_nonnegative_float(
     env: os._Environ[str] | dict[str, str],
     name: str,
@@ -126,8 +149,8 @@ def validate_nonnegative_float(
     *,
     maximum: float | None = None,
 ) -> None:
-    value = env.get(name, "").strip()
-    if not value:
+    value = validated_runtime_env_value(env, name, errors)
+    if value is None:
         return
     try:
         parsed = float(value)
@@ -148,8 +171,8 @@ def validate_positive_float(
     *,
     maximum: float | None = None,
 ) -> None:
-    value = env.get(name, "").strip()
-    if not value:
+    value = validated_runtime_env_value(env, name, errors)
+    if value is None:
         return
     try:
         parsed = float(value)
@@ -170,8 +193,8 @@ def validate_nonnegative_int(
     *,
     maximum: int | None = None,
 ) -> None:
-    value = env.get(name, "").strip()
-    if not value:
+    value = validated_runtime_env_value(env, name, errors)
+    if value is None:
         return
     try:
         parsed = int(value)
@@ -192,8 +215,8 @@ def validate_positive_int(
     *,
     maximum: int | None = None,
 ) -> None:
-    value = env.get(name, "").strip()
-    if not value:
+    value = validated_runtime_env_value(env, name, errors)
+    if value is None:
         return
     try:
         parsed = int(value)
@@ -483,6 +506,8 @@ def preflight_error_category(error: str) -> str:
         return "invalid_codex_auth_payload"
     if error.startswith("AUTOMOAT_CODEX_"):
         return "invalid_codex_config"
+    if any(error.startswith(name) for name in RUNTIME_CONFIG_LIMITS):
+        return "invalid_runtime_config"
     if (
         "single-line value without control characters" in error
         or "must not include leading or trailing whitespace" in error
