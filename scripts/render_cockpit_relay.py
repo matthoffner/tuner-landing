@@ -880,6 +880,16 @@ def parse_positive_int(
     return parsed
 
 
+def blocking_parent_path_component(path: Path) -> Path | None:
+    current_path = path.parent
+    while True:
+        if current_path.exists():
+            return None if current_path.is_dir() else current_path
+        if current_path.parent == current_path:
+            return None
+        current_path = current_path.parent
+
+
 def validate_relay_configuration(
     args: argparse.Namespace,
     env: os._Environ[str] | dict[str, str] | None = None,
@@ -914,14 +924,29 @@ def validate_relay_configuration(
         errors.append("--host must not include leading or trailing whitespace")
     elif any(character.isspace() for character in host_value):
         errors.append("--host must not contain whitespace")
-    state_file = str(args.state_file).strip()
-    if state_file:
-        state_path = Path(state_file).expanduser()
-        if state_path.exists() and state_path.is_dir():
-            errors.append("--state-file must be a file path, not a directory")
-        elif state_path.parent.exists() and not state_path.parent.is_dir():
-            errors.append("--state-file parent must be a directory")
 
+    state_file_value = str(args.state_file)
+    state_file = state_file_value.strip()
+    if state_file_value:
+        if any(
+            character in "\r\n" or ord(character) < 32 or ord(character) == 127
+            for character in state_file_value
+        ):
+            errors.append(
+                "--state-file must be a single-line path without control characters"
+            )
+        elif state_file_value != state_file:
+            errors.append("--state-file must not include leading or trailing whitespace")
+        elif state_file:
+            state_path = Path(state_file).expanduser()
+            blocking_path = blocking_parent_path_component(state_path)
+            if state_path.exists() and state_path.is_dir():
+                errors.append("--state-file must be a file path, not a directory")
+            elif blocking_path is not None:
+                errors.append(
+                    "--state-file parent path "
+                    f"{repo_relative(blocking_path)} must be a directory"
+                )
     port = parse_positive_int("--port", args.port, errors)
     if port is not None and port > 65535:
         errors.append("--port must be less than or equal to 65535")

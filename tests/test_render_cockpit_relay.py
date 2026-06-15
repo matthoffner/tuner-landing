@@ -1168,6 +1168,65 @@ class RenderCockpitRelayTest(unittest.TestCase):
 
         self.assertIn("--state-file must be a file path, not a directory", errors)
 
+    def test_relay_preflight_rejects_malformed_state_file_before_serving(self) -> None:
+        cases = {
+            " /tmp/automoat-relay-state.json": (
+                "--state-file must not include leading or trailing whitespace"
+            ),
+            "/tmp/automoat-relay-state.json\nbackup": (
+                "--state-file must be a single-line path without control characters"
+            ),
+            "   ": "--state-file must not include leading or trailing whitespace",
+        }
+        for state_file, expected_error in cases.items():
+            with self.subTest(state_file=repr(state_file)):
+                with patch.dict(
+                    os.environ,
+                    {"AUTOMOAT_RELAY_TOKEN": "relay-token"},
+                    clear=True,
+                ), patch.object(
+                    sys,
+                    "argv",
+                    [
+                        "render_cockpit_relay.py",
+                        "--check-env",
+                        "--state-file",
+                        state_file,
+                    ],
+                ):
+                    args = self.relay.parse_args()
+                    errors = self.relay.validate_relay_configuration(args)
+
+                self.assertEqual(errors, [expected_error])
+
+    def test_relay_preflight_rejects_blocked_state_file_parent(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            blocking_parent = Path(tmp) / "blocked"
+            blocking_parent.write_text("not a directory\n", encoding="utf-8")
+            state_file = blocking_parent / "relay-state.json"
+
+            with patch.dict(
+                os.environ,
+                {"AUTOMOAT_RELAY_TOKEN": "relay-token"},
+                clear=True,
+            ), patch.object(
+                sys,
+                "argv",
+                [
+                    "render_cockpit_relay.py",
+                    "--check-env",
+                    "--state-file",
+                    str(state_file),
+                ],
+            ):
+                args = self.relay.parse_args()
+                errors = self.relay.validate_relay_configuration(args)
+
+        self.assertEqual(
+            errors,
+            ["--state-file parent path <external>/blocked must be a directory"],
+        )
+
     def test_update_state_reports_persistence_failure_without_mutating_snapshot(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             state_directory = Path(tmp) / "state-dir"
@@ -1348,6 +1407,35 @@ class RenderCockpitRelayTest(unittest.TestCase):
         self.assertNotIn("backup", stdout.getvalue())
         self.assertNotIn("relay-token", stdout.getvalue())
         self.assertNotIn("second-line", stdout.getvalue())
+
+    def test_check_env_json_categorizes_malformed_state_file_without_echoing_it(self) -> None:
+        env = {
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            "PORT": "4180",
+            "AUTOMOAT_RELAY_STATE_FILE": "/tmp/automoat-relay-state.json\nbackup",
+        }
+        stdout = io.StringIO()
+        with patch.dict(os.environ, env, clear=True), patch.object(
+            sys,
+            "argv",
+            ["render_cockpit_relay.py", "--check-env", "--format", "json"],
+        ), contextlib.redirect_stdout(stdout):
+            status = self.relay.main()
+
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(status, 2)
+        self.assertEqual(payload["status"], "failed")
+        self.assertEqual(
+            payload["errors"],
+            ["--state-file must be a single-line path without control characters"],
+        )
+        self.assertEqual(
+            payload["diagnostics"]["error_categories"],
+            ["invalid_state_file"],
+        )
+        self.assertNotIn("/tmp/automoat-relay-state.json", stdout.getvalue())
+        self.assertNotIn("backup", stdout.getvalue())
+        self.assertNotIn("relay-token", stdout.getvalue())
 
 
 if __name__ == "__main__":
