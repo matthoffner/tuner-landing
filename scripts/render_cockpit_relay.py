@@ -219,6 +219,36 @@ def publisher_identity(state: dict[str, Any]) -> dict[str, Any]:
     return identity
 
 
+def source_status_diagnostics(status: dict[str, Any]) -> dict[str, Any]:
+    diagnostics: dict[str, Any] = {}
+    text_fields = {
+        "source_status": status.get("status"),
+        "source_status_file": status.get("source_status_file"),
+        "source_status_file_status": status.get("source_status_file_status"),
+        "source_status_file_error": status.get("source_status_file_error"),
+    }
+    for key, value in text_fields.items():
+        compact_value = compact_text(value, max_length=240)
+        if compact_value is not None:
+            diagnostics[key] = compact_value
+
+    int_fields = {
+        "source_status_age_seconds": status.get("source_status_age_seconds"),
+        "source_status_stale_after_seconds": status.get(
+            "source_status_stale_after_seconds"
+        ),
+    }
+    for key, value in int_fields.items():
+        compact_value = compact_int(value)
+        if compact_value is not None:
+            diagnostics[key] = compact_value
+
+    stale = status.get("source_status_stale")
+    if isinstance(stale, bool):
+        diagnostics["source_status_stale"] = stale
+    return diagnostics
+
+
 def cockpit_health(
     state: dict[str, Any],
     status: dict[str, Any],
@@ -289,6 +319,7 @@ def cockpit_health(
         ],
         "source_cockpit_attention_primary_reason": source_attention_primary_reason,
         "source_cockpit_attention_label": source_attention_label,
+        "source_status_diagnostics": source_status_diagnostics(status),
         "source_health": source_health,
         "publisher_identity": publisher_identity(state),
     }

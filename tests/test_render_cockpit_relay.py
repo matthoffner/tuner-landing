@@ -470,6 +470,21 @@ class RenderCockpitRelayTest(unittest.TestCase):
             ],
         )
         self.assertEqual(status["source_status_file_status"], "invalid_json")
+        expected_diagnostics = {
+            "source_status": "waiting",
+            "source_status_file": ".automoat/state/mvp-loop-status.json",
+            "source_status_file_status": "invalid_json",
+            "source_status_file_error": "line 1 column 2: Expecting property name",
+            "source_status_stale": True,
+        }
+        self.assertEqual(
+            health["cockpit_health"]["source_status_diagnostics"],
+            expected_diagnostics,
+        )
+        self.assertEqual(
+            status["cockpit_health"]["source_status_diagnostics"],
+            expected_diagnostics,
+        )
         self.assertEqual(
             status["cockpit_health"]["reasons"],
             health["cockpit_health"]["reasons"],
