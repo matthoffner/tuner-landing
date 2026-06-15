@@ -653,6 +653,23 @@ def tail_text(path: Path, line_count: int, max_bytes: int) -> str:
     return "\n".join(lines[-line_count:]).rstrip() + "\n"
 
 
+def sanitize_log_tail_for_relay(text: str, *, max_line_length: int = 1200) -> str:
+    sanitized_lines: list[str] = []
+    for line in text.splitlines():
+        sanitized = "".join(
+            " " if ord(character) < 32 or ord(character) == 127 else character
+            for character in line
+        )
+        sanitized = URL_TEXT_PATTERN.sub(sanitize_url_for_log, sanitized)
+        sanitized = BEARER_SECRET_PATTERN.sub(r"\1 [redacted]", sanitized)
+        sanitized = SECRET_ASSIGNMENT_PATTERN.sub(
+            lambda match: f"{match.group(1)}=[redacted]",
+            sanitized,
+        )
+        sanitized_lines.append(sanitized[:max_line_length])
+    return "\n".join(sanitized_lines).rstrip() + "\n"
+
+
 def shell(command: list[str], timeout: float = 5.0) -> str:
     result = subprocess.run(
         command,
@@ -775,7 +792,9 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     return {
         "pushed_at": utc_now(),
         "status": status,
-        "log_tail": tail_text(args.log_file, args.tail_lines, args.max_log_bytes),
+        "log_tail": sanitize_log_tail_for_relay(
+            tail_text(args.log_file, args.tail_lines, args.max_log_bytes)
+        ),
         "publisher": {
             "host": socket.gethostname(),
             "pid": os.getpid(),

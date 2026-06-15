@@ -173,6 +173,72 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             },
         )
 
+    def test_build_payload_sanitizes_log_tail_before_relay_publish(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            status_file = tmp_path / "status.json"
+            pid_file = tmp_path / "custom.pid"
+            log_file = tmp_path / "custom.log"
+            publisher_log = tmp_path / "publisher.log"
+            bridge_status_file = tmp_path / "custom-bridge-status.json"
+            status_file.write_text(
+                json.dumps(
+                    {
+                        "status": "passing",
+                        "updated_at": "2026-06-14T19:30:00Z",
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            log_file.write_text(
+                "\n".join(
+                    [
+                        "visible startup line",
+                        (
+                            "authorization: Bearer relay-secret "
+                            "token=tail-secret relay_token=second-secret "
+                            "https://relay-user:relay-pass@relay.example/status"
+                            "?token=url-secret#debug"
+                        ),
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            args = Namespace(
+                status_file=status_file,
+                pid_file=pid_file,
+                log_file=log_file,
+                publisher_log=publisher_log,
+                bridge_status_file=bridge_status_file,
+                interval=4.5,
+                timeout=11.25,
+                tail_lines=5,
+                max_log_bytes=4096,
+                max_consecutive_failures=5,
+                max_consecutive_stale_statuses=6,
+                status_stale_after_seconds=120,
+                bridge_status_stale_after_seconds=120,
+            )
+            self.publisher.utc_now = lambda: "2026-06-14T19:31:00Z"
+
+            payload = self.publisher.build_payload(args)
+
+        log_tail = payload["log_tail"]
+        self.assertIn("visible startup line", log_tail)
+        self.assertIn("authorization: Bearer [redacted]", log_tail)
+        self.assertIn("token=[redacted]", log_tail)
+        self.assertIn("relay_token=[redacted]", log_tail)
+        self.assertIn("https://relay.example/status?[redacted]#[redacted]", log_tail)
+        self.assertTrue(log_tail.endswith("\n"))
+        self.assertNotIn("relay-secret", log_tail)
+        self.assertNotIn("tail-secret", log_tail)
+        self.assertNotIn("second-secret", log_tail)
+        self.assertNotIn("relay-user", log_tail)
+        self.assertNotIn("relay-pass", log_tail)
+        self.assertNotIn("url-secret", log_tail)
+
     def test_read_status_returns_waiting_for_missing_configured_file(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
