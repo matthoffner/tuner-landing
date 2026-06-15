@@ -1198,6 +1198,35 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             ],
         )
 
+    def test_check_env_json_categorizes_git_identity_whitespace(self) -> None:
+        env = {
+            "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            "GITHUB_TOKEN": "github-token",
+            "CODEX_ACCESS_TOKEN": "codex-token",
+            "GIT_AUTHOR_NAME": " automoat-render-bot",
+        }
+        output = io.StringIO()
+
+        with redirect_stdout(output):
+            errors = self.worker.emit_environment_preflight(
+                env,
+                found_command,
+                output_format="json",
+            )
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(
+            errors,
+            ["GIT_AUTHOR_NAME must not include leading or trailing whitespace"],
+        )
+        self.assertEqual(payload["status"], "failed")
+        self.assertEqual(
+            payload["diagnostics"]["error_categories"],
+            ["invalid_git_identity"],
+        )
+        self.assertNotIn(" automoat-render-bot", output.getvalue())
+
     def test_rejects_malformed_git_identity_email_values_before_git_config(self) -> None:
         base_env = {
             "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",

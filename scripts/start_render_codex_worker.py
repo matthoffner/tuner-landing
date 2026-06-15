@@ -529,13 +529,13 @@ def preflight_error_category(error: str) -> str:
         return "invalid_codex_config"
     if any(error.startswith(name) for name in RUNTIME_CONFIG_LIMITS):
         return "invalid_runtime_config"
+    if error.startswith("GIT_AUTHOR_") or error.startswith("GIT_COMMITTER_"):
+        return "invalid_git_identity"
     if (
         "single-line value without control characters" in error
         or "must not include leading or trailing whitespace" in error
     ):
         return "invalid_secret_or_identity"
-    if error.startswith("GIT_AUTHOR_") or error.startswith("GIT_COMMITTER_"):
-        return "invalid_git_identity"
     if error.endswith(" executable is required on PATH"):
         return "missing_command"
     if error.startswith("AUTOMOAT_"):
