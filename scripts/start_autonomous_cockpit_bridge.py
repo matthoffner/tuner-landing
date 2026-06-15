@@ -7,10 +7,12 @@ import argparse
 import json
 import os
 import signal
+import shutil
 import subprocess
 import sys
 import time
 from pathlib import Path
+from typing import Any
 from urllib.request import urlopen
 
 
@@ -113,13 +115,132 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--interval", type=float, default=300.0, help="seconds between autonomous Codex iterations")
     parser.add_argument("--port", type=int, default=4174)
+    parser.add_argument("--bridge-port", type=int, default=4175, help="local read-only bridge viewer port")
+    parser.add_argument("--ngrok-web-port", type=int, default=4040, help="local ngrok inspection API port")
+    parser.add_argument("--bridge-interval", type=float, default=6.0, help="read-only bridge viewer refresh interval")
     parser.add_argument("--no-stop-existing", action="store_true")
     parser.add_argument("--keep-bridge", action="store_true", help="restart only the local cockpit and reuse the existing bridge")
+    parser.add_argument(
+        "--check-env",
+        action="store_true",
+        help="validate local bridge launcher configuration without starting processes",
+    )
+    parser.add_argument(
+        "--format",
+        choices=("text", "json"),
+        default="text",
+        help="output format for --check-env preflight results",
+    )
     return parser.parse_args()
+
+
+def validate_port(name: str, value: int) -> list[str]:
+    if value <= 0:
+        return [f"{name} must be greater than 0"]
+    if value > 65535:
+        return [f"{name} must be less than or equal to 65535"]
+    return []
+
+
+def validate_startup_configuration(args: argparse.Namespace) -> list[str]:
+    errors: list[str] = []
+    errors.extend(validate_port("--port", int(args.port)))
+    errors.extend(validate_port("--bridge-port", int(args.bridge_port)))
+    errors.extend(validate_port("--ngrok-web-port", int(args.ngrok_web_port)))
+    if args.interval <= 0:
+        errors.append("--interval must be greater than 0")
+    if args.bridge_interval <= 0:
+        errors.append("--bridge-interval must be greater than 0")
+    if args.port == args.bridge_port:
+        errors.append("--port must not equal --bridge-port")
+    if not args.keep_bridge and shutil.which("ngrok") is None:
+        errors.append("ngrok is required unless --keep-bridge is set")
+    return errors
+
+
+def startup_preflight_error_category(error: str) -> str:
+    if error.startswith("ngrok "):
+        return "missing_command"
+    if error.startswith("--"):
+        return "invalid_runtime_config"
+    return "invalid_configuration"
+
+
+def startup_preflight_error_categories(errors: list[str]) -> list[str]:
+    return sorted({startup_preflight_error_category(error) for error in errors})
+
+
+def startup_preflight_summary(args: argparse.Namespace, errors: list[str]) -> dict[str, Any]:
+    ngrok_path = shutil.which("ngrok")
+    payload: dict[str, Any] = {
+        "status": "failed" if errors else "passed",
+        "errors": errors,
+    }
+    if errors:
+        payload["diagnostics"] = {
+            "error_count": len(errors),
+            "error_categories": startup_preflight_error_categories(errors),
+            "ngrok_required": not bool(args.keep_bridge),
+            "ngrok_available": ngrok_path is not None,
+        }
+        return payload
+
+    payload["config"] = {
+        "local_cockpit_url": f"http://127.0.0.1:{args.port}",
+        "local_bridge_url": f"http://127.0.0.1:{args.bridge_port}/",
+        "ngrok_api_url": f"http://127.0.0.1:{args.ngrok_web_port}/api/tunnels",
+        "agent_interval": float(args.interval),
+        "bridge_interval": float(args.bridge_interval),
+        "keep_bridge": bool(args.keep_bridge),
+        "stop_existing": not bool(args.no_stop_existing),
+        "ngrok_required": not bool(args.keep_bridge),
+        "ngrok_available": ngrok_path is not None,
+    }
+    return payload
+
+
+def emit_startup_preflight(
+    args: argparse.Namespace,
+    *,
+    output_format: str = "text",
+) -> list[str]:
+    errors = validate_startup_configuration(args)
+    if output_format == "json":
+        print(json.dumps(startup_preflight_summary(args, errors), sort_keys=True), flush=True)
+        return errors
+
+    if errors:
+        print("autonomous bridge startup preflight failed")
+        for error in errors:
+            print(f"  - {error}")
+        return errors
+
+    print(
+        "autonomous bridge startup preflight passed: "
+        f"local_cockpit_url=http://127.0.0.1:{args.port} "
+        f"local_bridge_url=http://127.0.0.1:{args.bridge_port}/ "
+        f"ngrok_api_url=http://127.0.0.1:{args.ngrok_web_port}/api/tunnels "
+        f"agent_interval={args.interval} "
+        f"bridge_interval={args.bridge_interval} "
+        f"keep_bridge={args.keep_bridge}"
+    )
+    return []
 
 
 def main() -> int:
     args = parse_args()
+    if args.format == "json" and not args.check_env:
+        print("--format json is only supported with --check-env", file=sys.stderr)
+        return 2
+
+    errors = validate_startup_configuration(args)
+    if args.check_env:
+        return 0 if not emit_startup_preflight(args, output_format=args.format) else 2
+    if errors:
+        for error in errors:
+            print(error, file=sys.stderr)
+        return 2
+
     LOG_DIR.mkdir(parents=True, exist_ok=True)
     STATE_DIR.mkdir(parents=True, exist_ok=True)
     if not args.no_stop_existing:
@@ -148,7 +269,16 @@ def main() -> int:
         bridge_pid = read_pid(BRIDGE_RUNNER_PID) or 0
     else:
         bridge_pid = start_detached(
-            [sys.executable, "scripts/bridge_mvp_cockpit.py"],
+            [
+                sys.executable,
+                "scripts/bridge_mvp_cockpit.py",
+                "--port",
+                str(args.bridge_port),
+                "--ngrok-web-port",
+                str(args.ngrok_web_port),
+                "--interval",
+                str(args.bridge_interval),
+            ],
             LOG_DIR / "mvp-bridge-runner.log",
             BRIDGE_RUNNER_PID,
         )
