@@ -32,6 +32,7 @@ STOP_REQUESTED = False
 STARTUP_CHILD_GRACE_SECONDS = 0.5
 PUBLISHER_PREFLIGHT_TIMEOUT_SECONDS = 15.0
 PUBLISHER_PREFLIGHT_MAX_OUTPUT_BYTES = 64 * 1024
+PUBLISHER_PREFLIGHT_DIAGNOSTIC_TOKEN_LIMIT = 12
 CODEX_AUTH_ENV_NAMES = ("CODEX_AUTH_JSON_B64", "CODEX_ACCESS_TOKEN", "OPENAI_API_KEY")
 GIT_AUTH_ENV_NAMES = ("GITHUB_TOKEN", "GH_TOKEN")
 REQUIRED_COMMANDS = ("git", "codex")
@@ -1062,11 +1063,17 @@ def publisher_preflight_diagnostic_tokens(diagnostics: Any, key: str) -> list[st
         return []
 
     tokens: list[str] = []
+    seen: set[str] = set()
     for value in values:
         if not isinstance(value, str) or not value or len(value) > 160:
             continue
+        if value in seen:
+            continue
         if all(character.isalnum() or character in "_-|" for character in value):
             tokens.append(value)
+            seen.add(value)
+        if len(tokens) >= PUBLISHER_PREFLIGHT_DIAGNOSTIC_TOKEN_LIMIT:
+            break
     return tokens
 
 

@@ -2343,6 +2343,47 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertNotIn("relay.example", message)
         self.assertNotIn("token=secret", message)
 
+    def test_validate_publisher_preflight_output_bounds_diagnostic_tokens(self) -> None:
+        categories = [f"category_{index:02d}" for index in range(16)]
+        failed_keys = [
+            f"AUTOMOAT_RELAY_KEY_{index:02d}|--key-{index:02d}"
+            for index in range(16)
+        ]
+        failed_payload = json.dumps(
+            {
+                "status": "failed",
+                "errors": ["publisher emitted many diagnostics"],
+                "diagnostics": {
+                    "error_categories": [
+                        categories[0],
+                        categories[0],
+                        *categories[1:],
+                        "token=relay-secret",
+                    ],
+                    "failed_configuration_keys": [
+                        failed_keys[0],
+                        failed_keys[0],
+                        *failed_keys[1:],
+                        "https://relay.example/?token=secret",
+                    ],
+                },
+            }
+        )
+
+        with self.assertRaises(RuntimeError) as context:
+            self.worker.validate_publisher_preflight_output(failed_payload)
+
+        message = str(context.exception)
+        self.assertEqual(message.count(categories[0]), 1)
+        self.assertIn(categories[11], message)
+        self.assertNotIn(categories[12], message)
+        self.assertEqual(message.count(failed_keys[0]), 1)
+        self.assertIn(failed_keys[11], message)
+        self.assertNotIn(failed_keys[12], message)
+        self.assertNotIn("relay-secret", message)
+        self.assertNotIn("relay.example", message)
+        self.assertNotIn("token=secret", message)
+
     def test_check_relay_publisher_preflight_rejects_non_standard_json_constants(
         self,
     ) -> None:
