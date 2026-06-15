@@ -106,7 +106,7 @@ def read_json_with_status(path: Path) -> tuple[dict[str, Any] | None, dict[str, 
         return None, metadata
     try:
         with path.open("r", encoding="utf-8") as handle:
-            payload = json.load(handle)
+            payload = json.load(handle, parse_constant=reject_json_constant)
     except OSError as exc:
         metadata["source_status_file_status"] = "read_failed"
         metadata["source_status_file_error"] = compact_path_error(exc, path)
@@ -116,6 +116,10 @@ def read_json_with_status(path: Path) -> tuple[dict[str, Any] | None, dict[str, 
         metadata["source_status_file_error"] = (
             f"line {exc.lineno} column {exc.colno}: {exc.msg}"
         )
+        return None, metadata
+    except ValueError as exc:
+        metadata["source_status_file_status"] = "invalid_json"
+        metadata["source_status_file_error"] = compact_text(str(exc)) or type(exc).__name__
         return None, metadata
     if not isinstance(payload, dict):
         metadata["source_status_file_status"] = "not_object"
@@ -127,6 +131,10 @@ def read_json_with_status(path: Path) -> tuple[dict[str, Any] | None, dict[str, 
 def read_json(path: Path) -> dict[str, Any] | None:
     payload, _metadata = read_json_with_status(path)
     return payload
+
+
+def reject_json_constant(value: str) -> None:
+    raise ValueError(f"invalid JSON constant {value}")
 
 
 def parse_utc_timestamp(value: Any) -> datetime | None:
@@ -336,7 +344,10 @@ def read_bridge_summary(
             "status_file_status": "missing",
         }
     try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
+        payload = json.loads(
+            path.read_text(encoding="utf-8"),
+            parse_constant=reject_json_constant,
+        )
     except OSError as exc:
         return {
             "available": False,
@@ -350,6 +361,13 @@ def read_bridge_summary(
             "status_file": status_file,
             "status_file_status": "invalid_json",
             "status_file_error": f"line {exc.lineno} column {exc.colno}: {exc.msg}",
+        }
+    except ValueError as exc:
+        return {
+            "available": False,
+            "status_file": status_file,
+            "status_file_status": "invalid_json",
+            "status_file_error": compact_text(str(exc)) or type(exc).__name__,
         }
     if not isinstance(payload, dict):
         return {
@@ -696,7 +714,7 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
 
 def post_payload(args: argparse.Namespace, payload: dict[str, Any]) -> dict[str, Any]:
     relay_url = args.relay_url.rstrip("/")
-    data = json.dumps(payload).encode("utf-8")
+    data = json.dumps(payload, allow_nan=False).encode("utf-8")
     request = Request(
         f"{relay_url}/ingest",
         data=data,
@@ -820,7 +838,13 @@ def publish_once_result(args: argparse.Namespace) -> dict[str, Any]:
             "published": False,
             "source_status_stale": source_fields.get("source_status_stale"),
         }
-    except (OSError, URLError, json.JSONDecodeError, subprocess.SubprocessError) as exc:
+    except (
+        OSError,
+        URLError,
+        ValueError,
+        json.JSONDecodeError,
+        subprocess.SubprocessError,
+    ) as exc:
         emit(
             "publish failed "
             f"error={sanitize_error_for_log(exc)} "

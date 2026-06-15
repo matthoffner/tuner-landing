@@ -279,6 +279,22 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertNotIn("interval", summary)
         self.assertNotIn("Infinity", summary_text)
 
+    def test_read_bridge_summary_rejects_nonstandard_json_constants(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            bridge_status_file = Path(tmp) / "mvp-bridge-status.json"
+            bridge_status_file.write_text(
+                '{"status":"running","updated_at":"2026-06-15T03:20:00Z","interval":Infinity}\n',
+                encoding="utf-8",
+            )
+
+            summary = self.publisher.read_bridge_summary(bridge_status_file)
+            summary_text = json.dumps(summary, sort_keys=True, allow_nan=False)
+
+        self.assertFalse(summary["available"])
+        self.assertEqual(summary["status_file_status"], "invalid_json")
+        self.assertIn("invalid JSON constant Infinity", summary["status_file_error"])
+        self.assertNotIn('"interval"', summary_text)
+
     def test_read_bridge_summary_sanitizes_url_fields_for_remote_snapshots(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
@@ -632,6 +648,31 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertEqual(status["source_status_file_status"], "invalid_json")
         self.assertIn("line 1 column 2", status["source_status_file_error"])
         self.assertTrue(status["source_status_stale"])
+
+    def test_read_status_rejects_nonstandard_json_constants(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            status_file = tmp_path / "status.json"
+            status_file.write_text(
+                (
+                    '{"status":"passing","updated_at":"2026-06-14T19:30:00Z",'
+                    '"artifacts":{"contract":{"passed_checks":NaN}}}\n'
+                ),
+                encoding="utf-8",
+            )
+
+            status = self.publisher.read_status(
+                status_file,
+                tmp_path / "missing.pid",
+                status_stale_after_seconds=120,
+            )
+            status_text = json.dumps(status, sort_keys=True, allow_nan=False)
+
+        self.assertEqual(status["status"], "waiting")
+        self.assertEqual(status["source_status_file_status"], "invalid_json")
+        self.assertIn("invalid JSON constant NaN", status["source_status_file_error"])
+        self.assertTrue(status["source_status_stale"])
+        self.assertNotIn("passed_checks", status_text)
 
     def test_read_status_masks_local_path_in_read_error(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
