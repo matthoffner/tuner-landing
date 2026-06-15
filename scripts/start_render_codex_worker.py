@@ -103,6 +103,13 @@ def configured_names(env: os._Environ[str] | dict[str, str], names: tuple[str, .
     return [name for name in names if env.get(name, "").strip()]
 
 
+def selected_name(env: os._Environ[str] | dict[str, str], names: tuple[str, ...]) -> str | None:
+    for name in names:
+        if env.get(name, "").strip():
+            return name
+    return None
+
+
 def decode_codex_auth_json_b64(value: str) -> bytes:
     decoded = base64.b64decode(value, validate=True)
     parsed = json.loads(decoded.decode("utf-8"))
@@ -633,7 +640,9 @@ def environment_preflight_summary(
             "error_count": len(errors),
             "error_categories": preflight_error_categories(errors),
             "git_auth": configured_names(env, GIT_AUTH_ENV_NAMES),
+            "git_auth_selected": selected_name(env, GIT_AUTH_ENV_NAMES),
             "codex_auth": configured_names(env, CODEX_AUTH_ENV_NAMES),
+            "codex_auth_selected": selected_name(env, CODEX_AUTH_ENV_NAMES),
             "commands": list(REQUIRED_COMMANDS),
             "command_paths": command_paths,
             "runtime_limits": RUNTIME_CONFIG_LIMITS,
@@ -647,7 +656,9 @@ def environment_preflight_summary(
         "workdir": str(WORKDIR),
         "codex_home": str(CODEX_HOME),
         "git_auth": configured_names(env, GIT_AUTH_ENV_NAMES),
+        "git_auth_selected": selected_name(env, GIT_AUTH_ENV_NAMES),
         "codex_auth": configured_names(env, CODEX_AUTH_ENV_NAMES),
+        "codex_auth_selected": selected_name(env, CODEX_AUTH_ENV_NAMES),
         "agent_interval": env.get("AUTOMOAT_AGENT_INTERVAL", "300"),
         "agent_iterations": env.get("AUTOMOAT_AGENT_ITERATIONS", "0"),
         "relay_interval": env.get("AUTOMOAT_RELAY_INTERVAL", "3"),
@@ -711,7 +722,9 @@ def emit_environment_preflight(
         f"workdir={WORKDIR} "
         f"codex_home={CODEX_HOME} "
         f"git_auth={','.join(configured_names(env, GIT_AUTH_ENV_NAMES))} "
+        f"git_auth_selected={selected_name(env, GIT_AUTH_ENV_NAMES)} "
         f"codex_auth={','.join(configured_names(env, CODEX_AUTH_ENV_NAMES))} "
+        f"codex_auth_selected={selected_name(env, CODEX_AUTH_ENV_NAMES)} "
         f"agent_interval={env.get('AUTOMOAT_AGENT_INTERVAL', '300')} "
         f"agent_iterations={env.get('AUTOMOAT_AGENT_ITERATIONS', '0')} "
         f"relay_interval={env.get('AUTOMOAT_RELAY_INTERVAL', '3')} "

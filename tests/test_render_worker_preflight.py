@@ -564,7 +564,9 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
             "AUTOMOAT_RELAY_TOKEN": "relay-token",
             "GITHUB_TOKEN": "github-token",
+            "GH_TOKEN": "alternate-github-token",
             "CODEX_ACCESS_TOKEN": "codex-token",
+            "OPENAI_API_KEY": "api-key",
             "AUTOMOAT_GIT_BRANCH": "release/2026.06",
             "AUTOMOAT_AGENT_ITERATIONS": "12",
         }
@@ -579,6 +581,10 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertIn("git_branch=release/2026.06", output.getvalue())
         self.assertIn("workdir=/work/automoat", output.getvalue())
         self.assertIn("codex_home=/tmp/codex-home", output.getvalue())
+        self.assertIn("git_auth=GITHUB_TOKEN,GH_TOKEN", output.getvalue())
+        self.assertIn("git_auth_selected=GITHUB_TOKEN", output.getvalue())
+        self.assertIn("codex_auth=CODEX_ACCESS_TOKEN,OPENAI_API_KEY", output.getvalue())
+        self.assertIn("codex_auth_selected=CODEX_ACCESS_TOKEN", output.getvalue())
         self.assertIn("agent_iterations=12", output.getvalue())
         self.assertIn(
             'command_paths={"codex": "/usr/bin/codex", "git": "/usr/bin/git"}',
@@ -590,7 +596,9 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
             "AUTOMOAT_RELAY_TOKEN": "relay-token",
             "GITHUB_TOKEN": "github-token",
+            "GH_TOKEN": "alternate-github-token",
             "CODEX_ACCESS_TOKEN": "codex-token",
+            "OPENAI_API_KEY": "api-key",
             "AUTOMOAT_GIT_BRANCH": "release/2026.06",
             "AUTOMOAT_AGENT_ITERATIONS": "12",
         }
@@ -612,8 +620,13 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertEqual(payload["config"]["git_branch"], "release/2026.06")
         self.assertEqual(payload["config"]["workdir"], "/work/automoat")
         self.assertEqual(payload["config"]["codex_home"], "/tmp/codex-home")
-        self.assertEqual(payload["config"]["git_auth"], ["GITHUB_TOKEN"])
-        self.assertEqual(payload["config"]["codex_auth"], ["CODEX_ACCESS_TOKEN"])
+        self.assertEqual(payload["config"]["git_auth"], ["GITHUB_TOKEN", "GH_TOKEN"])
+        self.assertEqual(payload["config"]["git_auth_selected"], "GITHUB_TOKEN")
+        self.assertEqual(
+            payload["config"]["codex_auth"],
+            ["CODEX_ACCESS_TOKEN", "OPENAI_API_KEY"],
+        )
+        self.assertEqual(payload["config"]["codex_auth_selected"], "CODEX_ACCESS_TOKEN")
         self.assertEqual(payload["config"]["agent_iterations"], "12")
         self.assertEqual(payload["config"]["commands"], ["git", "codex"])
         self.assertEqual(
@@ -622,7 +635,9 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         )
         self.assertEqual(payload["config"]["runtime_limits"], self.worker.RUNTIME_CONFIG_LIMITS)
         self.assertNotIn("github-token", output.getvalue())
+        self.assertNotIn("alternate-github-token", output.getvalue())
         self.assertNotIn("codex-token", output.getvalue())
+        self.assertNotIn("api-key", output.getvalue())
 
     def test_check_env_json_failure_does_not_print_invalid_url_values(self) -> None:
         env = {
@@ -648,7 +663,12 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertEqual(payload["diagnostics"]["error_count"], 2)
         self.assertEqual(payload["diagnostics"]["error_categories"], ["invalid_url"])
         self.assertEqual(payload["diagnostics"]["git_auth"], ["GITHUB_TOKEN"])
+        self.assertEqual(payload["diagnostics"]["git_auth_selected"], "GITHUB_TOKEN")
         self.assertEqual(payload["diagnostics"]["codex_auth"], ["CODEX_ACCESS_TOKEN"])
+        self.assertEqual(
+            payload["diagnostics"]["codex_auth_selected"],
+            "CODEX_ACCESS_TOKEN",
+        )
         self.assertEqual(payload["diagnostics"]["commands"], ["git", "codex"])
         self.assertEqual(
             payload["diagnostics"]["command_paths"],
@@ -1022,6 +1042,11 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertEqual(
             payload["diagnostics"]["command_paths"],
             {"git": "/usr/bin/git", "codex": None},
+        )
+        self.assertEqual(payload["diagnostics"]["git_auth_selected"], "GH_TOKEN")
+        self.assertEqual(
+            payload["diagnostics"]["codex_auth_selected"],
+            "CODEX_ACCESS_TOKEN",
         )
 
     def test_relay_publisher_command_exposes_runtime_knobs_without_secrets(self) -> None:
