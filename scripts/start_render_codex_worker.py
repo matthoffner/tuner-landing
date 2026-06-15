@@ -72,6 +72,16 @@ PUBLISHER_FILE_PATH_ENV_NAMES = ("AUTOMOAT_BRIDGE_STATUS_FILE",)
 DEFAULT_BRIDGE_STATUS_FILE = ".automoat/state/mvp-bridge-status.json"
 MAX_GIT_BRANCH_CHARS = 240
 PORTABLE_GIT_BRANCH_PATTERN = re.compile(r"^[A-Za-z0-9._/-]+$")
+GIT_PSEUDO_REF_NAMES = {
+    "AUTO_MERGE",
+    "BISECT_HEAD",
+    "CHERRY_PICK_HEAD",
+    "FETCH_HEAD",
+    "HEAD",
+    "MERGE_HEAD",
+    "ORIG_HEAD",
+    "REVERT_HEAD",
+}
 GIT_IDENTITY_ENV_DEFAULTS = {
     "GIT_AUTHOR_NAME": "automoat-render-agent",
     "GIT_AUTHOR_EMAIL": "automoat-render-agent@users.noreply.github.com",
@@ -879,6 +889,9 @@ def validate_git_branch_name(value: str, errors: list[str]) -> None:
         for character in branch
     ):
         errors.append("AUTOMOAT_GIT_BRANCH must not contain whitespace or control characters")
+        return
+    if branch in GIT_PSEUDO_REF_NAMES:
+        errors.append("AUTOMOAT_GIT_BRANCH must be a branch name, not a Git pseudo-ref")
         return
     if branch.startswith(("origin/", "remotes/", "refs/")):
         errors.append(
