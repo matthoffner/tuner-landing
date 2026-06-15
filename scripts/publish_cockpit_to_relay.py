@@ -990,6 +990,8 @@ def validate_publisher_configuration(args: argparse.Namespace) -> list[str]:
             errors.append("--relay-url must not include embedded credentials")
         elif parsed_relay_url.query or parsed_relay_url.fragment:
             errors.append("--relay-url must not include query strings or fragments")
+        elif parsed_relay_url.path.strip("/"):
+            errors.append("--relay-url must be a relay base URL without a path")
         else:
             host_port = parsed_relay_url.netloc.rsplit("@", 1)[-1]
             try:
