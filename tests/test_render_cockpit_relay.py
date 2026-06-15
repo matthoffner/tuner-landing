@@ -1177,6 +1177,7 @@ class RenderCockpitRelayTest(unittest.TestCase):
                             "pipeline token=problem-secret",
                         ],
                         "import_readiness": "blocked",
+                        "readiness_blocker_count": "3",
                         "readiness_blockers": [
                             "coverage has thin group token=blocker-secret",
                         ],
@@ -1268,10 +1269,17 @@ class RenderCockpitRelayTest(unittest.TestCase):
                         "policy_reason": "dallas_ready_no_thin_groups",
                         "dallas_pipeline_ready": False,
                         "thin_group_count": "2",
+                        "thin_group_category_count": "4",
                         "thin_group_categories": [
                             "inspection_status:pending?token=thin-secret",
                             "workflow_stage:escalation",
                         ],
+                        "coverage_latest_thin_counts": {
+                            "inspection_status:pending?token=thin-count-secret": "2",
+                            "workflow_stage:escalation": 1,
+                            "ignored_negative": -1,
+                            "ignored_non_numeric": "many",
+                        },
                         "contract_checks": "12/13",
                         "queue_items": "535",
                     },
@@ -1298,7 +1306,13 @@ class RenderCockpitRelayTest(unittest.TestCase):
             "contract_checks": "12/13",
             "ready_for_next_import_records": False,
             "dallas_pipeline_ready": False,
+            "readiness_blocker_count": 3,
             "thin_group_count": 2,
+            "thin_group_category_count": 4,
+            "coverage_latest_thin_counts": {
+                "inspection_status:pending?token=[redacted]": 2,
+                "workflow_stage:escalation": 1,
+            },
             "queue_items": 535,
             "import_handoff": {
                 "available": True,
@@ -1402,11 +1416,27 @@ class RenderCockpitRelayTest(unittest.TestCase):
             status["cockpit_health"]["source_readiness"],
             expected_readiness,
         )
+        self.assertEqual(
+            status["cockpit_summary"]["readiness_blocker_count"],
+            3,
+        )
+        self.assertEqual(
+            status["cockpit_summary"]["thin_group_category_count"],
+            4,
+        )
+        self.assertEqual(
+            status["cockpit_summary"]["coverage_latest_thin_counts"],
+            {
+                "inspection_status:pending?token=[redacted]": 2,
+                "workflow_stage:escalation": 1,
+            },
+        )
         health_text = json.dumps(health, sort_keys=True)
         self.assertNotIn("artifact-secret", health_text)
         self.assertNotIn("problem-secret", health_text)
         self.assertNotIn("blocker-secret", health_text)
         self.assertNotIn("thin-secret", health_text)
+        self.assertNotIn("thin-count-secret", health_text)
         self.assertNotIn("handoff-secret", health_text)
         self.assertNotIn("check-secret", health_text)
         self.assertNotIn("command-secret", health_text)

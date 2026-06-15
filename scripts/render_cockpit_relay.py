@@ -304,6 +304,21 @@ def compact_int(value: Any) -> int | None:
     return parsed if parsed >= 0 else None
 
 
+def compact_count_map(value: Any, *, max_items: int = 8) -> dict[str, int]:
+    if not isinstance(value, dict):
+        return {}
+    compacted: dict[str, int] = {}
+    for raw_key, raw_value in sorted(value.items(), key=lambda item: str(item[0])):
+        key = compact_policy_detail(raw_key, max_length=80)
+        count = compact_int(raw_value)
+        if key is None or count is None:
+            continue
+        compacted[key] = count
+        if len(compacted) >= max_items:
+            break
+    return compacted
+
+
 def reject_json_constant(value: str) -> None:
     raise ValueError(f"invalid JSON constant {value}")
 
@@ -801,13 +816,21 @@ def source_readiness_summary(status: dict[str, Any]) -> dict[str, Any]:
     int_fields = {
         "artifact_count": source_summary.get("artifact_count"),
         "loaded_artifact_count": source_summary.get("loaded_artifact_count"),
+        "readiness_blocker_count": source_summary.get("readiness_blocker_count"),
         "thin_group_count": source_summary.get("thin_group_count"),
+        "thin_group_category_count": source_summary.get("thin_group_category_count"),
         "queue_items": source_summary.get("queue_items"),
     }
     for key, value in int_fields.items():
         compact_value = compact_int(value)
         if compact_value is not None:
             summary[key] = compact_value
+
+    coverage_latest_thin_counts = compact_count_map(
+        source_summary.get("coverage_latest_thin_counts")
+    )
+    if coverage_latest_thin_counts:
+        summary["coverage_latest_thin_counts"] = coverage_latest_thin_counts
 
     list_fields = {
         "readiness_blockers": source_summary.get("readiness_blockers"),
@@ -903,7 +926,9 @@ def sanitize_cockpit_summary_for_relay_response(summary: Any) -> dict[str, Any] 
         "status_age_seconds": summary.get("status_age_seconds"),
         "artifact_count": summary.get("artifact_count"),
         "loaded_artifact_count": summary.get("loaded_artifact_count"),
+        "readiness_blocker_count": summary.get("readiness_blocker_count"),
         "thin_group_count": summary.get("thin_group_count"),
+        "thin_group_category_count": summary.get("thin_group_category_count"),
         "queue_items": summary.get("queue_items"),
         "policy_raw_dallas_csv_changed_path_count": summary.get(
             "policy_raw_dallas_csv_changed_path_count"
@@ -917,6 +942,12 @@ def sanitize_cockpit_summary_for_relay_response(summary: Any) -> dict[str, Any] 
         compact_value = compact_int(value)
         if compact_value is not None:
             sanitized[key] = compact_value
+
+    coverage_latest_thin_counts = compact_count_map(
+        summary.get("coverage_latest_thin_counts")
+    )
+    if coverage_latest_thin_counts:
+        sanitized["coverage_latest_thin_counts"] = coverage_latest_thin_counts
 
     list_fields = {
         "operator_attention_reasons": summary.get("operator_attention_reasons"),
