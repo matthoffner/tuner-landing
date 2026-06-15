@@ -485,13 +485,27 @@ def validate_secret_safe_http_url(
     if not value.startswith(("http://", "https://")):
         errors.append(f"{name} must start with http:// or https://")
         return
-    parsed_value = urlparse(value)
-    if not parsed_value.netloc:
+    try:
+        parsed_value = urlparse(value)
+    except ValueError:
+        errors.append(f"{name} must be a valid URL")
+        return
+
+    if not parsed_value.netloc or not parsed_value.hostname:
         errors.append(f"{name} must include a host")
     elif parsed_value.username or parsed_value.password:
         errors.append(f"{name} must not include embedded credentials")
     elif parsed_value.query or parsed_value.fragment:
         errors.append(f"{name} must not include query strings or fragments")
+    else:
+        host_port = parsed_value.netloc.rsplit("@", 1)[-1]
+        try:
+            port = parsed_value.port
+        except ValueError:
+            errors.append(f"{name} must include a valid port when a port is specified")
+            return
+        if host_port.endswith(":") or port == 0:
+            errors.append(f"{name} must include a valid port when a port is specified")
 
 
 def preflight_error_category(error: str) -> str:

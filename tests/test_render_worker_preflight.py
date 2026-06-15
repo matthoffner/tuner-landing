@@ -454,6 +454,91 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             ],
         )
 
+    def test_rejects_urls_with_invalid_ports_before_startup(self) -> None:
+        errors = self.worker.validate_worker_environment(
+            {
+                "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example:abc",
+                "AUTOMOAT_RELAY_TOKEN": "relay-token",
+                "AUTOMOAT_GIT_REPO": "https://github.com:99999/example/private.git",
+                "GITHUB_TOKEN": "github-token",
+                "CODEX_ACCESS_TOKEN": "codex-token",
+            },
+            found_command,
+        )
+
+        self.assertEqual(
+            errors,
+            [
+                "AUTOMOAT_RELAY_URL must include a valid port when a port is specified",
+                "AUTOMOAT_GIT_REPO must include a valid port when a port is specified",
+            ],
+        )
+
+    def test_rejects_urls_with_empty_or_zero_ports_before_startup(self) -> None:
+        errors = self.worker.validate_worker_environment(
+            {
+                "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example:",
+                "AUTOMOAT_RELAY_TOKEN": "relay-token",
+                "AUTOMOAT_GIT_REPO": "https://github.com:0/example/private.git",
+                "GITHUB_TOKEN": "github-token",
+                "CODEX_ACCESS_TOKEN": "codex-token",
+            },
+            found_command,
+        )
+
+        self.assertEqual(
+            errors,
+            [
+                "AUTOMOAT_RELAY_URL must include a valid port when a port is specified",
+                "AUTOMOAT_GIT_REPO must include a valid port when a port is specified",
+            ],
+        )
+
+    def test_rejects_urls_without_real_host_or_valid_url_syntax(self) -> None:
+        errors = self.worker.validate_worker_environment(
+            {
+                "AUTOMOAT_RELAY_URL": "https://:443/status",
+                "AUTOMOAT_RELAY_TOKEN": "relay-token",
+                "AUTOMOAT_GIT_REPO": "https://[::1",
+                "GITHUB_TOKEN": "github-token",
+                "CODEX_ACCESS_TOKEN": "codex-token",
+            },
+            found_command,
+        )
+
+        self.assertEqual(
+            errors,
+            [
+                "AUTOMOAT_RELAY_URL must include a host",
+                "AUTOMOAT_GIT_REPO must be a valid URL",
+            ],
+        )
+
+    def test_check_env_json_categorizes_invalid_url_ports(self) -> None:
+        env = {
+            "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example:abc",
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            "GITHUB_TOKEN": "github-token",
+            "CODEX_ACCESS_TOKEN": "codex-token",
+        }
+        output = io.StringIO()
+
+        with redirect_stdout(output):
+            errors = self.worker.emit_environment_preflight(
+                env,
+                found_command,
+                output_format="json",
+            )
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(
+            errors,
+            ["AUTOMOAT_RELAY_URL must include a valid port when a port is specified"],
+        )
+        self.assertEqual(payload["status"], "failed")
+        self.assertEqual(payload["diagnostics"]["error_categories"], ["invalid_url"])
+        self.assertNotIn("automoat-cockpit-relay.example:abc", output.getvalue())
+
     def test_rejects_git_repo_with_embedded_credentials(self) -> None:
         errors = self.worker.validate_worker_environment(
             {
