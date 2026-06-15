@@ -27,6 +27,7 @@ DEFAULT_MAX_LOG_CHARS = 160 * 1024
 DEFAULT_MAX_STATUS_BYTES = 128 * 1024
 DEFAULT_MAX_PUBLISHER_BYTES = 64 * 1024
 DEFAULT_STALE_AFTER_SECONDS = 120
+MAX_RUNTIME_CONFIG_VALUE_CHARS = 64
 RELAY_CONFIG_LIMITS = {
     "max_ingest_bytes": 4 * 1024 * 1024,
     "max_log_chars": 1024 * 1024,
@@ -1293,9 +1294,14 @@ def parse_positive_int(
     errors: list[str],
     *,
     maximum: int | None = None,
+    max_chars: int | None = None,
 ) -> int | None:
+    text_value = str(value)
+    if max_chars is not None and len(text_value) > max_chars:
+        errors.append(f"{name} must be {max_chars} characters or fewer")
+        return None
     try:
-        parsed = int(value)
+        parsed = int(text_value)
     except (TypeError, ValueError):
         errors.append(f"{name} must be an integer")
         return None
@@ -1383,30 +1389,35 @@ def validate_relay_configuration(
         args.max_ingest_bytes,
         errors,
         maximum=RELAY_CONFIG_LIMITS["max_ingest_bytes"],
+        max_chars=MAX_RUNTIME_CONFIG_VALUE_CHARS,
     )
     parse_positive_int(
         "--max-log-chars",
         args.max_log_chars,
         errors,
         maximum=RELAY_CONFIG_LIMITS["max_log_chars"],
+        max_chars=MAX_RUNTIME_CONFIG_VALUE_CHARS,
     )
     parse_positive_int(
         "--max-status-bytes",
         args.max_status_bytes,
         errors,
         maximum=RELAY_CONFIG_LIMITS["max_status_bytes"],
+        max_chars=MAX_RUNTIME_CONFIG_VALUE_CHARS,
     )
     parse_positive_int(
         "--max-publisher-bytes",
         args.max_publisher_bytes,
         errors,
         maximum=RELAY_CONFIG_LIMITS["max_publisher_bytes"],
+        max_chars=MAX_RUNTIME_CONFIG_VALUE_CHARS,
     )
     parse_positive_int(
         "--stale-after-seconds",
         args.stale_after_seconds,
         errors,
         maximum=RELAY_CONFIG_LIMITS["stale_after_seconds"],
+        max_chars=MAX_RUNTIME_CONFIG_VALUE_CHARS,
     )
     return errors
 

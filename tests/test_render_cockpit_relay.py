@@ -1741,6 +1741,44 @@ class RenderCockpitRelayTest(unittest.TestCase):
             ],
         )
 
+    def test_check_env_json_rejects_oversized_runtime_value_without_echoing_it(self) -> None:
+        oversized_value = "9" * (self.relay.MAX_RUNTIME_CONFIG_VALUE_CHARS + 1)
+        env = {
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            "PORT": "4180",
+            "AUTOMOAT_RELAY_MAX_LOG_CHARS": oversized_value,
+        }
+        stdout = io.StringIO()
+        with patch.dict(os.environ, env, clear=True), patch.object(
+            sys,
+            "argv",
+            ["render_cockpit_relay.py", "--check-env", "--format", "json"],
+        ), contextlib.redirect_stdout(stdout):
+            status = self.relay.main()
+
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(status, 2)
+        self.assertEqual(payload["status"], "failed")
+        self.assertEqual(
+            payload["errors"],
+            ["--max-log-chars must be 64 characters or fewer"],
+        )
+        self.assertEqual(
+            payload["diagnostics"]["error_categories"],
+            ["invalid_runtime_config"],
+        )
+        self.assertEqual(
+            payload["diagnostics"]["failed_configuration_keys"],
+            ["AUTOMOAT_RELAY_MAX_LOG_CHARS|--max-log-chars"],
+        )
+        self.assertEqual(
+            payload["diagnostics"]["runtime_limits"],
+            self.relay.RELAY_CONFIG_LIMITS,
+        )
+        self.assertTrue(payload["diagnostics"]["relay_token_configured"])
+        self.assertNotIn(oversized_value, stdout.getvalue())
+        self.assertNotIn("relay-token", stdout.getvalue())
+
     def test_relay_preflight_rejects_state_file_directory(self) -> None:
         with patch.dict(os.environ, {"AUTOMOAT_RELAY_TOKEN": "relay-token"}, clear=True), patch.object(
             sys,
