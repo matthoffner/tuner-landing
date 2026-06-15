@@ -328,6 +328,22 @@ class MvpCockpitServerTest(unittest.TestCase):
         self.assertEqual(invalid["status_file_status"], "invalid_json")
         self.assertIn("line 1 column 2", invalid["status_file_error"])
 
+    def test_read_bridge_summary_masks_local_path_in_read_error(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            bridge_status_file = tmp_path / "mvp-bridge-status.json"
+            bridge_status_file.mkdir()
+            self.cockpit.BRIDGE_STATUS_FILE = bridge_status_file
+
+            summary = self.cockpit.read_bridge_summary()
+
+        self.assertFalse(summary["available"])
+        self.assertEqual(summary["status_file"], "<external>/mvp-bridge-status.json")
+        self.assertEqual(summary["status_file_status"], "read_failed")
+        self.assertIn("<external>/mvp-bridge-status.json", summary["status_file_error"])
+        self.assertNotIn(str(bridge_status_file), summary["status_file_error"])
+        self.assertNotIn(tmp, summary["status_file_error"])
+
     def test_read_status_adds_cockpit_summary(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)

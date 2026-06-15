@@ -89,6 +89,30 @@ def compact_text(value: object, *, max_length: int = 180) -> str | None:
     return text[:max_length] if text else None
 
 
+def repo_relative(path: Path) -> str:
+    resolved_path = path.resolve()
+    try:
+        relative_path = resolved_path.relative_to(ROOT)
+    except ValueError:
+        return f"<external>/{resolved_path.name}" if resolved_path.name else "<external>"
+    relative_text = relative_path.as_posix()
+    return relative_text if relative_text else "."
+
+
+def compact_path_error(exc: BaseException, path: Path, *, max_length: int = 180) -> str:
+    message = str(exc)
+    safe_label = repo_relative(path)
+    path_strings = {str(path)}
+    try:
+        path_strings.add(str(path.resolve()))
+    except OSError:
+        pass
+    for path_string in sorted(path_strings, key=len, reverse=True):
+        if path_string:
+            message = message.replace(path_string, safe_label)
+    return compact_text(message, max_length=max_length) or type(exc).__name__
+
+
 def sanitize_url_value(value: str) -> str:
     parsed = urlparse(value)
     if not parsed.scheme or not parsed.netloc:
@@ -208,7 +232,7 @@ def artifact_status_summary(value: object) -> dict[str, str]:
 
 
 def read_bridge_summary() -> dict[str, object]:
-    status_file = ".automoat/state/mvp-bridge-status.json"
+    status_file = repo_relative(BRIDGE_STATUS_FILE)
     if not BRIDGE_STATUS_FILE.exists():
         return {
             "available": False,
@@ -222,7 +246,7 @@ def read_bridge_summary() -> dict[str, object]:
             "available": False,
             "status_file": status_file,
             "status_file_status": "read_failed",
-            "status_file_error": compact_text(str(exc)),
+            "status_file_error": compact_path_error(exc, BRIDGE_STATUS_FILE),
         }
     except json.JSONDecodeError as exc:
         return {
