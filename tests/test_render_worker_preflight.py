@@ -2025,6 +2025,8 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertIn("git_auth_selected=GITHUB_TOKEN", output.getvalue())
         self.assertIn("codex_auth=CODEX_ACCESS_TOKEN,OPENAI_API_KEY", output.getvalue())
         self.assertIn("codex_auth_selected=CODEX_ACCESS_TOKEN", output.getvalue())
+        self.assertIn('runtime_configured_keys=["AUTOMOAT_AGENT_ITERATIONS"]', output.getvalue())
+        self.assertIn("path_configured_keys=[]", output.getvalue())
         self.assertIn("agent_iterations=12", output.getvalue())
         self.assertIn(
             'command_paths={"codex": "<found>", "git": "<found>"}',
@@ -2070,6 +2072,11 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             ["CODEX_ACCESS_TOKEN", "OPENAI_API_KEY"],
         )
         self.assertEqual(payload["config"]["codex_auth_selected"], "CODEX_ACCESS_TOKEN")
+        self.assertEqual(
+            payload["config"]["runtime_configured_keys"],
+            ["AUTOMOAT_AGENT_ITERATIONS"],
+        )
+        self.assertEqual(payload["config"]["path_configured_keys"], [])
         self.assertEqual(payload["config"]["agent_iterations"], "12")
         self.assertEqual(payload["config"]["commands"], ["git", "codex"])
         self.assertEqual(
@@ -2143,6 +2150,10 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertEqual(errors, [])
         self.assertEqual(payload["config"]["workdir"], "<external>/repo")
         self.assertEqual(payload["config"]["codex_home"], "<external>/codex-home")
+        self.assertEqual(
+            payload["config"]["path_configured_keys"],
+            ["AUTOMOAT_WORKDIR", "CODEX_HOME"],
+        )
         self.assertNotIn(str(workdir), output.getvalue())
         self.assertNotIn(str(codex_home), output.getvalue())
 
@@ -2443,6 +2454,17 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertEqual(
             payload["config"]["bridge_status_stale_after_seconds"],
             "240",
+        )
+        self.assertEqual(
+            payload["config"]["runtime_configured_keys"],
+            [
+                "AUTOMOAT_BRIDGE_STATUS_FILE",
+                "AUTOMOAT_BRIDGE_STATUS_STALE_AFTER_SECONDS",
+            ],
+        )
+        self.assertEqual(
+            payload["config"]["path_configured_keys"],
+            ["AUTOMOAT_WORKDIR", "CODEX_HOME"],
         )
         self.assertEqual(
             payload["config"]["bridge_status_file"],

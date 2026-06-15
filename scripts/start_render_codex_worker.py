@@ -1182,6 +1182,8 @@ def environment_preflight_summary(
         "git_auth_selected": selected_name(env, GIT_AUTH_ENV_NAMES),
         "codex_auth": configured_names(env, CODEX_AUTH_ENV_NAMES),
         "codex_auth_selected": selected_name(env, CODEX_AUTH_ENV_NAMES),
+        "runtime_configured_keys": configured_runtime_keys(env),
+        "path_configured_keys": configured_worker_path_keys(env),
         "agent_interval": env.get("AUTOMOAT_AGENT_INTERVAL", "300"),
         "agent_iterations": env.get("AUTOMOAT_AGENT_ITERATIONS", "0"),
         "relay_interval": env.get("AUTOMOAT_RELAY_INTERVAL", "3"),
@@ -1264,6 +1266,10 @@ def emit_environment_preflight(
         f"git_auth_selected={selected_name(env, GIT_AUTH_ENV_NAMES)} "
         f"codex_auth={','.join(configured_names(env, CODEX_AUTH_ENV_NAMES))} "
         f"codex_auth_selected={selected_name(env, CODEX_AUTH_ENV_NAMES)} "
+        f"runtime_configured_keys="
+        f"{json.dumps(configured_runtime_keys(env), sort_keys=True)} "
+        f"path_configured_keys="
+        f"{json.dumps(configured_worker_path_keys(env), sort_keys=True)} "
         f"agent_interval={env.get('AUTOMOAT_AGENT_INTERVAL', '300')} "
         f"agent_iterations={env.get('AUTOMOAT_AGENT_ITERATIONS', '0')} "
         f"relay_interval={env.get('AUTOMOAT_RELAY_INTERVAL', '3')} "
