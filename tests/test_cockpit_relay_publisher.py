@@ -2220,6 +2220,17 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                     "source_status_stale": True,
                     "source_status_age_seconds": 700,
                     "source_status_file_status": "loaded",
+                    "cockpit_summary": {
+                        "policy_failure_reason": "raw_dallas_csv_without_productive_work",
+                        "policy_diagnostics_status": "failed",
+                        "policy_route_hint": "dallas_raw_fixture_without_productive_companion",
+                        "policy_preview_json_changed": False,
+                        "policy_allows_synthetic_append": False,
+                        "policy_override": True,
+                        "policy_raw_dallas_csv_changed_path_count": 2,
+                        "policy_productive_changed_path_count": 1,
+                        "policy_synthetic_row_count": 3,
+                    },
                 },
                 "log_tail": "loop log\n",
                 "publisher": {
@@ -2255,6 +2266,21 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertIn("source_health_status=degraded", log_text)
         self.assertIn("source_health_primary_reason=source_status_stale", log_text)
         self.assertIn("source_health_label=Source status is stale", log_text)
+        self.assertIn(
+            "source_policy_failure_reason=raw_dallas_csv_without_productive_work",
+            log_text,
+        )
+        self.assertIn("source_policy_diagnostics_status=failed", log_text)
+        self.assertIn(
+            "source_policy_route_hint=dallas_raw_fixture_without_productive_companion",
+            log_text,
+        )
+        self.assertIn("source_policy_preview_json_changed=False", log_text)
+        self.assertIn("source_policy_allows_synthetic_append=False", log_text)
+        self.assertIn("source_policy_override=True", log_text)
+        self.assertIn("source_policy_raw_path_count=2", log_text)
+        self.assertIn("source_policy_productive_path_count=1", log_text)
+        self.assertIn("source_policy_synthetic_row_count=3", log_text)
         self.assertIn("publisher_host=worker-1", log_text)
         self.assertIn("publisher_pid=4321", log_text)
         self.assertIn("publisher_started_at=2026-06-14T20:10:00Z", log_text)
@@ -2276,6 +2302,22 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                         "loaded token=file-secret "
                         "https://relay-user:relay-pass@relay.example/status?token=url-secret#debug"
                     ),
+                    "cockpit_summary": {
+                        "policy_failure_reason": (
+                            "synthetic append rejected\n"
+                            "authorization: Bearer policy-secret "
+                            "token=reason-secret "
+                            "https://policy.example/debug?token=policy-url-secret#trace"
+                        ),
+                        "policy_diagnostics_status": "failed token=status-secret",
+                        "policy_route_hint": "route token=route-secret",
+                        "policy_preview_json_changed": "false",
+                        "policy_allows_synthetic_append": True,
+                        "policy_override": False,
+                        "policy_raw_dallas_csv_changed_path_count": "9",
+                        "policy_productive_changed_path_count": "3",
+                        "policy_synthetic_row_count": "12",
+                    },
                 },
                 "publisher": {
                     "host": "worker-1\nx-automoat-relay-token=host-secret",
@@ -2317,6 +2359,20 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             log_text,
         )
         self.assertIn("source_health_label=Source token=[redacted] status", log_text)
+        self.assertIn(
+            "source_policy_failure_reason=synthetic append rejected "
+            "authorization: Bearer [redacted] token=[redacted] "
+            "https://policy.example/debug?[redacted]#[redacted]",
+            log_text,
+        )
+        self.assertIn("source_policy_diagnostics_status=failed token=[redacted]", log_text)
+        self.assertIn("source_policy_route_hint=route token=[redacted]", log_text)
+        self.assertIn("source_policy_preview_json_changed=None", log_text)
+        self.assertIn("source_policy_allows_synthetic_append=True", log_text)
+        self.assertIn("source_policy_override=False", log_text)
+        self.assertIn("source_policy_raw_path_count=9", log_text)
+        self.assertIn("source_policy_productive_path_count=3", log_text)
+        self.assertIn("source_policy_synthetic_row_count=12", log_text)
         self.assertIn("publisher_git_head=abc1234 token=[redacted]", log_text)
         self.assertNotIn("status-secret", log_text)
         self.assertNotIn("file-secret", log_text)
@@ -2326,6 +2382,10 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertNotIn("host-secret", log_text)
         self.assertNotIn("label-secret", log_text)
         self.assertNotIn("head-secret", log_text)
+        self.assertNotIn("policy-secret", log_text)
+        self.assertNotIn("reason-secret", log_text)
+        self.assertNotIn("policy-url-secret", log_text)
+        self.assertNotIn("route-secret", log_text)
 
     def test_publish_once_logs_relay_ok_false_as_failure(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

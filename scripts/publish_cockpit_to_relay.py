@@ -978,6 +978,9 @@ def source_status_log_fields(payload: dict[str, Any]) -> dict[str, Any]:
     status = payload.get("status")
     if not isinstance(status, dict):
         status = {}
+    cockpit_summary = status.get("cockpit_summary")
+    if not isinstance(cockpit_summary, dict):
+        cockpit_summary = {}
     publisher = payload.get("publisher")
     if not isinstance(publisher, dict):
         publisher = {}
@@ -1007,6 +1010,40 @@ def source_status_log_fields(payload: dict[str, Any]) -> dict[str, Any]:
             max_length=120,
         ),
         "source_health_label": compact_policy_detail(source_health.get("label"), max_length=160),
+        "source_policy_failure_reason": compact_policy_detail(
+            cockpit_summary.get("policy_failure_reason"),
+            max_length=160,
+        ),
+        "source_policy_diagnostics_status": compact_policy_detail(
+            cockpit_summary.get("policy_diagnostics_status"),
+            max_length=80,
+        ),
+        "source_policy_route_hint": compact_policy_detail(
+            cockpit_summary.get("policy_route_hint"),
+            max_length=120,
+        ),
+        "source_policy_preview_json_changed": cockpit_summary.get(
+            "policy_preview_json_changed"
+        )
+        if isinstance(cockpit_summary.get("policy_preview_json_changed"), bool)
+        else None,
+        "source_policy_allows_synthetic_append": cockpit_summary.get(
+            "policy_allows_synthetic_append"
+        )
+        if isinstance(cockpit_summary.get("policy_allows_synthetic_append"), bool)
+        else None,
+        "source_policy_override": cockpit_summary.get("policy_override")
+        if isinstance(cockpit_summary.get("policy_override"), bool)
+        else None,
+        "source_policy_raw_path_count": compact_int(
+            cockpit_summary.get("policy_raw_dallas_csv_changed_path_count")
+        ),
+        "source_policy_productive_path_count": compact_int(
+            cockpit_summary.get("policy_productive_changed_path_count")
+        ),
+        "source_policy_synthetic_row_count": compact_int(
+            cockpit_summary.get("policy_synthetic_row_count")
+        ),
         "publisher_host": compact_policy_detail(publisher.get("host"), max_length=120),
         "publisher_pid": compact_int(publisher.get("pid")),
         "publisher_started_at": compact_policy_detail(
@@ -1082,6 +1119,15 @@ def publish_once_result(args: argparse.Namespace) -> dict[str, Any]:
             f"source_health_status={source_fields.get('source_health_status')} "
             f"source_health_primary_reason={source_fields.get('source_health_primary_reason')} "
             f"source_health_label={source_fields.get('source_health_label')} "
+            f"source_policy_failure_reason={source_fields.get('source_policy_failure_reason')} "
+            f"source_policy_diagnostics_status={source_fields.get('source_policy_diagnostics_status')} "
+            f"source_policy_route_hint={source_fields.get('source_policy_route_hint')} "
+            f"source_policy_preview_json_changed={source_fields.get('source_policy_preview_json_changed')} "
+            f"source_policy_allows_synthetic_append={source_fields.get('source_policy_allows_synthetic_append')} "
+            f"source_policy_override={source_fields.get('source_policy_override')} "
+            f"source_policy_raw_path_count={source_fields.get('source_policy_raw_path_count')} "
+            f"source_policy_productive_path_count={source_fields.get('source_policy_productive_path_count')} "
+            f"source_policy_synthetic_row_count={source_fields.get('source_policy_synthetic_row_count')} "
             f"publisher_host={source_fields.get('publisher_host')} "
             f"publisher_pid={source_fields.get('publisher_pid')} "
             f"publisher_started_at={source_fields.get('publisher_started_at')} "
@@ -1112,6 +1158,15 @@ def publish_once_result(args: argparse.Namespace) -> dict[str, Any]:
             f"source_health_status={source_fields.get('source_health_status')} "
             f"source_health_primary_reason={source_fields.get('source_health_primary_reason')} "
             f"source_health_label={source_fields.get('source_health_label')} "
+            f"source_policy_failure_reason={source_fields.get('source_policy_failure_reason')} "
+            f"source_policy_diagnostics_status={source_fields.get('source_policy_diagnostics_status')} "
+            f"source_policy_route_hint={source_fields.get('source_policy_route_hint')} "
+            f"source_policy_preview_json_changed={source_fields.get('source_policy_preview_json_changed')} "
+            f"source_policy_allows_synthetic_append={source_fields.get('source_policy_allows_synthetic_append')} "
+            f"source_policy_override={source_fields.get('source_policy_override')} "
+            f"source_policy_raw_path_count={source_fields.get('source_policy_raw_path_count')} "
+            f"source_policy_productive_path_count={source_fields.get('source_policy_productive_path_count')} "
+            f"source_policy_synthetic_row_count={source_fields.get('source_policy_synthetic_row_count')} "
             f"publisher_host={source_fields.get('publisher_host')} "
             f"publisher_pid={source_fields.get('publisher_pid')} "
             f"publisher_started_at={source_fields.get('publisher_started_at')} "
@@ -1136,6 +1191,15 @@ def publish_once_result(args: argparse.Namespace) -> dict[str, Any]:
             f"source_health_status={source_fields['source_health_status']} "
             f"source_health_primary_reason={source_fields['source_health_primary_reason']} "
             f"source_health_label={source_fields['source_health_label']} "
+            f"source_policy_failure_reason={source_fields['source_policy_failure_reason']} "
+            f"source_policy_diagnostics_status={source_fields['source_policy_diagnostics_status']} "
+            f"source_policy_route_hint={source_fields['source_policy_route_hint']} "
+            f"source_policy_preview_json_changed={source_fields['source_policy_preview_json_changed']} "
+            f"source_policy_allows_synthetic_append={source_fields['source_policy_allows_synthetic_append']} "
+            f"source_policy_override={source_fields['source_policy_override']} "
+            f"source_policy_raw_path_count={source_fields['source_policy_raw_path_count']} "
+            f"source_policy_productive_path_count={source_fields['source_policy_productive_path_count']} "
+            f"source_policy_synthetic_row_count={source_fields['source_policy_synthetic_row_count']} "
             f"publisher_host={source_fields['publisher_host']} "
             f"publisher_pid={source_fields['publisher_pid']} "
             f"publisher_started_at={source_fields['publisher_started_at']} "
@@ -1159,6 +1223,15 @@ def publish_once_result(args: argparse.Namespace) -> dict[str, Any]:
         f"source_health_status={source_fields['source_health_status']} "
         f"source_health_primary_reason={source_fields['source_health_primary_reason']} "
         f"source_health_label={source_fields['source_health_label']} "
+        f"source_policy_failure_reason={source_fields['source_policy_failure_reason']} "
+        f"source_policy_diagnostics_status={source_fields['source_policy_diagnostics_status']} "
+        f"source_policy_route_hint={source_fields['source_policy_route_hint']} "
+        f"source_policy_preview_json_changed={source_fields['source_policy_preview_json_changed']} "
+        f"source_policy_allows_synthetic_append={source_fields['source_policy_allows_synthetic_append']} "
+        f"source_policy_override={source_fields['source_policy_override']} "
+        f"source_policy_raw_path_count={source_fields['source_policy_raw_path_count']} "
+        f"source_policy_productive_path_count={source_fields['source_policy_productive_path_count']} "
+        f"source_policy_synthetic_row_count={source_fields['source_policy_synthetic_row_count']} "
         f"publisher_host={source_fields['publisher_host']} "
         f"publisher_pid={source_fields['publisher_pid']} "
         f"publisher_started_at={source_fields['publisher_started_at']} "
