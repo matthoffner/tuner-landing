@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 from argparse import Namespace
+from contextlib import redirect_stderr
 from contextlib import redirect_stdout
 import importlib.util
 import io
@@ -483,6 +484,134 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                     self.assertIn("publisher environment preflight failed", output.getvalue())
                     self.assertIn(expected_error, output.getvalue())
                     self.assertNotIn("relay-token", output.getvalue())
+
+    def test_check_env_json_reports_secret_safe_success_summary(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            env = {
+                "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example/",
+                "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            }
+            output = io.StringIO()
+            self.publisher.publish_once = lambda _args: self.fail("publish_once should not run")
+            with patch.dict(os.environ, env, clear=True), patch.object(
+                sys,
+                "argv",
+                [
+                    "publish_cockpit_to_relay.py",
+                    "--check-env",
+                    "--format",
+                    "json",
+                    "--interval",
+                    "4.5",
+                    "--timeout",
+                    "12",
+                    "--tail-lines",
+                    "90",
+                    "--max-log-bytes",
+                    "4096",
+                    "--max-consecutive-failures",
+                    "5",
+                    "--max-consecutive-stale-statuses",
+                    "6",
+                    "--status-stale-after-seconds",
+                    "900",
+                    "--status-file",
+                    str(tmp_path / "status.json"),
+                    "--pid-file",
+                    str(tmp_path / "loop.pid"),
+                    "--log-file",
+                    str(tmp_path / "loop.log"),
+                    "--publisher-log",
+                    str(tmp_path / "publisher.log"),
+                ],
+            ), redirect_stdout(output):
+                status = self.publisher.main()
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(status, 0)
+        self.assertEqual(payload["status"], "passed")
+        self.assertEqual(payload["errors"], [])
+        self.assertEqual(
+            payload["config"]["relay_url"],
+            "https://automoat-cockpit-relay.example",
+        )
+        self.assertTrue(payload["config"]["relay_token_configured"])
+        self.assertEqual(payload["config"]["interval"], 4.5)
+        self.assertEqual(payload["config"]["timeout"], 12.0)
+        self.assertEqual(payload["config"]["tail_lines"], 90)
+        self.assertEqual(payload["config"]["max_log_bytes"], 4096)
+        self.assertEqual(payload["config"]["max_consecutive_failures"], 5)
+        self.assertEqual(payload["config"]["max_consecutive_stale_statuses"], 6)
+        self.assertEqual(payload["config"]["status_stale_after_seconds"], 900)
+        self.assertEqual(
+            payload["config"]["runtime_limits"],
+            self.publisher.PUBLISHER_CONFIG_LIMITS,
+        )
+        self.assertNotIn("relay-token", output.getvalue())
+
+    def test_check_env_json_reports_secret_safe_failure_diagnostics(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            env = {
+                "AUTOMOAT_RELAY_URL": "https://relay-user:relay-pass@automoat-cockpit-relay.example",
+                "AUTOMOAT_RELAY_TOKEN": "relay-token\nsecond-line",
+            }
+            output = io.StringIO()
+            self.publisher.publish_once = lambda _args: self.fail("publish_once should not run")
+            with patch.dict(os.environ, env, clear=True), patch.object(
+                sys,
+                "argv",
+                [
+                    "publish_cockpit_to_relay.py",
+                    "--check-env",
+                    "--format",
+                    "json",
+                    "--interval",
+                    "61",
+                    "--publisher-log",
+                    str(tmp_path / "publisher.log"),
+                ],
+            ), redirect_stdout(output):
+                status = self.publisher.main()
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(status, 2)
+        self.assertEqual(payload["status"], "failed")
+        self.assertEqual(payload["diagnostics"]["error_count"], 3)
+        self.assertEqual(
+            payload["diagnostics"]["error_categories"],
+            ["invalid_relay_url", "invalid_runtime_config", "invalid_secret"],
+        )
+        self.assertTrue(payload["diagnostics"]["relay_url_configured"])
+        self.assertTrue(payload["diagnostics"]["relay_token_configured"])
+        self.assertEqual(
+            payload["diagnostics"]["runtime_limits"],
+            self.publisher.PUBLISHER_CONFIG_LIMITS,
+        )
+        self.assertNotIn("relay-user", output.getvalue())
+        self.assertNotIn("relay-pass", output.getvalue())
+        self.assertNotIn("relay-token", output.getvalue())
+        self.assertNotIn("second-line", output.getvalue())
+
+    def test_format_json_is_check_env_only(self) -> None:
+        env = {
+            "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+        }
+        stdout = io.StringIO()
+        stderr = io.StringIO()
+        self.publisher.publish_once = lambda _args: self.fail("publish_once should not run")
+        with patch.dict(os.environ, env, clear=True), patch.object(
+            sys,
+            "argv",
+            ["publish_cockpit_to_relay.py", "--format", "json", "--once"],
+        ), redirect_stdout(stdout), redirect_stderr(stderr):
+            status = self.publisher.main()
+
+        self.assertEqual(status, 2)
+        self.assertEqual(stdout.getvalue(), "")
+        self.assertIn("--format json is only supported with --check-env", stderr.getvalue())
 
     def test_publish_once_logs_source_status_freshness(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

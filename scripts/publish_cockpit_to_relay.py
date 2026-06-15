@@ -548,8 +548,89 @@ def validate_publisher_configuration(args: argparse.Namespace) -> list[str]:
     return errors
 
 
-def emit_publisher_preflight(args: argparse.Namespace) -> list[str]:
+def publisher_preflight_error_category(error: str) -> str:
+    if error.endswith("is required"):
+        return "missing_required"
+    if error.startswith("--relay-url"):
+        return "invalid_relay_url"
+    if error.startswith("--token"):
+        return "invalid_secret"
+    if error.startswith(
+        (
+            "--interval",
+            "--timeout",
+            "--tail-lines",
+            "--max-log-bytes",
+            "--max-consecutive-failures",
+            "--max-consecutive-stale-statuses",
+            "--status-stale-after-seconds",
+        )
+    ):
+        return "invalid_runtime_config"
+    if error.startswith(("--status-file", "--pid-file", "--log-file", "--publisher-log")):
+        return "invalid_file_path"
+    return "invalid_configuration"
+
+
+def publisher_preflight_error_categories(errors: list[str]) -> list[str]:
+    return sorted({publisher_preflight_error_category(error) for error in errors})
+
+
+def publisher_preflight_summary(
+    args: argparse.Namespace,
+    errors: list[str],
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "status": "failed" if errors else "passed",
+        "errors": errors,
+    }
+    if errors:
+        payload["diagnostics"] = {
+            "error_count": len(errors),
+            "error_categories": publisher_preflight_error_categories(errors),
+            "relay_url_configured": bool(str(args.relay_url).strip()),
+            "relay_token_configured": bool(str(args.token).strip()),
+            "runtime_limits": PUBLISHER_CONFIG_LIMITS,
+        }
+        return payload
+
+    payload["config"] = {
+        "relay_url": str(args.relay_url).strip().rstrip("/"),
+        "relay_token_configured": bool(str(args.token).strip()),
+        "interval": float(args.interval),
+        "timeout": float(args.timeout),
+        "tail_lines": int(args.tail_lines),
+        "max_log_bytes": int(args.max_log_bytes),
+        "status_stale_after_seconds": int(args.status_stale_after_seconds),
+        "max_consecutive_failures": int(args.max_consecutive_failures),
+        "max_consecutive_stale_statuses": int(
+            args.max_consecutive_stale_statuses
+        ),
+        "status_file": str(args.status_file),
+        "pid_file": str(args.pid_file),
+        "log_file": str(args.log_file),
+        "publisher_log": str(args.publisher_log),
+        "runtime_limits": PUBLISHER_CONFIG_LIMITS,
+    }
+    return payload
+
+
+def emit_publisher_preflight(
+    args: argparse.Namespace,
+    *,
+    output_format: str = "text",
+) -> list[str]:
     errors = validate_publisher_configuration(args)
+    if output_format == "json":
+        print(
+            json.dumps(
+                publisher_preflight_summary(args, errors),
+                sort_keys=True,
+            ),
+            flush=True,
+        )
+        return errors
+
     if errors:
         print("publisher environment preflight failed")
         for error in errors:
@@ -582,6 +663,12 @@ def parse_args() -> argparse.Namespace:
         "--check-env",
         action="store_true",
         help="validate publisher configuration without posting to the relay",
+    )
+    parser.add_argument(
+        "--format",
+        choices=("text", "json"),
+        default="text",
+        help="output format for --check-env preflight results",
     )
     parser.add_argument("--tail-lines", type=int, default=os.environ.get("AUTOMOAT_RELAY_TAIL_LINES", "180"))
     parser.add_argument(
@@ -639,9 +726,13 @@ def normalize_args(args: argparse.Namespace) -> argparse.Namespace:
 
 def main() -> int:
     args = normalize_args(parse_args())
+    if args.format == "json" and not args.check_env:
+        print("--format json is only supported with --check-env", file=sys.stderr)
+        return 2
+
     errors = validate_publisher_configuration(args)
     if args.check_env:
-        return 0 if not emit_publisher_preflight(args) else 2
+        return 0 if not emit_publisher_preflight(args, output_format=args.format) else 2
     if errors:
         for error in errors:
             print(error, file=sys.stderr)
