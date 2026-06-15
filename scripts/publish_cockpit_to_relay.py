@@ -962,10 +962,23 @@ def validate_publisher_configuration(args: argparse.Namespace) -> list[str]:
     for label, path in configured_file_args.items():
         if path.exists() and path.is_dir():
             errors.append(f"{label} must be a file path, not a directory")
-    publisher_log_parent = args.publisher_log.parent
-    if publisher_log_parent.exists() and not publisher_log_parent.is_dir():
-        errors.append("--publisher-log parent must be a directory")
+            continue
+        blocking_path = blocking_parent_path_component(path)
+        if blocking_path is not None:
+            errors.append(
+                f"{label} parent path {repo_relative(blocking_path)} must be a directory"
+            )
     return errors
+
+
+def blocking_parent_path_component(path: Path) -> Path | None:
+    current_path = path.parent
+    while True:
+        if current_path.exists():
+            return None if current_path.is_dir() else current_path
+        if current_path.parent == current_path:
+            return None
+        current_path = current_path.parent
 
 
 def publisher_preflight_error_category(error: str) -> str:

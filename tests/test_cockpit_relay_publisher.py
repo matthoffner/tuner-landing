@@ -606,6 +606,39 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             ],
         )
 
+    def test_validate_publisher_configuration_rejects_blocked_file_parents(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            blocker = tmp_path / "blocked-parent"
+            blocker.write_text("not a directory", encoding="utf-8")
+            args = Namespace(
+                relay_url="https://automoat-cockpit-relay.example",
+                token="relay-token",
+                interval=3,
+                timeout=8,
+                tail_lines=180,
+                max_log_bytes=256 * 1024,
+                max_consecutive_failures=3,
+                max_consecutive_stale_statuses=0,
+                status_stale_after_seconds=660,
+                status_file=blocker / "status.json",
+                pid_file=blocker / "loop.pid",
+                log_file=blocker / "loop.log",
+                publisher_log=blocker / "publisher.log",
+            )
+
+            errors = self.publisher.validate_publisher_configuration(args)
+
+        self.assertEqual(
+            errors,
+            [
+                "--status-file parent path <external>/blocked-parent must be a directory",
+                "--pid-file parent path <external>/blocked-parent must be a directory",
+                "--log-file parent path <external>/blocked-parent must be a directory",
+                "--publisher-log parent path <external>/blocked-parent must be a directory",
+            ],
+        )
+
     def test_check_env_validates_without_publishing(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
@@ -873,6 +906,42 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         )
         self.assertEqual(payload["diagnostics"]["error_categories"], ["invalid_relay_url"])
         self.assertNotIn("automoat-cockpit-relay.example:abc", output.getvalue())
+        self.assertNotIn("relay-token", output.getvalue())
+
+    def test_check_env_json_rejects_blocked_publisher_log_parent(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            blocker = tmp_path / "blocked-parent"
+            blocker.write_text("not a directory", encoding="utf-8")
+            env = {
+                "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+                "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            }
+            output = io.StringIO()
+            self.publisher.publish_once = lambda _args: self.fail("publish_once should not run")
+            with patch.dict(os.environ, env, clear=True), patch.object(
+                sys,
+                "argv",
+                [
+                    "publish_cockpit_to_relay.py",
+                    "--check-env",
+                    "--format",
+                    "json",
+                    "--publisher-log",
+                    str(blocker / "publisher.log"),
+                ],
+            ), redirect_stdout(output):
+                status = self.publisher.main()
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(status, 2)
+        self.assertEqual(payload["status"], "failed")
+        self.assertEqual(
+            payload["errors"],
+            ["--publisher-log parent path <external>/blocked-parent must be a directory"],
+        )
+        self.assertEqual(payload["diagnostics"]["error_categories"], ["invalid_file_path"])
+        self.assertNotIn(str(tmp_path), output.getvalue())
         self.assertNotIn("relay-token", output.getvalue())
 
     def test_check_env_rejects_bad_relay_token_before_publish(self) -> None:
