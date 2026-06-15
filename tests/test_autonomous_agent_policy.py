@@ -573,6 +573,42 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
             ],
         )
 
+    def test_untracked_synthetic_row_detector_reads_multiline_csv_records(self) -> None:
+        fixture_path = (
+            "generated/raw/dallas-electrician-import-sample-v3/permits.csv"
+        )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            csv_path = root / fixture_path
+            csv_path.parent.mkdir(parents=True)
+            csv_path.write_text(
+                "\n".join(
+                    [
+                        "permit_number,description,source_url",
+                        'ELZ-2026-9996,"repair note',
+                        'https://example.local/dallas",Finaled',
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            def fake_shell(command):
+                if command[1] == "diff":
+                    return SimpleNamespace(stdout="")
+                return SimpleNamespace(stdout=fixture_path + "\n")
+
+            self.loop.ROOT = root
+            self.loop.shell = fake_shell
+
+            rows = self.loop.added_synthetic_dallas_rows()
+
+        self.assertEqual(len(rows), 1)
+        self.assertIn(fixture_path + ":3:", rows[0])
+        self.assertIn("ELZ-2026-9996", rows[0])
+        self.assertIn("https://example.local/dallas", rows[0])
+
     def test_policy_check_rejects_docs_only_synthetic_row_append(self) -> None:
         self.loop.dirty_paths_excluding_preview = lambda: [
             "README.md",

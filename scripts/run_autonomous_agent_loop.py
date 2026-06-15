@@ -482,6 +482,17 @@ def synthetic_dallas_csv_row(row: str) -> bool:
     )
 
 
+def synthetic_dallas_csv_record(cells: list[str]) -> bool:
+    """Return whether a parsed CSV record is hidden Dallas example.local growth."""
+    row = ",".join(cells)
+    if SYNTHETIC_DALLAS_PERMIT_PATTERN.search(row) is None:
+        return False
+    return any(
+        EXAMPLE_LOCAL_DALLAS_PATTERN.search(candidate) is not None
+        for candidate in [row, *cells]
+    )
+
+
 def sanitized_policy_detail(text: str, max_chars: int = MAX_POLICY_DETAIL_CHARS) -> str:
     """Return a bounded, secret-safe detail string for policy status payloads."""
 
@@ -577,12 +588,18 @@ def added_synthetic_dallas_rows() -> list[str]:
     for relative_path in untracked_dallas_raw_csv_paths():
         path = ROOT / relative_path
         try:
-            file_rows = path.read_text(encoding="utf-8").splitlines()
+            with path.open("r", encoding="utf-8", newline="") as handle:
+                reader = csv.reader(handle)
+                for cells in reader:
+                    if synthetic_dallas_csv_record(cells):
+                        append_row(
+                            f"{relative_path}:{reader.line_num}: "
+                            + ",".join(cells)
+                        )
         except OSError:
             continue
-        for line_number, row in enumerate(file_rows, start=1):
-            if synthetic_dallas_csv_row(row):
-                append_row(f"{relative_path}:{line_number}: {row}")
+        except csv.Error:
+            continue
     return rows
 
 
