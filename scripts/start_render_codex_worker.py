@@ -250,14 +250,14 @@ def validate_worker_environment(
     errors: list[str] = []
     command_paths = resolved_required_command_paths(env, command_lookup)
 
-    relay_url = env.get("AUTOMOAT_RELAY_URL", "").strip()
+    relay_url = env.get("AUTOMOAT_RELAY_URL", "")
     validate_secret_safe_http_url(
         "AUTOMOAT_RELAY_URL",
         relay_url,
         errors,
         required=True,
     )
-    git_repo = env.get("AUTOMOAT_GIT_REPO", DEFAULT_REPO).strip()
+    git_repo = env.get("AUTOMOAT_GIT_REPO", DEFAULT_REPO)
     validate_secret_safe_http_url(
         "AUTOMOAT_GIT_REPO",
         git_repo,
@@ -380,6 +380,10 @@ def validate_secret_safe_http_url(
         if required:
             errors.append(f"{name} is required")
         return
+    if value != value.strip():
+        errors.append(f"{name} must not include leading or trailing whitespace")
+        return
+    value = value.strip()
     if not value.startswith(("http://", "https://")):
         errors.append(f"{name} must start with http:// or https://")
         return

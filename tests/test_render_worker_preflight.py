@@ -312,6 +312,22 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             ["AUTOMOAT_RELAY_URL must not include query strings or fragments"],
         )
 
+    def test_rejects_relay_url_with_leading_or_trailing_whitespace(self) -> None:
+        errors = self.worker.validate_worker_environment(
+            {
+                "AUTOMOAT_RELAY_URL": " https://automoat-cockpit-relay.example\n",
+                "AUTOMOAT_RELAY_TOKEN": "relay-token",
+                "GITHUB_TOKEN": "github-token",
+                "CODEX_ACCESS_TOKEN": "codex-token",
+            },
+            found_command,
+        )
+
+        self.assertEqual(
+            errors,
+            ["AUTOMOAT_RELAY_URL must not include leading or trailing whitespace"],
+        )
+
     def test_rejects_git_repo_with_embedded_credentials(self) -> None:
         errors = self.worker.validate_worker_environment(
             {
@@ -325,6 +341,23 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         )
 
         self.assertEqual(errors, ["AUTOMOAT_GIT_REPO must not include embedded credentials"])
+
+    def test_rejects_git_repo_with_leading_or_trailing_whitespace(self) -> None:
+        errors = self.worker.validate_worker_environment(
+            {
+                "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+                "AUTOMOAT_RELAY_TOKEN": "relay-token",
+                "AUTOMOAT_GIT_REPO": "https://github.com/example/private.git ",
+                "GITHUB_TOKEN": "github-token",
+                "CODEX_ACCESS_TOKEN": "codex-token",
+            },
+            found_command,
+        )
+
+        self.assertEqual(
+            errors,
+            ["AUTOMOAT_GIT_REPO must not include leading or trailing whitespace"],
+        )
 
     def test_rejects_git_repo_with_query_or_fragment(self) -> None:
         errors = self.worker.validate_worker_environment(
