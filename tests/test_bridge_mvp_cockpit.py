@@ -213,7 +213,53 @@ class BridgeMvpCockpitTest(unittest.TestCase):
             payload["diagnostics"]["error_categories"],
             ["invalid_runtime_config", "missing_command"],
         )
+        self.assertEqual(
+            payload["diagnostics"]["failed_configuration_keys"],
+            ["--interval", "--ngrok-web-port|--port", "PATH:ngrok"],
+        )
         self.assertFalse(payload["diagnostics"]["ngrok_available"])
+
+    def test_check_env_json_rejects_non_finite_interval(self) -> None:
+        output = io.StringIO()
+
+        with patch.object(
+            self.bridge.subprocess,
+            "Popen",
+            side_effect=AssertionError("Popen should not run"),
+        ), patch.object(
+            self.bridge.shutil,
+            "which",
+            return_value="/usr/local/bin/ngrok",
+        ), patch.object(
+            sys,
+            "argv",
+            [
+                "bridge_mvp_cockpit.py",
+                "--check-env",
+                "--format",
+                "json",
+                "--interval",
+                "nan",
+            ],
+        ), redirect_stdout(output):
+            status = self.bridge.main()
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(status, 2)
+        self.assertEqual(payload["status"], "failed")
+        self.assertEqual(
+            payload["errors"],
+            ["--interval must be a finite number of seconds"],
+        )
+        self.assertEqual(
+            payload["diagnostics"]["error_categories"],
+            ["invalid_runtime_config"],
+        )
+        self.assertEqual(
+            payload["diagnostics"]["failed_configuration_keys"],
+            ["--interval"],
+        )
+        self.assertTrue(payload["diagnostics"]["ngrok_available"])
 
     def test_main_passes_configured_web_addr_to_ngrok(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

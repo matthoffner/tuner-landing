@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import shutil
 import subprocess
@@ -186,7 +187,9 @@ def validate_bridge_configuration(args: argparse.Namespace) -> list[str]:
     errors: list[str] = []
     errors.extend(validate_port("--port", int(args.port)))
     errors.extend(validate_port("--ngrok-web-port", int(args.ngrok_web_port)))
-    if args.interval <= 0:
+    if not math.isfinite(args.interval):
+        errors.append("--interval must be a finite number of seconds")
+    elif args.interval <= 0:
         errors.append("--interval must be greater than 0")
     if args.port == args.ngrok_web_port:
         errors.append("--port must not equal --ngrok-web-port")
@@ -207,6 +210,24 @@ def bridge_preflight_error_categories(errors: list[str]) -> list[str]:
     return sorted({bridge_preflight_error_category(error) for error in errors})
 
 
+def bridge_preflight_error_key(error: str) -> str:
+    if error.startswith("ngrok "):
+        return "PATH:ngrok"
+    if error == "--port must not equal --ngrok-web-port":
+        return "--ngrok-web-port|--port"
+    if error.startswith("--ngrok-web-port"):
+        return "--ngrok-web-port"
+    if error.startswith("--interval"):
+        return "--interval"
+    if error.startswith("--port"):
+        return "--port"
+    return "bridge_configuration"
+
+
+def bridge_preflight_error_keys(errors: list[str]) -> list[str]:
+    return sorted({bridge_preflight_error_key(error) for error in errors})
+
+
 def bridge_preflight_summary(args: argparse.Namespace, errors: list[str]) -> dict[str, Any]:
     ngrok_path = shutil.which("ngrok")
     payload: dict[str, Any] = {
@@ -217,6 +238,7 @@ def bridge_preflight_summary(args: argparse.Namespace, errors: list[str]) -> dic
         payload["diagnostics"] = {
             "error_count": len(errors),
             "error_categories": bridge_preflight_error_categories(errors),
+            "failed_configuration_keys": bridge_preflight_error_keys(errors),
             "ngrok_available": ngrok_path is not None,
         }
         return payload
