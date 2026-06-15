@@ -30,6 +30,8 @@ RESERVED_RUNTIME_FILE_PATHS = (GIT_ASKPASS, GITHUB_TOKEN_FILE)
 CHILDREN: list[subprocess.Popen[object]] = []
 STOP_REQUESTED = False
 STARTUP_CHILD_GRACE_SECONDS = 0.5
+PUBLISHER_PREFLIGHT_TIMEOUT_SECONDS = 15.0
+PUBLISHER_PREFLIGHT_MAX_OUTPUT_BYTES = 64 * 1024
 CODEX_AUTH_ENV_NAMES = ("CODEX_AUTH_JSON_B64", "CODEX_ACCESS_TOKEN", "OPENAI_API_KEY")
 GIT_AUTH_ENV_NAMES = ("GITHUB_TOKEN", "GH_TOKEN")
 REQUIRED_COMMANDS = ("git", "codex")
@@ -933,20 +935,45 @@ def emit_environment_preflight(
     return []
 
 
-def run(command: list[str], *, cwd: Path | None = None, input_text: str | None = None) -> str:
+def run(
+    command: list[str],
+    *,
+    cwd: Path | None = None,
+    input_text: str | None = None,
+    timeout_seconds: float | None = None,
+    max_output_bytes: int | None = None,
+) -> str:
     printable = " ".join(command)
     emit(f"$ {printable}")
-    result = subprocess.run(
-        command,
-        cwd=cwd,
-        input=input_text,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
-        check=False,
-        env=os.environ.copy(),
-    )
+    try:
+        result = subprocess.run(
+            command,
+            cwd=cwd,
+            input=input_text,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            check=False,
+            env=os.environ.copy(),
+            timeout=timeout_seconds,
+        )
+    except subprocess.TimeoutExpired as exc:
+        timeout_text = (
+            format_number(timeout_seconds) if timeout_seconds is not None else "unknown"
+        )
+        raise RuntimeError(f"{printable} timed out after {timeout_text}s") from exc
+
     if result.stdout:
+        output_size = len(result.stdout.encode("utf-8", errors="replace"))
+        if max_output_bytes is not None and output_size > max_output_bytes:
+            emit(
+                "  <stdout omitted: "
+                f"{output_size} bytes exceeds {max_output_bytes} byte limit>"
+            )
+            raise RuntimeError(
+                f"{printable} produced {output_size} bytes of output, "
+                f"exceeding limit {max_output_bytes}"
+            )
         for line in result.stdout.rstrip().splitlines():
             emit(f"  {line}")
     if result.returncode != 0:
@@ -1082,7 +1109,12 @@ def sync_repo() -> None:
 def check_relay_publisher_preflight() -> None:
     workdir, _codex_home = configured_worker_paths(os.environ)
     emit("checking checked-out relay publisher preflight")
-    output = run(relay_publisher_preflight_command(os.environ), cwd=workdir)
+    output = run(
+        relay_publisher_preflight_command(os.environ),
+        cwd=workdir,
+        timeout_seconds=PUBLISHER_PREFLIGHT_TIMEOUT_SECONDS,
+        max_output_bytes=PUBLISHER_PREFLIGHT_MAX_OUTPUT_BYTES,
+    )
     validate_publisher_preflight_output(output)
     emit("checked-out relay publisher preflight passed")
 

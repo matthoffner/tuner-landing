@@ -2161,10 +2161,53 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             self.worker.relay_publisher_preflight_command(env),
         )
         self.assertEqual(run.call_args.kwargs["cwd"], workdir)
+        self.assertEqual(
+            run.call_args.kwargs["timeout_seconds"],
+            self.worker.PUBLISHER_PREFLIGHT_TIMEOUT_SECONDS,
+        )
+        self.assertEqual(
+            run.call_args.kwargs["max_output_bytes"],
+            self.worker.PUBLISHER_PREFLIGHT_MAX_OUTPUT_BYTES,
+        )
         self.assertIn("checking checked-out relay publisher preflight", output.getvalue())
         self.assertIn("checked-out relay publisher preflight passed", output.getvalue())
         self.assertNotIn("relay-token", output.getvalue())
         self.assertNotIn("https://automoat-cockpit-relay.example", output.getvalue())
+
+    def test_run_times_out_bounded_preflight_commands(self) -> None:
+        output = io.StringIO()
+
+        with patch.object(
+            self.worker.subprocess,
+            "run",
+            side_effect=self.worker.subprocess.TimeoutExpired(["slow"], 15),
+        ) as subprocess_run, redirect_stdout(output):
+            with self.assertRaisesRegex(RuntimeError, "slow timed out after 15s"):
+                self.worker.run(["slow"], timeout_seconds=15)
+
+        self.assertEqual(subprocess_run.call_args.kwargs["timeout"], 15)
+        self.assertIn("$ slow", output.getvalue())
+
+    def test_run_rejects_oversized_output_without_echoing_it(self) -> None:
+        output = io.StringIO()
+        stdout = "token=relay-secret\n" + ("x" * 80)
+
+        with patch.object(
+            self.worker.subprocess,
+            "run",
+            return_value=self.worker.subprocess.CompletedProcess(
+                args=["noisy"],
+                returncode=0,
+                stdout=stdout,
+            ),
+        ), redirect_stdout(output):
+            with self.assertRaisesRegex(RuntimeError, "exceeding limit 32"):
+                self.worker.run(["noisy"], max_output_bytes=32)
+
+        log_output = output.getvalue()
+        self.assertIn("$ noisy", log_output)
+        self.assertIn("<stdout omitted:", log_output)
+        self.assertNotIn("relay-secret", log_output)
 
     def test_check_relay_publisher_preflight_rejects_non_json_success(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
