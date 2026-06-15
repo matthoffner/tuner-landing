@@ -380,6 +380,34 @@ def validate_secret_safe_http_url(
         errors.append(f"{name} must not include query strings or fragments")
 
 
+def preflight_error_category(error: str) -> str:
+    if error.endswith(" is required"):
+        return "missing_required"
+    if error.startswith("AUTOMOAT_RELAY_URL") or error.startswith("AUTOMOAT_GIT_REPO"):
+        return "invalid_url"
+    if error.startswith("AUTOMOAT_GIT_BRANCH"):
+        return "invalid_git_branch"
+    if error.startswith("AUTOMOAT_WORKDIR") or error.startswith("CODEX_HOME"):
+        return "invalid_path"
+    if error.startswith("CODEX_AUTH_JSON_B64 must decode"):
+        return "invalid_codex_auth_payload"
+    if "single-line value without control characters" in error:
+        return "invalid_secret_or_identity"
+    if error.startswith("AUTOMOAT_CODEX_"):
+        return "invalid_codex_config"
+    if error.startswith("GIT_AUTHOR_") or error.startswith("GIT_COMMITTER_"):
+        return "invalid_git_identity"
+    if error.endswith(" executable is required on PATH"):
+        return "missing_command"
+    if error.startswith("AUTOMOAT_"):
+        return "invalid_runtime_config"
+    return "invalid_configuration"
+
+
+def preflight_error_categories(errors: list[str]) -> list[str]:
+    return sorted({preflight_error_category(error) for error in errors})
+
+
 def validate_git_branch_name(value: str, errors: list[str]) -> None:
     branch = value.strip()
     if not branch:
@@ -487,6 +515,14 @@ def environment_preflight_summary(
         "errors": errors,
     }
     if errors:
+        payload["diagnostics"] = {
+            "error_count": len(errors),
+            "error_categories": preflight_error_categories(errors),
+            "git_auth": configured_names(env, GIT_AUTH_ENV_NAMES),
+            "codex_auth": configured_names(env, CODEX_AUTH_ENV_NAMES),
+            "commands": list(REQUIRED_COMMANDS),
+            "runtime_limits": RUNTIME_CONFIG_LIMITS,
+        }
         return payload
 
     payload["config"] = {

@@ -509,12 +509,59 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertEqual(payload["status"], "failed")
         self.assertEqual(payload["errors"], errors)
         self.assertNotIn("config", payload)
+        self.assertEqual(payload["diagnostics"]["error_count"], 2)
+        self.assertEqual(payload["diagnostics"]["error_categories"], ["invalid_url"])
+        self.assertEqual(payload["diagnostics"]["git_auth"], ["GITHUB_TOKEN"])
+        self.assertEqual(payload["diagnostics"]["codex_auth"], ["CODEX_ACCESS_TOKEN"])
+        self.assertEqual(payload["diagnostics"]["commands"], ["git", "codex"])
+        self.assertEqual(
+            payload["diagnostics"]["runtime_limits"],
+            self.worker.RUNTIME_CONFIG_LIMITS,
+        )
         self.assertIn("AUTOMOAT_RELAY_URL must not include embedded credentials", errors)
         self.assertIn("AUTOMOAT_GIT_REPO must not include embedded credentials", errors)
         self.assertNotIn("relay-secret", output.getvalue())
         self.assertNotIn("git-secret", output.getvalue())
         self.assertNotIn("github-token", output.getvalue())
         self.assertNotIn("codex-token", output.getvalue())
+
+    def test_check_env_json_failure_groups_errors_without_printing_secret_values(self) -> None:
+        env = {
+            "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+            "AUTOMOAT_RELAY_TOKEN": "relay-token\nsecond-line",
+            "GH_TOKEN": "github-token",
+            "CODEX_AUTH_JSON_B64": "not-base64",
+            "AUTOMOAT_AGENT_INTERVAL": "4000",
+            "AUTOMOAT_GIT_BRANCH": "feature with space",
+        }
+        output = io.StringIO()
+
+        with redirect_stdout(output):
+            errors = self.worker.emit_environment_preflight(
+                env,
+                found_command,
+                output_format="json",
+            )
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(payload["status"], "failed")
+        self.assertEqual(payload["errors"], errors)
+        self.assertEqual(payload["diagnostics"]["error_count"], len(errors))
+        self.assertEqual(
+            payload["diagnostics"]["error_categories"],
+            [
+                "invalid_codex_auth_payload",
+                "invalid_git_branch",
+                "invalid_runtime_config",
+                "invalid_secret_or_identity",
+            ],
+        )
+        self.assertEqual(payload["diagnostics"]["git_auth"], ["GH_TOKEN"])
+        self.assertEqual(payload["diagnostics"]["codex_auth"], ["CODEX_AUTH_JSON_B64"])
+        self.assertNotIn("config", payload)
+        self.assertNotIn("relay-token", output.getvalue())
+        self.assertNotIn("github-token", output.getvalue())
+        self.assertNotIn("not-base64", output.getvalue())
 
     def test_json_format_is_only_for_check_env(self) -> None:
         with patch.object(self.worker, "parse_args") as parse_args:
