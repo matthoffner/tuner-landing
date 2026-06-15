@@ -790,6 +790,118 @@ def source_readiness_summary(status: dict[str, Any]) -> dict[str, Any]:
     return summary
 
 
+def sanitize_cockpit_summary_for_relay_response(summary: Any) -> dict[str, Any] | None:
+    if not isinstance(summary, dict):
+        return None
+
+    sanitized: dict[str, Any] = {}
+    text_fields = {
+        "status": summary.get("status"),
+        "phase": summary.get("phase"),
+        "artifact_health": summary.get("artifact_health"),
+        "import_readiness": summary.get("import_readiness"),
+        "current_focus": summary.get("current_focus"),
+        "policy_reason": summary.get("policy_reason"),
+        "contract_checks": summary.get("contract_checks"),
+        "policy_failure_reason": summary.get("policy_failure_reason"),
+        "policy_diagnostics_status": summary.get("policy_diagnostics_status"),
+        "policy_route_hint": summary.get("policy_route_hint"),
+        "policy_diagnostics_decision_reason": summary.get(
+            "policy_diagnostics_decision_reason"
+        ),
+        "policy_diagnostics_current_focus": summary.get(
+            "policy_diagnostics_current_focus"
+        ),
+        "operator_attention_primary_reason": summary.get(
+            "operator_attention_primary_reason"
+        ),
+        "operator_attention_label": summary.get("operator_attention_label"),
+    }
+    for key, value in text_fields.items():
+        compact_value = compact_policy_detail(value, max_length=160)
+        if compact_value is not None:
+            sanitized[key] = compact_value
+
+    bool_fields = {
+        "operator_attention": summary.get("operator_attention"),
+        "ready_for_next_import_records": summary.get("ready_for_next_import_records"),
+        "dallas_pipeline_ready": summary.get("dallas_pipeline_ready"),
+        "policy_preview_json_changed": summary.get("policy_preview_json_changed"),
+        "policy_allows_synthetic_append": summary.get(
+            "policy_allows_synthetic_append"
+        ),
+        "policy_override": summary.get("policy_override"),
+    }
+    for key, value in bool_fields.items():
+        if isinstance(value, bool):
+            sanitized[key] = value
+
+    int_fields = {
+        "iteration": summary.get("iteration"),
+        "status_age_seconds": summary.get("status_age_seconds"),
+        "thin_group_count": summary.get("thin_group_count"),
+        "queue_items": summary.get("queue_items"),
+        "policy_raw_dallas_csv_changed_path_count": summary.get(
+            "policy_raw_dallas_csv_changed_path_count"
+        ),
+        "policy_productive_changed_path_count": summary.get(
+            "policy_productive_changed_path_count"
+        ),
+        "policy_synthetic_row_count": summary.get("policy_synthetic_row_count"),
+    }
+    for key, value in int_fields.items():
+        compact_value = compact_int(value)
+        if compact_value is not None:
+            sanitized[key] = compact_value
+
+    list_fields = {
+        "operator_attention_reasons": summary.get("operator_attention_reasons"),
+        "readiness_blockers": summary.get("readiness_blockers"),
+        "thin_group_categories": summary.get("thin_group_categories"),
+        "artifact_problem_artifacts": summary.get("artifact_problem_artifacts"),
+        "policy_raw_dallas_csv_changed_paths": summary.get(
+            "policy_raw_dallas_csv_changed_paths"
+        ),
+        "policy_productive_changed_paths": summary.get(
+            "policy_productive_changed_paths"
+        ),
+        "policy_synthetic_row_samples": summary.get("policy_synthetic_row_samples"),
+    }
+    for key, value in list_fields.items():
+        if not isinstance(value, list):
+            continue
+        compact_values = [
+            compact_value
+            for compact_value in (
+                compact_policy_detail(item, max_length=240)
+                for item in value[:5]
+            )
+            if compact_value is not None
+        ]
+        if compact_values:
+            sanitized[key] = compact_values
+        sanitized[f"{key}_count"] = len(value)
+
+    artifact_statuses = summary.get("artifact_statuses")
+    if isinstance(artifact_statuses, dict):
+        compact_statuses: dict[str, str] = {}
+        for key, value in sorted(artifact_statuses.items()):
+            compact_key = compact_policy_detail(key, max_length=80)
+            compact_value = compact_policy_detail(value, max_length=80)
+            if compact_key is not None and compact_value is not None:
+                compact_statuses[compact_key] = compact_value
+        if compact_statuses:
+            sanitized["artifact_statuses"] = compact_statuses
+
+    import_handoff = source_import_handoff_summary(
+        {"import_handoff": summary.get("import_handoff")}
+    )
+    if import_handoff["available"]:
+        sanitized["import_handoff"] = import_handoff
+
+    return sanitized
+
+
 def sanitize_status_for_relay_response(status: dict[str, Any]) -> dict[str, Any]:
     response_status = dict(status)
 
@@ -819,6 +931,12 @@ def sanitize_status_for_relay_response(status: dict[str, Any]) -> dict[str, Any]
                 sanitized_bridge[key] = compact_value
         response_status["bridge_summary"] = sanitized_bridge
 
+    cockpit_summary = sanitize_cockpit_summary_for_relay_response(
+        response_status.get("cockpit_summary")
+    )
+    if cockpit_summary is not None:
+        response_status["cockpit_summary"] = cockpit_summary
+
     return response_status
 
 
@@ -838,17 +956,28 @@ def cockpit_health(
     source_summary = status.get("cockpit_summary")
     if not isinstance(source_summary, dict):
         source_summary = {}
+    source_attention_reason_values: list[str] = []
     source_attention_reasons = source_summary.get("operator_attention_reasons")
-    if not isinstance(source_attention_reasons, list):
-        source_attention_reasons = []
-    source_attention_primary_reason = source_summary.get(
-        "operator_attention_primary_reason"
+    if isinstance(source_attention_reasons, list):
+        source_attention_reason_values = [
+            str(reason) for reason in source_attention_reasons if reason
+        ]
+    source_attention_reason_samples = [
+        compact_reason
+        for compact_reason in (
+            compact_policy_detail(reason, max_length=160)
+            for reason in source_attention_reason_values[:5]
+        )
+        if compact_reason is not None
+    ]
+    source_attention_primary_reason = compact_policy_detail(
+        source_summary.get("operator_attention_primary_reason"),
+        max_length=160,
     )
-    if not isinstance(source_attention_primary_reason, str):
-        source_attention_primary_reason = None
-    source_attention_label = source_summary.get("operator_attention_label")
-    if not isinstance(source_attention_label, str):
-        source_attention_label = None
+    source_attention_label = compact_policy_detail(
+        source_summary.get("operator_attention_label"),
+        max_length=160,
+    )
     startup = state.get("relay_startup")
     if isinstance(startup, dict) and startup.get("state_load_status") == "failed":
         reasons.append("relay_state_load_failed")
@@ -867,7 +996,7 @@ def cockpit_health(
         reasons.append("source_status_unavailable")
     if status.get("loop_running") is False:
         reasons.append("source_loop_not_running")
-    if "autonomy_policy_failed" in source_attention_reasons:
+    if "autonomy_policy_failed" in source_attention_reason_values:
         reasons.append("source_autonomy_policy_failed")
     if status.get("status") in {"error", "failing"}:
         reasons.append("source_status_failing")
@@ -908,9 +1037,8 @@ def cockpit_health(
         "reasons": reasons,
         "primary_reason": primary_reason,
         "label": cockpit_health_label(primary_reason, source_attention_label),
-        "source_cockpit_attention_reasons": [
-            str(reason) for reason in source_attention_reasons if reason
-        ],
+        "source_cockpit_attention_reasons": source_attention_reason_samples,
+        "source_cockpit_attention_reasons_count": len(source_attention_reason_values),
         "source_cockpit_attention_primary_reason": source_attention_primary_reason,
         "source_cockpit_attention_label": source_attention_label,
         "source_status_diagnostics": source_status_diagnostics(status),

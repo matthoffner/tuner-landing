@@ -747,6 +747,91 @@ class RenderCockpitRelayTest(unittest.TestCase):
         )
         self.assertEqual(status["cockpit_health_label"], "Artifact health is not loaded")
 
+    def test_status_and_health_sanitize_source_cockpit_attention_fields(self) -> None:
+        self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
+        self.relay.update_state(
+            {
+                "pushed_at": "2026-06-14T19:59:30Z",
+                "status": {
+                    "status": "running",
+                    "loop_running": True,
+                    "cockpit_summary": {
+                        "operator_attention": True,
+                        "operator_attention_primary_reason": (
+                            "artifact token=primary-secret\nneeds review"
+                        ),
+                        "operator_attention_label": (
+                            "Investigate https://user:label-secret@example.local/path"
+                            "?token=label-token#debug"
+                        ),
+                        "operator_attention_reasons": [
+                            "artifact_health_not_loaded",
+                            (
+                                "import https://user:reason-secret@example.local/path"
+                                "?token=reason-token#debug"
+                            ),
+                            "relay_token=assignment-secret",
+                            "queue\tneeds review",
+                            "policy_override",
+                            "extra_reason_one",
+                            "extra_reason_two",
+                        ],
+                    },
+                },
+                "log_tail": "loop is working\n",
+            }
+        )
+        self.relay.utc_now = lambda: "2026-06-14T20:00:00Z"
+
+        health = self.relay.health_payload()
+        status = self.relay.relay_status_payload()
+
+        expected_reasons = [
+            "artifact_health_not_loaded",
+            "import https://example.local/path?[redacted]#[redacted]",
+            "relay_token=[redacted]",
+            "queue needs review",
+            "policy_override",
+        ]
+        self.assertEqual(
+            health["cockpit_health"]["source_cockpit_attention_reasons"],
+            expected_reasons,
+        )
+        self.assertEqual(
+            status["cockpit_health"]["source_cockpit_attention_reasons"],
+            expected_reasons,
+        )
+        self.assertEqual(
+            health["cockpit_health"]["source_cockpit_attention_reasons_count"],
+            7,
+        )
+        self.assertEqual(
+            health["cockpit_health"]["source_cockpit_attention_primary_reason"],
+            "artifact token=[redacted] needs review",
+        )
+        self.assertEqual(
+            health["cockpit_health_label"],
+            "Investigate https://example.local/path?[redacted]#[redacted]",
+        )
+        self.assertEqual(
+            status["cockpit_health_label"],
+            "Investigate https://example.local/path?[redacted]#[redacted]",
+        )
+        health_text = json.dumps(health, sort_keys=True)
+        status_text = json.dumps(status, sort_keys=True)
+        for unsafe_text in (
+            "primary-secret",
+            "label-secret",
+            "label-token",
+            "reason-secret",
+            "reason-token",
+            "assignment-secret",
+            "extra_reason_one",
+            "extra_reason_two",
+        ):
+            self.assertNotIn(unsafe_text, health_text)
+            self.assertNotIn(unsafe_text, status_text)
+
     def test_status_and_health_include_source_readiness_summary(self) -> None:
         self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
         self.relay.update_state(
