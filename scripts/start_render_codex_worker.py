@@ -40,6 +40,7 @@ CODEX_CONFIG_ENV_DEFAULTS = {
     "AUTOMOAT_CODEX_MODEL": "gpt-5.5",
     "AUTOMOAT_CODEX_REASONING_EFFORT": "high",
 }
+MAX_CODEX_CONFIG_VALUE_CHARS = 120
 RUNTIME_CONFIG_LIMITS = {
     "AUTOMOAT_AGENT_INTERVAL": 3600,
     "AUTOMOAT_AGENT_ITERATIONS": 1000,
@@ -295,6 +296,9 @@ def validate_codex_config_value(
         return
     if value != value.strip():
         errors.append(f"{name} must not include leading or trailing whitespace")
+        return
+    if len(value) > MAX_CODEX_CONFIG_VALUE_CHARS:
+        errors.append(f"{name} must be {MAX_CODEX_CONFIG_VALUE_CHARS} characters or fewer")
 
 
 def validate_git_identity_value(

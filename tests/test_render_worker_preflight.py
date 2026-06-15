@@ -1902,6 +1902,39 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             ],
         )
 
+    def test_rejects_oversized_codex_config_values_before_writing_config(self) -> None:
+        base_env = {
+            "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            "GITHUB_TOKEN": "github-token",
+            "CODEX_ACCESS_TOKEN": "codex-token",
+        }
+        long_model = "gpt-" + ("x" * self.worker.MAX_CODEX_CONFIG_VALUE_CHARS)
+        long_reasoning = "high-" + ("y" * self.worker.MAX_CODEX_CONFIG_VALUE_CHARS)
+
+        errors = self.worker.validate_worker_environment(
+            {
+                **base_env,
+                "AUTOMOAT_CODEX_MODEL": long_model,
+                "AUTOMOAT_CODEX_REASONING_EFFORT": long_reasoning,
+            },
+            found_command,
+        )
+
+        self.assertEqual(
+            errors,
+            [
+                (
+                    "AUTOMOAT_CODEX_MODEL must be "
+                    f"{self.worker.MAX_CODEX_CONFIG_VALUE_CHARS} characters or fewer"
+                ),
+                (
+                    "AUTOMOAT_CODEX_REASONING_EFFORT must be "
+                    f"{self.worker.MAX_CODEX_CONFIG_VALUE_CHARS} characters or fewer"
+                ),
+            ],
+        )
+
     def test_check_env_json_categorizes_codex_config_whitespace(self) -> None:
         env = {
             "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
@@ -1930,6 +1963,45 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             ["invalid_codex_config"],
         )
         self.assertNotIn(" gpt-5.5-codex", output.getvalue())
+
+    def test_check_env_json_routes_oversized_codex_config_without_echoing_value(self) -> None:
+        oversized_model = "secret-model-" + ("x" * self.worker.MAX_CODEX_CONFIG_VALUE_CHARS)
+        env = {
+            "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            "GITHUB_TOKEN": "github-token",
+            "CODEX_ACCESS_TOKEN": "codex-token",
+            "AUTOMOAT_CODEX_MODEL": oversized_model,
+        }
+        output = io.StringIO()
+
+        with redirect_stdout(output):
+            errors = self.worker.emit_environment_preflight(
+                env,
+                found_command,
+                output_format="json",
+            )
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(
+            errors,
+            [
+                (
+                    "AUTOMOAT_CODEX_MODEL must be "
+                    f"{self.worker.MAX_CODEX_CONFIG_VALUE_CHARS} characters or fewer"
+                ),
+            ],
+        )
+        self.assertEqual(payload["status"], "failed")
+        self.assertEqual(
+            payload["diagnostics"]["error_categories"],
+            ["invalid_codex_config"],
+        )
+        self.assertEqual(
+            payload["diagnostics"]["failed_configuration_keys"],
+            ["AUTOMOAT_CODEX_MODEL"],
+        )
+        self.assertNotIn("secret-model", output.getvalue())
 
     def test_rejects_bad_git_identity_values_before_git_config(self) -> None:
         base_env = {
