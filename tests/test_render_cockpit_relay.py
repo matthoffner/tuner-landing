@@ -1084,6 +1084,31 @@ class RenderCockpitRelayTest(unittest.TestCase):
 
                 self.assertIn(expected_error, errors)
 
+    def test_relay_preflight_rejects_malformed_host_before_serving(self) -> None:
+        cases = {
+            "": "--host must not be empty",
+            "127.0.0.1\nbackup": (
+                "--host must be a single-line value without control characters"
+            ),
+            " 127.0.0.1": "--host must not include leading or trailing whitespace",
+            "local host": "--host must not contain whitespace",
+        }
+        for host, expected_error in cases.items():
+            with self.subTest(host=repr(host)):
+                with patch.dict(
+                    os.environ,
+                    {"AUTOMOAT_RELAY_TOKEN": "relay-token", "HOST": host, "PORT": "4180"},
+                    clear=True,
+                ), patch.object(
+                    sys,
+                    "argv",
+                    ["render_cockpit_relay.py", "--check-env"],
+                ):
+                    args = self.relay.parse_args()
+                    errors = self.relay.validate_relay_configuration(args)
+
+                self.assertEqual(errors, [expected_error])
+
     def test_relay_preflight_accepts_documented_runtime_limits(self) -> None:
         limits = self.relay.RELAY_CONFIG_LIMITS
         env = {
@@ -1292,6 +1317,35 @@ class RenderCockpitRelayTest(unittest.TestCase):
             payload["diagnostics"]["runtime_limits"],
             self.relay.RELAY_CONFIG_LIMITS,
         )
+        self.assertNotIn("relay-token", stdout.getvalue())
+
+    def test_check_env_json_categorizes_malformed_host_without_echoing_it(self) -> None:
+        env = {
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            "HOST": "127.0.0.1\nbackup",
+            "PORT": "4180",
+        }
+        stdout = io.StringIO()
+        with patch.dict(os.environ, env, clear=True), patch.object(
+            sys,
+            "argv",
+            ["render_cockpit_relay.py", "--check-env", "--format", "json"],
+        ), contextlib.redirect_stdout(stdout):
+            status = self.relay.main()
+
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(status, 2)
+        self.assertEqual(payload["status"], "failed")
+        self.assertEqual(
+            payload["errors"],
+            ["--host must be a single-line value without control characters"],
+        )
+        self.assertEqual(
+            payload["diagnostics"]["error_categories"],
+            ["invalid_host"],
+        )
+        self.assertNotIn("127.0.0.1", stdout.getvalue())
+        self.assertNotIn("backup", stdout.getvalue())
         self.assertNotIn("relay-token", stdout.getvalue())
         self.assertNotIn("second-line", stdout.getvalue())
 

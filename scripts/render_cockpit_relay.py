@@ -901,8 +901,19 @@ def validate_relay_configuration(
         errors.append(
             "AUTOMOAT_RELAY_TOKEN must not include leading or trailing whitespace"
         )
-    if not str(args.host).strip():
+    host_value = str(args.host)
+    host = host_value.strip()
+    if not host:
         errors.append("--host must not be empty")
+    elif any(
+        character in "\r\n" or ord(character) < 32 or ord(character) == 127
+        for character in host_value
+    ):
+        errors.append("--host must be a single-line value without control characters")
+    elif host_value != host:
+        errors.append("--host must not include leading or trailing whitespace")
+    elif any(character.isspace() for character in host_value):
+        errors.append("--host must not contain whitespace")
     state_file = str(args.state_file).strip()
     if state_file:
         state_path = Path(state_file).expanduser()
