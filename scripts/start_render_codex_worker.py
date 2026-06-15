@@ -1185,6 +1185,12 @@ def validate_publisher_preflight_output(output: str) -> None:
 
     status = payload.get("status")
     if status == "passed":
+        errors = payload.get("errors")
+        if isinstance(errors, list) and errors:
+            raise RuntimeError(
+                "relay publisher preflight reported inconsistent status=passed "
+                f"error_count={len(errors)}"
+            )
         return
 
     if status == "failed":

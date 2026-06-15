@@ -2933,6 +2933,47 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                 with self.assertRaisesRegex(RuntimeError, "did not return valid JSON"):
                     self.worker.check_relay_publisher_preflight()
 
+    def test_check_relay_publisher_preflight_rejects_passed_json_with_errors(
+        self,
+    ) -> None:
+        inconsistent_payload = json.dumps(
+            {
+                "status": "passed",
+                "errors": ["token=relay-secret should not be logged"],
+                "config": {
+                    "relay_url": "https://automoat-cockpit-relay.example",
+                    "relay_token_configured": True,
+                },
+            }
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workdir = Path(temp_dir) / "runtime-repo"
+            workdir.mkdir()
+            env = {
+                "AUTOMOAT_WORKDIR": str(workdir),
+                "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+                "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            }
+
+            with patch.dict(self.worker.os.environ, env, clear=True), patch.object(
+                self.worker.subprocess,
+                "run",
+                return_value=self.worker.subprocess.CompletedProcess(
+                    args=self.worker.relay_publisher_preflight_command(env),
+                    returncode=0,
+                    stdout=inconsistent_payload,
+                ),
+            ):
+                with self.assertRaisesRegex(
+                    RuntimeError,
+                    "inconsistent status=passed error_count=1",
+                ) as context:
+                    self.worker.check_relay_publisher_preflight()
+
+        self.assertNotIn("relay-secret", str(context.exception))
+        self.assertNotIn("token=", str(context.exception))
+
     def test_check_relay_publisher_preflight_rejects_failed_json_status(self) -> None:
         failed_payload = json.dumps(
             {
