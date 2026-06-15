@@ -104,6 +104,12 @@ def relay_publisher_command(
     return command
 
 
+def relay_publisher_preflight_command(
+    env: os._Environ[str] | dict[str, str],
+) -> list[str]:
+    return [*relay_publisher_command(env), "--check-env", "--format", "json"]
+
+
 def env_has_any(env: os._Environ[str] | dict[str, str], names: tuple[str, ...]) -> bool:
     return any(env.get(name, "").strip() for name in names)
 
@@ -1036,6 +1042,12 @@ def sync_repo() -> None:
     run(["git", "status", "--short", "--branch"], cwd=workdir)
 
 
+def check_relay_publisher_preflight() -> None:
+    workdir, _codex_home = configured_worker_paths(os.environ)
+    emit("checking checked-out relay publisher preflight")
+    run(relay_publisher_preflight_command(os.environ), cwd=workdir)
+
+
 def start_publisher() -> subprocess.Popen[object]:
     require_env("AUTOMOAT_RELAY_URL")
     require_env("AUTOMOAT_RELAY_TOKEN")
@@ -1178,6 +1190,7 @@ def main() -> int:
     configure_git_auth()
     configure_codex_auth()
     sync_repo()
+    check_relay_publisher_preflight()
     publisher = start_publisher()
     publisher_startup_status = child_startup_exit_status(
         publisher,

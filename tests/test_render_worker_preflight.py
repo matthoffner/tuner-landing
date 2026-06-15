@@ -1628,6 +1628,29 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         threshold_index = command.index("--bridge-status-stale-after-seconds")
         self.assertEqual(command[threshold_index + 1], "240")
 
+    def test_relay_publisher_preflight_command_extends_runtime_command(self) -> None:
+        env = {
+            "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            "AUTOMOAT_RELAY_INTERVAL": "4",
+            "AUTOMOAT_RELAY_TIMEOUT": "9",
+            "AUTOMOAT_BRIDGE_STATUS_STALE_AFTER_SECONDS": "240",
+        }
+
+        command = self.worker.relay_publisher_preflight_command(env)
+
+        self.assertEqual(
+            command,
+            [
+                *self.worker.relay_publisher_command(env),
+                "--check-env",
+                "--format",
+                "json",
+            ],
+        )
+        self.assertNotIn("relay-token", command)
+        self.assertNotIn("https://automoat-cockpit-relay.example", command)
+
     def test_check_env_json_reports_bridge_status_stale_threshold(self) -> None:
         env = {
             "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
@@ -2113,6 +2136,34 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertNotIn("relay-token", log_line)
         self.assertNotIn("https://automoat-cockpit-relay.example", log_line)
 
+    def test_check_relay_publisher_preflight_runs_checked_out_contract(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workdir = Path(temp_dir) / "runtime-repo"
+            workdir.mkdir()
+            env = {
+                "AUTOMOAT_WORKDIR": str(workdir),
+                "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+                "AUTOMOAT_RELAY_TOKEN": "relay-token",
+                "AUTOMOAT_RELAY_INTERVAL": "4",
+                "AUTOMOAT_RELAY_TIMEOUT": "9",
+            }
+            output = io.StringIO()
+
+            with patch.dict(self.worker.os.environ, env, clear=True), patch.object(
+                self.worker,
+                "run",
+            ) as run, redirect_stdout(output):
+                self.worker.check_relay_publisher_preflight()
+
+        self.assertEqual(
+            run.call_args.args[0],
+            self.worker.relay_publisher_preflight_command(env),
+        )
+        self.assertEqual(run.call_args.kwargs["cwd"], workdir)
+        self.assertIn("checking checked-out relay publisher preflight", output.getvalue())
+        self.assertNotIn("relay-token", output.getvalue())
+        self.assertNotIn("https://automoat-cockpit-relay.example", output.getvalue())
+
     def test_monitor_returns_loop_status_when_loop_exits_first(self) -> None:
         loop = FakeProcess(pid=101, initial_status=7)
         publisher = FakeProcess(pid=202)
@@ -2162,6 +2213,9 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             "sync_repo",
         ), patch.object(
             self.worker,
+            "check_relay_publisher_preflight",
+        ), patch.object(
+            self.worker,
             "start_publisher",
             return_value=publisher,
         ), patch.object(
@@ -2189,6 +2243,44 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             output.getvalue(),
         )
 
+    def test_publisher_preflight_failure_prevents_child_startup(self) -> None:
+        output = io.StringIO()
+
+        with patch.object(self.worker, "parse_args") as parse_args, patch.object(
+            self.worker,
+            "emit_environment_preflight",
+            return_value=[],
+        ), patch.object(self.worker, "configure_git_auth"), patch.object(
+            self.worker,
+            "configure_codex_auth",
+        ), patch.object(
+            self.worker,
+            "sync_repo",
+        ), patch.object(
+            self.worker,
+            "check_relay_publisher_preflight",
+            side_effect=RuntimeError("publisher preflight failed with status 2"),
+        ), patch.object(
+            self.worker,
+            "start_publisher",
+        ) as start_publisher, patch.object(
+            self.worker,
+            "start_loop",
+        ) as start_loop, redirect_stdout(
+            output
+        ):
+            parse_args.return_value = type(
+                "Args",
+                (),
+                {"check_env": False, "format": "text"},
+            )()
+
+            with self.assertRaisesRegex(RuntimeError, "publisher preflight failed"):
+                self.worker.main()
+
+        start_publisher.assert_not_called()
+        start_loop.assert_not_called()
+
     def test_startup_clean_publisher_exit_is_worker_failure(self) -> None:
         publisher = FakeProcess(pid=202, initial_status=0)
         output = io.StringIO()
@@ -2203,6 +2295,9 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         ), patch.object(
             self.worker,
             "sync_repo",
+        ), patch.object(
+            self.worker,
+            "check_relay_publisher_preflight",
         ), patch.object(
             self.worker,
             "start_publisher",
@@ -2247,6 +2342,9 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         ), patch.object(
             self.worker,
             "sync_repo",
+        ), patch.object(
+            self.worker,
+            "check_relay_publisher_preflight",
         ), patch.object(
             self.worker,
             "start_publisher",
