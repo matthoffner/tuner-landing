@@ -1848,11 +1848,12 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertIn("codex_auth_selected=CODEX_ACCESS_TOKEN", output.getvalue())
         self.assertIn("agent_iterations=12", output.getvalue())
         self.assertIn(
-            'command_paths={"codex": "/usr/bin/codex", "git": "/usr/bin/git"}',
+            'command_paths={"codex": "<found>", "git": "<found>"}',
             output.getvalue(),
         )
         self.assertNotIn("workdir=/work/automoat", output.getvalue())
         self.assertNotIn("codex_home=/tmp/codex-home", output.getvalue())
+        self.assertNotIn("/usr/bin", output.getvalue())
 
     def test_check_env_json_reports_safe_machine_readable_summary(self) -> None:
         env = {
@@ -1894,7 +1895,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertEqual(payload["config"]["commands"], ["git", "codex"])
         self.assertEqual(
             payload["config"]["command_paths"],
-            {"git": "/usr/bin/git", "codex": "/usr/bin/codex"},
+            {"git": "<found>", "codex": "<found>"},
         )
         self.assertEqual(payload["config"]["runtime_limits"], self.worker.RUNTIME_CONFIG_LIMITS)
         self.assertNotIn("github-token", output.getvalue())
@@ -1903,6 +1904,38 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertNotIn("api-key", output.getvalue())
         self.assertNotIn('"/work/automoat"', output.getvalue())
         self.assertNotIn('"/tmp/codex-home"', output.getvalue())
+        self.assertNotIn("/usr/bin", output.getvalue())
+
+    def test_check_env_json_does_not_echo_command_path_components(self) -> None:
+        env = {
+            "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            "GITHUB_TOKEN": "github-token",
+            "CODEX_ACCESS_TOKEN": "codex-token",
+        }
+
+        def secret_path_command(command: str) -> str:
+            return f"/tmp/render-secret-token-path/{command}"
+
+        output = io.StringIO()
+
+        with redirect_stdout(output):
+            errors = self.worker.emit_environment_preflight(
+                env,
+                secret_path_command,
+                output_format="json",
+            )
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(errors, [])
+        self.assertEqual(
+            payload["config"]["command_paths"],
+            {"git": "<found>", "codex": "<found>"},
+        )
+        self.assertNotIn("render-secret-token-path", output.getvalue())
+        self.assertNotIn("relay-token", output.getvalue())
+        self.assertNotIn("github-token", output.getvalue())
+        self.assertNotIn("codex-token", output.getvalue())
 
     def test_check_env_json_reports_supplied_path_env_labels(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -2084,7 +2117,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertEqual(payload["diagnostics"]["commands"], ["git", "codex"])
         self.assertEqual(
             payload["diagnostics"]["command_paths"],
-            {"git": "/usr/bin/git", "codex": "/usr/bin/codex"},
+            {"git": "<found>", "codex": "<found>"},
         )
         self.assertEqual(payload["diagnostics"]["runtime_configured_keys"], [])
         self.assertEqual(
@@ -2144,7 +2177,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertEqual(payload["diagnostics"]["codex_auth"], ["CODEX_AUTH_JSON_B64"])
         self.assertEqual(
             payload["diagnostics"]["command_paths"],
-            {"git": "/usr/bin/git", "codex": "/usr/bin/codex"},
+            {"git": "<found>", "codex": "<found>"},
         )
         self.assertEqual(
             payload["diagnostics"]["runtime_configured_keys"],
@@ -3167,7 +3200,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         )
         self.assertEqual(
             payload["diagnostics"]["command_paths"],
-            {"git": "/usr/bin/git", "codex": None},
+            {"git": "<found>", "codex": None},
         )
         self.assertEqual(payload["diagnostics"]["missing_commands"], ["codex"])
         self.assertEqual(payload["diagnostics"]["runtime_configured_keys"], [])

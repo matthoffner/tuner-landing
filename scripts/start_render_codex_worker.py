@@ -638,6 +638,13 @@ def missing_required_commands(command_paths: dict[str, str | None]) -> list[str]
     return [command for command in REQUIRED_COMMANDS if not command_paths.get(command)]
 
 
+def safe_command_path_labels(command_paths: dict[str, str | None]) -> dict[str, str | None]:
+    return {
+        command: "<found>" if command_paths.get(command) else None
+        for command in REQUIRED_COMMANDS
+    }
+
+
 def configured_runtime_keys(env: os._Environ[str] | dict[str, str]) -> list[str]:
     """Return nonsecret runtime override keys present in the worker environment."""
     return sorted(
@@ -1125,6 +1132,7 @@ def environment_preflight_summary(
     command_paths: dict[str, str | None] | None = None,
 ) -> dict[str, Any]:
     command_paths = command_paths or resolved_required_command_paths(env)
+    command_path_labels = safe_command_path_labels(command_paths)
     workdir, codex_home = configured_worker_paths(env)
     payload: dict[str, Any] = {
         "status": "failed" if errors else "passed",
@@ -1140,7 +1148,7 @@ def environment_preflight_summary(
             "codex_auth": configured_names(env, CODEX_AUTH_ENV_NAMES),
             "codex_auth_selected": selected_name(env, CODEX_AUTH_ENV_NAMES),
             "commands": list(REQUIRED_COMMANDS),
-            "command_paths": command_paths,
+            "command_paths": command_path_labels,
             "missing_commands": missing_required_commands(command_paths),
             "runtime_configured_keys": configured_runtime_keys(env),
             "runtime_limits": RUNTIME_CONFIG_LIMITS,
@@ -1189,7 +1197,7 @@ def environment_preflight_summary(
             "AUTOMOAT_CODEX_REASONING_EFFORT",
         ),
         "commands": list(REQUIRED_COMMANDS),
-        "command_paths": command_paths,
+        "command_paths": command_path_labels,
         "runtime_limits": RUNTIME_CONFIG_LIMITS,
     }
     return payload
@@ -1223,6 +1231,7 @@ def emit_environment_preflight(
     workdir, codex_home = configured_worker_paths(env)
     workdir_label = worker_config_path_label(workdir)
     codex_home_label = worker_config_path_label(codex_home)
+    command_path_labels = safe_command_path_labels(command_paths)
     bridge_status_file = worker_file_label(
         env.get("AUTOMOAT_BRIDGE_STATUS_FILE", DEFAULT_BRIDGE_STATUS_FILE),
         env,
@@ -1256,7 +1265,7 @@ def emit_environment_preflight(
         f"codex_reasoning_effort="
         f"{codex_config_value(env, 'AUTOMOAT_CODEX_REASONING_EFFORT')} "
         f"commands={','.join(REQUIRED_COMMANDS)} "
-        f"command_paths={json.dumps(command_paths, sort_keys=True)} "
+        f"command_paths={json.dumps(command_path_labels, sort_keys=True)} "
         f"runtime_limits={json.dumps(RUNTIME_CONFIG_LIMITS, sort_keys=True)}"
     )
     return []
