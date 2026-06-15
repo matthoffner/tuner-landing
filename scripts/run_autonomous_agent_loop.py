@@ -121,13 +121,17 @@ def emit(log_file: Path, message: str) -> None:
 def write_json(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8") as handle:
-        json.dump(payload, handle, indent=2)
+        json.dump(payload, handle, indent=2, allow_nan=False)
         handle.write("\n")
+
+
+def reject_json_constant(value: str) -> None:
+    raise ValueError(f"invalid JSON constant: {value}")
 
 
 def read_json(path: Path) -> dict[str, Any]:
     with path.open("r", encoding="utf-8") as handle:
-        return json.load(handle)
+        return json.load(handle, parse_constant=reject_json_constant)
 
 
 def artifact_error(status: str, path: Path, error: str | None = None) -> dict[str, Any]:
@@ -145,7 +149,7 @@ def read_json_artifact(path: Path) -> tuple[dict[str, Any], dict[str, Any]]:
         payload = read_json(path)
     except FileNotFoundError:
         return {}, artifact_error("missing", path)
-    except (OSError, json.JSONDecodeError) as exc:
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
         return {}, artifact_error("invalid", path, str(exc))
     if not isinstance(payload, dict):
         return {}, artifact_error("invalid", path, "artifact JSON must be an object")
@@ -208,7 +212,7 @@ def import_pipeline_snapshot() -> dict[str, Any]:
 
     try:
         summary = read_json(PIPELINE_SUMMARY_PATH)
-    except (OSError, json.JSONDecodeError) as exc:
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
         return {
             "status": "invalid",
             "summary_path": repo_path(PIPELINE_SUMMARY_PATH),
@@ -627,7 +631,7 @@ def write_status(
     payload = status_payload(run_id, iteration, status, phase, started_at, steps, error)
     write_json(STATUS_FILE, payload)
     with event_file.open("a", encoding="utf-8") as handle:
-        handle.write(json.dumps(payload, sort_keys=True) + "\n")
+        handle.write(json.dumps(payload, sort_keys=True, allow_nan=False) + "\n")
     return payload
 
 

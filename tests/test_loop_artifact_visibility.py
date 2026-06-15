@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import math
 from pathlib import Path
 import tempfile
 import unittest
@@ -125,6 +126,38 @@ class LoopArtifactVisibilityTest(unittest.TestCase):
                 self.assertEqual(artifacts["contract"]["passed_checks"], 0)
                 self.assertEqual(artifacts["contract"]["total_checks"], 0)
                 self.assertIsNone(artifacts["workflow"]["queue_items"])
+
+    def test_inspect_artifacts_rejects_non_standard_json_constants(self) -> None:
+        for script_path in LOOP_SCRIPTS:
+            with self.subTest(script=script_path.name), tempfile.TemporaryDirectory() as tmp:
+                tmp_path = Path(tmp)
+                module = load_module(script_path)
+                point_artifacts(module, tmp_path)
+                write_valid_artifacts(tmp_path)
+                (tmp_path / "coverage.json").write_text(
+                    '{"summary": {"latest_thin_counts": NaN}}\n',
+                    encoding="utf-8",
+                )
+                (tmp_path / "pipeline.json").write_text(
+                    '{"execution_readiness": {"status": Infinity}}\n',
+                    encoding="utf-8",
+                )
+
+                artifacts = module.inspect_artifacts()
+
+                self.assertEqual(artifacts["artifact_health"]["status"], "degraded")
+                self.assertEqual(artifacts["coverage"]["artifact_status"], "invalid")
+                self.assertEqual(artifacts["import_pipeline"]["status"], "invalid")
+                self.assertIn("invalid JSON constant", artifacts["coverage"]["artifact_error"])
+                self.assertIn("invalid JSON constant", artifacts["import_pipeline"]["error"])
+
+    def test_loop_status_writers_reject_non_finite_payloads(self) -> None:
+        for script_path in LOOP_SCRIPTS:
+            with self.subTest(script=script_path.name), tempfile.TemporaryDirectory() as tmp:
+                module = load_module(script_path)
+
+                with self.assertRaises(ValueError):
+                    module.write_json(Path(tmp) / "status.json", {"seconds": math.nan})
 
     def test_mvp_iteration_fails_when_artifact_health_is_degraded(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
