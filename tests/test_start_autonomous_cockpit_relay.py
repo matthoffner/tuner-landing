@@ -322,6 +322,44 @@ class StartAutonomousCockpitRelayTest(unittest.TestCase):
             ],
         )
 
+    def test_validate_startup_configuration_rejects_oversized_intervals(self) -> None:
+        errors = self.launcher.validate_startup_configuration(
+            Namespace(
+                relay_url="https://automoat-cockpit-relay.example",
+                token="relay-token",
+                interval=self.launcher.MAX_AGENT_INTERVAL_SECONDS + 1,
+                publish_interval=self.launcher.MAX_PUBLISH_INTERVAL_SECONDS + 1,
+                port=4174,
+            )
+        )
+
+        self.assertEqual(
+            errors,
+            [
+                (
+                    "--interval must be less than or equal to "
+                    f"{self.launcher.MAX_AGENT_INTERVAL_SECONDS}"
+                ),
+                (
+                    "--publish-interval must be less than or equal to "
+                    f"{self.launcher.MAX_PUBLISH_INTERVAL_SECONDS}"
+                ),
+            ],
+        )
+
+    def test_validate_startup_configuration_accepts_interval_limits(self) -> None:
+        errors = self.launcher.validate_startup_configuration(
+            Namespace(
+                relay_url="https://automoat-cockpit-relay.example",
+                token="relay-token",
+                interval=self.launcher.MAX_AGENT_INTERVAL_SECONDS,
+                publish_interval=self.launcher.MAX_PUBLISH_INTERVAL_SECONDS,
+                port=4174,
+            )
+        )
+
+        self.assertEqual(errors, [])
+
     def test_validate_startup_configuration_rejects_non_finite_intervals(self) -> None:
         errors = self.launcher.validate_startup_configuration(
             Namespace(
@@ -369,6 +407,7 @@ class StartAutonomousCockpitRelayTest(unittest.TestCase):
         self.assertEqual(status, 0)
         self.assertIn("autonomous relay startup preflight passed", output.getvalue())
         self.assertIn("relay_url=https://automoat-cockpit-relay.example", output.getvalue())
+        self.assertIn("runtime_limits=", output.getvalue())
 
     def test_check_env_rejects_secret_bearing_relay_url_without_printing_secrets(self) -> None:
         output = io.StringIO()
@@ -435,6 +474,13 @@ class StartAutonomousCockpitRelayTest(unittest.TestCase):
         self.assertTrue(payload["config"]["keep_legacy_bridge"])
         self.assertFalse(payload["config"]["stop_existing"])
         self.assertTrue(payload["config"]["relay_token_configured"])
+        self.assertEqual(
+            payload["config"]["runtime_limits"],
+            {
+                "interval": self.launcher.MAX_AGENT_INTERVAL_SECONDS,
+                "publish_interval": self.launcher.MAX_PUBLISH_INTERVAL_SECONDS,
+            },
+        )
         self.assertNotIn("relay-token", output.getvalue())
 
     def test_check_env_json_failure_groups_errors_without_printing_secrets(self) -> None:
@@ -481,6 +527,13 @@ class StartAutonomousCockpitRelayTest(unittest.TestCase):
         )
         self.assertTrue(payload["diagnostics"]["relay_url_configured"])
         self.assertTrue(payload["diagnostics"]["relay_token_configured"])
+        self.assertEqual(
+            payload["diagnostics"]["runtime_limits"],
+            {
+                "interval": self.launcher.MAX_AGENT_INTERVAL_SECONDS,
+                "publish_interval": self.launcher.MAX_PUBLISH_INTERVAL_SECONDS,
+            },
+        )
         self.assertNotIn("relay-token", output.getvalue())
         self.assertNotIn("relay-user", output.getvalue())
         self.assertNotIn("relay-pass", output.getvalue())

@@ -26,6 +26,15 @@ PUBLISHER_PID = STATE_DIR / "cockpit-relay-publisher.pid"
 BRIDGE_RUNNER_PID = STATE_DIR / "mvp-bridge-runner.pid"
 MAX_RELAY_URL_CHARS = 500
 MAX_RELAY_TOKEN_CHARS = 8192
+MAX_AGENT_INTERVAL_SECONDS = 3600
+MAX_PUBLISH_INTERVAL_SECONDS = 60
+
+
+def payload_runtime_limits() -> dict[str, int]:
+    return {
+        "interval": MAX_AGENT_INTERVAL_SECONDS,
+        "publish_interval": MAX_PUBLISH_INTERVAL_SECONDS,
+    }
 
 
 def read_pid(path: Path) -> int | None:
@@ -257,10 +266,18 @@ def validate_startup_configuration(args: argparse.Namespace) -> list[str]:
         errors.append("--interval must be a finite number of seconds")
     elif args.interval <= 0:
         errors.append("--interval must be greater than 0")
+    elif args.interval > MAX_AGENT_INTERVAL_SECONDS:
+        errors.append(
+            f"--interval must be less than or equal to {MAX_AGENT_INTERVAL_SECONDS}"
+        )
     if not math.isfinite(float(args.publish_interval)):
         errors.append("--publish-interval must be a finite number of seconds")
     elif args.publish_interval <= 0:
         errors.append("--publish-interval must be greater than 0")
+    elif args.publish_interval > MAX_PUBLISH_INTERVAL_SECONDS:
+        errors.append(
+            f"--publish-interval must be less than or equal to {MAX_PUBLISH_INTERVAL_SECONDS}"
+        )
     if args.port <= 0:
         errors.append("--port must be greater than 0")
     elif args.port > 65535:
@@ -318,6 +335,7 @@ def startup_preflight_summary(args: argparse.Namespace, errors: list[str]) -> di
             "failed_configuration_keys": startup_preflight_error_keys(errors),
             "relay_url_configured": bool(str(args.relay_url).strip()),
             "relay_token_configured": bool(str(args.token).strip()),
+            "runtime_limits": payload_runtime_limits(),
         }
         return payload
 
@@ -329,6 +347,7 @@ def startup_preflight_summary(args: argparse.Namespace, errors: list[str]) -> di
         "keep_legacy_bridge": bool(args.keep_legacy_bridge),
         "stop_existing": not bool(args.no_stop_existing),
         "relay_token_configured": bool(str(args.token).strip()),
+        "runtime_limits": payload_runtime_limits(),
     }
     return payload
 
@@ -355,7 +374,8 @@ def emit_startup_preflight(
         f"local_port={args.port} "
         f"agent_interval={args.interval} "
         f"publish_interval={args.publish_interval} "
-        f"keep_legacy_bridge={args.keep_legacy_bridge}"
+        f"keep_legacy_bridge={args.keep_legacy_bridge} "
+        f"runtime_limits={json.dumps(payload_runtime_limits(), sort_keys=True)}"
     )
     return []
 
