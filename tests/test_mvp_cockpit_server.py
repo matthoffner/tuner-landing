@@ -364,6 +364,23 @@ class MvpCockpitServerTest(unittest.TestCase):
         self.assertNotIn("interval", summary)
         json.dumps(summary, allow_nan=False)
 
+    def test_read_bridge_summary_rejects_nonstandard_json_constants(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            self.cockpit.BRIDGE_STATUS_FILE = tmp_path / "mvp-bridge-status.json"
+            self.cockpit.BRIDGE_STATUS_FILE.write_text(
+                '{"status":"running","interval":Infinity}\n',
+                encoding="utf-8",
+            )
+
+            summary = self.cockpit.read_bridge_summary()
+            summary_text = json.dumps(summary, sort_keys=True, allow_nan=False)
+
+        self.assertFalse(summary["available"])
+        self.assertEqual(summary["status_file_status"], "invalid_json")
+        self.assertIn("invalid JSON constant Infinity", summary["status_file_error"])
+        self.assertNotIn('"interval"', summary_text)
+
     def test_read_bridge_summary_handles_missing_and_invalid_status(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)

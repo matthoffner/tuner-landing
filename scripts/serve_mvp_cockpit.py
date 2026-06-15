@@ -205,6 +205,10 @@ def compact_float(value: object) -> float | None:
     return parsed if math.isfinite(parsed) and parsed >= 0 else None
 
 
+def reject_json_constant(value: str) -> None:
+    raise ValueError(f"invalid JSON constant {value}")
+
+
 def operator_attention_label(reason: str | None) -> str:
     if reason is None:
         return "Clear"
@@ -284,7 +288,10 @@ def read_bridge_summary() -> dict[str, object]:
             "status_file_status": "missing",
         }
     try:
-        payload = json.loads(BRIDGE_STATUS_FILE.read_text(encoding="utf-8"))
+        payload = json.loads(
+            BRIDGE_STATUS_FILE.read_text(encoding="utf-8"),
+            parse_constant=reject_json_constant,
+        )
     except OSError as exc:
         return {
             "available": False,
@@ -298,6 +305,13 @@ def read_bridge_summary() -> dict[str, object]:
             "status_file": status_file,
             "status_file_status": "invalid_json",
             "status_file_error": f"line {exc.lineno} column {exc.colno}: {exc.msg}",
+        }
+    except ValueError as exc:
+        return {
+            "available": False,
+            "status_file": status_file,
+            "status_file_status": "invalid_json",
+            "status_file_error": compact_text(str(exc)) or type(exc).__name__,
         }
     if not isinstance(payload, dict):
         return {
