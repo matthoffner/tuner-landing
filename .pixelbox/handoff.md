@@ -4,6 +4,12 @@ Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
 - lane: editor
+- status: made Render Codex worker preflight diagnostics report resolved required-command paths so `--check-env` text and JSON output include `command_paths` for `git` and `codex`, with missing commands represented as `null` in failure JSON; no Dallas raw CSV rows were edited
+- files: scripts/start_render_codex_worker.py, tests/test_render_worker_preflight.py, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- checks: `python3 -m unittest tests.test_render_worker_preflight -v`; `python3 -m py_compile scripts/start_render_codex_worker.py tests/test_render_worker_preflight.py`; `python3 -m unittest discover -s tests -v`; `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json > /tmp/automoat-command-paths-ready.json`; JSON assertion for readiness `ready`, `535` permits, `1082` inspections, `1625` source records, and zero thin groups; `env -i PATH="$PATH" AUTOMOAT_RELAY_URL=https://automoat-cockpit-relay.example AUTOMOAT_RELAY_TOKEN=relay-token GH_TOKEN=github-token CODEX_ACCESS_TOKEN=codex-token python3 scripts/start_render_codex_worker.py --check-env --format json`; `cmp -s generated/landing.html index.html`; `git diff --name-only -- generated/raw`; `git diff --exit-code -- .pxcode/preview.json`; `git diff --check`
+- next: use `scripts/start_render_codex_worker.py --check-env --format json` and inspect `config.command_paths` or `diagnostics.command_paths` when Render startup looks like a PATH/image problem before debugging auth or loop settings
+
+- lane: editor
 - status: made autonomous policy rejections directly cockpit-visible so `/api/status.cockpit_summary.operator_attention_reasons` includes `autonomy_policy_failed` and exposes `policy_failure_reason` plus changed raw Dallas CSV paths from the failed policy-check step; no Dallas raw CSV rows were edited
 - files: scripts/serve_mvp_cockpit.py, tests/test_mvp_cockpit_server.py, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
 - checks: `python3 -m unittest tests.test_mvp_cockpit_server -v`; `python3 -m py_compile scripts/serve_mvp_cockpit.py tests/test_mvp_cockpit_server.py`; `python3 -m unittest discover -s tests -v`; `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json`; `cmp -s generated/landing.html index.html`; raw Dallas CSV diff check returned no changes

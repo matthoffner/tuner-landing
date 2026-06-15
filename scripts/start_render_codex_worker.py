@@ -248,11 +248,7 @@ def validate_worker_environment(
     """Return actionable Render startup configuration errors without exposing secrets."""
     env = env if env is not None else os.environ
     errors: list[str] = []
-    if command_lookup is None:
-        path = env.get("PATH")
-
-        def command_lookup(command: str) -> str | None:
-            return shutil.which(command, path=path)
+    command_paths = resolved_required_command_paths(env, command_lookup)
 
     relay_url = env.get("AUTOMOAT_RELAY_URL", "").strip()
     validate_secret_safe_http_url(
@@ -351,10 +347,26 @@ def validate_worker_environment(
     for name in GIT_IDENTITY_ENV_DEFAULTS:
         validate_git_identity_value(env, name, errors)
 
-    for command in REQUIRED_COMMANDS:
-        if not command_lookup(command):
+    for command, resolved_path in command_paths.items():
+        if not resolved_path:
             errors.append(f"{command} executable is required on PATH")
     return errors
+
+
+def resolved_required_command_paths(
+    env: os._Environ[str] | dict[str, str],
+    command_lookup: Callable[[str], str | None] | None = None,
+) -> dict[str, str | None]:
+    if command_lookup is None:
+        path = env.get("PATH")
+
+        def command_lookup(command: str) -> str | None:
+            return shutil.which(command, path=path)
+
+    return {
+        command: command_lookup(command) or None
+        for command in REQUIRED_COMMANDS
+    }
 
 
 def validate_secret_safe_http_url(
@@ -509,7 +521,9 @@ def validate_codex_home_path(path: Path, workdir: Path, errors: list[str]) -> No
 def environment_preflight_summary(
     env: os._Environ[str] | dict[str, str],
     errors: list[str],
+    command_paths: dict[str, str | None] | None = None,
 ) -> dict[str, Any]:
+    command_paths = command_paths or resolved_required_command_paths(env)
     payload: dict[str, Any] = {
         "status": "failed" if errors else "passed",
         "errors": errors,
@@ -521,6 +535,7 @@ def environment_preflight_summary(
             "git_auth": configured_names(env, GIT_AUTH_ENV_NAMES),
             "codex_auth": configured_names(env, CODEX_AUTH_ENV_NAMES),
             "commands": list(REQUIRED_COMMANDS),
+            "command_paths": command_paths,
             "runtime_limits": RUNTIME_CONFIG_LIMITS,
         }
         return payload
@@ -557,6 +572,7 @@ def environment_preflight_summary(
             "AUTOMOAT_CODEX_REASONING_EFFORT",
         ),
         "commands": list(REQUIRED_COMMANDS),
+        "command_paths": command_paths,
         "runtime_limits": RUNTIME_CONFIG_LIMITS,
     }
     return payload
@@ -570,9 +586,13 @@ def emit_environment_preflight(
 ) -> list[str]:
     env = env if env is not None else os.environ
     errors = validate_worker_environment(env, command_lookup)
+    command_paths = resolved_required_command_paths(env, command_lookup)
     if output_format == "json":
         print(
-            json.dumps(environment_preflight_summary(env, errors), sort_keys=True),
+            json.dumps(
+                environment_preflight_summary(env, errors, command_paths),
+                sort_keys=True,
+            ),
             flush=True,
         )
         return errors
@@ -607,6 +627,7 @@ def emit_environment_preflight(
         f"codex_reasoning_effort="
         f"{codex_config_value(env, 'AUTOMOAT_CODEX_REASONING_EFFORT')} "
         f"commands={','.join(REQUIRED_COMMANDS)} "
+        f"command_paths={json.dumps(command_paths, sort_keys=True)} "
         f"runtime_limits={json.dumps(RUNTIME_CONFIG_LIMITS, sort_keys=True)}"
     )
     return []

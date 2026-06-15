@@ -456,6 +456,10 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertIn("workdir=/work/automoat", output.getvalue())
         self.assertIn("codex_home=/tmp/codex-home", output.getvalue())
         self.assertIn("agent_iterations=12", output.getvalue())
+        self.assertIn(
+            'command_paths={"codex": "/usr/bin/codex", "git": "/usr/bin/git"}',
+            output.getvalue(),
+        )
 
     def test_check_env_json_reports_safe_machine_readable_summary(self) -> None:
         env = {
@@ -488,6 +492,10 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertEqual(payload["config"]["codex_auth"], ["CODEX_ACCESS_TOKEN"])
         self.assertEqual(payload["config"]["agent_iterations"], "12")
         self.assertEqual(payload["config"]["commands"], ["git", "codex"])
+        self.assertEqual(
+            payload["config"]["command_paths"],
+            {"git": "/usr/bin/git", "codex": "/usr/bin/codex"},
+        )
         self.assertEqual(payload["config"]["runtime_limits"], self.worker.RUNTIME_CONFIG_LIMITS)
         self.assertNotIn("github-token", output.getvalue())
         self.assertNotIn("codex-token", output.getvalue())
@@ -518,6 +526,10 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertEqual(payload["diagnostics"]["git_auth"], ["GITHUB_TOKEN"])
         self.assertEqual(payload["diagnostics"]["codex_auth"], ["CODEX_ACCESS_TOKEN"])
         self.assertEqual(payload["diagnostics"]["commands"], ["git", "codex"])
+        self.assertEqual(
+            payload["diagnostics"]["command_paths"],
+            {"git": "/usr/bin/git", "codex": "/usr/bin/codex"},
+        )
         self.assertEqual(
             payload["diagnostics"]["runtime_limits"],
             self.worker.RUNTIME_CONFIG_LIMITS,
@@ -562,6 +574,10 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         )
         self.assertEqual(payload["diagnostics"]["git_auth"], ["GH_TOKEN"])
         self.assertEqual(payload["diagnostics"]["codex_auth"], ["CODEX_AUTH_JSON_B64"])
+        self.assertEqual(
+            payload["diagnostics"]["command_paths"],
+            {"git": "/usr/bin/git", "codex": "/usr/bin/codex"},
+        )
         self.assertNotIn("config", payload)
         self.assertNotIn("relay-token", output.getvalue())
         self.assertNotIn("github-token", output.getvalue())
@@ -744,6 +760,36 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         )
 
         self.assertEqual(errors, ["codex executable is required on PATH"])
+
+    def test_check_env_json_failure_reports_missing_command_path(self) -> None:
+        def missing_codex(command: str) -> str | None:
+            if command == "codex":
+                return None
+            return found_command(command)
+
+        env = {
+            "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            "GH_TOKEN": "github-token",
+            "CODEX_ACCESS_TOKEN": "codex-token",
+        }
+        output = io.StringIO()
+
+        with redirect_stdout(output):
+            errors = self.worker.emit_environment_preflight(
+                env,
+                missing_codex,
+                output_format="json",
+            )
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(errors, ["codex executable is required on PATH"])
+        self.assertEqual(payload["status"], "failed")
+        self.assertEqual(payload["diagnostics"]["error_categories"], ["missing_command"])
+        self.assertEqual(
+            payload["diagnostics"]["command_paths"],
+            {"git": "/usr/bin/git", "codex": None},
+        )
 
     def test_monitor_returns_loop_status_when_loop_exits_first(self) -> None:
         loop = FakeProcess(pid=101, initial_status=7)
