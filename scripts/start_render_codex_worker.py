@@ -52,6 +52,7 @@ RUNTIME_CONFIG_LIMITS = {
     "AUTOMOAT_STATUS_STALE_AFTER_SECONDS": 3600,
     "AUTOMOAT_BRIDGE_STATUS_STALE_AFTER_SECONDS": 3600,
 }
+MAX_GIT_BRANCH_CHARS = 240
 GIT_IDENTITY_ENV_DEFAULTS = {
     "GIT_AUTHOR_NAME": "automoat-render-agent",
     "GIT_AUTHOR_EMAIL": "automoat-render-agent@users.noreply.github.com",
@@ -652,6 +653,11 @@ def validate_git_branch_name(value: str, errors: list[str]) -> None:
     branch = value.strip()
     if not branch:
         errors.append("AUTOMOAT_GIT_BRANCH must not be empty")
+        return
+    if len(branch) > MAX_GIT_BRANCH_CHARS:
+        errors.append(
+            f"AUTOMOAT_GIT_BRANCH must be {MAX_GIT_BRANCH_CHARS} characters or fewer"
+        )
         return
     if branch.startswith("-"):
         errors.append("AUTOMOAT_GIT_BRANCH must not start with -")

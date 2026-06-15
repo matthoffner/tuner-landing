@@ -1018,6 +1018,68 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                     ],
                 )
 
+    def test_rejects_oversized_git_branch_before_clone(self) -> None:
+        long_branch = "release/" + ("x" * self.worker.MAX_GIT_BRANCH_CHARS)
+
+        errors = self.worker.validate_worker_environment(
+            {
+                "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+                "AUTOMOAT_RELAY_TOKEN": "relay-token",
+                "GITHUB_TOKEN": "github-token",
+                "CODEX_ACCESS_TOKEN": "codex-token",
+                "AUTOMOAT_GIT_BRANCH": long_branch,
+            },
+            found_command,
+        )
+
+        self.assertEqual(
+            errors,
+            [
+                (
+                    "AUTOMOAT_GIT_BRANCH must be "
+                    f"{self.worker.MAX_GIT_BRANCH_CHARS} characters or fewer"
+                ),
+            ],
+        )
+
+    def test_check_env_json_routes_oversized_git_branch_without_echoing_value(self) -> None:
+        long_branch = "release/" + ("secret-branch-" * 24)
+        output = io.StringIO()
+
+        with redirect_stdout(output):
+            errors = self.worker.emit_environment_preflight(
+                {
+                    "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+                    "AUTOMOAT_RELAY_TOKEN": "relay-token",
+                    "GITHUB_TOKEN": "github-token",
+                    "CODEX_ACCESS_TOKEN": "codex-token",
+                    "AUTOMOAT_GIT_BRANCH": long_branch,
+                },
+                found_command,
+                output_format="json",
+            )
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(
+            errors,
+            [
+                (
+                    "AUTOMOAT_GIT_BRANCH must be "
+                    f"{self.worker.MAX_GIT_BRANCH_CHARS} characters or fewer"
+                ),
+            ],
+        )
+        self.assertEqual(payload["status"], "failed")
+        self.assertEqual(
+            payload["diagnostics"]["error_categories"],
+            ["invalid_git_branch"],
+        )
+        self.assertEqual(
+            payload["diagnostics"]["failed_configuration_keys"],
+            ["AUTOMOAT_GIT_BRANCH"],
+        )
+        self.assertNotIn("secret-branch", output.getvalue())
+
     def test_rejects_unsafe_workdir_before_clone_cleanup(self) -> None:
         base_env = {
             "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
