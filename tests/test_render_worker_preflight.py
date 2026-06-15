@@ -839,6 +839,32 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             ],
         )
 
+    def test_rejects_malformed_git_identity_email_values_before_git_config(self) -> None:
+        base_env = {
+            "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            "GITHUB_TOKEN": "github-token",
+            "CODEX_ACCESS_TOKEN": "codex-token",
+        }
+        errors = self.worker.validate_worker_environment(
+            {
+                **base_env,
+                "GIT_AUTHOR_NAME": "automoat-render-bot",
+                "GIT_AUTHOR_EMAIL": "automoat-render-bot",
+                "GIT_COMMITTER_NAME": "automoat-render-bot",
+                "GIT_COMMITTER_EMAIL": "automoat-render-bot@example.com.",
+            },
+            found_command,
+        )
+
+        self.assertEqual(
+            errors,
+            [
+                "GIT_AUTHOR_EMAIL must be a plain email address with one @",
+                "GIT_COMMITTER_EMAIL must be a plain email address with one @",
+            ],
+        )
+
     def test_write_codex_config_escapes_string_values(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             self.worker.CODEX_HOME = Path(temp_dir) / "codex-home"

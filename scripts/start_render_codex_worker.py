@@ -254,6 +254,22 @@ def validate_git_identity_value(
         return
     if value != value.strip():
         errors.append(f"{name} must not include leading or trailing whitespace")
+        return
+    if name.endswith("_EMAIL") and not is_plain_git_email(value):
+        errors.append(f"{name} must be a plain email address with one @")
+
+
+def is_plain_git_email(value: str) -> bool:
+    if value.count("@") != 1:
+        return False
+    local_part, domain_part = value.split("@", 1)
+    if not local_part or not domain_part:
+        return False
+    if any(character in "<>()[],:;\\\"" for character in value):
+        return False
+    if domain_part.startswith(".") or domain_part.endswith(".") or ".." in domain_part:
+        return False
+    return True
 
 
 def validate_secret_value(
