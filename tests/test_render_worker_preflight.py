@@ -434,6 +434,26 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             ],
         )
 
+    def test_rejects_urls_with_embedded_spaces(self) -> None:
+        errors = self.worker.validate_worker_environment(
+            {
+                "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example/debug path",
+                "AUTOMOAT_RELAY_TOKEN": "relay-token",
+                "AUTOMOAT_GIT_REPO": "https://github.com/example/private repo.git",
+                "GITHUB_TOKEN": "github-token",
+                "CODEX_ACCESS_TOKEN": "codex-token",
+            },
+            found_command,
+        )
+
+        self.assertEqual(
+            errors,
+            [
+                "AUTOMOAT_RELAY_URL must not contain whitespace",
+                "AUTOMOAT_GIT_REPO must not contain whitespace",
+            ],
+        )
+
     def test_rejects_git_repo_with_embedded_credentials(self) -> None:
         errors = self.worker.validate_worker_environment(
             {
