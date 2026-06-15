@@ -27,6 +27,7 @@ DEFAULT_MAX_LOG_CHARS = 160 * 1024
 DEFAULT_MAX_STATUS_BYTES = 128 * 1024
 DEFAULT_MAX_PUBLISHER_BYTES = 64 * 1024
 DEFAULT_STALE_AFTER_SECONDS = 120
+MAX_RELAY_TOKEN_CHARS = 8192
 MAX_RUNTIME_CONFIG_VALUE_CHARS = 64
 RELAY_CONFIG_LIMITS = {
     "max_ingest_bytes": 4 * 1024 * 1024,
@@ -1334,6 +1335,10 @@ def validate_relay_configuration(
     token = token_value.strip()
     if not token:
         errors.append("AUTOMOAT_RELAY_TOKEN is required")
+    elif len(token_value) > MAX_RELAY_TOKEN_CHARS:
+        errors.append(
+            f"AUTOMOAT_RELAY_TOKEN must be {MAX_RELAY_TOKEN_CHARS} characters or fewer"
+        )
     elif any(
         character in "\r\n" or ord(character) < 32 or ord(character) == 127
         for character in token_value

@@ -1639,12 +1639,17 @@ class RenderCockpitRelayTest(unittest.TestCase):
         self.assertIn("--stale-after-seconds must be greater than 0", errors)
 
     def test_relay_preflight_rejects_malformed_token_before_serving(self) -> None:
+        oversized_token = "relay-token-" + ("x" * self.relay.MAX_RELAY_TOKEN_CHARS)
         cases = {
             " relay-token": (
                 "AUTOMOAT_RELAY_TOKEN must not include leading or trailing whitespace"
             ),
             "relay-token\nsecond-line": (
                 "AUTOMOAT_RELAY_TOKEN must be a single-line value without control characters"
+            ),
+            oversized_token: (
+                f"AUTOMOAT_RELAY_TOKEN must be {self.relay.MAX_RELAY_TOKEN_CHARS} "
+                "characters or fewer"
             ),
         }
         for token, expected_error in cases.items():
@@ -1662,6 +1667,42 @@ class RenderCockpitRelayTest(unittest.TestCase):
                     errors = self.relay.validate_relay_configuration(args)
 
                 self.assertIn(expected_error, errors)
+
+    def test_check_env_json_rejects_oversized_token_without_echoing_it(self) -> None:
+        oversized_token = "relay-token-" + ("x" * self.relay.MAX_RELAY_TOKEN_CHARS)
+        env = {
+            "AUTOMOAT_RELAY_TOKEN": oversized_token,
+            "PORT": "4180",
+        }
+        stdout = io.StringIO()
+        with patch.dict(os.environ, env, clear=True), patch.object(
+            sys,
+            "argv",
+            ["render_cockpit_relay.py", "--check-env", "--format", "json"],
+        ), contextlib.redirect_stdout(stdout):
+            status = self.relay.main()
+
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(status, 2)
+        self.assertEqual(payload["status"], "failed")
+        self.assertEqual(
+            payload["errors"],
+            [
+                "AUTOMOAT_RELAY_TOKEN must "
+                f"be {self.relay.MAX_RELAY_TOKEN_CHARS} characters or fewer"
+            ],
+        )
+        self.assertEqual(
+            payload["diagnostics"]["error_categories"],
+            ["invalid_secret"],
+        )
+        self.assertEqual(
+            payload["diagnostics"]["failed_configuration_keys"],
+            ["AUTOMOAT_RELAY_TOKEN"],
+        )
+        self.assertTrue(payload["diagnostics"]["relay_token_configured"])
+        self.assertNotIn(oversized_token, stdout.getvalue())
+        self.assertNotIn("relay-token", stdout.getvalue())
 
     def test_relay_preflight_rejects_malformed_host_before_serving(self) -> None:
         cases = {
