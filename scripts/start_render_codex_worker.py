@@ -89,6 +89,7 @@ GIT_IDENTITY_ENV_DEFAULTS = {
     "GIT_COMMITTER_NAME": "automoat-render-agent",
     "GIT_COMMITTER_EMAIL": "automoat-render-agent@users.noreply.github.com",
 }
+GIT_IDENTITY_CONFIG_KEYS = ("user.name", "user.email")
 MAX_GIT_IDENTITY_VALUE_CHARS = 120
 PUBLISHER_RUNTIME_ENV_ARGS = (
     ("AUTOMOAT_RELAY_INTERVAL", "--interval", "3"),
@@ -167,6 +168,17 @@ def sanitize_worker_log_text(
     )
     for secret_value in secret_values:
         sanitized = sanitized.replace(secret_value, "[redacted]")
+    identity_values = sorted(
+        {
+            value.strip()
+            for name in GIT_IDENTITY_ENV_DEFAULTS
+            if len(value := env.get(name, "")) >= 4 and value.strip()
+        },
+        key=len,
+        reverse=True,
+    )
+    for identity_value in identity_values:
+        sanitized = sanitized.replace(identity_value, "[redacted]")
     return sanitized
 
 
@@ -1396,7 +1408,7 @@ def run(
     timeout_seconds: float | None = None,
     max_output_bytes: int | None = None,
 ) -> str:
-    printable = sanitize_worker_log_text(" ".join(command))
+    printable = worker_command_log_text(command)
     emit(f"$ {printable}")
     try:
         result = subprocess.run(
@@ -1432,6 +1444,18 @@ def run(
     if result.returncode != 0:
         raise RuntimeError(f"{printable} failed with status {result.returncode}")
     return result.stdout
+
+
+def worker_command_log_text(command: list[str]) -> str:
+    """Return a Render-visible command line without Git identity values."""
+    safe_command = list(command)
+    if (
+        len(safe_command) >= 5
+        and safe_command[:3] == ["git", "config", "--global"]
+        and safe_command[3] in GIT_IDENTITY_CONFIG_KEYS
+    ):
+        safe_command[4] = "[redacted]"
+    return sanitize_worker_log_text(" ".join(safe_command))
 
 
 def reject_json_constant(value: str) -> None:

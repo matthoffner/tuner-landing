@@ -3806,6 +3806,65 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertNotIn("github-secret", log_output)
         self.assertNotIn("relay-secret", log_output)
 
+    def test_run_sanitizes_git_identity_command_and_output(self) -> None:
+        output = io.StringIO()
+        stdout = "\n".join(
+            [
+                "configured identity Private Render Bot",
+                "configured email private-render-bot@example.com",
+            ]
+        )
+
+        with patch.dict(
+            self.worker.os.environ,
+            {
+                "GIT_AUTHOR_NAME": "Private Render Bot",
+                "GIT_AUTHOR_EMAIL": "private-render-bot@example.com",
+            },
+            clear=True,
+        ), patch.object(
+            self.worker.subprocess,
+            "run",
+            return_value=self.worker.subprocess.CompletedProcess(
+                args=[
+                    "git",
+                    "config",
+                    "--global",
+                    "user.email",
+                    "private-render-bot@example.com",
+                ],
+                returncode=0,
+                stdout=stdout,
+            ),
+        ) as subprocess_run, redirect_stdout(output):
+            returned_stdout = self.worker.run(
+                [
+                    "git",
+                    "config",
+                    "--global",
+                    "user.email",
+                    "private-render-bot@example.com",
+                ],
+            )
+
+        self.assertEqual(returned_stdout, stdout)
+        self.assertEqual(
+            subprocess_run.call_args.args[0],
+            [
+                "git",
+                "config",
+                "--global",
+                "user.email",
+                "private-render-bot@example.com",
+            ],
+        )
+        log_output = output.getvalue()
+        self.assertIn("$ git config --global user.email [redacted]", log_output)
+        self.assertIn("configured identity [redacted]", log_output)
+        self.assertIn("configured email [redacted]", log_output)
+        self.assertNotIn("Private Render Bot", log_output)
+        self.assertNotIn("private-render-bot@example.com", log_output)
+
     def test_check_relay_publisher_preflight_rejects_non_json_success(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             workdir = Path(temp_dir) / "runtime-repo"
