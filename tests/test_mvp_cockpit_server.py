@@ -60,6 +60,10 @@ class MvpCockpitServerTest(unittest.TestCase):
             "Autonomy policy failed",
         )
         self.assertEqual(
+            self.cockpit.operator_attention_label("status_timestamp_invalid"),
+            "Status timestamp is invalid",
+        )
+        self.assertEqual(
             self.cockpit.operator_attention_label("new_attention_reason"),
             "new attention reason",
         )
@@ -134,6 +138,7 @@ class MvpCockpitServerTest(unittest.TestCase):
         self.assertIsInstance(summary["status_age_seconds"], int)
         self.assertEqual(summary["status_stale_after_seconds"], 120)
         self.assertTrue(summary["status_stale"])
+        self.assertFalse(summary["status_timestamp_invalid"])
         self.assertTrue(summary["operator_attention"])
         self.assertEqual(summary["operator_attention_reasons"], ["status_stale"])
         self.assertEqual(summary["operator_attention_primary_reason"], "status_stale")
@@ -242,6 +247,38 @@ class MvpCockpitServerTest(unittest.TestCase):
         self.assertEqual(summary["thin_group_count"], 2)
         self.assertEqual(
             summary["thin_group_categories"], ["failure_reasons", "result_states"]
+        )
+
+    def test_cockpit_summary_reports_invalid_status_timestamp(self) -> None:
+        status = {
+            "status": "passing",
+            "updated_at": "not a timestamp",
+            "loop_running": True,
+            "artifacts": {
+                "artifact_health": {"status": "loaded"},
+                "import_pipeline": {
+                    "execution_readiness": {"status": "ready", "blockers": []}
+                },
+            },
+        }
+
+        summary = self.cockpit.cockpit_summary(status)
+
+        self.assertIsNone(summary["status_age_seconds"])
+        self.assertIsNone(summary["status_stale"])
+        self.assertTrue(summary["status_timestamp_invalid"])
+        self.assertTrue(summary["operator_attention"])
+        self.assertEqual(
+            summary["operator_attention_reasons"],
+            ["status_timestamp_invalid"],
+        )
+        self.assertEqual(
+            summary["operator_attention_primary_reason"],
+            "status_timestamp_invalid",
+        )
+        self.assertEqual(
+            summary["operator_attention_label"],
+            "Status timestamp is invalid",
         )
 
     def test_cockpit_summary_reports_autonomy_policy_failure_details(self) -> None:
@@ -646,10 +683,11 @@ class MvpCockpitServerTest(unittest.TestCase):
         self.assertEqual(status["cockpit_summary"]["import_readiness"], "ready")
         self.assertIsNone(status["cockpit_summary"]["status_age_seconds"])
         self.assertIsNone(status["cockpit_summary"]["status_stale"])
+        self.assertTrue(status["cockpit_summary"]["status_timestamp_invalid"])
         self.assertTrue(status["cockpit_summary"]["operator_attention"])
         self.assertEqual(
             status["cockpit_summary"]["operator_attention_reasons"],
-            ["loop_not_running"],
+            ["loop_not_running", "status_timestamp_invalid"],
         )
         self.assertEqual(
             status["cockpit_summary"]["operator_attention_label"],

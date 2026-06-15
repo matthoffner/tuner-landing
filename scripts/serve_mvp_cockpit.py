@@ -46,6 +46,7 @@ OPERATOR_ATTENTION_LABELS = {
     "status_failing": "Loop status is failing",
     "autonomy_policy_failed": "Autonomy policy failed",
     "status_stale": "Status is stale",
+    "status_timestamp_invalid": "Status timestamp is invalid",
     "artifact_health_not_loaded": "Artifact health is not loaded",
     "import_readiness_not_ready": "Import readiness is not ready",
     "import_readiness_blocked": "Import readiness is blocked",
@@ -460,6 +461,7 @@ def cockpit_summary(status: dict[str, object]) -> dict[str, object]:
     status_stale = None
     if status_age_seconds is not None:
         status_stale = status_age_seconds > STATUS_STALE_AFTER_SECONDS
+    status_timestamp_invalid = updated_at is not None and status_age_seconds is None
 
     status_value = status.get("status") or "waiting"
     loop_running = bool(status.get("loop_running"))
@@ -602,6 +604,8 @@ def cockpit_summary(status: dict[str, object]) -> dict[str, object]:
         attention_reasons.append("status_failing")
     if status_stale is True:
         attention_reasons.append("status_stale")
+    if status_timestamp_invalid:
+        attention_reasons.append("status_timestamp_invalid")
     if artifact_health_status != "loaded":
         attention_reasons.append("artifact_health_not_loaded")
     if import_readiness != "ready":
@@ -623,6 +627,7 @@ def cockpit_summary(status: dict[str, object]) -> dict[str, object]:
         "status_age_seconds": status_age_seconds,
         "status_stale_after_seconds": STATUS_STALE_AFTER_SECONDS,
         "status_stale": status_stale,
+        "status_timestamp_invalid": status_timestamp_invalid,
         "operator_attention": bool(attention_reasons),
         "operator_attention_reasons": attention_reasons,
         "operator_attention_primary_reason": primary_attention_reason,
