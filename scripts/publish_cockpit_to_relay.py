@@ -52,6 +52,16 @@ SOURCE_HEALTH_LABELS = {
     "source_loop_not_running": "Source loop is not running",
     "source_status_failing": "Source status is failing",
 }
+OPERATOR_ATTENTION_LABELS = {
+    "loop_not_running": "Loop is not running",
+    "status_failing": "Loop status is failing",
+    "autonomy_policy_failed": "Autonomy policy failed",
+    "status_stale": "Status is stale",
+    "artifact_health_not_loaded": "Artifact health is not loaded",
+    "import_readiness_not_ready": "Import readiness is not ready",
+    "import_readiness_blocked": "Import readiness is blocked",
+    "coverage_thin_groups_present": "Coverage has thin groups",
+}
 
 
 def utc_now() -> str:
@@ -138,6 +148,122 @@ def status_freshness(status: dict[str, Any], stale_after_seconds: int) -> dict[s
     }
 
 
+def as_dict(value: Any) -> dict[str, Any]:
+    return value if isinstance(value, dict) else {}
+
+
+def as_string_list(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [str(item) for item in value if isinstance(item, (str, int, float))]
+
+
+def operator_attention_label(reason: str | None) -> str:
+    if reason is None:
+        return "Clear"
+    return OPERATOR_ATTENTION_LABELS.get(reason, reason.replace("_", " "))
+
+
+def failed_autonomy_policy_step(status: dict[str, Any]) -> dict[str, Any] | None:
+    steps = status.get("steps")
+    if not isinstance(steps, list):
+        return None
+    for step in reversed(steps):
+        if not isinstance(step, dict):
+            continue
+        if step.get("name") != "autonomy policy check":
+            continue
+        if step.get("exit_status") != 0:
+            return step
+    return None
+
+
+def publisher_cockpit_summary(status: dict[str, Any]) -> dict[str, Any]:
+    artifacts = as_dict(status.get("artifacts"))
+    artifact_health = as_dict(artifacts.get("artifact_health"))
+    contract = as_dict(artifacts.get("contract"))
+    workflow = as_dict(artifacts.get("workflow"))
+    import_pipeline = as_dict(artifacts.get("import_pipeline"))
+    readiness = as_dict(import_pipeline.get("execution_readiness"))
+    autonomy_policy = as_dict(status.get("autonomy_policy"))
+
+    passed_checks = contract.get("passed_checks")
+    total_checks = contract.get("total_checks")
+    contract_checks = None
+    if passed_checks is not None and total_checks is not None:
+        contract_checks = f"{passed_checks}/{total_checks}"
+
+    status_value = status.get("status") or "waiting"
+    loop_running = bool(status.get("loop_running"))
+    artifact_health_status = artifact_health.get("status") or "unknown"
+    import_readiness = readiness.get("status") or "unknown"
+    readiness_blockers = as_string_list(readiness.get("blockers"))
+    policy_failure = failed_autonomy_policy_step(status)
+    policy_failure_reason = (
+        str(policy_failure.get("failure_reason"))
+        if policy_failure and policy_failure.get("failure_reason")
+        else None
+    )
+    policy_raw_csv_paths = (
+        as_string_list(policy_failure.get("raw_dallas_csv_changed_paths"))
+        if policy_failure
+        else []
+    )
+    thin_group_categories = as_string_list(autonomy_policy.get("thin_group_categories"))
+    thin_group_count = autonomy_policy.get("thin_group_count")
+    if not isinstance(thin_group_count, int):
+        thin_group_count = len(thin_group_categories)
+
+    attention_reasons: list[str] = []
+    if not loop_running:
+        attention_reasons.append("loop_not_running")
+    if policy_failure:
+        attention_reasons.append("autonomy_policy_failed")
+    if status_value in {"error", "failing", "invalid-status-json"}:
+        attention_reasons.append("status_failing")
+    if status.get("source_status_stale") is True:
+        attention_reasons.append("status_stale")
+    if artifact_health_status != "loaded":
+        attention_reasons.append("artifact_health_not_loaded")
+    if import_readiness != "ready":
+        attention_reasons.append("import_readiness_not_ready")
+    if readiness_blockers:
+        attention_reasons.append("import_readiness_blocked")
+    if thin_group_count > 0:
+        attention_reasons.append("coverage_thin_groups_present")
+    primary_attention_reason = attention_reasons[0] if attention_reasons else None
+
+    return {
+        "status": status_value,
+        "phase": status.get("phase"),
+        "mode": status.get("mode") or "unknown",
+        "loop_running": loop_running,
+        "loop_pid": status.get("loop_pid"),
+        "iteration": status.get("iteration") or 0,
+        "updated_at": status.get("updated_at"),
+        "status_age_seconds": status.get("source_status_age_seconds"),
+        "status_stale_after_seconds": status.get("source_status_stale_after_seconds"),
+        "status_stale": status.get("source_status_stale"),
+        "operator_attention": bool(attention_reasons),
+        "operator_attention_reasons": attention_reasons,
+        "operator_attention_primary_reason": primary_attention_reason,
+        "operator_attention_label": operator_attention_label(primary_attention_reason),
+        "artifact_health": artifact_health_status,
+        "import_readiness": import_readiness,
+        "readiness_blockers": readiness_blockers,
+        "ready_for_next_import_records": readiness.get("ready_for_next_import_records"),
+        "current_focus": autonomy_policy.get("current_focus") or "mvp_loop",
+        "policy_reason": autonomy_policy.get("decision_reason"),
+        "policy_failure_reason": policy_failure_reason,
+        "policy_raw_dallas_csv_changed_paths": policy_raw_csv_paths,
+        "dallas_pipeline_ready": autonomy_policy.get("dallas_pipeline_ready"),
+        "thin_group_count": thin_group_count,
+        "thin_group_categories": thin_group_categories,
+        "contract_checks": contract_checks,
+        "queue_items": workflow.get("queue_items"),
+    }
+
+
 def pid_alive(pid: int) -> bool:
     try:
         os.kill(pid, 0)
@@ -171,6 +297,7 @@ def read_status(
     status["loop_running"] = pid is not None
     status["loop_pid"] = pid
     status["publisher_updated_at"] = utc_now()
+    status["cockpit_summary"] = publisher_cockpit_summary(status)
     return status
 
 

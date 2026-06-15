@@ -82,6 +82,12 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertFalse(payload["status"]["source_status_stale"])
         self.assertFalse(payload["status"]["loop_running"])
         self.assertIsNone(payload["status"]["loop_pid"])
+        self.assertIn("cockpit_summary", payload["status"])
+        self.assertEqual(payload["status"]["cockpit_summary"]["status"], "passing")
+        self.assertEqual(
+            payload["status"]["cockpit_summary"]["operator_attention_reasons"],
+            ["loop_not_running", "artifact_health_not_loaded", "import_readiness_not_ready"],
+        )
         self.assertEqual(payload["log_tail"], "second\nthird\n")
         self.assertEqual(payload["publisher"]["status_file"], str(status_file))
         self.assertEqual(payload["publisher"]["pid_file"], str(pid_file))
@@ -117,6 +123,101 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertFalse(status["loop_running"])
         self.assertIsNone(status["loop_pid"])
         self.assertIn("publisher_updated_at", status)
+        self.assertEqual(status["cockpit_summary"]["status"], "waiting")
+        self.assertEqual(
+            status["cockpit_summary"]["operator_attention_reasons"],
+            [
+                "loop_not_running",
+                "status_stale",
+                "artifact_health_not_loaded",
+                "import_readiness_not_ready",
+            ],
+        )
+
+    def test_read_status_derives_cockpit_summary_for_remote_attention(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            status_file = tmp_path / "status.json"
+            status_file.write_text(
+                json.dumps(
+                    {
+                        "status": "passing",
+                        "phase": "autonomy_policy_failed",
+                        "mode": "autonomous_codex",
+                        "updated_at": "2026-06-14T19:30:00Z",
+                        "iteration": 8,
+                        "steps": [
+                            {
+                                "name": "autonomy policy check",
+                                "exit_status": 1,
+                                "failure_reason": "raw_dallas_csv_without_productive_work",
+                                "raw_dallas_csv_changed_paths": [
+                                    "generated/raw/dallas-electrician-import-sample-v2/permits.csv"
+                                ],
+                            }
+                        ],
+                        "artifacts": {
+                            "artifact_health": {"status": "loaded"},
+                            "contract": {"passed_checks": 13, "total_checks": 13},
+                            "workflow": {"queue_items": 535},
+                            "import_pipeline": {
+                                "execution_readiness": {
+                                    "status": "ready",
+                                    "ready_for_next_import_records": True,
+                                    "blockers": [],
+                                }
+                            },
+                        },
+                        "autonomy_policy": {
+                            "current_focus": "autonomy_visibility_or_real_ingest",
+                            "decision_reason": "dallas_ready_no_thin_groups",
+                            "dallas_pipeline_ready": True,
+                            "thin_group_count": 0,
+                            "thin_group_categories": [],
+                        },
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            self.publisher.utc_now = lambda: "2026-06-14T19:31:00Z"
+            self.publisher.local_loop_pid = lambda _pid_file: 4242
+
+            status = self.publisher.read_status(
+                status_file,
+                tmp_path / "loop.pid",
+                status_stale_after_seconds=120,
+            )
+
+        summary = status["cockpit_summary"]
+        self.assertEqual(summary["status"], "passing")
+        self.assertEqual(summary["phase"], "autonomy_policy_failed")
+        self.assertEqual(summary["mode"], "autonomous_codex")
+        self.assertTrue(summary["loop_running"])
+        self.assertEqual(summary["loop_pid"], 4242)
+        self.assertEqual(summary["iteration"], 8)
+        self.assertEqual(summary["status_age_seconds"], 60)
+        self.assertFalse(summary["status_stale"])
+        self.assertEqual(summary["artifact_health"], "loaded")
+        self.assertEqual(summary["import_readiness"], "ready")
+        self.assertTrue(summary["ready_for_next_import_records"])
+        self.assertEqual(summary["current_focus"], "autonomy_visibility_or_real_ingest")
+        self.assertEqual(summary["policy_reason"], "dallas_ready_no_thin_groups")
+        self.assertTrue(summary["dallas_pipeline_ready"])
+        self.assertEqual(summary["contract_checks"], "13/13")
+        self.assertEqual(summary["queue_items"], 535)
+        self.assertTrue(summary["operator_attention"])
+        self.assertEqual(summary["operator_attention_reasons"], ["autonomy_policy_failed"])
+        self.assertEqual(summary["operator_attention_primary_reason"], "autonomy_policy_failed")
+        self.assertEqual(summary["operator_attention_label"], "Autonomy policy failed")
+        self.assertEqual(
+            summary["policy_failure_reason"],
+            "raw_dallas_csv_without_productive_work",
+        )
+        self.assertEqual(
+            summary["policy_raw_dallas_csv_changed_paths"],
+            ["generated/raw/dallas-electrician-import-sample-v2/permits.csv"],
+        )
 
     def test_publisher_source_health_reports_live_source_status(self) -> None:
         status = {

@@ -4,6 +4,11 @@ Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
 - lane: editor
+- status: added derived `status.cockpit_summary` data to standalone cockpit relay publisher snapshots so the Render relay can see source operator-attention labels, autonomy-policy failure details, readiness, artifact health, freshness, and queue/contract summaries even when snapshots come from the loop status file instead of the local cockpit API; no Dallas raw CSV rows were edited
+- files: scripts/publish_cockpit_to_relay.py, tests/test_cockpit_relay_publisher.py, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- checks: `python3 -m unittest tests.test_cockpit_relay_publisher`; `python3 -m py_compile scripts/publish_cockpit_to_relay.py tests/test_cockpit_relay_publisher.py`; `python3 -m unittest tests.test_render_cockpit_relay`; `python3 -m unittest discover -s tests`; `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json`; `cmp -s generated/landing.html index.html`; `git diff --check`; `git diff --name-only -- generated/raw .pxcode/preview.json generated/landing.html index.html`
+- next: remote relay health can now use `status.cockpit_summary.operator_attention_label` and `operator_attention_reasons` from standalone publisher snapshots; use the nested reason codes for automation and the label for the first human routing hint
+- lane: editor
 - status: added a compact `publisher.source_health` summary to standalone cockpit relay publisher payloads so remote relay snapshots carry source-loop health (`live`/`degraded`, reasons, primary reason, and label) without consumers re-deriving it from nested status freshness, file-read, PID, and source status fields; no Dallas raw CSV rows were edited
 - files: scripts/publish_cockpit_to_relay.py, tests/test_cockpit_relay_publisher.py, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
 - checks: `python3 -m unittest tests.test_cockpit_relay_publisher`; `python3 -m py_compile scripts/publish_cockpit_to_relay.py tests/test_cockpit_relay_publisher.py`; `python3 -m unittest discover -s tests`; `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json`; `cmp -s generated/landing.html index.html`; `git diff --check`; `git diff --name-only -- generated/raw .pxcode/preview.json generated/landing.html index.html`
