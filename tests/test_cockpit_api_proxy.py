@@ -91,6 +91,7 @@ class CockpitApiProxyTest(unittest.TestCase):
             const assert = require("assert");
             const {
               invalidUpstreamKeysHeader,
+              MAX_RELAY_TOKEN_CHARS,
               upstreams,
             } = require("./api/cockpit-upstreams");
 
@@ -144,6 +145,44 @@ class CockpitApiProxyTest(unittest.TestCase):
             assert.deepStrictEqual(emptyReadTokenFallsBack.configured[0].headers, {
               "X-Automoat-Relay-Token": "write-token",
             });
+
+            const oversizedToken = "x".repeat(MAX_RELAY_TOKEN_CHARS + 1);
+            const oversizedReadToken = upstreams({
+              relayPath: "/api/status",
+              bridgePath: "/api/status",
+              env: {
+                AUTOMOAT_RELAY_URL: "https://automoat-cockpit-relay.example",
+                AUTOMOAT_RELAY_READ_TOKEN: oversizedToken,
+                AUTOMOAT_RELAY_TOKEN: "write-token",
+              },
+            });
+            assert.deepStrictEqual(oversizedReadToken.configured, []);
+            assert.deepStrictEqual(oversizedReadToken.invalid, [{
+              kind: "relay_auth",
+              error: `AUTOMOAT_RELAY_READ_TOKEN must be ${MAX_RELAY_TOKEN_CHARS} characters or fewer`,
+            }]);
+            assert.strictEqual(
+              invalidUpstreamKeysHeader(oversizedReadToken.invalid),
+              "AUTOMOAT_RELAY_READ_TOKEN",
+            );
+
+            const oversizedWriteToken = upstreams({
+              relayPath: "/api/status",
+              bridgePath: "/api/status",
+              env: {
+                AUTOMOAT_RELAY_URL: "https://automoat-cockpit-relay.example",
+                AUTOMOAT_RELAY_TOKEN: oversizedToken,
+              },
+            });
+            assert.deepStrictEqual(oversizedWriteToken.configured, []);
+            assert.deepStrictEqual(oversizedWriteToken.invalid, [{
+              kind: "relay_auth",
+              error: `AUTOMOAT_RELAY_TOKEN must be ${MAX_RELAY_TOKEN_CHARS} characters or fewer`,
+            }]);
+            assert.strictEqual(
+              invalidUpstreamKeysHeader(oversizedWriteToken.invalid),
+              "AUTOMOAT_RELAY_TOKEN",
+            );
             """
         )
 
