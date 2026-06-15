@@ -1076,6 +1076,12 @@ def source_status_log_fields(payload: dict[str, Any]) -> dict[str, Any]:
     cockpit_summary = status.get("cockpit_summary")
     if not isinstance(cockpit_summary, dict):
         cockpit_summary = {}
+    bridge_summary = status.get("bridge_summary")
+    if not isinstance(bridge_summary, dict):
+        bridge_summary = {}
+    bridge_health = bridge_summary.get("bridge_health")
+    if not isinstance(bridge_health, dict):
+        bridge_health = {}
     publisher = payload.get("publisher")
     if not isinstance(publisher, dict):
         publisher = {}
@@ -1105,6 +1111,35 @@ def source_status_log_fields(payload: dict[str, Any]) -> dict[str, Any]:
             max_length=120,
         ),
         "source_health_label": compact_policy_detail(source_health.get("label"), max_length=160),
+        "bridge_available": bridge_summary.get("available")
+        if isinstance(bridge_summary.get("available"), bool)
+        else None,
+        "bridge_status": compact_policy_detail(bridge_summary.get("status"), max_length=80),
+        "bridge_status_file_status": compact_policy_detail(
+            bridge_summary.get("status_file_status"),
+            max_length=80,
+        ),
+        "bridge_status_stale": bridge_summary.get("bridge_status_stale")
+        if isinstance(bridge_summary.get("bridge_status_stale"), bool)
+        else None,
+        "bridge_status_age_seconds": compact_int(
+            bridge_summary.get("bridge_status_age_seconds")
+        ),
+        "bridge_status_stale_after_seconds": compact_int(
+            bridge_summary.get("bridge_status_stale_after_seconds")
+        ),
+        "bridge_health_status": compact_policy_detail(
+            bridge_health.get("status"),
+            max_length=80,
+        ),
+        "bridge_health_primary_reason": compact_policy_detail(
+            bridge_health.get("primary_reason"),
+            max_length=120,
+        ),
+        "bridge_health_label": compact_policy_detail(
+            bridge_health.get("label"),
+            max_length=160,
+        ),
         "source_policy_failure_reason": compact_policy_detail(
             cockpit_summary.get("policy_failure_reason"),
             max_length=160,
@@ -1149,6 +1184,50 @@ def source_status_log_fields(payload: dict[str, Any]) -> dict[str, Any]:
         "publisher_git_head": compact_policy_detail(git.get("head"), max_length=80),
         "publisher_git_dirty_path_count": compact_int(git.get("dirty_path_count")),
     }
+
+
+SOURCE_STATUS_LOG_FIELD_NAMES = (
+    "source_status",
+    "source_loop_running",
+    "source_status_stale",
+    "source_status_age_seconds",
+    "source_status_file_status",
+    "source_health_status",
+    "source_health_primary_reason",
+    "source_health_label",
+    "bridge_available",
+    "bridge_status",
+    "bridge_status_file_status",
+    "bridge_status_stale",
+    "bridge_status_age_seconds",
+    "bridge_status_stale_after_seconds",
+    "bridge_health_status",
+    "bridge_health_primary_reason",
+    "bridge_health_label",
+    "source_policy_failure_reason",
+    "source_policy_diagnostics_status",
+    "source_policy_route_hint",
+    "source_policy_preview_json_changed",
+    "source_policy_allows_synthetic_append",
+    "source_policy_override",
+    "source_policy_raw_path_count",
+    "source_policy_productive_path_count",
+    "source_policy_synthetic_row_count",
+    "publisher_host",
+    "publisher_pid",
+    "publisher_started_at",
+    "publisher_snapshot_sequence",
+    "publisher_git_head",
+    "publisher_git_dirty_path_count",
+)
+
+
+def source_status_log_suffix(source_fields: dict[str, Any]) -> str:
+    field_defaults = {"source_status": "unknown"}
+    return " ".join(
+        f"{field_name}={source_fields.get(field_name, field_defaults.get(field_name))}"
+        for field_name in SOURCE_STATUS_LOG_FIELD_NAMES
+    )
 
 
 def relay_response_failure_reason(response: dict[str, Any]) -> str:
@@ -1206,29 +1285,7 @@ def publish_once_result(args: argparse.Namespace) -> dict[str, Any]:
             f"http_status={http_fields['http_status']} "
             f"http_reason={http_fields['http_reason']} "
             f"http_body_bytes={http_fields['http_body_bytes']} "
-            f"source_status={source_fields.get('source_status', 'unknown')} "
-            f"source_loop_running={source_fields.get('source_loop_running')} "
-            f"source_status_stale={source_fields.get('source_status_stale')} "
-            f"source_status_age_seconds={source_fields.get('source_status_age_seconds')} "
-            f"source_status_file_status={source_fields.get('source_status_file_status')} "
-            f"source_health_status={source_fields.get('source_health_status')} "
-            f"source_health_primary_reason={source_fields.get('source_health_primary_reason')} "
-            f"source_health_label={source_fields.get('source_health_label')} "
-            f"source_policy_failure_reason={source_fields.get('source_policy_failure_reason')} "
-            f"source_policy_diagnostics_status={source_fields.get('source_policy_diagnostics_status')} "
-            f"source_policy_route_hint={source_fields.get('source_policy_route_hint')} "
-            f"source_policy_preview_json_changed={source_fields.get('source_policy_preview_json_changed')} "
-            f"source_policy_allows_synthetic_append={source_fields.get('source_policy_allows_synthetic_append')} "
-            f"source_policy_override={source_fields.get('source_policy_override')} "
-            f"source_policy_raw_path_count={source_fields.get('source_policy_raw_path_count')} "
-            f"source_policy_productive_path_count={source_fields.get('source_policy_productive_path_count')} "
-            f"source_policy_synthetic_row_count={source_fields.get('source_policy_synthetic_row_count')} "
-            f"publisher_host={source_fields.get('publisher_host')} "
-            f"publisher_pid={source_fields.get('publisher_pid')} "
-            f"publisher_started_at={source_fields.get('publisher_started_at')} "
-            f"publisher_snapshot_sequence={source_fields.get('publisher_snapshot_sequence')} "
-            f"publisher_git_head={source_fields.get('publisher_git_head')} "
-            f"publisher_git_dirty_path_count={source_fields.get('publisher_git_dirty_path_count')}",
+            f"{source_status_log_suffix(source_fields)}",
             log_path=args.publisher_log,
         )
         return {
@@ -1245,29 +1302,7 @@ def publish_once_result(args: argparse.Namespace) -> dict[str, Any]:
         emit(
             "publish failed "
             f"error={sanitize_error_for_log(exc)} "
-            f"source_status={source_fields.get('source_status', 'unknown')} "
-            f"source_loop_running={source_fields.get('source_loop_running')} "
-            f"source_status_stale={source_fields.get('source_status_stale')} "
-            f"source_status_age_seconds={source_fields.get('source_status_age_seconds')} "
-            f"source_status_file_status={source_fields.get('source_status_file_status')} "
-            f"source_health_status={source_fields.get('source_health_status')} "
-            f"source_health_primary_reason={source_fields.get('source_health_primary_reason')} "
-            f"source_health_label={source_fields.get('source_health_label')} "
-            f"source_policy_failure_reason={source_fields.get('source_policy_failure_reason')} "
-            f"source_policy_diagnostics_status={source_fields.get('source_policy_diagnostics_status')} "
-            f"source_policy_route_hint={source_fields.get('source_policy_route_hint')} "
-            f"source_policy_preview_json_changed={source_fields.get('source_policy_preview_json_changed')} "
-            f"source_policy_allows_synthetic_append={source_fields.get('source_policy_allows_synthetic_append')} "
-            f"source_policy_override={source_fields.get('source_policy_override')} "
-            f"source_policy_raw_path_count={source_fields.get('source_policy_raw_path_count')} "
-            f"source_policy_productive_path_count={source_fields.get('source_policy_productive_path_count')} "
-            f"source_policy_synthetic_row_count={source_fields.get('source_policy_synthetic_row_count')} "
-            f"publisher_host={source_fields.get('publisher_host')} "
-            f"publisher_pid={source_fields.get('publisher_pid')} "
-            f"publisher_started_at={source_fields.get('publisher_started_at')} "
-            f"publisher_snapshot_sequence={source_fields.get('publisher_snapshot_sequence')} "
-            f"publisher_git_head={source_fields.get('publisher_git_head')} "
-            f"publisher_git_dirty_path_count={source_fields.get('publisher_git_dirty_path_count')}",
+            f"{source_status_log_suffix(source_fields)}",
             log_path=args.publisher_log,
         )
         return {
@@ -1278,29 +1313,7 @@ def publish_once_result(args: argparse.Namespace) -> dict[str, Any]:
         emit(
             "publish failed relay_ok=False "
             f"reason={relay_response_failure_reason(response)} "
-            f"source_status={source_fields['source_status']} "
-            f"source_loop_running={source_fields['source_loop_running']} "
-            f"source_status_stale={source_fields['source_status_stale']} "
-            f"source_status_age_seconds={source_fields['source_status_age_seconds']} "
-            f"source_status_file_status={source_fields['source_status_file_status']} "
-            f"source_health_status={source_fields['source_health_status']} "
-            f"source_health_primary_reason={source_fields['source_health_primary_reason']} "
-            f"source_health_label={source_fields['source_health_label']} "
-            f"source_policy_failure_reason={source_fields['source_policy_failure_reason']} "
-            f"source_policy_diagnostics_status={source_fields['source_policy_diagnostics_status']} "
-            f"source_policy_route_hint={source_fields['source_policy_route_hint']} "
-            f"source_policy_preview_json_changed={source_fields['source_policy_preview_json_changed']} "
-            f"source_policy_allows_synthetic_append={source_fields['source_policy_allows_synthetic_append']} "
-            f"source_policy_override={source_fields['source_policy_override']} "
-            f"source_policy_raw_path_count={source_fields['source_policy_raw_path_count']} "
-            f"source_policy_productive_path_count={source_fields['source_policy_productive_path_count']} "
-            f"source_policy_synthetic_row_count={source_fields['source_policy_synthetic_row_count']} "
-            f"publisher_host={source_fields['publisher_host']} "
-            f"publisher_pid={source_fields['publisher_pid']} "
-            f"publisher_started_at={source_fields['publisher_started_at']} "
-            f"publisher_snapshot_sequence={source_fields['publisher_snapshot_sequence']} "
-            f"publisher_git_head={source_fields['publisher_git_head']} "
-            f"publisher_git_dirty_path_count={source_fields['publisher_git_dirty_path_count']}",
+            f"{source_status_log_suffix(source_fields)}",
             log_path=args.publisher_log,
         )
         return {
@@ -1310,29 +1323,7 @@ def publish_once_result(args: argparse.Namespace) -> dict[str, Any]:
     emit(
         f"published relay snapshot ok={response.get('ok')} "
         f"received_at={response.get('received_at')} "
-        f"source_status={source_fields['source_status']} "
-        f"source_loop_running={source_fields['source_loop_running']} "
-        f"source_status_stale={source_fields['source_status_stale']} "
-        f"source_status_age_seconds={source_fields['source_status_age_seconds']} "
-        f"source_status_file_status={source_fields['source_status_file_status']} "
-        f"source_health_status={source_fields['source_health_status']} "
-        f"source_health_primary_reason={source_fields['source_health_primary_reason']} "
-        f"source_health_label={source_fields['source_health_label']} "
-        f"source_policy_failure_reason={source_fields['source_policy_failure_reason']} "
-        f"source_policy_diagnostics_status={source_fields['source_policy_diagnostics_status']} "
-        f"source_policy_route_hint={source_fields['source_policy_route_hint']} "
-        f"source_policy_preview_json_changed={source_fields['source_policy_preview_json_changed']} "
-        f"source_policy_allows_synthetic_append={source_fields['source_policy_allows_synthetic_append']} "
-        f"source_policy_override={source_fields['source_policy_override']} "
-        f"source_policy_raw_path_count={source_fields['source_policy_raw_path_count']} "
-        f"source_policy_productive_path_count={source_fields['source_policy_productive_path_count']} "
-        f"source_policy_synthetic_row_count={source_fields['source_policy_synthetic_row_count']} "
-        f"publisher_host={source_fields['publisher_host']} "
-        f"publisher_pid={source_fields['publisher_pid']} "
-        f"publisher_started_at={source_fields['publisher_started_at']} "
-        f"publisher_snapshot_sequence={source_fields['publisher_snapshot_sequence']} "
-        f"publisher_git_head={source_fields['publisher_git_head']} "
-        f"publisher_git_dirty_path_count={source_fields['publisher_git_dirty_path_count']}",
+        f"{source_status_log_suffix(source_fields)}",
         log_path=args.publisher_log,
     )
     return {

@@ -2478,6 +2478,13 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertIn("source_health_status=None", log_text)
         self.assertIn("source_health_primary_reason=None", log_text)
         self.assertIn("source_health_label=None", log_text)
+        self.assertIn("bridge_available=None", log_text)
+        self.assertIn("bridge_status=None", log_text)
+        self.assertIn("bridge_status_file_status=None", log_text)
+        self.assertIn("bridge_status_stale=None", log_text)
+        self.assertIn("bridge_health_status=None", log_text)
+        self.assertIn("bridge_health_primary_reason=None", log_text)
+        self.assertIn("bridge_health_label=None", log_text)
 
     def test_publish_once_logs_compact_source_health(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -2490,6 +2497,19 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                     "source_status_stale": True,
                     "source_status_age_seconds": 700,
                     "source_status_file_status": "loaded",
+                    "bridge_summary": {
+                        "available": True,
+                        "status": "running",
+                        "status_file_status": "loaded",
+                        "bridge_status_stale": True,
+                        "bridge_status_age_seconds": 900,
+                        "bridge_status_stale_after_seconds": 660,
+                        "bridge_health": {
+                            "status": "degraded",
+                            "primary_reason": "tunnel_stale",
+                            "label": "Bridge status is stale",
+                        },
+                    },
                     "cockpit_summary": {
                         "policy_failure_reason": "raw_dallas_csv_without_productive_work",
                         "policy_diagnostics_status": "failed",
@@ -2536,6 +2556,15 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertIn("source_health_status=degraded", log_text)
         self.assertIn("source_health_primary_reason=source_status_stale", log_text)
         self.assertIn("source_health_label=Source status is stale", log_text)
+        self.assertIn("bridge_available=True", log_text)
+        self.assertIn("bridge_status=running", log_text)
+        self.assertIn("bridge_status_file_status=loaded", log_text)
+        self.assertIn("bridge_status_stale=True", log_text)
+        self.assertIn("bridge_status_age_seconds=900", log_text)
+        self.assertIn("bridge_status_stale_after_seconds=660", log_text)
+        self.assertIn("bridge_health_status=degraded", log_text)
+        self.assertIn("bridge_health_primary_reason=tunnel_stale", log_text)
+        self.assertIn("bridge_health_label=Bridge status is stale", log_text)
         self.assertIn(
             "source_policy_failure_reason=raw_dallas_csv_without_productive_work",
             log_text,
@@ -2572,6 +2601,26 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                         "loaded token=file-secret "
                         "https://relay-user:relay-pass@relay.example/status?token=url-secret#debug"
                     ),
+                    "bridge_summary": {
+                        "available": True,
+                        "status": "running token=bridge-status-secret",
+                        "status_file_status": (
+                            "loaded "
+                            "https://bridge-user:bridge-pass@bridge.example/status"
+                            "?token=bridge-file-url-secret#debug"
+                        ),
+                        "bridge_status_stale": True,
+                        "bridge_status_age_seconds": "800",
+                        "bridge_status_stale_after_seconds": "660",
+                        "bridge_health": {
+                            "status": "degraded token=bridge-health-status-secret",
+                            "primary_reason": "tunnel_failed",
+                            "label": (
+                                "Bridge authorization: Bearer bridge-label-secret "
+                                "https://bridge.example/debug?token=bridge-label-url-secret#trace"
+                            ),
+                        },
+                    },
                     "cockpit_summary": {
                         "policy_failure_reason": (
                             "synthetic append rejected\n"
@@ -2624,6 +2673,23 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             "https://relay.example/status?[redacted]#[redacted]",
             log_text,
         )
+        self.assertIn("bridge_available=True", log_text)
+        self.assertIn("bridge_status=running token=[redacted]", log_text)
+        self.assertIn(
+            "bridge_status_file_status=loaded "
+            "https://bridge.example/status?[redacted]#[redacted]",
+            log_text,
+        )
+        self.assertIn("bridge_status_stale=True", log_text)
+        self.assertIn("bridge_status_age_seconds=800", log_text)
+        self.assertIn("bridge_status_stale_after_seconds=660", log_text)
+        self.assertIn("bridge_health_status=degraded token=[redacted]", log_text)
+        self.assertIn("bridge_health_primary_reason=tunnel_failed", log_text)
+        self.assertIn(
+            "bridge_health_label=Bridge authorization: Bearer [redacted] "
+            "https://bridge.example/debug?[redacted]#[redacted]",
+            log_text,
+        )
         self.assertIn(
             "publisher_host=worker-1 x-automoat-relay-token=[redacted]",
             log_text,
@@ -2652,6 +2718,13 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertNotIn("host-secret", log_text)
         self.assertNotIn("label-secret", log_text)
         self.assertNotIn("head-secret", log_text)
+        self.assertNotIn("bridge-status-secret", log_text)
+        self.assertNotIn("bridge-user", log_text)
+        self.assertNotIn("bridge-pass", log_text)
+        self.assertNotIn("bridge-file-url-secret", log_text)
+        self.assertNotIn("bridge-health-status-secret", log_text)
+        self.assertNotIn("bridge-label-secret", log_text)
+        self.assertNotIn("bridge-label-url-secret", log_text)
         self.assertNotIn("policy-secret", log_text)
         self.assertNotIn("reason-secret", log_text)
         self.assertNotIn("policy-url-secret", log_text)
