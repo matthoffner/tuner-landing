@@ -168,6 +168,18 @@ def worker_file_label(
     return relative_text if relative_text else "."
 
 
+def worker_config_path_label(value: Path | str) -> str:
+    path = Path(value)
+    path_text = path.as_posix()
+    if not path.is_absolute():
+        return path_text
+    try:
+        resolved_path = path.expanduser().resolve(strict=False)
+    except OSError:
+        return f"<external>/{path.name}" if path.name else "<external>"
+    return f"<external>/{resolved_path.name}" if resolved_path.name else "<external>"
+
+
 def decode_codex_auth_json_b64(value: str) -> bytes:
     decoded = base64.b64decode(value, validate=True)
     parsed = json.loads(decoded.decode("utf-8"))
@@ -986,8 +998,8 @@ def environment_preflight_summary(
         "relay_url": env.get("AUTOMOAT_RELAY_URL", "").strip(),
         "git_repo": env.get("AUTOMOAT_GIT_REPO", DEFAULT_REPO).strip(),
         "git_branch": env.get("AUTOMOAT_GIT_BRANCH", "main").strip() or "main",
-        "workdir": str(workdir),
-        "codex_home": str(codex_home),
+        "workdir": worker_config_path_label(workdir),
+        "codex_home": worker_config_path_label(codex_home),
         "git_auth": configured_names(env, GIT_AUTH_ENV_NAMES),
         "git_auth_selected": selected_name(env, GIT_AUTH_ENV_NAMES),
         "codex_auth": configured_names(env, CODEX_AUTH_ENV_NAMES),
@@ -1056,6 +1068,8 @@ def emit_environment_preflight(
         return errors
 
     workdir, codex_home = configured_worker_paths(env)
+    workdir_label = worker_config_path_label(workdir)
+    codex_home_label = worker_config_path_label(codex_home)
     bridge_status_file = worker_file_label(
         env.get("AUTOMOAT_BRIDGE_STATUS_FILE", DEFAULT_BRIDGE_STATUS_FILE),
         env,
@@ -1065,8 +1079,8 @@ def emit_environment_preflight(
         f"relay_url={env.get('AUTOMOAT_RELAY_URL', '').strip()} "
         f"git_repo={env.get('AUTOMOAT_GIT_REPO', DEFAULT_REPO).strip()} "
         f"git_branch={env.get('AUTOMOAT_GIT_BRANCH', 'main').strip() or 'main'} "
-        f"workdir={workdir} "
-        f"codex_home={codex_home} "
+        f"workdir={workdir_label} "
+        f"codex_home={codex_home_label} "
         f"git_auth={','.join(configured_names(env, GIT_AUTH_ENV_NAMES))} "
         f"git_auth_selected={selected_name(env, GIT_AUTH_ENV_NAMES)} "
         f"codex_auth={','.join(configured_names(env, CODEX_AUTH_ENV_NAMES))} "

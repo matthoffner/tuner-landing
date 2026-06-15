@@ -1540,8 +1540,8 @@ class RenderWorkerPreflightTest(unittest.TestCase):
 
         self.assertEqual(errors, [])
         self.assertIn("git_branch=release/2026.06", output.getvalue())
-        self.assertIn("workdir=/work/automoat", output.getvalue())
-        self.assertIn("codex_home=/tmp/codex-home", output.getvalue())
+        self.assertIn("workdir=<external>/automoat", output.getvalue())
+        self.assertIn("codex_home=<external>/codex-home", output.getvalue())
         self.assertIn("git_auth=GITHUB_TOKEN,GH_TOKEN", output.getvalue())
         self.assertIn("git_auth_selected=GITHUB_TOKEN", output.getvalue())
         self.assertIn("codex_auth=CODEX_ACCESS_TOKEN,OPENAI_API_KEY", output.getvalue())
@@ -1551,6 +1551,8 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             'command_paths={"codex": "/usr/bin/codex", "git": "/usr/bin/git"}',
             output.getvalue(),
         )
+        self.assertNotIn("workdir=/work/automoat", output.getvalue())
+        self.assertNotIn("codex_home=/tmp/codex-home", output.getvalue())
 
     def test_check_env_json_reports_safe_machine_readable_summary(self) -> None:
         env = {
@@ -1579,8 +1581,8 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertEqual(payload["status"], "passed")
         self.assertEqual(payload["errors"], [])
         self.assertEqual(payload["config"]["git_branch"], "release/2026.06")
-        self.assertEqual(payload["config"]["workdir"], "/work/automoat")
-        self.assertEqual(payload["config"]["codex_home"], "/tmp/codex-home")
+        self.assertEqual(payload["config"]["workdir"], "<external>/automoat")
+        self.assertEqual(payload["config"]["codex_home"], "<external>/codex-home")
         self.assertEqual(payload["config"]["git_auth"], ["GITHUB_TOKEN", "GH_TOKEN"])
         self.assertEqual(payload["config"]["git_auth_selected"], "GITHUB_TOKEN")
         self.assertEqual(
@@ -1599,16 +1601,20 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertNotIn("alternate-github-token", output.getvalue())
         self.assertNotIn("codex-token", output.getvalue())
         self.assertNotIn("api-key", output.getvalue())
+        self.assertNotIn('"/work/automoat"', output.getvalue())
+        self.assertNotIn('"/tmp/codex-home"', output.getvalue())
 
-    def test_check_env_json_reports_supplied_path_env_values(self) -> None:
+    def test_check_env_json_reports_supplied_path_env_labels(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
+            workdir = Path(temp_dir) / "repo"
+            codex_home = Path(temp_dir) / "codex-home"
             env = {
                 "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
                 "AUTOMOAT_RELAY_TOKEN": "relay-token",
                 "GITHUB_TOKEN": "github-token",
                 "CODEX_ACCESS_TOKEN": "codex-token",
-                "AUTOMOAT_WORKDIR": str(Path(temp_dir) / "repo"),
-                "CODEX_HOME": str(Path(temp_dir) / "codex-home"),
+                "AUTOMOAT_WORKDIR": str(workdir),
+                "CODEX_HOME": str(codex_home),
             }
             self.worker.WORKDIR = Path("/work/automoat")
             self.worker.CODEX_HOME = Path("/tmp/codex-home")
@@ -1623,8 +1629,10 @@ class RenderWorkerPreflightTest(unittest.TestCase):
 
         payload = json.loads(output.getvalue())
         self.assertEqual(errors, [])
-        self.assertEqual(payload["config"]["workdir"], env["AUTOMOAT_WORKDIR"])
-        self.assertEqual(payload["config"]["codex_home"], env["CODEX_HOME"])
+        self.assertEqual(payload["config"]["workdir"], "<external>/repo")
+        self.assertEqual(payload["config"]["codex_home"], "<external>/codex-home")
+        self.assertNotIn(str(workdir), output.getvalue())
+        self.assertNotIn(str(codex_home), output.getvalue())
 
     def test_write_codex_config_uses_supplied_runtime_path_env_values(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
