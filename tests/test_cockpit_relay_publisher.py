@@ -420,7 +420,40 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                                     "status": "ready",
                                     "ready_for_next_import_records": True,
                                     "blockers": [],
-                                }
+                                },
+                                "next_import_record_handoff": {
+                                    "raw_dir": (
+                                        "generated/raw/"
+                                        "dallas-electrician-import-sample-v2"
+                                    ),
+                                    "raw_file_next_append_rows": {
+                                        "permits.csv": 538,
+                                        "inspections.csv": "1085",
+                                        "bad.csv": -1,
+                                    },
+                                    "raw_file_append_preflight": {
+                                        "status": "passed",
+                                        "ready_for_append": True,
+                                        "checks": {
+                                            "raw_files_present": True,
+                                            "relationships_resolve": True,
+                                            "ignored": "yes",
+                                        },
+                                        "blockers": [],
+                                    },
+                                    "after_edit_command": (
+                                        "python3 scripts/run_dallas_import_pipeline.py "
+                                        "--require-ready"
+                                    ),
+                                    "readiness_check_command": (
+                                        "python3 scripts/run_dallas_import_pipeline.py "
+                                        "--summary-only --require-ready --format json"
+                                    ),
+                                    "raw_handoff_verification_json_command": (
+                                        "python3 scripts/run_dallas_import_pipeline.py "
+                                        "--verify-raw-handoff --format json"
+                                    ),
+                                },
                             },
                         },
                         "autonomy_policy": {
@@ -456,6 +489,35 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertEqual(summary["artifact_health"], "loaded")
         self.assertEqual(summary["import_readiness"], "ready")
         self.assertTrue(summary["ready_for_next_import_records"])
+        self.assertEqual(
+            summary["import_handoff"],
+            {
+                "available": True,
+                "next_append_rows": {
+                    "permits.csv": 538,
+                    "inspections.csv": 1085,
+                },
+                "append_preflight_status": "passed",
+                "append_preflight_checks": {
+                    "raw_files_present": True,
+                    "relationships_resolve": True,
+                },
+                "append_preflight_blockers": [],
+                "ready_for_append": True,
+                "raw_dir": "generated/raw/dallas-electrician-import-sample-v2",
+                "after_edit_command": (
+                    "python3 scripts/run_dallas_import_pipeline.py --require-ready"
+                ),
+                "readiness_check_command": (
+                    "python3 scripts/run_dallas_import_pipeline.py "
+                    "--summary-only --require-ready --format json"
+                ),
+                "raw_handoff_verification_json_command": (
+                    "python3 scripts/run_dallas_import_pipeline.py "
+                    "--verify-raw-handoff --format json"
+                ),
+            },
+        )
         self.assertEqual(summary["current_focus"], "autonomy_visibility_or_real_ingest")
         self.assertEqual(summary["policy_reason"], "dallas_ready_no_thin_groups")
         self.assertTrue(summary["dallas_pipeline_ready"])

@@ -88,7 +88,36 @@ class MvpCockpitServerTest(unittest.TestCase):
                         "status": "ready",
                         "ready_for_next_import_records": True,
                         "blockers": [],
-                    }
+                    },
+                    "next_import_record_handoff": {
+                        "raw_dir": "generated/raw/dallas-electrician-import-sample-v2",
+                        "raw_file_next_append_rows": {
+                            "permits.csv": 538,
+                            "inspections.csv": "1085",
+                            "bad.csv": -1,
+                        },
+                        "raw_file_append_preflight": {
+                            "status": "passed",
+                            "ready_for_append": True,
+                            "checks": {
+                                "raw_files_present": True,
+                                "relationships_resolve": True,
+                                "ignored": "yes",
+                            },
+                            "blockers": [],
+                        },
+                        "after_edit_command": (
+                            "python3 scripts/run_dallas_import_pipeline.py --require-ready"
+                        ),
+                        "readiness_check_command": (
+                            "python3 scripts/run_dallas_import_pipeline.py "
+                            "--summary-only --require-ready --format json"
+                        ),
+                        "raw_handoff_verification_json_command": (
+                            "python3 scripts/run_dallas_import_pipeline.py "
+                            "--verify-raw-handoff --format json"
+                        ),
+                    },
                 },
             },
         }
@@ -115,6 +144,35 @@ class MvpCockpitServerTest(unittest.TestCase):
         self.assertEqual(summary["import_readiness"], "ready")
         self.assertEqual(summary["readiness_blockers"], [])
         self.assertTrue(summary["ready_for_next_import_records"])
+        self.assertEqual(
+            summary["import_handoff"],
+            {
+                "available": True,
+                "next_append_rows": {
+                    "permits.csv": 538,
+                    "inspections.csv": 1085,
+                },
+                "append_preflight_status": "passed",
+                "append_preflight_checks": {
+                    "raw_files_present": True,
+                    "relationships_resolve": True,
+                },
+                "append_preflight_blockers": [],
+                "ready_for_append": True,
+                "raw_dir": "generated/raw/dallas-electrician-import-sample-v2",
+                "after_edit_command": (
+                    "python3 scripts/run_dallas_import_pipeline.py --require-ready"
+                ),
+                "readiness_check_command": (
+                    "python3 scripts/run_dallas_import_pipeline.py "
+                    "--summary-only --require-ready --format json"
+                ),
+                "raw_handoff_verification_json_command": (
+                    "python3 scripts/run_dallas_import_pipeline.py "
+                    "--verify-raw-handoff --format json"
+                ),
+            },
+        )
         self.assertEqual(summary["current_focus"], "autonomy_visibility_or_real_ingest")
         self.assertEqual(summary["policy_reason"], "dallas_ready_no_thin_groups")
         self.assertTrue(summary["dallas_pipeline_ready"])
@@ -487,6 +545,17 @@ class MvpCockpitServerTest(unittest.TestCase):
                 "policy_synthetic_row_samples": [
                     "ELZ-2026-9999,100 Example Ave,https://example.local/dallas/9999",
                 ],
+                "import_handoff": {
+                    "available": True,
+                    "next_append_rows": {"permits.csv": 538, "inspections.csv": 1085},
+                    "append_preflight_status": "passed",
+                    "append_preflight_checks": {"raw_files_present": True},
+                    "append_preflight_blockers": [],
+                    "readiness_check_command": (
+                        "python3 scripts/run_dallas_import_pipeline.py "
+                        "--summary-only --require-ready --format json"
+                    ),
+                },
             },
             "bridge_summary": {
                 "available": True,
@@ -509,6 +578,7 @@ class MvpCockpitServerTest(unittest.TestCase):
         self.assertIn('id="artifactHealth"', markup)
         self.assertIn('id="freshness"', markup)
         self.assertIn('id="attention"', markup)
+        self.assertIn('id="importHandoff"', markup)
         self.assertIn('id="bridgeHealth"', markup)
         self.assertIn("status.cockpit_summary", markup)
         self.assertIn("status.bridge_summary", markup)
@@ -521,6 +591,9 @@ class MvpCockpitServerTest(unittest.TestCase):
         self.assertIn("policy_raw_dallas_csv_changed_path_count", markup)
         self.assertIn("policy_synthetic_row_samples", markup)
         self.assertIn("policy_synthetic_row_count", markup)
+        self.assertIn("import_handoff", markup)
+        self.assertIn("next_append_rows", markup)
+        self.assertIn("append_preflight_checks", markup)
         self.assertIn("artifact_statuses", markup)
         self.assertIn("artifact_problem_artifacts", markup)
         self.assertIn("artifactProblems.join", markup)

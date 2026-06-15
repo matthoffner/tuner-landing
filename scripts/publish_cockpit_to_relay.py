@@ -440,6 +440,49 @@ def failed_autonomy_policy_step(status: dict[str, Any]) -> dict[str, Any] | None
     return None
 
 
+def import_handoff_summary(import_pipeline: dict[str, Any]) -> dict[str, Any]:
+    handoff = as_dict(import_pipeline.get("next_import_record_handoff"))
+    if not handoff:
+        return {"available": False}
+
+    preflight = as_dict(handoff.get("raw_file_append_preflight"))
+    preflight_checks = {
+        str(name): passed
+        for name, passed in as_dict(preflight.get("checks")).items()
+        if isinstance(passed, bool)
+    }
+    next_append_rows = {
+        str(name): row_number
+        for name, value in as_dict(handoff.get("raw_file_next_append_rows")).items()
+        if (row_number := compact_int(value)) is not None
+    }
+    summary: dict[str, Any] = {
+        "available": True,
+        "next_append_rows": next_append_rows,
+        "append_preflight_status": compact_text(preflight.get("status")) or "unknown",
+        "append_preflight_checks": preflight_checks,
+        "append_preflight_blockers": as_string_list(preflight.get("blockers")),
+    }
+
+    ready_for_append = preflight.get("ready_for_append")
+    if isinstance(ready_for_append, bool):
+        summary["ready_for_append"] = ready_for_append
+
+    text_fields = {
+        "raw_dir": handoff.get("raw_dir"),
+        "after_edit_command": handoff.get("after_edit_command"),
+        "readiness_check_command": handoff.get("readiness_check_command"),
+        "raw_handoff_verification_json_command": handoff.get(
+            "raw_handoff_verification_json_command"
+        ),
+    }
+    for key, value in text_fields.items():
+        compact_value = compact_policy_detail(value)
+        if compact_value is not None:
+            summary[key] = compact_value
+    return summary
+
+
 def publisher_cockpit_summary(status: dict[str, Any]) -> dict[str, Any]:
     artifacts = as_dict(status.get("artifacts"))
     artifact_health = as_dict(artifacts.get("artifact_health"))
@@ -531,6 +574,7 @@ def publisher_cockpit_summary(status: dict[str, Any]) -> dict[str, Any]:
         "import_readiness": import_readiness,
         "readiness_blockers": readiness_blockers,
         "ready_for_next_import_records": readiness.get("ready_for_next_import_records"),
+        "import_handoff": import_handoff_summary(import_pipeline),
         "current_focus": autonomy_policy.get("current_focus") or "mvp_loop",
         "policy_reason": autonomy_policy.get("decision_reason"),
         "policy_failure_reason": policy_failure_reason,

@@ -363,6 +363,49 @@ def read_bridge_summary() -> dict[str, object]:
     return summary
 
 
+def import_handoff_summary(import_pipeline: dict[str, object]) -> dict[str, object]:
+    handoff = as_dict(import_pipeline.get("next_import_record_handoff"))
+    if not handoff:
+        return {"available": False}
+
+    preflight = as_dict(handoff.get("raw_file_append_preflight"))
+    preflight_checks = {
+        str(name): passed
+        for name, passed in as_dict(preflight.get("checks")).items()
+        if isinstance(passed, bool)
+    }
+    next_append_rows = {
+        str(name): row_number
+        for name, value in as_dict(handoff.get("raw_file_next_append_rows")).items()
+        if (row_number := compact_int(value)) is not None
+    }
+    summary: dict[str, object] = {
+        "available": True,
+        "next_append_rows": next_append_rows,
+        "append_preflight_status": compact_text(preflight.get("status")) or "unknown",
+        "append_preflight_checks": preflight_checks,
+        "append_preflight_blockers": as_string_list(preflight.get("blockers")),
+    }
+
+    ready_for_append = preflight.get("ready_for_append")
+    if isinstance(ready_for_append, bool):
+        summary["ready_for_append"] = ready_for_append
+
+    text_fields = {
+        "raw_dir": handoff.get("raw_dir"),
+        "after_edit_command": handoff.get("after_edit_command"),
+        "readiness_check_command": handoff.get("readiness_check_command"),
+        "raw_handoff_verification_json_command": handoff.get(
+            "raw_handoff_verification_json_command"
+        ),
+    }
+    for key, value in text_fields.items():
+        compact_value = compact_policy_detail(value)
+        if compact_value is not None:
+            summary[key] = compact_value
+    return summary
+
+
 def cockpit_summary(status: dict[str, object]) -> dict[str, object]:
     artifacts = as_dict(status.get("artifacts"))
     artifact_health = as_dict(artifacts.get("artifact_health"))
@@ -471,6 +514,7 @@ def cockpit_summary(status: dict[str, object]) -> dict[str, object]:
         "import_readiness": import_readiness,
         "readiness_blockers": readiness_blockers,
         "ready_for_next_import_records": readiness.get("ready_for_next_import_records"),
+        "import_handoff": import_handoff_summary(import_pipeline),
         "current_focus": autonomy_policy.get("current_focus") or "mvp_loop",
         "policy_reason": autonomy_policy.get("decision_reason"),
         "policy_failure_reason": policy_failure_reason,
@@ -840,6 +884,7 @@ def cockpit_html() -> str:
               <div class="detail"><span>artifact health</span><strong id="artifactHealth">...</strong></div>
               <div class="detail"><span>status freshness</span><strong id="freshness">...</strong></div>
               <div class="detail"><span>operator attention</span><strong id="attention">...</strong></div>
+              <div class="detail"><span>next import rows</span><strong id="importHandoff">...</strong></div>
               <div class="detail"><span>bridge health</span><strong id="bridgeHealth">...</strong></div>
             </div>
             <div class="links">
@@ -868,6 +913,7 @@ def cockpit_html() -> str:
       const artifactHealth = document.getElementById("artifactHealth");
       const freshness = document.getElementById("freshness");
       const attention = document.getElementById("attention");
+      const importHandoff = document.getElementById("importHandoff");
       const bridgeHealth = document.getElementById("bridgeHealth");
 
       async function post(path) {{
@@ -930,6 +976,30 @@ def cockpit_html() -> str:
           cockpit.policy_failure_reason ? `policy: ${{cockpit.policy_failure_reason}}` : "",
           policyRawPaths.length ? `raw csv (${{policyRawPathCount}}): ${{policyRawPaths.join(", ")}}` : "",
           policySamples.length ? `synthetic rows (${{policySyntheticRowCount}}): ${{policySamples.join(" | ")}}` : "",
+        ].filter(Boolean).join(" | ");
+        const handoff = cockpit.import_handoff || {{}};
+        const nextRows = handoff.next_append_rows || {{}};
+        const preferredNextRows = ["permits.csv", "inspections.csv"]
+          .filter((name) => typeof nextRows[name] === "number")
+          .map((name) => `${{name.replace(".csv", "")}} ${{nextRows[name]}}`);
+        const fallbackNextRows = Object.entries(nextRows)
+          .slice(0, 2)
+          .map(([name, row]) => `${{name.replace(".csv", "")}} ${{row}}`);
+        const visibleNextRows = preferredNextRows.length ? preferredNextRows : fallbackNextRows;
+        importHandoff.textContent = handoff.available
+          ? visibleNextRows.join(", ") || handoff.append_preflight_status || "available"
+          : "unavailable";
+        const preflightChecks = handoff.append_preflight_checks || {{}};
+        importHandoff.title = [
+          handoff.raw_dir,
+          handoff.append_preflight_status ? `preflight: ${{handoff.append_preflight_status}}` : "",
+          Array.isArray(handoff.append_preflight_blockers) && handoff.append_preflight_blockers.length
+            ? `blockers: ${{handoff.append_preflight_blockers.join(", ")}}`
+            : "",
+          Object.entries(preflightChecks).length
+            ? `checks: ${{Object.entries(preflightChecks).map(([name, passed]) => `${{name}}=${{passed}}`).join(", ")}}`
+            : "",
+          handoff.readiness_check_command,
         ].filter(Boolean).join(" | ");
         bridgeHealth.textContent = bridge.available
           ? bridgeCompact.label || bridgeCompact.status || bridge.status || "Live"
