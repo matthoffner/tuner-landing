@@ -1292,6 +1292,37 @@ def emit_environment_preflight(
         emit("environment preflight failed")
         for error in errors:
             emit(f"  - {error}")
+        diagnostics = environment_preflight_summary(
+            env,
+            errors,
+            command_paths,
+        )["diagnostics"]
+        emit(
+            "preflight diagnostics: "
+            f"error_categories="
+            f"{json.dumps(diagnostics['error_categories'], sort_keys=True)} "
+            f"failed_configuration_keys="
+            f"{json.dumps(diagnostics['failed_configuration_keys'], sort_keys=True)} "
+            f"missing_commands="
+            f"{json.dumps(diagnostics['missing_commands'], sort_keys=True)} "
+            f"git_auth={','.join(diagnostics['git_auth'])} "
+            f"git_auth_selected={diagnostics['git_auth_selected']} "
+            f"codex_auth={','.join(diagnostics['codex_auth'])} "
+            f"codex_auth_selected={diagnostics['codex_auth_selected']} "
+            f"auth_ambiguous_groups="
+            f"{json.dumps(diagnostics['auth_ambiguous_groups'], sort_keys=True)} "
+            f"runtime_configured_keys="
+            f"{json.dumps(diagnostics['runtime_configured_keys'], sort_keys=True)} "
+            f"path_configured_keys="
+            f"{json.dumps(diagnostics['path_configured_keys'], sort_keys=True)} "
+            f"codex_configured_keys="
+            f"{json.dumps(diagnostics['codex_configured_keys'], sort_keys=True)} "
+            f"git_configured_keys="
+            f"{json.dumps(diagnostics['git_configured_keys'], sort_keys=True)} "
+            f"git_identity_configured_keys="
+            f"{json.dumps(diagnostics['git_identity_configured_keys'], sort_keys=True)} "
+            f"command_paths={json.dumps(diagnostics['command_paths'], sort_keys=True)}"
+        )
         return errors
 
     workdir, codex_home = configured_worker_paths(env)

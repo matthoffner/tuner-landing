@@ -2090,6 +2090,67 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertNotIn("automoat-render-bot@example.com", output.getvalue())
         self.assertNotIn("/usr/bin", output.getvalue())
 
+    def test_failed_text_preflight_reports_safe_diagnostics(self) -> None:
+        env = {
+            "AUTOMOAT_RELAY_URL": "https://relay-user:relay-secret@example.test",
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            "GITHUB_TOKEN": "github-token",
+            "GH_TOKEN": "alternate-github-token",
+            "CODEX_ACCESS_TOKEN": "codex-token",
+            "OPENAI_API_KEY": "api-key",
+            "AUTOMOAT_AGENT_INTERVAL": "4000",
+            "AUTOMOAT_WORKDIR": "/tmp/render-secret-workdir",
+            "AUTOMOAT_GIT_REPO": "https://github.com/example/private-automoat.git",
+            "GIT_AUTHOR_NAME": "automoat-render-bot",
+        }
+
+        def missing_codex(command: str) -> str | None:
+            if command == "codex":
+                return None
+            return found_command(command)
+
+        output = io.StringIO()
+
+        with redirect_stdout(output):
+            errors = self.worker.emit_environment_preflight(env, missing_codex)
+
+        output_text = output.getvalue()
+        self.assertIn("AUTOMOAT_RELAY_URL must not include embedded credentials", errors)
+        self.assertIn("AUTOMOAT_AGENT_INTERVAL must be less than or equal to 3600", errors)
+        self.assertIn("codex executable is required on PATH", errors)
+        self.assertIn(
+            'error_categories=["invalid_runtime_config", "invalid_url", "missing_command"]',
+            output_text,
+        )
+        self.assertIn(
+            'failed_configuration_keys='
+            '["AUTOMOAT_AGENT_INTERVAL", "AUTOMOAT_RELAY_URL", "PATH:codex"]',
+            output_text,
+        )
+        self.assertIn('missing_commands=["codex"]', output_text)
+        self.assertIn("git_auth=GITHUB_TOKEN,GH_TOKEN", output_text)
+        self.assertIn("git_auth_selected=GITHUB_TOKEN", output_text)
+        self.assertIn("codex_auth=CODEX_ACCESS_TOKEN,OPENAI_API_KEY", output_text)
+        self.assertIn("codex_auth_selected=CODEX_ACCESS_TOKEN", output_text)
+        self.assertIn(
+            'auth_ambiguous_groups=["git_auth", "codex_auth"]',
+            output_text,
+        )
+        self.assertIn('runtime_configured_keys=["AUTOMOAT_AGENT_INTERVAL"]', output_text)
+        self.assertIn('path_configured_keys=["AUTOMOAT_WORKDIR"]', output_text)
+        self.assertIn('git_configured_keys=["AUTOMOAT_GIT_REPO"]', output_text)
+        self.assertIn('git_identity_configured_keys=["GIT_AUTHOR_NAME"]', output_text)
+        self.assertIn('command_paths={"codex": null, "git": "<found>"}', output_text)
+        self.assertNotIn("relay-secret", output_text)
+        self.assertNotIn("relay-token", output_text)
+        self.assertNotIn("github-token", output_text)
+        self.assertNotIn("alternate-github-token", output_text)
+        self.assertNotIn("codex-token", output_text)
+        self.assertNotIn("api-key", output_text)
+        self.assertNotIn("render-secret-workdir", output_text)
+        self.assertNotIn("automoat-render-bot", output_text)
+        self.assertNotIn("/usr/bin", output_text)
+
     def test_check_env_json_reports_safe_machine_readable_summary(self) -> None:
         env = {
             "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
