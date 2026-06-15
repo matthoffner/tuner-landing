@@ -33,6 +33,13 @@ HANDOFF_PATH = ROOT / ".pixelbox/handoff.md"
 STOP_REQUESTED = False
 MAX_ARTIFACT_HEALTH_DETAILS = 8
 MAX_ARTIFACT_HEALTH_DETAIL_CHARS = 240
+PIPELINE_SUMMARY_OBJECT_SECTIONS = (
+    "execution_readiness",
+    "contract",
+    "workflow",
+    "coverage",
+    "latest_import",
+)
 
 
 def utc_now() -> str:
@@ -217,6 +224,18 @@ def import_pipeline_snapshot() -> dict[str, Any]:
                 "blockers": ["pipeline_summary_invalid"],
             },
         }
+    structure_error = pipeline_summary_structure_error(summary)
+    if structure_error:
+        return {
+            "status": "invalid",
+            "summary_path": repo_path(PIPELINE_SUMMARY_PATH),
+            "error": structure_error,
+            "execution_readiness": {
+                "status": "blocked",
+                "ready_for_next_import_records": False,
+                "blockers": [structure_error],
+            },
+        }
 
     execution_readiness = summary.get("execution_readiness", {})
     if not isinstance(execution_readiness, dict):
@@ -274,6 +293,18 @@ def import_pipeline_snapshot() -> dict[str, Any]:
             "task_family_counts": latest_import.get("task_family_counts", {}),
         },
     }
+
+
+def pipeline_summary_structure_error(summary: Any) -> str | None:
+    if not isinstance(summary, dict):
+        return "pipeline_summary_not_object"
+    for section in PIPELINE_SUMMARY_OBJECT_SECTIONS:
+        if not isinstance(summary.get(section), dict):
+            return f"pipeline_summary_{section}_invalid"
+    coverage = summary.get("coverage", {})
+    if not isinstance(coverage.get("thin_groups"), dict):
+        return "pipeline_summary_coverage_thin_groups_invalid"
+    return None
 
 
 def inspect_artifacts() -> dict[str, Any]:

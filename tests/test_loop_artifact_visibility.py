@@ -192,6 +192,73 @@ class LoopArtifactVisibilityTest(unittest.TestCase):
                     ["coverage", "import_pipeline"],
                 )
 
+    def test_import_pipeline_summary_structure_errors_degrade_artifact_health(self) -> None:
+        for script_path in LOOP_SCRIPTS:
+            with self.subTest(script=script_path.name), tempfile.TemporaryDirectory() as tmp:
+                tmp_path = Path(tmp)
+                module = load_module(script_path)
+                point_artifacts(module, tmp_path)
+                write_valid_artifacts(tmp_path)
+                write_json(
+                    tmp_path / "pipeline.json",
+                    {
+                        "summary_id": "malformed-summary",
+                        "dataset_id": "test-dataset",
+                        "execution_readiness": {
+                            "status": "ready",
+                            "ready_for_next_import_records": True,
+                        },
+                        "contract": {},
+                        "workflow": {},
+                        "coverage": {"thin_groups": []},
+                        "latest_import": {},
+                    },
+                )
+
+                artifacts = module.inspect_artifacts()
+
+                self.assertEqual(artifacts["artifact_health"]["status"], "degraded")
+                self.assertEqual(artifacts["import_pipeline"]["status"], "invalid")
+                self.assertEqual(
+                    artifacts["import_pipeline"]["error"],
+                    "pipeline_summary_coverage_thin_groups_invalid",
+                )
+                self.assertEqual(
+                    artifacts["import_pipeline"]["execution_readiness"],
+                    {
+                        "status": "blocked",
+                        "ready_for_next_import_records": False,
+                        "blockers": ["pipeline_summary_coverage_thin_groups_invalid"],
+                    },
+                )
+                self.assertIn("import_pipeline", artifacts["artifact_health"]["degraded_artifacts"])
+                self.assertIn(
+                    {
+                        "name": "import_pipeline",
+                        "status": "invalid",
+                        "reason": "pipeline_summary_coverage_thin_groups_invalid",
+                    },
+                    artifacts["artifact_health"]["degradation_details"],
+                )
+
+    def test_import_pipeline_summary_non_object_degrades_without_crashing(self) -> None:
+        for script_path in LOOP_SCRIPTS:
+            with self.subTest(script=script_path.name), tempfile.TemporaryDirectory() as tmp:
+                tmp_path = Path(tmp)
+                module = load_module(script_path)
+                point_artifacts(module, tmp_path)
+                write_valid_artifacts(tmp_path)
+                (tmp_path / "pipeline.json").write_text("[1, 2, 3]\n", encoding="utf-8")
+
+                artifacts = module.inspect_artifacts()
+
+                self.assertEqual(artifacts["artifact_health"]["status"], "degraded")
+                self.assertEqual(artifacts["import_pipeline"]["status"], "invalid")
+                self.assertEqual(
+                    artifacts["import_pipeline"]["error"],
+                    "pipeline_summary_not_object",
+                )
+
     def test_artifact_degradation_details_are_bounded(self) -> None:
         for script_path in LOOP_SCRIPTS:
             with self.subTest(script=script_path.name):
