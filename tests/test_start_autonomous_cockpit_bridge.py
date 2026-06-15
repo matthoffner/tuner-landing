@@ -110,6 +110,26 @@ class StartAutonomousCockpitBridgeTest(unittest.TestCase):
             ],
         )
 
+    def test_validate_startup_configuration_rejects_ngrok_web_port_collisions(self) -> None:
+        args = Namespace(
+            interval=60,
+            port=4174,
+            bridge_port=4175,
+            ngrok_web_port=4174,
+            bridge_interval=5,
+            keep_bridge=True,
+            no_stop_existing=False,
+        )
+
+        errors = self.launcher.validate_startup_configuration(args)
+
+        self.assertEqual(errors, ["--port must not equal --ngrok-web-port"])
+
+        args.ngrok_web_port = 4175
+        errors = self.launcher.validate_startup_configuration(args)
+
+        self.assertEqual(errors, ["--bridge-port must not equal --ngrok-web-port"])
+
     def test_check_env_keep_bridge_validates_without_starting_processes(self) -> None:
         output = io.StringIO()
         self.launcher.start_detached = lambda *args, **kwargs: self.fail("start_detached should not run")
@@ -261,6 +281,36 @@ class StartAutonomousCockpitBridgeTest(unittest.TestCase):
             payload["diagnostics"]["error_categories"],
             ["invalid_runtime_config"],
         )
+
+    def test_check_env_json_reports_ngrok_web_port_collision(self) -> None:
+        output = io.StringIO()
+        self.launcher.start_detached = lambda *args, **kwargs: self.fail("start_detached should not run")
+        self.launcher.wait_http = lambda *args, **kwargs: self.fail("wait_http should not run")
+        self.launcher.wait_bridge = lambda *args, **kwargs: self.fail("wait_bridge should not run")
+
+        with patch.object(self.launcher.shutil, "which", return_value="/usr/local/bin/ngrok"), patch.object(
+            sys,
+            "argv",
+            [
+                "start_autonomous_cockpit_bridge.py",
+                "--check-env",
+                "--format",
+                "json",
+                "--port",
+                "4180",
+                "--bridge-port",
+                "4181",
+                "--ngrok-web-port",
+                "4181",
+            ],
+        ), redirect_stdout(output):
+            status = self.launcher.main()
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(status, 2)
+        self.assertEqual(payload["status"], "failed")
+        self.assertEqual(payload["errors"], ["--bridge-port must not equal --ngrok-web-port"])
+        self.assertEqual(payload["diagnostics"]["error_categories"], ["invalid_runtime_config"])
 
     def test_json_format_is_only_supported_for_check_env(self) -> None:
         stderr = io.StringIO()

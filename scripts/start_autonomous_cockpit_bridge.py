@@ -160,6 +160,10 @@ def validate_startup_configuration(args: argparse.Namespace) -> list[str]:
     errors.extend(validate_positive_float("--bridge-interval", float(args.bridge_interval)))
     if args.port == args.bridge_port:
         errors.append("--port must not equal --bridge-port")
+    if args.port == args.ngrok_web_port:
+        errors.append("--port must not equal --ngrok-web-port")
+    if args.bridge_port == args.ngrok_web_port:
+        errors.append("--bridge-port must not equal --ngrok-web-port")
     if not args.keep_bridge and shutil.which("ngrok") is None:
         errors.append("ngrok is required unless --keep-bridge is set")
     return errors
