@@ -446,6 +446,34 @@ class RenderWorkerPreflightTest(unittest.TestCase):
 
                 self.assertEqual(errors, [expected_error])
 
+    def test_rejects_git_branch_with_leading_or_trailing_whitespace(self) -> None:
+        base_env = {
+            "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            "GITHUB_TOKEN": "github-token",
+            "CODEX_ACCESS_TOKEN": "codex-token",
+        }
+
+        for branch in (" main", "main ", "main\t"):
+            with self.subTest(branch=branch):
+                errors = self.worker.validate_worker_environment(
+                    {
+                        **base_env,
+                        "AUTOMOAT_GIT_BRANCH": branch,
+                    },
+                    found_command,
+                )
+
+                self.assertEqual(
+                    errors,
+                    [
+                        (
+                            "AUTOMOAT_GIT_BRANCH must not include leading or trailing "
+                            "whitespace"
+                        ),
+                    ],
+                )
+
     def test_rejects_unsafe_workdir_before_clone_cleanup(self) -> None:
         base_env = {
             "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",

@@ -437,6 +437,9 @@ def preflight_error_categories(errors: list[str]) -> list[str]:
 
 
 def validate_git_branch_name(value: str, errors: list[str]) -> None:
+    if value != value.strip():
+        errors.append("AUTOMOAT_GIT_BRANCH must not include leading or trailing whitespace")
+        return
     branch = value.strip()
     if not branch:
         errors.append("AUTOMOAT_GIT_BRANCH must not be empty")
