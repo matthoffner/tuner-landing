@@ -260,6 +260,14 @@ def compact_int(value: Any) -> int | None:
     return parsed if parsed >= 0 else None
 
 
+def reject_json_constant(value: str) -> None:
+    raise ValueError(f"invalid JSON constant {value}")
+
+
+def strict_json_clone(payload: dict[str, Any]) -> dict[str, Any]:
+    return json.loads(json.dumps(payload, allow_nan=False))
+
+
 def compact_float(value: Any) -> float | None:
     if isinstance(value, bool):
         return None
@@ -652,11 +660,13 @@ def empty_state() -> dict[str, Any]:
 def read_json_with_error(path: Path) -> tuple[dict[str, Any] | None, str | None]:
     try:
         with path.open("r", encoding="utf-8") as handle:
-            payload = json.load(handle)
+            payload = json.load(handle, parse_constant=reject_json_constant)
     except OSError as exc:
         return None, f"failed_to_read_state_file: {compact_path_error(exc, path)}"
     except json.JSONDecodeError as exc:
         return None, f"invalid_state_json: line {exc.lineno} column {exc.colno}: {exc.msg}"
+    except ValueError as exc:
+        return None, f"invalid_state_json: {compact_text(str(exc)) or type(exc).__name__}"
     if not isinstance(payload, dict):
         return None, f"state_file_must_be_object: {type(payload).__name__}"
     return payload, None
@@ -700,20 +710,25 @@ def save_state(path: Path | None, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     temp_path = path.with_suffix(path.suffix + ".tmp")
     with temp_path.open("w", encoding="utf-8") as handle:
-        json.dump(payload, handle, indent=2, sort_keys=True)
+        json.dump(payload, handle, indent=2, sort_keys=True, allow_nan=False)
         handle.write("\n")
     temp_path.replace(path)
 
 
 def encoded_json_size(payload: Any) -> int:
     return len(
-        json.dumps(payload, separators=(",", ":"), sort_keys=True).encode("utf-8")
+        json.dumps(
+            payload,
+            separators=(",", ":"),
+            sort_keys=True,
+            allow_nan=False,
+        ).encode("utf-8")
     )
 
 
 def snapshot() -> dict[str, Any]:
     with STATE_LOCK:
-        return json.loads(json.dumps(STATE))
+        return strict_json_clone(STATE)
 
 
 def update_state(payload: dict[str, Any]) -> dict[str, Any]:
@@ -760,7 +775,7 @@ def update_state(payload: dict[str, Any]) -> dict[str, Any]:
             raise RelayPersistenceError(f"failed to persist relay state: {exc}") from exc
         STATE.clear()
         STATE.update(next_state)
-        return json.loads(json.dumps(STATE))
+        return strict_json_clone(STATE)
 
 
 def relay_status_payload() -> dict[str, Any]:
@@ -1068,7 +1083,9 @@ class RelayHandler(BaseHTTPRequestHandler):
         *,
         head_only: bool = False,
     ) -> None:
-        body = (json.dumps(payload, indent=2, sort_keys=True) + "\n").encode("utf-8")
+        body = (
+            json.dumps(payload, indent=2, sort_keys=True, allow_nan=False) + "\n"
+        ).encode("utf-8")
         self.send_body(body, "application/json; charset=utf-8", status, head_only=head_only)
 
     def send_text(
@@ -1152,8 +1169,11 @@ class RelayHandler(BaseHTTPRequestHandler):
             return
 
         try:
-            payload = json.loads(self.rfile.read(length).decode("utf-8"))
-        except (UnicodeDecodeError, json.JSONDecodeError):
+            payload = json.loads(
+                self.rfile.read(length).decode("utf-8"),
+                parse_constant=reject_json_constant,
+            )
+        except (UnicodeDecodeError, json.JSONDecodeError, ValueError):
             self.send_json({"error": "invalid_json"}, HTTPStatus.BAD_REQUEST)
             return
         if not isinstance(payload, dict):

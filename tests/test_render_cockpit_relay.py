@@ -886,6 +886,35 @@ class RenderCockpitRelayTest(unittest.TestCase):
         self.assertIn("invalid_state_json", status["relay"]["startup"]["state_load_error"])
         self.assertNotIn(str(state_file.parent), json.dumps(status, sort_keys=True))
 
+    def test_nonstandard_persisted_state_json_is_visible_in_health(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            state_file = Path(tmp) / "relay-state.json"
+            state_file.write_text(
+                '{"relay_status":"live","status":{"status":"running","bad":NaN}}\n',
+                encoding="utf-8",
+            )
+            loaded_state = self.relay.load_state(state_file)
+
+        with self.relay.STATE_LOCK:
+            self.relay.STATE.clear()
+            self.relay.STATE.update(loaded_state)
+
+        health = self.relay.health_payload()
+        status = self.relay.relay_status_payload()
+
+        self.assertEqual(health["relay_status"], "state_load_failed")
+        self.assertIn("relay_state_load_failed", health["cockpit_health"]["reasons"])
+        self.assertEqual(health["relay_startup"]["state_load_status"], "failed")
+        self.assertIn(
+            "invalid JSON constant NaN",
+            health["relay_startup"]["state_load_error"],
+        )
+        self.assertEqual(status["relay"]["status"], "state_load_failed")
+        self.assertIn(
+            "invalid JSON constant NaN",
+            status["relay"]["startup"]["state_load_error"],
+        )
+
     def test_unreadable_persisted_state_error_uses_safe_state_file_label(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             state_file = Path(tmp) / "relay-state-dir"
@@ -1118,6 +1147,26 @@ class RenderCockpitRelayTest(unittest.TestCase):
                         "status": "running",
                         "loop_running": True,
                         "oversized_diagnostic": "x" * 160,
+                    },
+                    "log_tail": "new log\n",
+                }
+            )
+
+        self.assertEqual(self.relay.snapshot(), before)
+
+    def test_update_state_rejects_non_finite_status_without_mutating_snapshot(self) -> None:
+        before = self.relay.snapshot()
+
+        with self.assertRaisesRegex(
+            ValueError,
+            "Out of range float values are not JSON compliant",
+        ):
+            self.relay.update_state(
+                {
+                    "status": {
+                        "status": "running",
+                        "loop_running": True,
+                        "bad_metric": float("nan"),
                     },
                     "log_tail": "new log\n",
                 }
