@@ -337,7 +337,7 @@ def publisher_identity(state: dict[str, Any]) -> dict[str, Any]:
         "git_branch": git.get("branch"),
     }
     for key, value in text_fields.items():
-        compact_value = compact_text(value)
+        compact_value = compact_policy_detail(value, max_length=160)
         if compact_value is not None:
             identity[key] = compact_value
 

@@ -255,6 +255,71 @@ class RenderCockpitRelayTest(unittest.TestCase):
         self.assertNotIn("pid", health["publisher_identity"])
         self.assertNotIn("git_branch", health["publisher_identity"])
 
+    def test_publisher_identity_sanitizes_token_like_metadata(self) -> None:
+        self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
+        self.relay.update_state(
+            {
+                "pushed_at": "2026-06-14T19:59:30Z token=pushed-secret",
+                "status": {"status": "running", "loop_running": True},
+                "log_tail": "loop is working\n",
+                "publisher": {
+                    "host": "worker-1 relay_token=host-secret",
+                    "publisher_started_at": (
+                        "2026-06-14T19:58:00Z token=started-secret"
+                    ),
+                    "snapshot_sequence": "8",
+                    "git": {
+                        "head": (
+                            "abc1234 https://user:head-secret@example.local"
+                            "/repo?token=head-token#debug"
+                        ),
+                        "branch": "feature/token=branch-secret",
+                        "dirty_path_count": "3",
+                    },
+                },
+            }
+        )
+        self.relay.utc_now = lambda: "2026-06-14T20:00:00Z"
+
+        health = self.relay.health_payload()
+        status = self.relay.relay_status_payload()
+
+        expected_identity = {
+            "available": True,
+            "host": "worker-1 relay_token=[redacted]",
+            "publisher_started_at": "2026-06-14T19:58:00Z token=[redacted]",
+            "pushed_at": "2026-06-14T19:59:30Z token=[redacted]",
+            "snapshot_sequence": 8,
+            "git_head": "abc1234 https://example.local/repo?[redacted]#[redacted]",
+            "git_branch": "feature/token=[redacted]",
+            "git_dirty_path_count": 3,
+        }
+        self.assertEqual(health["publisher_identity"], expected_identity)
+        self.assertEqual(status["publisher_identity"], expected_identity)
+        self.assertEqual(
+            status["cockpit_health"]["publisher_identity"],
+            expected_identity,
+        )
+        self.assertEqual(status["relay"]["publisher_identity"], expected_identity)
+        self.assertEqual(
+            status["relay"]["publisher"]["git"]["branch"],
+            "feature/token=[redacted]",
+        )
+
+        response_text = json.dumps(
+            {"health": health, "status": status},
+            sort_keys=True,
+        )
+        for unsafe_text in (
+            "host-secret",
+            "started-secret",
+            "pushed-secret",
+            "head-secret",
+            "head-token",
+            "branch-secret",
+        ):
+            self.assertNotIn(unsafe_text, response_text)
+
     def test_status_and_health_report_stale_snapshot(self) -> None:
         self.relay.utc_now = lambda: "2026-06-14T19:57:30Z"
         self.relay.update_state(
