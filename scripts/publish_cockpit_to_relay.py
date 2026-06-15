@@ -104,7 +104,7 @@ def read_json_with_status(path: Path) -> tuple[dict[str, Any] | None, dict[str, 
             payload = json.load(handle)
     except OSError as exc:
         metadata["source_status_file_status"] = "read_failed"
-        metadata["source_status_file_error"] = str(exc)
+        metadata["source_status_file_error"] = compact_path_error(exc, path)
         return None, metadata
     except json.JSONDecodeError as exc:
         metadata["source_status_file_status"] = "invalid_json"
@@ -180,6 +180,20 @@ def compact_text(value: Any, *, max_length: int = 180) -> str | None:
     )
     text = " ".join(text.split())
     return text[:max_length] if text else None
+
+
+def compact_path_error(exc: BaseException, path: Path, *, max_length: int = 180) -> str:
+    message = str(exc)
+    safe_label = repo_relative(path)
+    path_strings = {str(path)}
+    try:
+        path_strings.add(str(path.resolve()))
+    except OSError:
+        pass
+    for path_string in sorted(path_strings, key=len, reverse=True):
+        if path_string:
+            message = message.replace(path_string, safe_label)
+    return compact_text(message, max_length=max_length) or type(exc).__name__
 
 
 def sanitize_url_value(value: str) -> str:
@@ -269,7 +283,7 @@ def read_bridge_summary(path: Path | None = None) -> dict[str, Any]:
             "available": False,
             "status_file": status_file,
             "status_file_status": "read_failed",
-            "status_file_error": compact_text(str(exc)),
+            "status_file_error": compact_path_error(exc, path),
         }
     except json.JSONDecodeError as exc:
         return {

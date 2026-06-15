@@ -262,6 +262,21 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertNotIn("local-secret", summary_text)
         self.assertNotIn("api-secret", summary_text)
 
+    def test_read_bridge_summary_masks_local_path_in_read_error(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            bridge_status_file = tmp_path / "mvp-bridge-status.json"
+            bridge_status_file.mkdir()
+
+            summary = self.publisher.read_bridge_summary(bridge_status_file)
+            summary_text = json.dumps(summary, sort_keys=True)
+
+        self.assertFalse(summary["available"])
+        self.assertEqual(summary["status_file"], "<external>/mvp-bridge-status.json")
+        self.assertEqual(summary["status_file_status"], "read_failed")
+        self.assertIn("<external>/mvp-bridge-status.json", summary["status_file_error"])
+        self.assertNotIn(str(tmp_path), summary_text)
+
     def test_read_status_derives_cockpit_summary_for_remote_attention(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
@@ -409,6 +424,26 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertNotIn(str(tmp_path), json.dumps(status, sort_keys=True))
         self.assertEqual(status["source_status_file_status"], "invalid_json")
         self.assertIn("line 1 column 2", status["source_status_file_error"])
+        self.assertTrue(status["source_status_stale"])
+
+    def test_read_status_masks_local_path_in_read_error(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            status_file = tmp_path / "status.json"
+            status_file.mkdir()
+
+            status = self.publisher.read_status(
+                status_file,
+                tmp_path / "missing.pid",
+                status_stale_after_seconds=120,
+            )
+            status_text = json.dumps(status, sort_keys=True)
+
+        self.assertEqual(status["status"], "waiting")
+        self.assertEqual(status["source_status_file"], "<external>/status.json")
+        self.assertEqual(status["source_status_file_status"], "read_failed")
+        self.assertIn("<external>/status.json", status["source_status_file_error"])
+        self.assertNotIn(str(tmp_path), status_text)
         self.assertTrue(status["source_status_stale"])
 
     def test_read_status_marks_old_source_status_stale(self) -> None:
