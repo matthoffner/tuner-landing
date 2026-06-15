@@ -160,6 +160,65 @@ def publisher_source_health(state: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def compact_text(value: Any, *, max_length: int = 160) -> str | None:
+    if not isinstance(value, (str, int, float)):
+        return None
+    text = str(value).strip()
+    if not text:
+        return None
+    text = "".join(
+        " " if character in "\r\n" or ord(character) < 32 or ord(character) == 127 else character
+        for character in text
+    )
+    text = " ".join(text.split())
+    return text[:max_length] if text else None
+
+
+def compact_int(value: Any) -> int | None:
+    if isinstance(value, bool):
+        return None
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed >= 0 else None
+
+
+def publisher_identity(state: dict[str, Any]) -> dict[str, Any]:
+    publisher = state.get("publisher")
+    if not isinstance(publisher, dict) or not publisher:
+        return {"available": False}
+
+    git = publisher.get("git")
+    if not isinstance(git, dict):
+        git = {}
+
+    identity: dict[str, Any] = {"available": True}
+    text_fields = {
+        "host": publisher.get("host"),
+        "publisher_started_at": publisher.get("publisher_started_at"),
+        "pushed_at": publisher.get("pushed_at"),
+        "git_head": git.get("head"),
+        "git_branch": git.get("branch"),
+    }
+    for key, value in text_fields.items():
+        compact_value = compact_text(value)
+        if compact_value is not None:
+            identity[key] = compact_value
+
+    int_fields = {
+        "pid": publisher.get("pid"),
+        "snapshot_sequence": publisher.get("snapshot_sequence"),
+        "git_dirty_path_count": git.get("dirty_path_count"),
+    }
+    for key, value in int_fields.items():
+        compact_value = compact_int(value)
+        if compact_value is not None:
+            identity[key] = compact_value
+
+    return identity
+
+
 def cockpit_health(
     state: dict[str, Any],
     status: dict[str, Any],
@@ -231,6 +290,7 @@ def cockpit_health(
         "source_cockpit_attention_primary_reason": source_attention_primary_reason,
         "source_cockpit_attention_label": source_attention_label,
         "source_health": source_health,
+        "publisher_identity": publisher_identity(state),
     }
 
 
@@ -375,12 +435,14 @@ def relay_status_payload() -> dict[str, Any]:
     status["cockpit_ok"] = health["ok"]
     status["cockpit_health_primary_reason"] = health["primary_reason"]
     status["cockpit_health_label"] = health["label"]
+    status["publisher_identity"] = health["publisher_identity"]
     status["relay"] = {
         "status": state.get("relay_status", "waiting"),
         "received_at": state.get("received_at"),
         "updated_at": state.get("updated_at"),
         **freshness,
         "startup": state.get("relay_startup", {}),
+        "publisher_identity": health["publisher_identity"],
         "publisher": state.get("publisher", {}),
     }
     return status
@@ -401,6 +463,7 @@ def health_payload() -> dict[str, Any]:
         "cockpit_health_primary_reason": health["primary_reason"],
         "cockpit_health_label": health["label"],
         "cockpit_health": health,
+        "publisher_identity": health["publisher_identity"],
         "relay_status": state.get("relay_status", "waiting"),
         "relay_startup": state.get("relay_startup", {}),
         "has_snapshot": bool(state.get("received_at")),

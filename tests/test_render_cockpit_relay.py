@@ -80,6 +80,12 @@ class RenderCockpitRelayTest(unittest.TestCase):
         self.assertEqual(
             status["cockpit_health_primary_reason"], "relay_snapshot_missing"
         )
+        self.assertEqual(health["publisher_identity"], {"available": False})
+        self.assertEqual(status["publisher_identity"], {"available": False})
+        self.assertEqual(
+            status["cockpit_health"]["publisher_identity"],
+            {"available": False},
+        )
         self.assertTrue(status["relay"]["snapshot_stale"])
 
     def test_status_and_health_report_fresh_snapshot_age(self) -> None:
@@ -89,7 +95,19 @@ class RenderCockpitRelayTest(unittest.TestCase):
                 "pushed_at": "2026-06-14T19:59:30Z",
                 "status": {"status": "running", "loop_running": True},
                 "log_tail": "loop is working\n",
-                "publisher": {"host": "worker-1"},
+                "publisher": {
+                    "host": "worker-1",
+                    "pid": 4321,
+                    "publisher_started_at": "2026-06-14T19:58:00Z",
+                    "snapshot_sequence": 7,
+                    "repo": "/work/automoat",
+                    "git": {
+                        "head": "abc1234",
+                        "branch": "main",
+                        "dirty_path_count": 2,
+                        "dirty_paths": ["secret-local-note.txt"],
+                    },
+                },
             }
         )
         self.relay.utc_now = lambda: "2026-06-14T20:00:00Z"
@@ -111,8 +129,67 @@ class RenderCockpitRelayTest(unittest.TestCase):
         self.assertEqual(status["cockpit_status"], "live")
         self.assertEqual(status["cockpit_health"]["reasons"], [])
         self.assertEqual(status["cockpit_health_label"], "Live")
+        expected_identity = {
+            "available": True,
+            "host": "worker-1",
+            "pid": 4321,
+            "publisher_started_at": "2026-06-14T19:58:00Z",
+            "pushed_at": "2026-06-14T19:59:30Z",
+            "snapshot_sequence": 7,
+            "git_head": "abc1234",
+            "git_branch": "main",
+            "git_dirty_path_count": 2,
+        }
+        self.assertEqual(health["publisher_identity"], expected_identity)
+        self.assertEqual(status["publisher_identity"], expected_identity)
+        self.assertEqual(
+            status["cockpit_health"]["publisher_identity"],
+            expected_identity,
+        )
+        self.assertEqual(status["relay"]["publisher_identity"], expected_identity)
+        self.assertNotIn("repo", health["publisher_identity"])
+        self.assertNotIn("dirty_paths", health["publisher_identity"])
         self.assertEqual(status["relay"]["snapshot_age_seconds"], 30)
         self.assertFalse(status["relay"]["snapshot_stale"])
+
+    def test_publisher_identity_compacts_malformed_publisher_metadata(self) -> None:
+        self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
+        self.relay.update_state(
+            {
+                "pushed_at": "2026-06-14T19:59:30Z",
+                "status": {"status": "running", "loop_running": True},
+                "log_tail": "loop is working\n",
+                "publisher": {
+                    "host": " worker-1\nsecondary ",
+                    "pid": "-1",
+                    "publisher_started_at": " 2026-06-14T19:58:00Z\t",
+                    "snapshot_sequence": "8",
+                    "git": {
+                        "head": "abc1234\rdebug",
+                        "branch": ["not", "a", "branch"],
+                        "dirty_path_count": "3",
+                    },
+                },
+            }
+        )
+        self.relay.utc_now = lambda: "2026-06-14T20:00:00Z"
+
+        health = self.relay.health_payload()
+        status = self.relay.relay_status_payload()
+
+        expected_identity = {
+            "available": True,
+            "host": "worker-1 secondary",
+            "publisher_started_at": "2026-06-14T19:58:00Z",
+            "pushed_at": "2026-06-14T19:59:30Z",
+            "snapshot_sequence": 8,
+            "git_head": "abc1234 debug",
+            "git_dirty_path_count": 3,
+        }
+        self.assertEqual(health["publisher_identity"], expected_identity)
+        self.assertEqual(status["publisher_identity"], expected_identity)
+        self.assertNotIn("pid", health["publisher_identity"])
+        self.assertNotIn("git_branch", health["publisher_identity"])
 
     def test_status_and_health_report_stale_snapshot(self) -> None:
         self.relay.utc_now = lambda: "2026-06-14T19:57:30Z"
