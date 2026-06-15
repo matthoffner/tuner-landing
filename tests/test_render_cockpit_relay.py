@@ -1494,6 +1494,46 @@ class RenderCockpitRelayTest(unittest.TestCase):
         )
         self.assertNotIn("relay-token", stdout.getvalue())
 
+    def test_check_env_reports_safe_external_state_file_label(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            state_file = Path(tmp) / "private-render-state.json"
+            env = {
+                "AUTOMOAT_RELAY_TOKEN": "relay-token",
+                "PORT": "4180",
+                "AUTOMOAT_RELAY_STATE_FILE": str(state_file),
+            }
+            text_stdout = io.StringIO()
+            with patch.dict(os.environ, env, clear=True), patch.object(
+                sys,
+                "argv",
+                ["render_cockpit_relay.py", "--check-env"],
+            ), contextlib.redirect_stdout(text_stdout):
+                text_status = self.relay.main()
+
+            json_stdout = io.StringIO()
+            with patch.dict(os.environ, env, clear=True), patch.object(
+                sys,
+                "argv",
+                ["render_cockpit_relay.py", "--check-env", "--format", "json"],
+            ), contextlib.redirect_stdout(json_stdout):
+                json_status = self.relay.main()
+
+        payload = json.loads(json_stdout.getvalue())
+        self.assertEqual(text_status, 0)
+        self.assertEqual(json_status, 0)
+        self.assertIn(
+            "state_file=<external>/private-render-state.json",
+            text_stdout.getvalue(),
+        )
+        self.assertEqual(
+            payload["config"]["state_file"],
+            "<external>/private-render-state.json",
+        )
+        self.assertNotIn(str(state_file.parent), text_stdout.getvalue())
+        self.assertNotIn(str(state_file.parent), json_stdout.getvalue())
+        self.assertNotIn("relay-token", text_stdout.getvalue())
+        self.assertNotIn("relay-token", json_stdout.getvalue())
+
     def test_check_env_json_failure_groups_errors_without_printing_token(self) -> None:
         env = {
             "AUTOMOAT_RELAY_TOKEN": "relay-token\nsecond-line",

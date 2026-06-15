@@ -1155,6 +1155,13 @@ def relay_preflight_error_keys(errors: list[str]) -> list[str]:
     return sorted({relay_preflight_error_key(error) for error in errors})
 
 
+def relay_state_file_label(value: Any) -> str:
+    state_file = str(value).strip()
+    if not state_file:
+        return "memory-only"
+    return repo_relative(Path(state_file).expanduser())
+
+
 def relay_preflight_summary(
     args: argparse.Namespace,
     errors: list[str],
@@ -1177,7 +1184,7 @@ def relay_preflight_summary(
         }
         return payload
 
-    state_file = str(args.state_file).strip() or "memory-only"
+    state_file = relay_state_file_label(args.state_file)
     payload["config"] = {
         "host": str(args.host),
         "port": int(args.port),
@@ -1217,7 +1224,7 @@ def emit_relay_preflight(
             print(f"  - {error}", file=sys.stderr)
         return errors
 
-    state_file = str(args.state_file).strip() or "memory-only"
+    state_file = relay_state_file_label(args.state_file)
     print(
         "relay environment preflight passed: "
         f"host={args.host} "
