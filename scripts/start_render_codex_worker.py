@@ -236,10 +236,20 @@ def relay_publisher_preflight_command(
 def autonomous_loop_runtime_config(
     env: os._Environ[str] | dict[str, str],
 ) -> dict[str, str]:
+    iterations = env.get("AUTOMOAT_AGENT_ITERATIONS", "0")
     return {
         "interval": env.get("AUTOMOAT_AGENT_INTERVAL", "300"),
-        "iterations": env.get("AUTOMOAT_AGENT_ITERATIONS", "0"),
+        "iterations": iterations,
+        "mode": autonomous_loop_mode(iterations),
     }
+
+
+def autonomous_loop_mode(iterations: str) -> str:
+    try:
+        iteration_count = int(iterations)
+    except ValueError:
+        return "unknown"
+    return "bounded" if iteration_count > 0 else "continuous"
 
 
 def env_has_any(env: os._Environ[str] | dict[str, str], names: tuple[str, ...]) -> bool:
@@ -1271,6 +1281,9 @@ def environment_preflight_summary(
         "git_identity_configured_keys": configured_git_identity_keys(env),
         "agent_interval": env.get("AUTOMOAT_AGENT_INTERVAL", "300"),
         "agent_iterations": env.get("AUTOMOAT_AGENT_ITERATIONS", "0"),
+        "agent_loop_mode": autonomous_loop_mode(
+            env.get("AUTOMOAT_AGENT_ITERATIONS", "0")
+        ),
         "relay_interval": env.get("AUTOMOAT_RELAY_INTERVAL", "3"),
         "relay_timeout": env.get("AUTOMOAT_RELAY_TIMEOUT", "8"),
         "relay_max_consecutive_failures": env.get(
@@ -1418,6 +1431,8 @@ def emit_environment_preflight(
         f"{json.dumps(configured_git_identity_keys(env), sort_keys=True)} "
         f"agent_interval={env.get('AUTOMOAT_AGENT_INTERVAL', '300')} "
         f"agent_iterations={env.get('AUTOMOAT_AGENT_ITERATIONS', '0')} "
+        f"agent_loop_mode="
+        f"{autonomous_loop_mode(env.get('AUTOMOAT_AGENT_ITERATIONS', '0'))} "
         f"relay_interval={env.get('AUTOMOAT_RELAY_INTERVAL', '3')} "
         f"relay_timeout={env.get('AUTOMOAT_RELAY_TIMEOUT', '8')} "
         f"relay_max_consecutive_failures="

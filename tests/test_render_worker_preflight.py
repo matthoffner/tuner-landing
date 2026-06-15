@@ -2245,6 +2245,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             ["GIT_AUTHOR_EMAIL", "GIT_AUTHOR_NAME"],
         )
         self.assertEqual(payload["config"]["agent_iterations"], "12")
+        self.assertEqual(payload["config"]["agent_loop_mode"], "bounded")
         self.assertEqual(payload["config"]["commands"], ["git", "codex"])
         self.assertEqual(
             payload["config"]["command_paths"],
@@ -2288,9 +2289,11 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertEqual(json_errors, [])
         self.assertEqual(payload["status"], "passed")
         self.assertEqual(payload["config"]["git_branch"], "release/[redacted]")
+        self.assertEqual(payload["config"]["agent_loop_mode"], "continuous")
         self.assertEqual(payload["config"]["codex_model"], "[redacted]")
         self.assertEqual(payload["config"]["codex_reasoning_effort"], "high-[redacted]")
         self.assertIn("git_branch=release/[redacted]", text_output.getvalue())
+        self.assertIn("agent_loop_mode=continuous", text_output.getvalue())
         self.assertIn("codex_model=[redacted]", text_output.getvalue())
         self.assertIn("codex_reasoning_effort=high-[redacted]", text_output.getvalue())
         combined_output = text_output.getvalue() + json_output.getvalue()
@@ -2479,6 +2482,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertIn("started autonomous loop pid=404", log_output)
         self.assertIn("loop_interval=44", log_output)
         self.assertIn("loop_iterations=2", log_output)
+        self.assertIn("loop_mode=bounded", log_output)
         self.assertNotIn("relay-token", log_output)
         self.assertNotIn("https://automoat-cockpit-relay.example", log_output)
 
