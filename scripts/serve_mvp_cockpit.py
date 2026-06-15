@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import html
 import json
+import math
 import mimetypes
 import os
 import re
@@ -201,7 +202,7 @@ def compact_float(value: object) -> float | None:
         parsed = float(value)
     except (TypeError, ValueError):
         return None
-    return parsed if parsed >= 0 else None
+    return parsed if math.isfinite(parsed) and parsed >= 0 else None
 
 
 def operator_attention_label(reason: str | None) -> str:

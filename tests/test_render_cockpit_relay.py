@@ -459,6 +459,36 @@ class RenderCockpitRelayTest(unittest.TestCase):
         self.assertEqual(health["cockpit_health"]["source_bridge"], expected_bridge)
         self.assertEqual(status["cockpit_health"]["source_bridge"], expected_bridge)
 
+    def test_status_and_health_omit_non_finite_source_bridge_interval(self) -> None:
+        self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
+        self.relay.update_state(
+            {
+                "pushed_at": "2026-06-14T19:59:30Z",
+                "status": {
+                    "status": "running",
+                    "loop_running": True,
+                    "bridge_summary": {
+                        "available": True,
+                        "status_file_status": "loaded",
+                        "status": "running",
+                        "interval": "inf",
+                    },
+                },
+                "log_tail": "bridge interval was malformed\n",
+            }
+        )
+        self.relay.utc_now = lambda: "2026-06-14T20:00:00Z"
+
+        health = self.relay.health_payload()
+        status = self.relay.relay_status_payload()
+
+        self.assertTrue(health["ok"])
+        self.assertTrue(health["cockpit_ok"])
+        self.assertNotIn("interval", health["cockpit_health"]["source_bridge"])
+        self.assertNotIn("interval", status["cockpit_health"]["source_bridge"])
+        json.dumps(health, allow_nan=False)
+        json.dumps(status, allow_nan=False)
+
     def test_status_and_health_report_unavailable_source_bridge_status_file(self) -> None:
         self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
         self.relay.update_state(

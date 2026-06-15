@@ -342,6 +342,28 @@ class MvpCockpitServerTest(unittest.TestCase):
         )
         self.assertNotIn("debug_path", summary)
 
+    def test_read_bridge_summary_omits_non_finite_interval(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            self.cockpit.BRIDGE_STATUS_FILE = tmp_path / "mvp-bridge-status.json"
+            self.cockpit.BRIDGE_STATUS_FILE.write_text(
+                json.dumps(
+                    {
+                        "status": "running",
+                        "updated_at": "2026-06-15T03:20:00Z",
+                        "interval": "inf",
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            summary = self.cockpit.read_bridge_summary()
+
+        self.assertTrue(summary["available"])
+        self.assertNotIn("interval", summary)
+        json.dumps(summary, allow_nan=False)
+
     def test_read_bridge_summary_handles_missing_and_invalid_status(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
