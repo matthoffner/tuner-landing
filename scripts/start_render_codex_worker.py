@@ -56,6 +56,7 @@ RUNTIME_CONFIG_LIMITS = {
     "AUTOMOAT_BRIDGE_STATUS_STALE_AFTER_SECONDS": 3600,
 }
 PUBLISHER_FILE_PATH_ENV_NAMES = ("AUTOMOAT_BRIDGE_STATUS_FILE",)
+DEFAULT_BRIDGE_STATUS_FILE = ".automoat/state/mvp-bridge-status.json"
 MAX_GIT_BRANCH_CHARS = 240
 GIT_IDENTITY_ENV_DEFAULTS = {
     "GIT_AUTHOR_NAME": "automoat-render-agent",
@@ -99,10 +100,15 @@ def require_env(name: str) -> str:
 def relay_publisher_runtime_config(
     env: os._Environ[str] | dict[str, str],
 ) -> dict[str, str]:
-    return {
+    config = {
         option.lstrip("-").replace("-", "_"): env.get(env_name, default).strip() or default
         for env_name, option, default in PUBLISHER_RUNTIME_ENV_ARGS
     }
+    config["bridge_status_file"] = worker_file_label(
+        env.get("AUTOMOAT_BRIDGE_STATUS_FILE", DEFAULT_BRIDGE_STATUS_FILE),
+        env,
+    )
+    return config
 
 
 def relay_publisher_command(
@@ -139,6 +145,27 @@ def configured_worker_paths(env: os._Environ[str] | dict[str, str]) -> tuple[Pat
     workdir = Path(env["AUTOMOAT_WORKDIR"]) if "AUTOMOAT_WORKDIR" in env else WORKDIR
     codex_home = Path(env["CODEX_HOME"]) if "CODEX_HOME" in env else CODEX_HOME
     return workdir, codex_home
+
+
+def worker_file_label(
+    value: str,
+    env: os._Environ[str] | dict[str, str],
+) -> str:
+    path = Path(value)
+    if not path.is_absolute():
+        return path.as_posix()
+    workdir, _codex_home = configured_worker_paths(env)
+    try:
+        resolved_path = path.expanduser().resolve(strict=False)
+        resolved_workdir = workdir.expanduser().resolve(strict=False)
+    except OSError:
+        return f"<external>/{path.name}" if path.name else "<external>"
+    try:
+        relative_path = resolved_path.relative_to(resolved_workdir)
+    except ValueError:
+        return f"<external>/{resolved_path.name}" if resolved_path.name else "<external>"
+    relative_text = relative_path.as_posix()
+    return relative_text if relative_text else "."
 
 
 def decode_codex_auth_json_b64(value: str) -> bytes:
@@ -983,9 +1010,9 @@ def environment_preflight_summary(
             "AUTOMOAT_STATUS_STALE_AFTER_SECONDS",
             "660",
         ),
-        "bridge_status_file": env.get(
-            "AUTOMOAT_BRIDGE_STATUS_FILE",
-            ".automoat/state/mvp-bridge-status.json",
+        "bridge_status_file": worker_file_label(
+            env.get("AUTOMOAT_BRIDGE_STATUS_FILE", DEFAULT_BRIDGE_STATUS_FILE),
+            env,
         ),
         "bridge_status_stale_after_seconds": env.get(
             "AUTOMOAT_BRIDGE_STATUS_STALE_AFTER_SECONDS",
@@ -1029,6 +1056,10 @@ def emit_environment_preflight(
         return errors
 
     workdir, codex_home = configured_worker_paths(env)
+    bridge_status_file = worker_file_label(
+        env.get("AUTOMOAT_BRIDGE_STATUS_FILE", DEFAULT_BRIDGE_STATUS_FILE),
+        env,
+    )
     emit(
         "environment preflight passed: "
         f"relay_url={env.get('AUTOMOAT_RELAY_URL', '').strip()} "
@@ -1051,6 +1082,7 @@ def emit_environment_preflight(
         f"relay_tail_lines={env.get('AUTOMOAT_RELAY_TAIL_LINES', '180')} "
         f"relay_max_log_bytes={env.get('AUTOMOAT_RELAY_MAX_LOG_BYTES', str(256 * 1024))} "
         f"status_stale_after_seconds={env.get('AUTOMOAT_STATUS_STALE_AFTER_SECONDS', '660')} "
+        f"bridge_status_file={bridge_status_file} "
         f"bridge_status_stale_after_seconds="
         f"{env.get('AUTOMOAT_BRIDGE_STATUS_STALE_AFTER_SECONDS', '660')} "
         f"codex_model={codex_config_value(env, 'AUTOMOAT_CODEX_MODEL')} "

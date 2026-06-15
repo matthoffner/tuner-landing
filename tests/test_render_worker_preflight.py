@@ -1879,13 +1879,48 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertNotIn("https://automoat-cockpit-relay.example", command)
 
     def test_check_env_json_reports_bridge_status_stale_threshold(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            bridge_status_file = Path(temp_dir) / "automoat-bridge-status.json"
+            env = {
+                "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+                "AUTOMOAT_RELAY_TOKEN": "relay-token",
+                "GITHUB_TOKEN": "github-token",
+                "CODEX_ACCESS_TOKEN": "codex-token",
+                "AUTOMOAT_BRIDGE_STATUS_FILE": str(bridge_status_file),
+                "AUTOMOAT_BRIDGE_STATUS_STALE_AFTER_SECONDS": "240",
+            }
+            output = io.StringIO()
+
+            with redirect_stdout(output):
+                errors = self.worker.emit_environment_preflight(
+                    env,
+                    found_command,
+                    output_format="json",
+                )
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(errors, [])
+        self.assertEqual(
+            payload["config"]["bridge_status_stale_after_seconds"],
+            "240",
+        )
+        self.assertEqual(
+            payload["config"]["bridge_status_file"],
+            "<external>/automoat-bridge-status.json",
+        )
+        self.assertNotIn(str(bridge_status_file), output.getvalue())
+
+    def test_check_env_json_reports_in_workdir_bridge_status_file_label(self) -> None:
         env = {
             "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
             "AUTOMOAT_RELAY_TOKEN": "relay-token",
             "GITHUB_TOKEN": "github-token",
             "CODEX_ACCESS_TOKEN": "codex-token",
-            "AUTOMOAT_BRIDGE_STATUS_FILE": "/tmp/automoat-bridge-status.json",
-            "AUTOMOAT_BRIDGE_STATUS_STALE_AFTER_SECONDS": "240",
+            "AUTOMOAT_WORKDIR": "/work/automoat",
+            "CODEX_HOME": "/tmp/codex-home",
+            "AUTOMOAT_BRIDGE_STATUS_FILE": (
+                "/work/automoat/.automoat/state/custom-bridge-status.json"
+            ),
         }
         output = io.StringIO()
 
@@ -1899,12 +1934,12 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         payload = json.loads(output.getvalue())
         self.assertEqual(errors, [])
         self.assertEqual(
-            payload["config"]["bridge_status_stale_after_seconds"],
-            "240",
-        )
-        self.assertEqual(
             payload["config"]["bridge_status_file"],
-            "/tmp/automoat-bridge-status.json",
+            ".automoat/state/custom-bridge-status.json",
+        )
+        self.assertNotIn(
+            "/work/automoat/.automoat/state/custom-bridge-status.json",
+            output.getvalue(),
         )
 
     def test_check_env_json_categorizes_bad_bridge_stale_threshold(self) -> None:
@@ -2620,26 +2655,29 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertNotIn("https://automoat-cockpit-relay.example", command)
 
     def test_start_publisher_logs_runtime_knobs_without_secret_values(self) -> None:
-        env = {
-            "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
-            "AUTOMOAT_RELAY_TOKEN": "relay-token",
-            "AUTOMOAT_RELAY_INTERVAL": "4.5",
-            "AUTOMOAT_RELAY_TIMEOUT": "11.25",
-            "AUTOMOAT_RELAY_TAIL_LINES": "77",
-            "AUTOMOAT_RELAY_MAX_LOG_BYTES": "4096",
-            "AUTOMOAT_STATUS_STALE_AFTER_SECONDS": "900",
-            "AUTOMOAT_RELAY_MAX_CONSECUTIVE_FAILURES": "5",
-            "AUTOMOAT_RELAY_MAX_CONSECUTIVE_STALE_STATUSES": "6",
-        }
-        fake_publisher = FakeProcess(pid=303)
-        output = io.StringIO()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            bridge_status_file = Path(temp_dir) / "bridge-status.json"
+            env = {
+                "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+                "AUTOMOAT_RELAY_TOKEN": "relay-token",
+                "AUTOMOAT_RELAY_INTERVAL": "4.5",
+                "AUTOMOAT_RELAY_TIMEOUT": "11.25",
+                "AUTOMOAT_RELAY_TAIL_LINES": "77",
+                "AUTOMOAT_RELAY_MAX_LOG_BYTES": "4096",
+                "AUTOMOAT_STATUS_STALE_AFTER_SECONDS": "900",
+                "AUTOMOAT_RELAY_MAX_CONSECUTIVE_FAILURES": "5",
+                "AUTOMOAT_RELAY_MAX_CONSECUTIVE_STALE_STATUSES": "6",
+                "AUTOMOAT_BRIDGE_STATUS_FILE": str(bridge_status_file),
+            }
+            fake_publisher = FakeProcess(pid=303)
+            output = io.StringIO()
 
-        with patch.dict(self.worker.os.environ, env, clear=True), patch.object(
-            self.worker.subprocess,
-            "Popen",
-            return_value=fake_publisher,
-        ) as popen, redirect_stdout(output):
-            process = self.worker.start_publisher()
+            with patch.dict(self.worker.os.environ, env, clear=True), patch.object(
+                self.worker.subprocess,
+                "Popen",
+                return_value=fake_publisher,
+            ) as popen, redirect_stdout(output):
+                process = self.worker.start_publisher()
 
         self.assertIs(process, fake_publisher)
         self.assertEqual(self.worker.CHILDREN, [fake_publisher])
@@ -2652,6 +2690,11 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertIn("publisher_timeout=11.25", log_line)
         self.assertIn("publisher_max_consecutive_stale_statuses=6", log_line)
         self.assertIn("publisher_bridge_status_stale_after_seconds=660", log_line)
+        self.assertIn(
+            "publisher_bridge_status_file=<external>/bridge-status.json",
+            log_line,
+        )
+        self.assertNotIn(str(bridge_status_file), log_line)
         self.assertNotIn("relay-token", log_line)
         self.assertNotIn("https://automoat-cockpit-relay.example", log_line)
 
