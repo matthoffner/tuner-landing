@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import ipaddress
 import json
 import math
 import os
@@ -153,6 +154,33 @@ def local_http_host(hostname: str) -> bool:
     return normalized in {"localhost", "127.0.0.1", "::1"}
 
 
+def valid_relay_hostname(hostname: str) -> bool:
+    normalized = hostname.strip("[]").rstrip(".").lower()
+    if not normalized:
+        return False
+    if normalized == "localhost":
+        return True
+    try:
+        ipaddress.ip_address(normalized)
+        return True
+    except ValueError:
+        pass
+    if len(normalized) > 253:
+        return False
+    labels = normalized.split(".")
+    for label in labels:
+        if not label or len(label) > 63:
+            return False
+        if label.startswith("-") or label.endswith("-"):
+            return False
+        if not all(
+            character.isascii() and (character.isalnum() or character == "-")
+            for character in label
+        ):
+            return False
+    return True
+
+
 def validate_startup_configuration(args: argparse.Namespace) -> list[str]:
     errors: list[str] = []
     raw_relay_url = str(args.relay_url)
@@ -186,8 +214,10 @@ def validate_startup_configuration(args: argparse.Namespace) -> list[str]:
                 parsed_relay_url = None
         if parsed_relay_url is None:
             pass
-        elif not parsed_relay_url.netloc:
+        elif not parsed_relay_url.netloc or not parsed_relay_url.hostname:
             errors.append("--relay-url must include a host")
+        elif not valid_relay_hostname(parsed_relay_url.hostname):
+            errors.append("--relay-url must include a valid host")
         elif parsed_relay_url.username or parsed_relay_url.password:
             errors.append("--relay-url must not include embedded credentials")
         elif parsed_relay_url.params:
