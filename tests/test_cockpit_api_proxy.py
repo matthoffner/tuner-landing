@@ -298,6 +298,82 @@ class CockpitApiProxyTest(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_upstreams_reject_empty_and_zero_ports_before_fetching(self) -> None:
+        result = run_node(
+            """
+            const assert = require("assert");
+            const {
+              explicitPortValue,
+              hasExplicitEmptyPort,
+              invalidExplicitPortError,
+              invalidUpstreamKeysHeader,
+              upstreams,
+            } = require("./api/cockpit-upstreams");
+
+            assert.strictEqual(explicitPortValue("https://relay.example:443"), "443");
+            assert.strictEqual(explicitPortValue("http://[::1]:4175"), "4175");
+            assert.strictEqual(explicitPortValue("https://relay.example"), null);
+            assert.strictEqual(hasExplicitEmptyPort("https://relay.example:"), true);
+            assert.strictEqual(hasExplicitEmptyPort("http://[::1]:"), true);
+            assert.strictEqual(hasExplicitEmptyPort("http://[::1]:4175"), false);
+            assert.strictEqual(hasExplicitEmptyPort("https://relay.example"), false);
+            assert.strictEqual(
+              invalidExplicitPortError("https://relay.example:abc"),
+              "port must be numeric",
+            );
+            assert.strictEqual(
+              invalidExplicitPortError("https://relay.example:65536"),
+              "port must be between 1 and 65535",
+            );
+
+            const result = upstreams({
+              relayPath: "/api/status",
+              bridgePath: "/api/status",
+              env: {
+                AUTOMOAT_RELAY_URL: "https://automoat-cockpit-relay.example:",
+                AUTOMOAT_BRIDGE_URL: "https://legacy-bridge.example:0",
+              },
+            });
+            assert.deepStrictEqual(result.configured, []);
+            assert.deepStrictEqual(result.invalid, [
+              {
+                kind: "relay",
+                error: "must not include an empty port",
+              },
+              {
+                kind: "legacy_bridge",
+                error: "port must be between 1 and 65535",
+              },
+            ]);
+            assert.strictEqual(
+              invalidUpstreamKeysHeader(result.invalid),
+              "AUTOMOAT_RELAY_URL,AUTOMOAT_BRIDGE_URL",
+            );
+
+            const malformed = upstreams({
+              relayPath: "/api/status",
+              bridgePath: "/api/status",
+              env: {
+                AUTOMOAT_RELAY_URL: "https://automoat-cockpit-relay.example:abc",
+                AUTOMOAT_BRIDGE_URL: "https://legacy-bridge.example:65536",
+              },
+            });
+            assert.deepStrictEqual(malformed.configured, []);
+            assert.deepStrictEqual(malformed.invalid, [
+              {
+                kind: "relay",
+                error: "port must be numeric",
+              },
+              {
+                kind: "legacy_bridge",
+                error: "port must be between 1 and 65535",
+              },
+            ]);
+            """
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_upstreams_validate_configured_timeout(self) -> None:
         result = run_node(
             """
@@ -758,6 +834,77 @@ class CockpitApiProxyTest(unittest.TestCase):
               assert(!logResponse.body.includes("automoat-cockpit-relay.example"));
               assert(!logResponse.body.includes("read-token"));
               assert(!logResponse.body.includes("write-token"));
+            })().catch((error) => {
+              console.error(error.stack || error);
+              process.exit(1);
+            });
+            """
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_handlers_reject_bad_upstream_ports_without_fetching(self) -> None:
+        result = run_node(
+            """
+            const assert = require("assert");
+            const statusHandler = require("./api/cockpit-status");
+            const logHandler = require("./api/cockpit-log");
+
+            function response() {
+              return {
+                statusCode: null,
+                body: "",
+                headers: {},
+                setHeader(name, value) {
+                  this.headers[name] = value;
+                },
+                status(code) {
+                  this.statusCode = code;
+                  return this;
+                },
+                send(body) {
+                  this.body = String(body);
+                  return this;
+                },
+                end(body = "") {
+                  this.body = String(body);
+                  return this;
+                },
+              };
+            }
+
+            process.env.AUTOMOAT_RELAY_URL = "https://automoat-cockpit-relay.example:0";
+            process.env.AUTOMOAT_RELAY_READ_TOKEN = "read-token";
+            process.env.AUTOMOAT_RELAY_TOKEN = "write-token";
+            process.env.AUTOMOAT_BRIDGE_URL = "https://legacy-bridge.example:";
+            global.fetch = async () => {
+              throw new Error("fetch should not be called for malformed upstream ports");
+            };
+
+            (async () => {
+              const statusResponse = response();
+              await statusHandler({ method: "GET" }, statusResponse);
+              assert.strictEqual(statusResponse.statusCode, 503);
+              assert(statusResponse.body.includes("cockpit_relay_invalid_configuration"));
+              assert(statusResponse.body.includes("port must be between 1 and 65535"));
+              assert(statusResponse.body.includes("must not include an empty port"));
+              assert(!statusResponse.body.includes("automoat-cockpit-relay.example"));
+              assert.strictEqual(
+                statusResponse.headers["X-Automoat-Upstream-Invalid-Keys"],
+                "AUTOMOAT_RELAY_URL,AUTOMOAT_BRIDGE_URL",
+              );
+
+              const logResponse = response();
+              await logHandler({ method: "GET" }, logResponse);
+              assert.strictEqual(logResponse.statusCode, 503);
+              assert(logResponse.body.includes("cockpit_relay_invalid_configuration"));
+              assert(logResponse.body.includes("port must be between 1 and 65535"));
+              assert(logResponse.body.includes("must not include an empty port"));
+              assert(!logResponse.body.includes("legacy-bridge.example"));
+              assert.strictEqual(
+                logResponse.headers["X-Automoat-Upstream-Invalid-Keys"],
+                "AUTOMOAT_RELAY_URL,AUTOMOAT_BRIDGE_URL",
+              );
             })().catch((error) => {
               console.error(error.stack || error);
               process.exit(1);

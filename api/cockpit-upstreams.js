@@ -29,6 +29,10 @@ function normalizeBaseUrl(value, options = {}) {
   if (/\s/.test(rawValue)) {
     return { url: "", error: "must not contain whitespace" };
   }
+  const explicitPortError = invalidExplicitPortError(raw);
+  if (explicitPortError) {
+    return { url: "", error: explicitPortError };
+  }
 
   let parsed;
   try {
@@ -68,6 +72,53 @@ function normalizeBaseUrl(value, options = {}) {
     return { url: "", error: "must be a relay base URL without a path" };
   }
   return { url: `${parsed.origin}${pathname === "/" ? "" : pathname}`, error: null };
+}
+
+function invalidExplicitPortError(rawUrl) {
+  const port = explicitPortValue(rawUrl);
+  if (port === null) {
+    return null;
+  }
+  if (port === "") {
+    return "must not include an empty port";
+  }
+  if (!/^\d+$/.test(port)) {
+    return "port must be numeric";
+  }
+  const parsed = Number(port);
+  if (!Number.isInteger(parsed) || parsed <= 0 || parsed > 65535) {
+    return "port must be between 1 and 65535";
+  }
+  return null;
+}
+
+function hasExplicitEmptyPort(rawUrl) {
+  return explicitPortValue(rawUrl) === "";
+}
+
+function explicitPortValue(rawUrl) {
+  const schemeEnd = rawUrl.indexOf("://");
+  if (schemeEnd < 0) {
+    return null;
+  }
+  const authorityStart = schemeEnd + 3;
+  const afterAuthorityStart = rawUrl.slice(authorityStart);
+  const authorityEnd = afterAuthorityStart.search(/[/?#]/);
+  const authority = authorityEnd < 0
+    ? afterAuthorityStart
+    : afterAuthorityStart.slice(0, authorityEnd);
+  const hostPort = authority.slice(authority.lastIndexOf("@") + 1);
+  if (hostPort.startsWith("[")) {
+    const closingBracket = hostPort.indexOf("]");
+    if (closingBracket < 0 || hostPort.length <= closingBracket + 1) {
+      return null;
+    }
+    return hostPort[closingBracket + 1] === ":"
+      ? hostPort.slice(closingBracket + 2)
+      : null;
+  }
+  const colonIndex = hostPort.lastIndexOf(":");
+  return colonIndex >= 0 ? hostPort.slice(colonIndex + 1) : null;
 }
 
 function isLocalHttpHost(hostname) {
@@ -421,8 +472,11 @@ module.exports = {
   NOT_CONFIGURED_UPSTREAMS_HEADER,
   classifyUpstreamError,
   fetchUpstreamText,
+  explicitPortValue,
+  invalidExplicitPortError,
   invalidUpstreamsHeader,
   invalidUpstreamKeysHeader,
+  hasExplicitEmptyPort,
   isLocalHttpHost,
   normalizeBaseUrl,
   normalizeUpstreamTimeoutMs,
