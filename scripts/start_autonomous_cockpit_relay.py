@@ -187,6 +187,8 @@ def validate_startup_configuration(args: argparse.Namespace) -> list[str]:
             errors.append("--relay-url must not include embedded credentials")
         elif parsed_relay_url.query or parsed_relay_url.fragment:
             errors.append("--relay-url must not include query strings or fragments")
+        elif parsed_relay_url.path.strip("/"):
+            errors.append("--relay-url must be a relay base URL without a path")
         elif parsed_relay_url.netloc.endswith(":") or parsed_relay_url.port == 0:
             errors.append("--relay-url must include a valid port when a port is specified")
 
