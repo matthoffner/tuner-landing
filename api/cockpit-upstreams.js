@@ -3,6 +3,7 @@ const MAX_UPSTREAM_TIMEOUT_MS = 15000;
 const EXPOSED_UPSTREAM_HEADERS = [
   "X-Automoat-Upstream",
   "X-Automoat-Upstream-Fallback-Count",
+  "X-Automoat-Upstream-Attempt-Count",
   "X-Automoat-Upstream-Attempts",
   "X-Automoat-Upstream-Timeout-Ms",
   "X-Automoat-Upstream-Invalid-Config",
@@ -225,6 +226,7 @@ function setProxyHeaders(response, contentType) {
 function setUpstreamSelectionHeaders(response, upstreamKind, fallbackCount, attempts) {
   response.setHeader("X-Automoat-Upstream", upstreamKind);
   response.setHeader("X-Automoat-Upstream-Fallback-Count", String(fallbackCount));
+  response.setHeader("X-Automoat-Upstream-Attempt-Count", String(attempts.length));
   response.setHeader("X-Automoat-Upstream-Attempts", upstreamAttemptsHeader(attempts));
 }
 
