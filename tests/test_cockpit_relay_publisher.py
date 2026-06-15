@@ -801,6 +801,48 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertIn("source_status_stale=True", log_text)
         self.assertIn("source_status_age_seconds=700", log_text)
         self.assertIn("source_status_file_status=None", log_text)
+        self.assertIn("source_health_status=None", log_text)
+        self.assertIn("source_health_primary_reason=None", log_text)
+        self.assertIn("source_health_label=None", log_text)
+
+    def test_publish_once_logs_compact_source_health(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            publisher_log = Path(tmp) / "publisher.log"
+            args = Namespace(publisher_log=publisher_log)
+            payload = {
+                "status": {
+                    "status": "running",
+                    "loop_running": False,
+                    "source_status_stale": True,
+                    "source_status_age_seconds": 700,
+                    "source_status_file_status": "loaded",
+                },
+                "log_tail": "loop log\n",
+                "publisher": {
+                    "source_health": {
+                        "status": "degraded",
+                        "ok": False,
+                        "reasons": ["source_status_stale"],
+                        "primary_reason": "source_status_stale",
+                        "label": "Source status is stale",
+                    }
+                },
+            }
+            self.publisher.build_payload = lambda _args: payload
+            self.publisher.post_payload = lambda _args, _body: {
+                "ok": True,
+                "received_at": "2026-06-14T20:20:00Z",
+            }
+
+            status = self.publisher.publish_once(args)
+            log_text = publisher_log.read_text(encoding="utf-8")
+
+        self.assertTrue(status)
+        self.assertIn("published relay snapshot ok=True", log_text)
+        self.assertIn("source_status=running", log_text)
+        self.assertIn("source_health_status=degraded", log_text)
+        self.assertIn("source_health_primary_reason=source_status_stale", log_text)
+        self.assertIn("source_health_label=Source status is stale", log_text)
 
     def test_publish_once_logs_relay_ok_false_as_failure(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

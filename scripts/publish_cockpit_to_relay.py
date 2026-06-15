@@ -430,12 +430,21 @@ def source_status_log_fields(payload: dict[str, Any]) -> dict[str, Any]:
     status = payload.get("status")
     if not isinstance(status, dict):
         status = {}
+    publisher = payload.get("publisher")
+    if not isinstance(publisher, dict):
+        publisher = {}
+    source_health = publisher.get("source_health")
+    if not isinstance(source_health, dict):
+        source_health = {}
     return {
         "source_status": status.get("status", "unknown"),
         "source_loop_running": status.get("loop_running"),
         "source_status_stale": status.get("source_status_stale"),
         "source_status_age_seconds": status.get("source_status_age_seconds"),
         "source_status_file_status": status.get("source_status_file_status"),
+        "source_health_status": source_health.get("status"),
+        "source_health_primary_reason": source_health.get("primary_reason"),
+        "source_health_label": source_health.get("label"),
     }
 
 
@@ -516,7 +525,10 @@ def publish_once_result(args: argparse.Namespace) -> dict[str, Any]:
             f"source_loop_running={source_fields.get('source_loop_running')} "
             f"source_status_stale={source_fields.get('source_status_stale')} "
             f"source_status_age_seconds={source_fields.get('source_status_age_seconds')} "
-            f"source_status_file_status={source_fields.get('source_status_file_status')}",
+            f"source_status_file_status={source_fields.get('source_status_file_status')} "
+            f"source_health_status={source_fields.get('source_health_status')} "
+            f"source_health_primary_reason={source_fields.get('source_health_primary_reason')} "
+            f"source_health_label={source_fields.get('source_health_label')}",
             log_path=args.publisher_log,
         )
         return {
@@ -531,7 +543,10 @@ def publish_once_result(args: argparse.Namespace) -> dict[str, Any]:
             f"source_loop_running={source_fields.get('source_loop_running')} "
             f"source_status_stale={source_fields.get('source_status_stale')} "
             f"source_status_age_seconds={source_fields.get('source_status_age_seconds')} "
-            f"source_status_file_status={source_fields.get('source_status_file_status')}",
+            f"source_status_file_status={source_fields.get('source_status_file_status')} "
+            f"source_health_status={source_fields.get('source_health_status')} "
+            f"source_health_primary_reason={source_fields.get('source_health_primary_reason')} "
+            f"source_health_label={source_fields.get('source_health_label')}",
             log_path=args.publisher_log,
         )
         return {
@@ -546,7 +561,10 @@ def publish_once_result(args: argparse.Namespace) -> dict[str, Any]:
             f"source_loop_running={source_fields['source_loop_running']} "
             f"source_status_stale={source_fields['source_status_stale']} "
             f"source_status_age_seconds={source_fields['source_status_age_seconds']} "
-            f"source_status_file_status={source_fields['source_status_file_status']}",
+            f"source_status_file_status={source_fields['source_status_file_status']} "
+            f"source_health_status={source_fields['source_health_status']} "
+            f"source_health_primary_reason={source_fields['source_health_primary_reason']} "
+            f"source_health_label={source_fields['source_health_label']}",
             log_path=args.publisher_log,
         )
         return {
@@ -560,7 +578,10 @@ def publish_once_result(args: argparse.Namespace) -> dict[str, Any]:
         f"source_loop_running={source_fields['source_loop_running']} "
         f"source_status_stale={source_fields['source_status_stale']} "
         f"source_status_age_seconds={source_fields['source_status_age_seconds']} "
-        f"source_status_file_status={source_fields['source_status_file_status']}",
+        f"source_status_file_status={source_fields['source_status_file_status']} "
+        f"source_health_status={source_fields['source_health_status']} "
+        f"source_health_primary_reason={source_fields['source_health_primary_reason']} "
+        f"source_health_label={source_fields['source_health_label']}",
         log_path=args.publisher_log,
     )
     return {
