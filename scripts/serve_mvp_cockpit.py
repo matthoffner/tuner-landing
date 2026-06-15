@@ -88,6 +88,15 @@ def as_string_list(value: object) -> list[str]:
     return [str(item) for item in value if isinstance(item, (str, int, float))]
 
 
+def first_string_list(*values: object) -> list[str]:
+    """Return the first non-empty compact string list from candidate payload fields."""
+    for value in values:
+        items = as_string_list(value)
+        if items:
+            return items
+    return []
+
+
 def compact_text(value: object, *, max_length: int = 180) -> str | None:
     if not isinstance(value, (str, int, float)):
         return None
@@ -490,7 +499,10 @@ def cockpit_summary(status: dict[str, object]) -> dict[str, object]:
     )
     policy_raw_csv_paths = (
         compact_policy_detail_list(
-            policy_failure.get("raw_dallas_csv_changed_paths"),
+            first_string_list(
+                policy_failure.get("raw_dallas_csv_changed_paths"),
+                policy_diagnostics.get("raw_dallas_csv_changed_path_samples"),
+            ),
             max_items=POLICY_RAW_PATH_SAMPLE_LIMIT,
         )
         if policy_failure
@@ -503,7 +515,10 @@ def cockpit_summary(status: dict[str, object]) -> dict[str, object]:
     )
     policy_productive_paths = (
         compact_policy_detail_list(
-            policy_failure.get("productive_changed_paths"),
+            first_string_list(
+                policy_failure.get("productive_changed_paths"),
+                policy_diagnostics.get("productive_changed_path_samples"),
+            ),
             max_items=POLICY_RAW_PATH_SAMPLE_LIMIT,
         )
         if policy_failure
@@ -521,7 +536,10 @@ def cockpit_summary(status: dict[str, object]) -> dict[str, object]:
         policy_productive_path_count = 0
     policy_synthetic_row_samples = (
         compact_policy_detail_list(
-            policy_failure.get("synthetic_row_samples"),
+            first_string_list(
+                policy_failure.get("synthetic_row_samples"),
+                policy_diagnostics.get("synthetic_row_samples"),
+            ),
             max_items=POLICY_ROW_SAMPLE_LIMIT,
             max_length=240,
         )

@@ -397,6 +397,78 @@ class MvpCockpitServerTest(unittest.TestCase):
         self.assertNotIn("api_key=secret", json.dumps(summary))
         self.assertNotIn("secret-token", json.dumps(summary))
 
+    def test_cockpit_summary_uses_policy_diagnostic_samples_when_step_lists_absent(
+        self,
+    ) -> None:
+        status = {
+            "status": "failing",
+            "phase": "autonomy_policy_failed",
+            "updated_at": "2026-06-15T00:00:00Z",
+            "loop_running": True,
+            "steps": [
+                {
+                    "name": "autonomy policy check",
+                    "exit_status": 1,
+                    "policy_diagnostics": {
+                        "status": "failed",
+                        "failure_reason": "raw_dallas_csv_without_productive_work",
+                        "route_hint": "dallas_raw_fixture_without_productive_companion",
+                        "raw_dallas_csv_changed_path_count": 2,
+                        "productive_changed_path_count": 1,
+                        "synthetic_row_count": 3,
+                        "raw_dallas_csv_changed_path_samples": [
+                            "generated/raw/dallas-electrician-import-sample-v2/permits.csv",
+                            "https://source.example/raw.csv?token=raw-secret#debug",
+                        ],
+                        "productive_changed_path_samples": [
+                            "scripts/run_autonomous_agent_loop.py",
+                        ],
+                        "synthetic_row_samples": [
+                            "ELZ-2026-9999,https://row.example/dallas?token=row-secret#debug",
+                            "ELZ-2026-9998,api_key=sample-secret",
+                        ],
+                    },
+                }
+            ],
+            "artifacts": {
+                "artifact_health": {"status": "loaded"},
+                "import_pipeline": {
+                    "execution_readiness": {"status": "ready", "blockers": []}
+                },
+            },
+            "autonomy_policy": {
+                "thin_group_count": 0,
+                "thin_group_categories": [],
+            },
+        }
+
+        summary = self.cockpit.cockpit_summary(status)
+
+        self.assertEqual(
+            summary["policy_raw_dallas_csv_changed_paths"],
+            [
+                "generated/raw/dallas-electrician-import-sample-v2/permits.csv",
+                "https://source.example/raw.csv?[redacted]#[redacted]",
+            ],
+        )
+        self.assertEqual(summary["policy_raw_dallas_csv_changed_path_count"], 2)
+        self.assertEqual(
+            summary["policy_productive_changed_paths"],
+            ["scripts/run_autonomous_agent_loop.py"],
+        )
+        self.assertEqual(summary["policy_productive_changed_path_count"], 1)
+        self.assertEqual(
+            summary["policy_synthetic_row_samples"],
+            [
+                "ELZ-2026-9999,https://row.example/dallas?[redacted]#[redacted]",
+                "ELZ-2026-9998,api_key=[redacted]",
+            ],
+        )
+        self.assertEqual(summary["policy_synthetic_row_count"], 3)
+        self.assertNotIn("raw-secret", json.dumps(summary))
+        self.assertNotIn("row-secret", json.dumps(summary))
+        self.assertNotIn("sample-secret", json.dumps(summary))
+
     def test_read_bridge_summary_compacts_loaded_status(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
