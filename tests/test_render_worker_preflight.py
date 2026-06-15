@@ -1270,6 +1270,18 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             "feature/with space": (
                 "AUTOMOAT_GIT_BRANCH must not contain whitespace or control characters"
             ),
+            "feature/secret;debug": (
+                "AUTOMOAT_GIT_BRANCH must contain only letters, numbers, dots, "
+                "underscores, hyphens, and slashes"
+            ),
+            "feature/secret$debug": (
+                "AUTOMOAT_GIT_BRANCH must contain only letters, numbers, dots, "
+                "underscores, hyphens, and slashes"
+            ),
+            "feature/secret`debug`": (
+                "AUTOMOAT_GIT_BRANCH must contain only letters, numbers, dots, "
+                "underscores, hyphens, and slashes"
+            ),
             "@": "AUTOMOAT_GIT_BRANCH must be a valid git branch name",
             ".hidden": "AUTOMOAT_GIT_BRANCH must be a valid git branch name",
             "feature/.hidden": "AUTOMOAT_GIT_BRANCH must be a valid git branch name",
@@ -1433,6 +1445,46 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             ["AUTOMOAT_GIT_BRANCH"],
         )
         self.assertNotIn("secret-release", output.getvalue())
+        self.assertNotIn("relay-token", output.getvalue())
+        self.assertNotIn("github-token", output.getvalue())
+        self.assertNotIn("codex-token", output.getvalue())
+
+    def test_check_env_json_routes_nonportable_git_branch_without_echoing_value(self) -> None:
+        output = io.StringIO()
+
+        with redirect_stdout(output):
+            errors = self.worker.emit_environment_preflight(
+                {
+                    "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+                    "AUTOMOAT_RELAY_TOKEN": "relay-token",
+                    "GITHUB_TOKEN": "github-token",
+                    "CODEX_ACCESS_TOKEN": "codex-token",
+                    "AUTOMOAT_GIT_BRANCH": "feature/secret;debug",
+                },
+                found_command,
+                output_format="json",
+            )
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(
+            errors,
+            [
+                (
+                    "AUTOMOAT_GIT_BRANCH must contain only letters, numbers, dots, "
+                    "underscores, hyphens, and slashes"
+                ),
+            ],
+        )
+        self.assertEqual(payload["status"], "failed")
+        self.assertEqual(
+            payload["diagnostics"]["error_categories"],
+            ["invalid_git_branch"],
+        )
+        self.assertEqual(
+            payload["diagnostics"]["failed_configuration_keys"],
+            ["AUTOMOAT_GIT_BRANCH"],
+        )
+        self.assertNotIn("secret", output.getvalue())
         self.assertNotIn("relay-token", output.getvalue())
         self.assertNotIn("github-token", output.getvalue())
         self.assertNotIn("codex-token", output.getvalue())

@@ -71,6 +71,7 @@ WORKER_PATH_ENV_NAMES = ("AUTOMOAT_WORKDIR", "CODEX_HOME")
 PUBLISHER_FILE_PATH_ENV_NAMES = ("AUTOMOAT_BRIDGE_STATUS_FILE",)
 DEFAULT_BRIDGE_STATUS_FILE = ".automoat/state/mvp-bridge-status.json"
 MAX_GIT_BRANCH_CHARS = 240
+PORTABLE_GIT_BRANCH_PATTERN = re.compile(r"^[A-Za-z0-9._/-]+$")
 GIT_IDENTITY_ENV_DEFAULTS = {
     "GIT_AUTHOR_NAME": "automoat-render-agent",
     "GIT_AUTHOR_EMAIL": "automoat-render-agent@users.noreply.github.com",
@@ -875,7 +876,6 @@ def validate_git_branch_name(value: str, errors: list[str]) -> None:
             "origin/, remotes/, or refs/ prefixes"
         )
         return
-
     branch_components = branch.split("/")
     invalid_fragments = ("..", "//", "@{", "\\")
     invalid_characters = set("~^:?*[")
@@ -890,6 +890,12 @@ def validate_git_branch_name(value: str, errors: list[str]) -> None:
         or any(character in invalid_characters for character in branch)
     ):
         errors.append("AUTOMOAT_GIT_BRANCH must be a valid git branch name")
+        return
+    if not PORTABLE_GIT_BRANCH_PATTERN.fullmatch(branch):
+        errors.append(
+            "AUTOMOAT_GIT_BRANCH must contain only letters, numbers, dots, "
+            "underscores, hyphens, and slashes"
+        )
 
 
 def validate_workdir_path(path: Path, errors: list[str], *, codex_home: Path | None = None) -> None:
