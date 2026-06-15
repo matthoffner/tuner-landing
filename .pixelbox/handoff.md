@@ -4,6 +4,12 @@ Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
 - lane: editor
+- status: bounded Render Codex worker runtime knobs in preflight so oversized loop intervals, iteration counts, relay intervals/timeouts, publisher failure/stale budgets, relay tail lines, relay log byte caps, and source-status stale thresholds fail before Git/Codex setup or autonomous child launch; passing text and JSON preflight output now expose the documented limits for operator tooling, and no Dallas raw CSV rows were edited
+- files: scripts/start_render_codex_worker.py, tests/test_render_worker_preflight.py, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- checks: `python3 -m unittest tests/test_render_worker_preflight.py -v`; `python3 -m py_compile scripts/start_render_codex_worker.py tests/test_render_worker_preflight.py`; `python3 -m unittest discover -s tests -v`; `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json > /tmp/automoat-worker-runtime-bounds-ready.json`; JSON assertion for readiness `ready`, `535/535` corrections, `535` permits, `1082` inspections, and zero thin groups; `cmp -s generated/landing.html index.html`; `git diff --exit-code -- .pxcode/preview.json`; `git diff --check`
+- next: keep Render `AUTOMOAT_AGENT_INTERVAL <= 3600`, `AUTOMOAT_RELAY_INTERVAL <= 60`, `AUTOMOAT_RELAY_TIMEOUT <= 60`, `AUTOMOAT_RELAY_MAX_LOG_BYTES <= 1048576`, and `AUTOMOAT_STATUS_STALE_AFTER_SECONDS <= 3600`; continue prioritizing autonomy/cockpit/Render reliability, real ingest, policy/checking, product clarity, or tests while Dallas readiness remains green
+
+- lane: editor
 - status: refocused the root landing page around the autonomous terminal concept; the live Render Codex terminal is now the primary hero surface with runtime facts, command-line context, and loop/memory/artifact cards, while Dallas/MVP proof details moved to `/mvp.html` so the root stays terminal-first
 - files: generated/landing.html, index.html, mvp.html, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
 - checks: `cmp -s generated/landing.html index.html`; Node terminal-first landing assertions and script syntax parse for `generated/landing.html`, `index.html`, and `mvp.html`; `python3 -m unittest discover -s tests -p 'test_loop_artifact_visibility.py' -v`; `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json > /tmp/automoat-terminal-core-ready.json`; `git diff --check`; Playwright rendered visibility assertions for desktop/mobile root and `/mvp.html`

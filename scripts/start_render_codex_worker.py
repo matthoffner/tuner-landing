@@ -33,6 +33,17 @@ CODEX_CONFIG_ENV_DEFAULTS = {
     "AUTOMOAT_CODEX_MODEL": "gpt-5.5",
     "AUTOMOAT_CODEX_REASONING_EFFORT": "high",
 }
+RUNTIME_CONFIG_LIMITS = {
+    "AUTOMOAT_AGENT_INTERVAL": 3600,
+    "AUTOMOAT_AGENT_ITERATIONS": 1000,
+    "AUTOMOAT_RELAY_INTERVAL": 60,
+    "AUTOMOAT_RELAY_TIMEOUT": 60,
+    "AUTOMOAT_RELAY_MAX_CONSECUTIVE_FAILURES": 100,
+    "AUTOMOAT_RELAY_MAX_CONSECUTIVE_STALE_STATUSES": 100,
+    "AUTOMOAT_RELAY_TAIL_LINES": 2000,
+    "AUTOMOAT_RELAY_MAX_LOG_BYTES": 1024 * 1024,
+    "AUTOMOAT_STATUS_STALE_AFTER_SECONDS": 3600,
+}
 GIT_IDENTITY_ENV_DEFAULTS = {
     "GIT_AUTHOR_NAME": "automoat-render-agent",
     "GIT_AUTHOR_EMAIL": "automoat-render-agent@users.noreply.github.com",
@@ -72,6 +83,8 @@ def validate_nonnegative_float(
     env: os._Environ[str] | dict[str, str],
     name: str,
     errors: list[str],
+    *,
+    maximum: float | None = None,
 ) -> None:
     value = env.get(name, "").strip()
     if not value:
@@ -83,12 +96,17 @@ def validate_nonnegative_float(
         return
     if parsed < 0:
         errors.append(f"{name} must be greater than or equal to 0")
+        return
+    if maximum is not None and parsed > maximum:
+        errors.append(f"{name} must be less than or equal to {format_number(maximum)}")
 
 
 def validate_positive_float(
     env: os._Environ[str] | dict[str, str],
     name: str,
     errors: list[str],
+    *,
+    maximum: float | None = None,
 ) -> None:
     value = env.get(name, "").strip()
     if not value:
@@ -100,12 +118,17 @@ def validate_positive_float(
         return
     if parsed <= 0:
         errors.append(f"{name} must be greater than 0")
+        return
+    if maximum is not None and parsed > maximum:
+        errors.append(f"{name} must be less than or equal to {format_number(maximum)}")
 
 
 def validate_nonnegative_int(
     env: os._Environ[str] | dict[str, str],
     name: str,
     errors: list[str],
+    *,
+    maximum: int | None = None,
 ) -> None:
     value = env.get(name, "").strip()
     if not value:
@@ -117,12 +140,17 @@ def validate_nonnegative_int(
         return
     if parsed < 0:
         errors.append(f"{name} must be greater than or equal to 0")
+        return
+    if maximum is not None and parsed > maximum:
+        errors.append(f"{name} must be less than or equal to {maximum}")
 
 
 def validate_positive_int(
     env: os._Environ[str] | dict[str, str],
     name: str,
     errors: list[str],
+    *,
+    maximum: int | None = None,
 ) -> None:
     value = env.get(name, "").strip()
     if not value:
@@ -134,6 +162,14 @@ def validate_positive_int(
         return
     if parsed <= 0:
         errors.append(f"{name} must be greater than 0")
+        return
+    if maximum is not None and parsed > maximum:
+        errors.append(f"{name} must be less than or equal to {maximum}")
+
+
+def format_number(value: float | int) -> str:
+    parsed = float(value)
+    return str(int(parsed)) if parsed.is_integer() else str(parsed)
 
 
 def codex_config_value(
@@ -256,15 +292,60 @@ def validate_worker_environment(
         except (UnicodeDecodeError, json.JSONDecodeError, ValueError):
             errors.append("CODEX_AUTH_JSON_B64 must decode to a JSON object")
 
-    validate_positive_float(env, "AUTOMOAT_RELAY_INTERVAL", errors)
-    validate_positive_float(env, "AUTOMOAT_RELAY_TIMEOUT", errors)
-    validate_nonnegative_int(env, "AUTOMOAT_RELAY_MAX_CONSECUTIVE_FAILURES", errors)
-    validate_nonnegative_int(env, "AUTOMOAT_RELAY_MAX_CONSECUTIVE_STALE_STATUSES", errors)
-    validate_positive_int(env, "AUTOMOAT_RELAY_TAIL_LINES", errors)
-    validate_positive_int(env, "AUTOMOAT_RELAY_MAX_LOG_BYTES", errors)
-    validate_positive_int(env, "AUTOMOAT_STATUS_STALE_AFTER_SECONDS", errors)
-    validate_nonnegative_float(env, "AUTOMOAT_AGENT_INTERVAL", errors)
-    validate_nonnegative_int(env, "AUTOMOAT_AGENT_ITERATIONS", errors)
+    validate_positive_float(
+        env,
+        "AUTOMOAT_RELAY_INTERVAL",
+        errors,
+        maximum=RUNTIME_CONFIG_LIMITS["AUTOMOAT_RELAY_INTERVAL"],
+    )
+    validate_positive_float(
+        env,
+        "AUTOMOAT_RELAY_TIMEOUT",
+        errors,
+        maximum=RUNTIME_CONFIG_LIMITS["AUTOMOAT_RELAY_TIMEOUT"],
+    )
+    validate_nonnegative_int(
+        env,
+        "AUTOMOAT_RELAY_MAX_CONSECUTIVE_FAILURES",
+        errors,
+        maximum=RUNTIME_CONFIG_LIMITS["AUTOMOAT_RELAY_MAX_CONSECUTIVE_FAILURES"],
+    )
+    validate_nonnegative_int(
+        env,
+        "AUTOMOAT_RELAY_MAX_CONSECUTIVE_STALE_STATUSES",
+        errors,
+        maximum=RUNTIME_CONFIG_LIMITS["AUTOMOAT_RELAY_MAX_CONSECUTIVE_STALE_STATUSES"],
+    )
+    validate_positive_int(
+        env,
+        "AUTOMOAT_RELAY_TAIL_LINES",
+        errors,
+        maximum=RUNTIME_CONFIG_LIMITS["AUTOMOAT_RELAY_TAIL_LINES"],
+    )
+    validate_positive_int(
+        env,
+        "AUTOMOAT_RELAY_MAX_LOG_BYTES",
+        errors,
+        maximum=RUNTIME_CONFIG_LIMITS["AUTOMOAT_RELAY_MAX_LOG_BYTES"],
+    )
+    validate_positive_int(
+        env,
+        "AUTOMOAT_STATUS_STALE_AFTER_SECONDS",
+        errors,
+        maximum=RUNTIME_CONFIG_LIMITS["AUTOMOAT_STATUS_STALE_AFTER_SECONDS"],
+    )
+    validate_nonnegative_float(
+        env,
+        "AUTOMOAT_AGENT_INTERVAL",
+        errors,
+        maximum=RUNTIME_CONFIG_LIMITS["AUTOMOAT_AGENT_INTERVAL"],
+    )
+    validate_nonnegative_int(
+        env,
+        "AUTOMOAT_AGENT_ITERATIONS",
+        errors,
+        maximum=RUNTIME_CONFIG_LIMITS["AUTOMOAT_AGENT_ITERATIONS"],
+    )
     validate_codex_config_value(env, "AUTOMOAT_CODEX_MODEL", errors)
     validate_codex_config_value(env, "AUTOMOAT_CODEX_REASONING_EFFORT", errors)
     for name in GIT_IDENTITY_ENV_DEFAULTS:
@@ -439,6 +520,7 @@ def environment_preflight_summary(
             "AUTOMOAT_CODEX_REASONING_EFFORT",
         ),
         "commands": list(REQUIRED_COMMANDS),
+        "runtime_limits": RUNTIME_CONFIG_LIMITS,
     }
     return payload
 
@@ -486,7 +568,8 @@ def emit_environment_preflight(
         f"codex_model={codex_config_value(env, 'AUTOMOAT_CODEX_MODEL')} "
         f"codex_reasoning_effort="
         f"{codex_config_value(env, 'AUTOMOAT_CODEX_REASONING_EFFORT')} "
-        f"commands={','.join(REQUIRED_COMMANDS)}"
+        f"commands={','.join(REQUIRED_COMMANDS)} "
+        f"runtime_limits={json.dumps(RUNTIME_CONFIG_LIMITS, sort_keys=True)}"
     )
     return []
 

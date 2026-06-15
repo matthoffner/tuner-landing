@@ -184,6 +184,92 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertIn("AUTOMOAT_RELAY_MAX_LOG_BYTES must be greater than 0", errors)
         self.assertIn("AUTOMOAT_STATUS_STALE_AFTER_SECONDS must be greater than 0", errors)
 
+    def test_accepts_runtime_knobs_at_documented_worker_limits(self) -> None:
+        limits = self.worker.RUNTIME_CONFIG_LIMITS
+
+        errors = self.worker.validate_worker_environment(
+            {
+                "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+                "AUTOMOAT_RELAY_TOKEN": "relay-token",
+                "GITHUB_TOKEN": "github-token",
+                "CODEX_ACCESS_TOKEN": "codex-token",
+                "AUTOMOAT_AGENT_INTERVAL": str(limits["AUTOMOAT_AGENT_INTERVAL"]),
+                "AUTOMOAT_AGENT_ITERATIONS": str(limits["AUTOMOAT_AGENT_ITERATIONS"]),
+                "AUTOMOAT_RELAY_INTERVAL": str(limits["AUTOMOAT_RELAY_INTERVAL"]),
+                "AUTOMOAT_RELAY_TIMEOUT": str(limits["AUTOMOAT_RELAY_TIMEOUT"]),
+                "AUTOMOAT_RELAY_MAX_CONSECUTIVE_FAILURES": str(
+                    limits["AUTOMOAT_RELAY_MAX_CONSECUTIVE_FAILURES"]
+                ),
+                "AUTOMOAT_RELAY_MAX_CONSECUTIVE_STALE_STATUSES": str(
+                    limits["AUTOMOAT_RELAY_MAX_CONSECUTIVE_STALE_STATUSES"]
+                ),
+                "AUTOMOAT_RELAY_TAIL_LINES": str(limits["AUTOMOAT_RELAY_TAIL_LINES"]),
+                "AUTOMOAT_RELAY_MAX_LOG_BYTES": str(
+                    limits["AUTOMOAT_RELAY_MAX_LOG_BYTES"]
+                ),
+                "AUTOMOAT_STATUS_STALE_AFTER_SECONDS": str(
+                    limits["AUTOMOAT_STATUS_STALE_AFTER_SECONDS"]
+                ),
+            },
+            found_command,
+        )
+
+        self.assertEqual(errors, [])
+
+    def test_rejects_runtime_knobs_above_documented_worker_limits(self) -> None:
+        limits = self.worker.RUNTIME_CONFIG_LIMITS
+
+        errors = self.worker.validate_worker_environment(
+            {
+                "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+                "AUTOMOAT_RELAY_TOKEN": "relay-token",
+                "GITHUB_TOKEN": "github-token",
+                "CODEX_ACCESS_TOKEN": "codex-token",
+                "AUTOMOAT_AGENT_INTERVAL": str(limits["AUTOMOAT_AGENT_INTERVAL"] + 1),
+                "AUTOMOAT_AGENT_ITERATIONS": str(limits["AUTOMOAT_AGENT_ITERATIONS"] + 1),
+                "AUTOMOAT_RELAY_INTERVAL": str(limits["AUTOMOAT_RELAY_INTERVAL"] + 1),
+                "AUTOMOAT_RELAY_TIMEOUT": str(limits["AUTOMOAT_RELAY_TIMEOUT"] + 1),
+                "AUTOMOAT_RELAY_MAX_CONSECUTIVE_FAILURES": str(
+                    limits["AUTOMOAT_RELAY_MAX_CONSECUTIVE_FAILURES"] + 1
+                ),
+                "AUTOMOAT_RELAY_MAX_CONSECUTIVE_STALE_STATUSES": str(
+                    limits["AUTOMOAT_RELAY_MAX_CONSECUTIVE_STALE_STATUSES"] + 1
+                ),
+                "AUTOMOAT_RELAY_TAIL_LINES": str(limits["AUTOMOAT_RELAY_TAIL_LINES"] + 1),
+                "AUTOMOAT_RELAY_MAX_LOG_BYTES": str(
+                    limits["AUTOMOAT_RELAY_MAX_LOG_BYTES"] + 1
+                ),
+                "AUTOMOAT_STATUS_STALE_AFTER_SECONDS": str(
+                    limits["AUTOMOAT_STATUS_STALE_AFTER_SECONDS"] + 1
+                ),
+            },
+            found_command,
+        )
+
+        self.assertEqual(
+            errors,
+            [
+                "AUTOMOAT_RELAY_INTERVAL must be less than or equal to 60",
+                "AUTOMOAT_RELAY_TIMEOUT must be less than or equal to 60",
+                (
+                    "AUTOMOAT_RELAY_MAX_CONSECUTIVE_FAILURES must be "
+                    "less than or equal to 100"
+                ),
+                (
+                    "AUTOMOAT_RELAY_MAX_CONSECUTIVE_STALE_STATUSES must be "
+                    "less than or equal to 100"
+                ),
+                "AUTOMOAT_RELAY_TAIL_LINES must be less than or equal to 2000",
+                "AUTOMOAT_RELAY_MAX_LOG_BYTES must be less than or equal to 1048576",
+                (
+                    "AUTOMOAT_STATUS_STALE_AFTER_SECONDS must be less than or equal "
+                    "to 3600"
+                ),
+                "AUTOMOAT_AGENT_INTERVAL must be less than or equal to 3600",
+                "AUTOMOAT_AGENT_ITERATIONS must be less than or equal to 1000",
+            ],
+        )
+
     def test_rejects_relay_url_without_host(self) -> None:
         errors = self.worker.validate_worker_environment(
             {
@@ -398,6 +484,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertEqual(payload["config"]["git_auth"], ["GITHUB_TOKEN"])
         self.assertEqual(payload["config"]["codex_auth"], ["CODEX_ACCESS_TOKEN"])
         self.assertEqual(payload["config"]["commands"], ["git", "codex"])
+        self.assertEqual(payload["config"]["runtime_limits"], self.worker.RUNTIME_CONFIG_LIMITS)
         self.assertNotIn("github-token", output.getvalue())
         self.assertNotIn("codex-token", output.getvalue())
 
