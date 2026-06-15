@@ -81,10 +81,13 @@ def emit(message: str, *, log_path: Path) -> None:
 
 
 def repo_relative(path: Path) -> str:
+    resolved_path = path.resolve()
     try:
-        return path.relative_to(ROOT).as_posix()
+        relative_path = resolved_path.relative_to(ROOT)
     except ValueError:
-        return str(path)
+        return f"<external>/{resolved_path.name}" if resolved_path.name else "<external>"
+    relative_text = relative_path.as_posix()
+    return relative_text if relative_text else "."
 
 
 def read_json_with_status(path: Path) -> tuple[dict[str, Any] | None, dict[str, Any]]:
@@ -409,7 +412,7 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
             "pid": os.getpid(),
             "publisher_started_at": PUBLISHER_STARTED_AT,
             "snapshot_sequence": next_publisher_snapshot_sequence(),
-            "repo": str(ROOT),
+            "repo": repo_relative(ROOT),
             "status_file": repo_relative(args.status_file),
             "pid_file": repo_relative(args.pid_file),
             "log_file": repo_relative(args.log_file),
@@ -841,10 +844,10 @@ def publisher_preflight_summary(
         "max_consecutive_stale_statuses": int(
             args.max_consecutive_stale_statuses
         ),
-        "status_file": str(args.status_file),
-        "pid_file": str(args.pid_file),
-        "log_file": str(args.log_file),
-        "publisher_log": str(args.publisher_log),
+        "status_file": repo_relative(args.status_file),
+        "pid_file": repo_relative(args.pid_file),
+        "log_file": repo_relative(args.log_file),
+        "publisher_log": repo_relative(args.publisher_log),
         "runtime_limits": PUBLISHER_CONFIG_LIMITS,
     }
     return payload

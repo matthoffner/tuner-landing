@@ -89,9 +89,11 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             ["loop_not_running", "artifact_health_not_loaded", "import_readiness_not_ready"],
         )
         self.assertEqual(payload["log_tail"], "second\nthird\n")
-        self.assertEqual(payload["publisher"]["status_file"], str(status_file))
-        self.assertEqual(payload["publisher"]["pid_file"], str(pid_file))
-        self.assertEqual(payload["publisher"]["log_file"], str(log_file))
+        self.assertEqual(payload["publisher"]["repo"], ".")
+        self.assertEqual(payload["publisher"]["status_file"], "<external>/custom-status.json")
+        self.assertEqual(payload["publisher"]["pid_file"], "<external>/custom.pid")
+        self.assertEqual(payload["publisher"]["log_file"], "<external>/custom.log")
+        self.assertNotIn(str(tmp_path), json.dumps(payload, sort_keys=True))
         self.assertEqual(payload["publisher"]["pid"], os.getpid())
         self.assertEqual(
             payload["publisher"]["publisher_started_at"],
@@ -129,7 +131,8 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             )
 
         self.assertEqual(status["status"], "waiting")
-        self.assertEqual(status["source_status_file"], str(status_file))
+        self.assertEqual(status["source_status_file"], "<external>/missing-status.json")
+        self.assertNotIn(str(tmp_path), json.dumps(status, sort_keys=True))
         self.assertEqual(status["source_status_file_status"], "missing")
         self.assertNotIn("source_status_file_error", status)
         self.assertIsNone(status["source_status_age_seconds"])
@@ -292,7 +295,8 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             )
 
         self.assertEqual(status["status"], "waiting")
-        self.assertEqual(status["source_status_file"], str(status_file))
+        self.assertEqual(status["source_status_file"], "<external>/status.json")
+        self.assertNotIn(str(tmp_path), json.dumps(status, sort_keys=True))
         self.assertEqual(status["source_status_file_status"], "invalid_json")
         self.assertIn("line 1 column 2", status["source_status_file_error"])
         self.assertTrue(status["source_status_stale"])
@@ -715,11 +719,16 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertEqual(payload["config"]["max_consecutive_failures"], 5)
         self.assertEqual(payload["config"]["max_consecutive_stale_statuses"], 6)
         self.assertEqual(payload["config"]["status_stale_after_seconds"], 900)
+        self.assertEqual(payload["config"]["status_file"], "<external>/status.json")
+        self.assertEqual(payload["config"]["pid_file"], "<external>/loop.pid")
+        self.assertEqual(payload["config"]["log_file"], "<external>/loop.log")
+        self.assertEqual(payload["config"]["publisher_log"], "<external>/publisher.log")
         self.assertEqual(
             payload["config"]["runtime_limits"],
             self.publisher.PUBLISHER_CONFIG_LIMITS,
         )
         self.assertNotIn("relay-token", output.getvalue())
+        self.assertNotIn(str(tmp_path), output.getvalue())
 
     def test_check_env_json_reports_secret_safe_failure_diagnostics(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
