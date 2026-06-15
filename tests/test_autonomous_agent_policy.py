@@ -221,6 +221,32 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
             ],
         )
 
+    def test_codex_command_log_text_compacts_prompt_without_changing_command(self) -> None:
+        prompt = (
+            "You are running inside the loop.\n"
+            "Current supervisor policy snapshot:\n"
+            '{"token":"super-secret","ready":true}'
+        )
+        command = self.loop.codex_command(prompt)
+
+        log_text = self.loop.command_log_text(command)
+
+        self.assertEqual(command[-1], prompt)
+        self.assertIn("codex exec", log_text)
+        self.assertIn("<prompt chars=", log_text)
+        self.assertIn("lines=3>", log_text)
+        self.assertNotIn("super-secret", log_text)
+        self.assertNotIn("Current supervisor policy snapshot", log_text)
+
+    def test_command_log_text_truncates_oversized_non_prompt_arguments(self) -> None:
+        long_argument = "secret-branch-" + ("x" * 240)
+
+        log_text = self.loop.command_log_text(["git", "checkout", long_argument])
+
+        self.assertIn("git checkout", log_text)
+        self.assertIn("<arg chars=254>", log_text)
+        self.assertNotIn("secret-branch", log_text)
+
     def test_dirty_paths_excluding_preview_filters_pixelbox_preview(self) -> None:
         self.loop.git_status_lines = lambda: [
             " M scripts/run_autonomous_agent_loop.py",

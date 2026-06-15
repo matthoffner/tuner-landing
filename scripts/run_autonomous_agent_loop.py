@@ -8,6 +8,7 @@ import json
 import os
 import re
 import selectors
+import shlex
 import signal
 import subprocess
 import sys
@@ -92,6 +93,7 @@ MAX_POLICY_DETAIL_CHARS = 240
 MAX_POLICY_LIST_ITEMS = 8
 MAX_ARTIFACT_HEALTH_DETAILS = 8
 MAX_ARTIFACT_HEALTH_DETAIL_CHARS = 240
+MAX_COMMAND_LOG_ARG_CHARS = 160
 URL_TOKEN_PATTERN = re.compile(r"https?://[^\s,]+", re.IGNORECASE)
 TOKEN_ASSIGNMENT_PATTERN = re.compile(
     r"\b([A-Za-z0-9_-]*(?:token|secret|password|api[_-]?key|access[_-]?key)"
@@ -715,7 +717,7 @@ def stream_command(
     env: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     emit(log_file, f"step start: {name}")
-    emit(log_file, "$ " + " ".join(command))
+    emit(log_file, "$ " + command_log_text(command))
     started = time.monotonic()
     process = subprocess.Popen(
         command,
@@ -764,7 +766,7 @@ def stream_command(
 def run_check(log_file: Path, name: str, command: list[str]) -> dict[str, Any]:
     started = time.monotonic()
     emit(log_file, f"step start: {name}")
-    emit(log_file, "$ " + " ".join(command))
+    emit(log_file, "$ " + command_log_text(command))
     result = shell(command)
     elapsed = round(time.monotonic() - started, 3)
     output = result.stdout.strip()
@@ -1080,6 +1082,25 @@ def codex_command(prompt: str) -> list[str]:
         "--dangerously-bypass-approvals-and-sandbox",
         prompt,
     ]
+
+
+def command_log_text(command: list[str]) -> str:
+    """Return a compact, shell-readable command label for loop logs."""
+    if command[:2] == ["codex", "exec"] and command:
+        prompt = command[-1]
+        line_count = prompt.count("\n") + 1 if prompt else 0
+        command = [
+            *command[:-1],
+            f"<prompt chars={len(prompt)} lines={line_count}>",
+        ]
+
+    safe_parts: list[str] = []
+    for part in command:
+        compact_part = part.replace("\r", " ").replace("\n", " ")
+        if len(compact_part) > MAX_COMMAND_LOG_ARG_CHARS:
+            compact_part = f"<arg chars={len(compact_part)}>"
+        safe_parts.append(shlex.quote(compact_part))
+    return " ".join(safe_parts)
 
 
 def run_iteration(
