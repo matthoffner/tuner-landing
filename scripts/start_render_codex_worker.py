@@ -593,6 +593,12 @@ def validate_workdir_path(path: Path, errors: list[str]) -> None:
             "AUTOMOAT_WORKDIR must not be equal to or inside reserved runtime file "
             f"{conflicting_runtime_file}"
         )
+        return
+
+    blocking_path = blocking_directory_path_component(resolved_path)
+    if blocking_path is not None:
+        errors.append(f"AUTOMOAT_WORKDIR path component {blocking_path} must be a directory")
+        return
 
 
 def validate_codex_home_path(path: Path, workdir: Path, errors: list[str]) -> None:
@@ -625,6 +631,11 @@ def validate_codex_home_path(path: Path, workdir: Path, errors: list[str]) -> No
         )
         return
 
+    blocking_path = blocking_directory_path_component(resolved_path)
+    if blocking_path is not None:
+        errors.append(f"CODEX_HOME path component {blocking_path} must be a directory")
+        return
+
     expanded_workdir = workdir.expanduser()
     workdir_named_parts = [
         part for part in expanded_workdir.parts if part != expanded_workdir.anchor
@@ -644,6 +655,16 @@ def validate_codex_home_path(path: Path, workdir: Path, errors: list[str]) -> No
         return
     if resolved_workdir.is_relative_to(resolved_path):
         errors.append("CODEX_HOME must not contain AUTOMOAT_WORKDIR")
+
+
+def blocking_directory_path_component(path: Path) -> Path | None:
+    current_path = path
+    while True:
+        if current_path.exists():
+            return None if current_path.is_dir() else current_path
+        if current_path.parent == current_path:
+            return None
+        current_path = current_path.parent
 
 
 def reserved_runtime_file_conflict(path: Path) -> Path | None:

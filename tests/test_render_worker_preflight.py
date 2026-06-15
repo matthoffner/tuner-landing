@@ -605,6 +605,26 @@ class RenderWorkerPreflightTest(unittest.TestCase):
 
                 self.assertEqual(errors, [expected_error])
 
+    def test_rejects_workdir_blocked_by_existing_file_before_clone_cleanup(self) -> None:
+        base_env = {
+            "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            "GITHUB_TOKEN": "github-token",
+            "CODEX_ACCESS_TOKEN": "codex-token",
+        }
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            blocker = Path(temp_dir) / "blocked-parent"
+            blocker.write_text("not a directory", encoding="utf-8")
+            self.worker.WORKDIR = blocker / "repo"
+
+            errors = self.worker.validate_worker_environment(base_env, found_command)
+
+        self.assertEqual(
+            errors,
+            [f"AUTOMOAT_WORKDIR path component {blocker} must be a directory"],
+        )
+
     def test_rejects_unsafe_codex_home_before_auth_setup(self) -> None:
         base_env = {
             "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
@@ -637,6 +657,27 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                 errors = self.worker.validate_worker_environment(base_env, found_command)
 
                 self.assertEqual(errors, [expected_error])
+
+    def test_rejects_codex_home_blocked_by_existing_file_before_auth_setup(self) -> None:
+        base_env = {
+            "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            "GITHUB_TOKEN": "github-token",
+            "CODEX_ACCESS_TOKEN": "codex-token",
+        }
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            self.worker.WORKDIR = Path(temp_dir) / "repo"
+            blocker = Path(temp_dir) / "blocked-codex-parent"
+            blocker.write_text("not a directory", encoding="utf-8")
+            self.worker.CODEX_HOME = blocker / "codex-home"
+
+            errors = self.worker.validate_worker_environment(base_env, found_command)
+
+        self.assertEqual(
+            errors,
+            [f"CODEX_HOME path component {blocker} must be a directory"],
+        )
 
     def test_rejects_bad_reserved_runtime_file_paths_before_git_auth_setup(self) -> None:
         base_env = {
