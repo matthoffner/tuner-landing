@@ -253,6 +253,32 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertNotIn("debug_path", summary)
         self.assertNotIn(str(tmp_path), json.dumps(summary, sort_keys=True))
 
+    def test_read_bridge_summary_omits_non_finite_interval(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            bridge_status_file = Path(tmp) / "mvp-bridge-status.json"
+            bridge_status_file.write_text(
+                json.dumps(
+                    {
+                        "status": "running",
+                        "updated_at": "2026-06-15T03:20:00Z",
+                        "interval": "Infinity",
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            self.publisher.utc_now = lambda: "2026-06-15T03:21:00Z"
+
+            summary = self.publisher.read_bridge_summary(
+                bridge_status_file,
+                stale_after_seconds=120,
+            )
+            summary_text = json.dumps(summary, sort_keys=True, allow_nan=False)
+
+        self.assertTrue(summary["available"])
+        self.assertNotIn("interval", summary)
+        self.assertNotIn("Infinity", summary_text)
+
     def test_read_bridge_summary_sanitizes_url_fields_for_remote_snapshots(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
@@ -1340,6 +1366,46 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertNotIn("relay-pass", output.getvalue())
         self.assertNotIn("relay-token", output.getvalue())
         self.assertNotIn("second-line", output.getvalue())
+
+    def test_check_env_json_rejects_non_finite_runtime_floats(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            env = {
+                "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+                "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            }
+            output = io.StringIO()
+            self.publisher.publish_once = lambda _args: self.fail("publish_once should not run")
+            with patch.dict(os.environ, env, clear=True), patch.object(
+                sys,
+                "argv",
+                [
+                    "publish_cockpit_to_relay.py",
+                    "--check-env",
+                    "--format",
+                    "json",
+                    "--interval",
+                    "nan",
+                    "--timeout",
+                    "inf",
+                    "--publisher-log",
+                    str(tmp_path / "publisher.log"),
+                ],
+            ), redirect_stdout(output):
+                status = self.publisher.main()
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(status, 2)
+        self.assertEqual(
+            payload["errors"],
+            ["--interval must be finite", "--timeout must be finite"],
+        )
+        self.assertEqual(
+            payload["diagnostics"]["error_categories"],
+            ["invalid_runtime_config"],
+        )
+        json.dumps(payload, allow_nan=False)
+        self.assertNotIn("relay-token", output.getvalue())
 
     def test_format_json_is_check_env_only(self) -> None:
         env = {

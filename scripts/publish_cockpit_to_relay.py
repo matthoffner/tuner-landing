@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import re
 import socket
@@ -296,7 +297,7 @@ def compact_float(value: Any) -> float | None:
         parsed = float(value)
     except (TypeError, ValueError):
         return None
-    return parsed if parsed >= 0 else None
+    return parsed if math.isfinite(parsed) and parsed >= 0 else None
 
 
 def bridge_health_summary(value: Any) -> dict[str, Any]:
@@ -986,14 +987,18 @@ def validate_publisher_configuration(args: argparse.Namespace) -> list[str]:
         errors.append("--token must be a single-line value without control characters")
     elif token_value != token:
         errors.append("--token must not include leading or trailing whitespace")
-    if args.interval <= 0:
+    if not math.isfinite(args.interval):
+        errors.append("--interval must be finite")
+    elif args.interval <= 0:
         errors.append("--interval must be greater than 0")
     elif args.interval > PUBLISHER_CONFIG_LIMITS["interval"]:
         errors.append(
             "--interval must be less than or equal to "
             f"{format_number(PUBLISHER_CONFIG_LIMITS['interval'])}"
         )
-    if args.timeout <= 0:
+    if not math.isfinite(args.timeout):
+        errors.append("--timeout must be finite")
+    elif args.timeout <= 0:
         errors.append("--timeout must be greater than 0")
     elif args.timeout > PUBLISHER_CONFIG_LIMITS["timeout"]:
         errors.append(
