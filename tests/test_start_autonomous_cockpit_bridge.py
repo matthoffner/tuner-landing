@@ -10,6 +10,7 @@ import io
 import json
 from pathlib import Path
 import sys
+import tempfile
 import unittest
 from unittest.mock import patch
 
@@ -30,6 +31,38 @@ def load_launcher_module():
 class StartAutonomousCockpitBridgeTest(unittest.TestCase):
     def setUp(self) -> None:
         self.launcher = load_launcher_module()
+
+    def test_start_detached_closes_parent_log_handle_and_writes_pid(self) -> None:
+        captured: dict[str, object] = {}
+
+        class FakeProcess:
+            pid = 13579
+
+        def fake_popen(command, **kwargs):  # noqa: ANN001 - mirrors subprocess signature for the test.
+            captured["command"] = command
+            captured["stdout"] = kwargs["stdout"]
+            self.assertFalse(kwargs["stdout"].closed)
+            self.assertTrue(kwargs["start_new_session"])
+            self.assertTrue(kwargs["close_fds"])
+            return FakeProcess()
+
+        with tempfile.TemporaryDirectory() as temp_dir, patch.object(
+            self.launcher.subprocess,
+            "Popen",
+            side_effect=fake_popen,
+        ):
+            root = Path(temp_dir)
+            pid = self.launcher.start_detached(
+                ["python", "-c", "print('ok')"],
+                root / "logs" / "launcher.log",
+                root / "state" / "launcher.pid",
+            )
+            pid_text = (root / "state" / "launcher.pid").read_text(encoding="utf-8")
+
+        self.assertEqual(pid, 13579)
+        self.assertEqual(captured["command"], ["python", "-c", "print('ok')"])
+        self.assertTrue(captured["stdout"].closed)
+        self.assertEqual(pid_text, "13579\n")
 
     def test_validate_startup_configuration_reports_bad_runtime_settings(self) -> None:
         args = Namespace(

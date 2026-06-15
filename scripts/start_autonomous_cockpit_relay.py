@@ -67,17 +67,17 @@ def stop_process_group(path: Path) -> None:
 def start_detached(command: list[str], log_path: Path, pid_path: Path, env: dict[str, str] | None = None) -> int:
     log_path.parent.mkdir(parents=True, exist_ok=True)
     pid_path.parent.mkdir(parents=True, exist_ok=True)
-    output = open(log_path, "ab", buffering=0)
-    process = subprocess.Popen(
-        command,
-        cwd=ROOT,
-        stdin=subprocess.DEVNULL,
-        stdout=output,
-        stderr=subprocess.STDOUT,
-        start_new_session=True,
-        close_fds=True,
-        env=env,
-    )
+    with log_path.open("ab", buffering=0) as output:
+        process = subprocess.Popen(
+            command,
+            cwd=ROOT,
+            stdin=subprocess.DEVNULL,
+            stdout=output,
+            stderr=subprocess.STDOUT,
+            start_new_session=True,
+            close_fds=True,
+            env=env,
+        )
     pid_path.write_text(str(process.pid) + "\n", encoding="utf-8")
     return process.pid
 

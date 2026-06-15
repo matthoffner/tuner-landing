@@ -11,6 +11,7 @@ import json
 import os
 from pathlib import Path
 import sys
+import tempfile
 import unittest
 from unittest.mock import patch
 
@@ -31,6 +32,41 @@ def load_launcher_module():
 class StartAutonomousCockpitRelayTest(unittest.TestCase):
     def setUp(self) -> None:
         self.launcher = load_launcher_module()
+
+    def test_start_detached_closes_parent_log_handle_and_writes_pid(self) -> None:
+        captured: dict[str, object] = {}
+
+        class FakeProcess:
+            pid = 24680
+
+        def fake_popen(command, **kwargs):  # noqa: ANN001 - mirrors subprocess signature for the test.
+            captured["command"] = command
+            captured["stdout"] = kwargs["stdout"]
+            captured["env"] = kwargs["env"]
+            self.assertFalse(kwargs["stdout"].closed)
+            self.assertTrue(kwargs["start_new_session"])
+            self.assertTrue(kwargs["close_fds"])
+            return FakeProcess()
+
+        with tempfile.TemporaryDirectory() as temp_dir, patch.object(
+            self.launcher.subprocess,
+            "Popen",
+            side_effect=fake_popen,
+        ):
+            root = Path(temp_dir)
+            pid = self.launcher.start_detached(
+                ["python", "-c", "print('ok')"],
+                root / "logs" / "launcher.log",
+                root / "state" / "launcher.pid",
+                env={"AUTOMOAT_RELAY_URL": "https://relay.example"},
+            )
+            pid_text = (root / "state" / "launcher.pid").read_text(encoding="utf-8")
+
+        self.assertEqual(pid, 24680)
+        self.assertEqual(captured["command"], ["python", "-c", "print('ok')"])
+        self.assertEqual(captured["env"], {"AUTOMOAT_RELAY_URL": "https://relay.example"})
+        self.assertTrue(captured["stdout"].closed)
+        self.assertEqual(pid_text, "24680\n")
 
     def test_validate_startup_configuration_reports_missing_required_settings(self) -> None:
         errors = self.launcher.validate_startup_configuration(
