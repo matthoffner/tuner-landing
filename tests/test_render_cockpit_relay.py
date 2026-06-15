@@ -666,6 +666,41 @@ class RenderCockpitRelayTest(unittest.TestCase):
                             "coverage has thin group token=blocker-secret",
                         ],
                         "ready_for_next_import_records": False,
+                        "import_handoff": {
+                            "available": True,
+                            "next_append_rows": {
+                                "permits.csv": "538",
+                                "inspections.csv": 1085,
+                                "bad.csv": -1,
+                            },
+                            "append_preflight_status": "blocked",
+                            "append_preflight_checks": {
+                                "raw_files_present": True,
+                                "relationships_resolve": False,
+                                "token=check-secret": True,
+                                "ignored": "yes",
+                            },
+                            "append_preflight_blockers": [
+                                "contractor export token=handoff-secret",
+                            ],
+                            "ready_for_append": False,
+                            "raw_dir": (
+                                "generated/raw/dallas-electrician-import-sample-v2"
+                            ),
+                            "after_edit_command": (
+                                "python3 scripts/run_dallas_import_pipeline.py "
+                                "--require-ready token=command-secret"
+                            ),
+                            "readiness_check_command": (
+                                "python3 scripts/run_dallas_import_pipeline.py "
+                                "--summary-only --require-ready --format json"
+                            ),
+                            "raw_handoff_verification_json_command": (
+                                "python3 scripts/run_dallas_import_pipeline.py "
+                                "--verify-raw-handoff --format json "
+                                "https://relay.example/handoff?token=url-secret#debug"
+                            ),
+                        },
                         "current_focus": "autonomy_visibility_or_real_ingest",
                         "policy_reason": "dallas_ready_no_thin_groups",
                         "dallas_pipeline_ready": False,
@@ -697,6 +732,38 @@ class RenderCockpitRelayTest(unittest.TestCase):
             "dallas_pipeline_ready": False,
             "thin_group_count": 2,
             "queue_items": 535,
+            "import_handoff": {
+                "available": True,
+                "append_preflight_status": "blocked",
+                "raw_dir": "generated/raw/dallas-electrician-import-sample-v2",
+                "after_edit_command": (
+                    "python3 scripts/run_dallas_import_pipeline.py "
+                    "--require-ready token=[redacted]"
+                ),
+                "readiness_check_command": (
+                    "python3 scripts/run_dallas_import_pipeline.py "
+                    "--summary-only --require-ready --format json"
+                ),
+                "raw_handoff_verification_json_command": (
+                    "python3 scripts/run_dallas_import_pipeline.py "
+                    "--verify-raw-handoff --format json "
+                    "https://relay.example/handoff?[redacted]#[redacted]"
+                ),
+                "ready_for_append": False,
+                "next_append_rows": {
+                    "inspections.csv": 1085,
+                    "permits.csv": 538,
+                },
+                "append_preflight_checks": {
+                    "raw_files_present": True,
+                    "relationships_resolve": False,
+                    "token=[redacted]": True,
+                },
+                "append_preflight_blockers": [
+                    "contractor export token=[redacted]",
+                ],
+                "append_preflight_blockers_count": 1,
+            },
             "readiness_blockers": [
                 "coverage has thin group token=[redacted]",
             ],
@@ -734,6 +801,10 @@ class RenderCockpitRelayTest(unittest.TestCase):
         self.assertNotIn("problem-secret", health_text)
         self.assertNotIn("blocker-secret", health_text)
         self.assertNotIn("thin-secret", health_text)
+        self.assertNotIn("handoff-secret", health_text)
+        self.assertNotIn("check-secret", health_text)
+        self.assertNotIn("command-secret", health_text)
+        self.assertNotIn("url-secret", health_text)
 
     def test_status_and_health_promote_autonomy_policy_attention(self) -> None:
         self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"

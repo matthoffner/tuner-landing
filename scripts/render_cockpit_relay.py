@@ -512,6 +512,68 @@ def source_policy_summary(status: dict[str, Any]) -> dict[str, Any]:
     return summary
 
 
+def source_import_handoff_summary(source_summary: dict[str, Any]) -> dict[str, Any]:
+    handoff = source_summary.get("import_handoff")
+    if not isinstance(handoff, dict) or not handoff:
+        return {"available": False}
+
+    summary: dict[str, Any] = {"available": handoff.get("available") is True}
+    text_fields = {
+        "append_preflight_status": handoff.get("append_preflight_status"),
+        "raw_dir": handoff.get("raw_dir"),
+        "after_edit_command": handoff.get("after_edit_command"),
+        "readiness_check_command": handoff.get("readiness_check_command"),
+        "raw_handoff_verification_json_command": handoff.get(
+            "raw_handoff_verification_json_command"
+        ),
+    }
+    for key, value in text_fields.items():
+        compact_value = compact_policy_detail(value, max_length=240)
+        if compact_value is not None:
+            summary[key] = compact_value
+
+    ready_for_append = handoff.get("ready_for_append")
+    if isinstance(ready_for_append, bool):
+        summary["ready_for_append"] = ready_for_append
+
+    next_append_rows = handoff.get("next_append_rows")
+    if isinstance(next_append_rows, dict):
+        compact_rows: dict[str, int] = {}
+        for key, value in sorted(next_append_rows.items()):
+            compact_key = compact_policy_detail(key, max_length=80)
+            compact_value = compact_int(value)
+            if compact_key is not None and compact_value is not None:
+                compact_rows[compact_key] = compact_value
+        if compact_rows:
+            summary["next_append_rows"] = compact_rows
+
+    append_preflight_checks = handoff.get("append_preflight_checks")
+    if isinstance(append_preflight_checks, dict):
+        compact_checks: dict[str, bool] = {}
+        for key, value in sorted(append_preflight_checks.items()):
+            compact_key = compact_policy_detail(key, max_length=80)
+            if compact_key is not None and isinstance(value, bool):
+                compact_checks[compact_key] = value
+        if compact_checks:
+            summary["append_preflight_checks"] = compact_checks
+
+    blockers = handoff.get("append_preflight_blockers")
+    if isinstance(blockers, list):
+        compact_blockers = [
+            compact_value
+            for compact_value in (
+                compact_policy_detail(item, max_length=200)
+                for item in blockers[:5]
+            )
+            if compact_value is not None
+        ]
+        summary["append_preflight_blockers"] = compact_blockers
+        summary["append_preflight_blockers_count"] = len(blockers)
+
+    summary["available"] = any(key != "available" for key in summary)
+    return summary
+
+
 def source_readiness_summary(status: dict[str, Any]) -> dict[str, Any]:
     source_summary = status.get("cockpit_summary")
     if not isinstance(source_summary, dict):
@@ -579,6 +641,10 @@ def source_readiness_summary(status: dict[str, Any]) -> dict[str, Any]:
                 compact_statuses[compact_key] = compact_value
         if compact_statuses:
             summary["artifact_statuses"] = compact_statuses
+
+    import_handoff = source_import_handoff_summary(source_summary)
+    if import_handoff["available"]:
+        summary["import_handoff"] = import_handoff
 
     summary["available"] = any(key != "available" for key in summary)
     return summary
