@@ -351,6 +351,7 @@ def validate_worker_environment(
         git_repo,
         errors,
         required=True,
+        require_path=True,
     )
     validate_git_branch_name(env.get("AUTOMOAT_GIT_BRANCH", "main"), errors)
     validate_workdir_path(WORKDIR, errors)
@@ -464,6 +465,7 @@ def validate_secret_safe_http_url(
     errors: list[str],
     *,
     required: bool,
+    require_path: bool = False,
 ) -> None:
     if not value:
         if required:
@@ -497,6 +499,8 @@ def validate_secret_safe_http_url(
         errors.append(f"{name} must not include embedded credentials")
     elif parsed_value.query or parsed_value.fragment:
         errors.append(f"{name} must not include query strings or fragments")
+    elif require_path and not parsed_value.path.strip("/"):
+        errors.append(f"{name} must include a repository path")
     else:
         host_port = parsed_value.netloc.rsplit("@", 1)[-1]
         try:

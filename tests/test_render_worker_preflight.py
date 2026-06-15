@@ -601,6 +601,53 @@ class RenderWorkerPreflightTest(unittest.TestCase):
 
         self.assertEqual(errors, ["AUTOMOAT_GIT_REPO must start with http:// or https://"])
 
+    def test_rejects_git_repo_without_repository_path_before_clone(self) -> None:
+        base_env = {
+            "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            "GITHUB_TOKEN": "github-token",
+            "CODEX_ACCESS_TOKEN": "codex-token",
+        }
+
+        for git_repo in ("https://github.com", "https://github.com/"):
+            with self.subTest(git_repo=git_repo):
+                errors = self.worker.validate_worker_environment(
+                    {
+                        **base_env,
+                        "AUTOMOAT_GIT_REPO": git_repo,
+                    },
+                    found_command,
+                )
+
+                self.assertEqual(
+                    errors,
+                    ["AUTOMOAT_GIT_REPO must include a repository path"],
+                )
+
+    def test_check_env_json_categorizes_git_repo_without_repository_path(self) -> None:
+        env = {
+            "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            "AUTOMOAT_GIT_REPO": "https://github.com/",
+            "GITHUB_TOKEN": "github-token",
+            "CODEX_ACCESS_TOKEN": "codex-token",
+        }
+        output = io.StringIO()
+
+        with redirect_stdout(output):
+            errors = self.worker.emit_environment_preflight(
+                env,
+                found_command,
+                output_format="json",
+            )
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(errors, ["AUTOMOAT_GIT_REPO must include a repository path"])
+        self.assertEqual(payload["status"], "failed")
+        self.assertEqual(payload["diagnostics"]["error_categories"], ["invalid_url"])
+        self.assertNotIn("github-token", output.getvalue())
+        self.assertNotIn("codex-token", output.getvalue())
+
     def test_rejects_invalid_git_branch_before_clone(self) -> None:
         base_env = {
             "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
