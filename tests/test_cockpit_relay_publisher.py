@@ -49,6 +49,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             pid_file = tmp_path / "custom.pid"
             log_file = tmp_path / "custom.log"
             publisher_log = tmp_path / "publisher.log"
+            bridge_status_file = tmp_path / "custom-bridge-status.json"
             status_file.write_text(
                 json.dumps(
                     {
@@ -62,11 +63,23 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             )
             pid_file.write_text("not-a-pid\n", encoding="utf-8")
             log_file.write_text("first\nsecond\nthird\n", encoding="utf-8")
+            bridge_status_file.write_text(
+                json.dumps(
+                    {
+                        "status": "running",
+                        "public_url": "https://automoat-test.ngrok.app",
+                        "local_read_only_url": "http://127.0.0.1:4181/",
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
             args = Namespace(
                 status_file=status_file,
                 pid_file=pid_file,
                 log_file=log_file,
                 publisher_log=publisher_log,
+                bridge_status_file=bridge_status_file,
                 tail_lines=2,
                 max_log_bytes=1024,
                 status_stale_after_seconds=120,
@@ -89,16 +102,24 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             ["loop_not_running", "artifact_health_not_loaded", "import_readiness_not_ready"],
         )
         self.assertIn("bridge_summary", payload["status"])
-        self.assertFalse(payload["status"]["bridge_summary"]["available"])
+        self.assertTrue(payload["status"]["bridge_summary"]["available"])
         self.assertEqual(
             payload["status"]["bridge_summary"]["status_file_status"],
-            "missing",
+            "loaded",
+        )
+        self.assertEqual(
+            payload["status"]["bridge_summary"]["public_url"],
+            "https://automoat-test.ngrok.app",
         )
         self.assertEqual(payload["log_tail"], "second\nthird\n")
         self.assertEqual(payload["publisher"]["repo"], ".")
         self.assertEqual(payload["publisher"]["status_file"], "<external>/custom-status.json")
         self.assertEqual(payload["publisher"]["pid_file"], "<external>/custom.pid")
         self.assertEqual(payload["publisher"]["log_file"], "<external>/custom.log")
+        self.assertEqual(
+            payload["publisher"]["bridge_status_file"],
+            "<external>/custom-bridge-status.json",
+        )
         self.assertNotIn(str(tmp_path), json.dumps(payload, sort_keys=True))
         self.assertEqual(payload["publisher"]["pid"], os.getpid())
         self.assertEqual(
@@ -567,6 +588,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             "AUTOMOAT_RELAY_MAX_CONSECUTIVE_FAILURES": "5",
             "AUTOMOAT_RELAY_MAX_CONSECUTIVE_STALE_STATUSES": "6",
             "AUTOMOAT_STATUS_STALE_AFTER_SECONDS": "900",
+            "AUTOMOAT_BRIDGE_STATUS_FILE": "/tmp/custom-bridge-status.json",
         }
 
         with patch.dict(os.environ, env, clear=True), patch.object(
@@ -585,6 +607,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertEqual(args.max_consecutive_failures, 5)
         self.assertEqual(args.max_consecutive_stale_statuses, 6)
         self.assertEqual(args.status_stale_after_seconds, 900)
+        self.assertEqual(args.bridge_status_file, Path("/tmp/custom-bridge-status.json"))
 
     def test_validate_publisher_configuration_reports_bad_runtime_settings(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1028,6 +1051,46 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertNotIn(str(tmp_path), output.getvalue())
         self.assertNotIn("relay-token", output.getvalue())
 
+    def test_check_env_json_rejects_blocked_bridge_status_file_parent(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            blocker = tmp_path / "blocked-parent"
+            blocker.write_text("not a directory", encoding="utf-8")
+            env = {
+                "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+                "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            }
+            output = io.StringIO()
+            self.publisher.publish_once = lambda _args: self.fail("publish_once should not run")
+            with patch.dict(os.environ, env, clear=True), patch.object(
+                sys,
+                "argv",
+                [
+                    "publish_cockpit_to_relay.py",
+                    "--check-env",
+                    "--format",
+                    "json",
+                    "--bridge-status-file",
+                    str(blocker / "mvp-bridge-status.json"),
+                    "--publisher-log",
+                    str(tmp_path / "publisher.log"),
+                ],
+            ), redirect_stdout(output):
+                status = self.publisher.main()
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(status, 2)
+        self.assertEqual(payload["status"], "failed")
+        self.assertEqual(
+            payload["errors"],
+            [
+                "--bridge-status-file parent path <external>/blocked-parent must be a directory"
+            ],
+        )
+        self.assertEqual(payload["diagnostics"]["error_categories"], ["invalid_file_path"])
+        self.assertNotIn(str(tmp_path), output.getvalue())
+        self.assertNotIn("relay-token", output.getvalue())
+
     def test_check_env_rejects_bad_relay_token_before_publish(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
@@ -1103,6 +1166,8 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                     str(tmp_path / "loop.log"),
                     "--publisher-log",
                     str(tmp_path / "publisher.log"),
+                    "--bridge-status-file",
+                    str(tmp_path / "bridge-status.json"),
                 ],
             ), redirect_stdout(output):
                 status = self.publisher.main()
@@ -1127,6 +1192,10 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertEqual(payload["config"]["pid_file"], "<external>/loop.pid")
         self.assertEqual(payload["config"]["log_file"], "<external>/loop.log")
         self.assertEqual(payload["config"]["publisher_log"], "<external>/publisher.log")
+        self.assertEqual(
+            payload["config"]["bridge_status_file"],
+            "<external>/bridge-status.json",
+        )
         self.assertEqual(
             payload["config"]["runtime_limits"],
             self.publisher.PUBLISHER_CONFIG_LIMITS,

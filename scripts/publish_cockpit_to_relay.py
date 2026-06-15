@@ -504,6 +504,7 @@ def read_status(
     status_file: Path = STATUS_FILE,
     pid_file: Path = PID_FILE,
     status_stale_after_seconds: int = DEFAULT_STATUS_STALE_AFTER_SECONDS,
+    bridge_status_file: Path = BRIDGE_STATUS_FILE,
 ) -> dict[str, Any]:
     loaded_status, source_file_metadata = read_json_with_status(status_file)
     status = loaded_status or {
@@ -518,7 +519,7 @@ def read_status(
     status["loop_pid"] = pid
     status["publisher_updated_at"] = utc_now()
     status["cockpit_summary"] = publisher_cockpit_summary(status)
-    status["bridge_summary"] = read_bridge_summary()
+    status["bridge_summary"] = read_bridge_summary(bridge_status_file)
     return status
 
 
@@ -616,6 +617,7 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         args.status_file,
         args.pid_file,
         args.status_stale_after_seconds,
+        getattr(args, "bridge_status_file", BRIDGE_STATUS_FILE),
     )
     return {
         "pushed_at": utc_now(),
@@ -630,6 +632,9 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
             "status_file": repo_relative(args.status_file),
             "pid_file": repo_relative(args.pid_file),
             "log_file": repo_relative(args.log_file),
+            "bridge_status_file": repo_relative(
+                getattr(args, "bridge_status_file", BRIDGE_STATUS_FILE)
+            ),
             "source_health": publisher_source_health(status),
             "git": git_snapshot(),
         },
@@ -994,6 +999,7 @@ def validate_publisher_configuration(args: argparse.Namespace) -> list[str]:
         "--pid-file": args.pid_file,
         "--log-file": args.log_file,
         "--publisher-log": args.publisher_log,
+        "--bridge-status-file": getattr(args, "bridge_status_file", BRIDGE_STATUS_FILE),
     }
     for label, path in configured_file_args.items():
         if path.exists() and path.is_dir():
@@ -1036,7 +1042,15 @@ def publisher_preflight_error_category(error: str) -> str:
         )
     ):
         return "invalid_runtime_config"
-    if error.startswith(("--status-file", "--pid-file", "--log-file", "--publisher-log")):
+    if error.startswith(
+        (
+            "--status-file",
+            "--pid-file",
+            "--log-file",
+            "--publisher-log",
+            "--bridge-status-file",
+        )
+    ):
         return "invalid_file_path"
     return "invalid_configuration"
 
@@ -1079,6 +1093,9 @@ def publisher_preflight_summary(
         "pid_file": repo_relative(args.pid_file),
         "log_file": repo_relative(args.log_file),
         "publisher_log": repo_relative(args.publisher_log),
+        "bridge_status_file": repo_relative(
+            getattr(args, "bridge_status_file", BRIDGE_STATUS_FILE)
+        ),
         "runtime_limits": PUBLISHER_CONFIG_LIMITS,
     }
     return payload
@@ -1116,6 +1133,7 @@ def emit_publisher_preflight(
         f"status_stale_after_seconds={args.status_stale_after_seconds} "
         f"max_consecutive_failures={args.max_consecutive_failures} "
         f"max_consecutive_stale_statuses={args.max_consecutive_stale_statuses} "
+        f"bridge_status_file={repo_relative(getattr(args, 'bridge_status_file', BRIDGE_STATUS_FILE))} "
         f"runtime_limits={json.dumps(PUBLISHER_CONFIG_LIMITS, sort_keys=True)}"
     )
     return []
@@ -1149,6 +1167,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--pid-file", type=Path, default=PID_FILE)
     parser.add_argument("--log-file", type=Path, default=LOG_FILE)
     parser.add_argument("--publisher-log", type=Path, default=PUBLISHER_LOG)
+    parser.add_argument(
+        "--bridge-status-file",
+        type=Path,
+        default=Path(
+            os.environ.get("AUTOMOAT_BRIDGE_STATUS_FILE", str(BRIDGE_STATUS_FILE))
+        ),
+        help="read local bridge status from this file when building relay snapshots",
+    )
     parser.add_argument(
         "--status-stale-after-seconds",
         type=int,
@@ -1190,6 +1216,7 @@ def normalize_args(args: argparse.Namespace) -> argparse.Namespace:
     args.pid_file = args.pid_file.expanduser().resolve()
     args.log_file = args.log_file.expanduser().resolve()
     args.publisher_log = args.publisher_log.expanduser().resolve()
+    args.bridge_status_file = args.bridge_status_file.expanduser().resolve()
     return args
 
 
