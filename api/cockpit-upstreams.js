@@ -6,6 +6,7 @@ const EXPOSED_UPSTREAM_HEADERS = [
   "X-Automoat-Upstream-Attempts",
   "X-Automoat-Upstream-Timeout-Ms",
   "X-Automoat-Upstream-Invalid-Config",
+  "X-Automoat-Upstream-Invalid-Keys",
   "X-Automoat-Upstream-Not-Configured",
 ].join(", ");
 const NOT_CONFIGURED_UPSTREAMS_HEADER = "relay,legacy_bridge";
@@ -188,6 +189,28 @@ function invalidUpstreamsHeader(invalid) {
       return `${kind}:${error}`;
     })
     .join(",");
+}
+
+function invalidUpstreamKeysHeader(invalid) {
+  const keys = [];
+  for (const item of invalid) {
+    const kind = item.kind || "unknown";
+    const error = String(item.error || "");
+    if (kind === "relay") {
+      keys.push("AUTOMOAT_RELAY_URL");
+    } else if (kind === "legacy_bridge") {
+      keys.push("AUTOMOAT_BRIDGE_URL");
+    } else if (kind === "timeout") {
+      keys.push("AUTOMOAT_COCKPIT_UPSTREAM_TIMEOUT_MS");
+    } else if (kind === "relay_auth") {
+      const match = error.match(/\bAUTOMOAT_RELAY_(?:READ_)?TOKEN\b/);
+      keys.push(match ? match[0] : "AUTOMOAT_RELAY_READ_TOKEN");
+      if (!match) {
+        keys.push("AUTOMOAT_RELAY_TOKEN");
+      }
+    }
+  }
+  return [...new Set(keys)].join(",");
 }
 
 function setProxyHeaders(response, contentType) {
@@ -375,6 +398,7 @@ module.exports = {
   classifyUpstreamError,
   fetchUpstreamText,
   invalidUpstreamsHeader,
+  invalidUpstreamKeysHeader,
   isLocalHttpHost,
   normalizeBaseUrl,
   normalizeUpstreamTimeoutMs,
