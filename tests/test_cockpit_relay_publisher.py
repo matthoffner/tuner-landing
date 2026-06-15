@@ -798,6 +798,83 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         )
         self.assertNotIn("automoat-cockpit-relay.example", output.getvalue())
 
+    def test_validate_publisher_configuration_rejects_malformed_relay_url_details(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            cases = {
+                "https://automoat-cockpit-relay.example/debug path": (
+                    "--relay-url must not contain whitespace"
+                ),
+                "https://automoat-cockpit-relay.example:abc": (
+                    "--relay-url must include a valid port when a port is specified"
+                ),
+                "https://automoat-cockpit-relay.example:": (
+                    "--relay-url must include a valid port when a port is specified"
+                ),
+                "https://automoat-cockpit-relay.example:0": (
+                    "--relay-url must include a valid port when a port is specified"
+                ),
+                "https://:443/status": "--relay-url must include a host",
+                "https://[::1": "--relay-url must be a valid URL",
+            }
+
+            for relay_url, expected_error in cases.items():
+                with self.subTest(relay_url=relay_url):
+                    args = Namespace(
+                        relay_url=relay_url,
+                        token="relay-token",
+                        interval=3,
+                        timeout=8,
+                        tail_lines=180,
+                        max_log_bytes=256 * 1024,
+                        max_consecutive_failures=3,
+                        max_consecutive_stale_statuses=0,
+                        status_stale_after_seconds=660,
+                        status_file=tmp_path / "status.json",
+                        pid_file=tmp_path / "loop.pid",
+                        log_file=tmp_path / "loop.log",
+                        publisher_log=tmp_path / "publisher.log",
+                    )
+
+                    errors = self.publisher.validate_publisher_configuration(args)
+
+                    self.assertEqual(errors, [expected_error])
+
+    def test_check_env_json_categorizes_invalid_relay_url_port(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            env = {
+                "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example:abc",
+                "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            }
+            output = io.StringIO()
+            self.publisher.publish_once = lambda _args: self.fail("publish_once should not run")
+            with patch.dict(os.environ, env, clear=True), patch.object(
+                sys,
+                "argv",
+                [
+                    "publish_cockpit_to_relay.py",
+                    "--check-env",
+                    "--format",
+                    "json",
+                    "--publisher-log",
+                    str(tmp_path / "publisher.log"),
+                ],
+            ), redirect_stdout(output):
+                status = self.publisher.main()
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(status, 2)
+        self.assertEqual(
+            payload["errors"],
+            ["--relay-url must include a valid port when a port is specified"],
+        )
+        self.assertEqual(payload["diagnostics"]["error_categories"], ["invalid_relay_url"])
+        self.assertNotIn("automoat-cockpit-relay.example:abc", output.getvalue())
+        self.assertNotIn("relay-token", output.getvalue())
+
     def test_check_env_rejects_bad_relay_token_before_publish(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)

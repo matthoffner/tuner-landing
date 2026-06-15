@@ -854,16 +854,33 @@ def validate_publisher_configuration(args: argparse.Namespace) -> list[str]:
         for character in relay_url_value
     ):
         errors.append("--relay-url must be a single-line URL without control characters")
+    elif any(character.isspace() for character in relay_url):
+        errors.append("--relay-url must not contain whitespace")
     elif not relay_url.startswith(("http://", "https://")):
         errors.append("--relay-url must start with http:// or https://")
     else:
-        parsed_relay_url = urlparse(relay_url)
-        if not parsed_relay_url.netloc:
+        try:
+            parsed_relay_url = urlparse(relay_url)
+        except ValueError:
+            errors.append("--relay-url must be a valid URL")
+            parsed_relay_url = None
+        if parsed_relay_url is None:
+            pass
+        elif not parsed_relay_url.netloc or not parsed_relay_url.hostname:
             errors.append("--relay-url must include a host")
         elif parsed_relay_url.username or parsed_relay_url.password:
             errors.append("--relay-url must not include embedded credentials")
         elif parsed_relay_url.query or parsed_relay_url.fragment:
             errors.append("--relay-url must not include query strings or fragments")
+        else:
+            host_port = parsed_relay_url.netloc.rsplit("@", 1)[-1]
+            try:
+                port = parsed_relay_url.port
+            except ValueError:
+                errors.append("--relay-url must include a valid port when a port is specified")
+            else:
+                if host_port.endswith(":") or port == 0:
+                    errors.append("--relay-url must include a valid port when a port is specified")
 
     token_value = str(args.token)
     token = token_value.strip()
