@@ -610,6 +610,40 @@ def preflight_error_categories(errors: list[str]) -> list[str]:
     return sorted({preflight_error_category(error) for error in errors})
 
 
+def preflight_error_key(error: str) -> str:
+    if error == "GITHUB_TOKEN or GH_TOKEN is required":
+        return "GITHUB_TOKEN|GH_TOKEN"
+    if error == "CODEX_AUTH_JSON_B64, CODEX_ACCESS_TOKEN, or OPENAI_API_KEY is required":
+        return "CODEX_AUTH_JSON_B64|CODEX_ACCESS_TOKEN|OPENAI_API_KEY"
+    first_token = error.split(" ", 1)[0]
+    if first_token in {
+        "AUTOMOAT_RELAY_URL",
+        "AUTOMOAT_RELAY_TOKEN",
+        "AUTOMOAT_GIT_REPO",
+        "AUTOMOAT_GIT_BRANCH",
+        "AUTOMOAT_WORKDIR",
+        "CODEX_HOME",
+        "CODEX_AUTH_JSON_B64",
+        "CODEX_ACCESS_TOKEN",
+        "OPENAI_API_KEY",
+        *GIT_AUTH_ENV_NAMES,
+        *CODEX_CONFIG_ENV_DEFAULTS,
+        *RUNTIME_CONFIG_LIMITS,
+        *GIT_IDENTITY_ENV_DEFAULTS,
+    }:
+        return first_token
+    for command in REQUIRED_COMMANDS:
+        if error == f"{command} executable is required on PATH":
+            return f"PATH:{command}"
+    if error.startswith("reserved runtime file "):
+        return "reserved_runtime_files"
+    return "worker_environment"
+
+
+def preflight_error_keys(errors: list[str]) -> list[str]:
+    return sorted({preflight_error_key(error) for error in errors})
+
+
 def validate_git_branch_name(value: str, errors: list[str]) -> None:
     if value != value.strip():
         errors.append("AUTOMOAT_GIT_BRANCH must not include leading or trailing whitespace")
@@ -820,6 +854,7 @@ def environment_preflight_summary(
         payload["diagnostics"] = {
             "error_count": len(errors),
             "error_categories": preflight_error_categories(errors),
+            "failed_configuration_keys": preflight_error_keys(errors),
             "git_auth": configured_names(env, GIT_AUTH_ENV_NAMES),
             "git_auth_selected": selected_name(env, GIT_AUTH_ENV_NAMES),
             "codex_auth": configured_names(env, CODEX_AUTH_ENV_NAMES),

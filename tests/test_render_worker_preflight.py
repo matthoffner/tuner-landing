@@ -48,6 +48,15 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             "CODEX_AUTH_JSON_B64, CODEX_ACCESS_TOKEN, or OPENAI_API_KEY is required",
             errors,
         )
+        self.assertEqual(
+            self.worker.preflight_error_keys(errors),
+            [
+                "AUTOMOAT_RELAY_TOKEN",
+                "AUTOMOAT_RELAY_URL",
+                "CODEX_AUTH_JSON_B64|CODEX_ACCESS_TOKEN|OPENAI_API_KEY",
+                "GITHUB_TOKEN|GH_TOKEN",
+            ],
+        )
 
     def test_accepts_alternate_git_and_codex_auth(self) -> None:
         errors = self.worker.validate_worker_environment(
@@ -1549,6 +1558,10 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertNotIn("config", payload)
         self.assertEqual(payload["diagnostics"]["error_count"], 2)
         self.assertEqual(payload["diagnostics"]["error_categories"], ["invalid_url"])
+        self.assertEqual(
+            payload["diagnostics"]["failed_configuration_keys"],
+            ["AUTOMOAT_GIT_REPO", "AUTOMOAT_RELAY_URL"],
+        )
         self.assertEqual(payload["diagnostics"]["git_auth"], ["GITHUB_TOKEN"])
         self.assertEqual(payload["diagnostics"]["git_auth_selected"], "GITHUB_TOKEN")
         self.assertEqual(payload["diagnostics"]["codex_auth"], ["CODEX_ACCESS_TOKEN"])
@@ -1602,6 +1615,16 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                 "invalid_git_branch",
                 "invalid_runtime_config",
                 "invalid_secret_or_identity",
+            ],
+        )
+        self.assertEqual(
+            payload["diagnostics"]["failed_configuration_keys"],
+            [
+                "AUTOMOAT_AGENT_INTERVAL",
+                "AUTOMOAT_BRIDGE_STATUS_STALE_AFTER_SECONDS",
+                "AUTOMOAT_GIT_BRANCH",
+                "AUTOMOAT_RELAY_TOKEN",
+                "CODEX_AUTH_JSON_B64",
             ],
         )
         self.assertEqual(payload["diagnostics"]["git_auth"], ["GH_TOKEN"])
@@ -2048,6 +2071,10 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertEqual(errors, ["codex executable is required on PATH"])
         self.assertEqual(payload["status"], "failed")
         self.assertEqual(payload["diagnostics"]["error_categories"], ["missing_command"])
+        self.assertEqual(
+            payload["diagnostics"]["failed_configuration_keys"],
+            ["PATH:codex"],
+        )
         self.assertEqual(
             payload["diagnostics"]["command_paths"],
             {"git": "/usr/bin/git", "codex": None},
