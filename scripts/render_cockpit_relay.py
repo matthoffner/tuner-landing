@@ -13,7 +13,7 @@ from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlunparse
 
 
 STATE_LOCK = threading.Lock()
@@ -42,6 +42,7 @@ COCKPIT_HEALTH_LABELS = {
     "relay_state_load_failed": "Relay state failed to load",
     "relay_snapshot_missing": "Relay snapshot is missing",
     "relay_snapshot_stale": "Relay snapshot is stale",
+    "source_bridge_degraded": "Source bridge is degraded",
     "source_status_stale": "Source status is stale",
     "source_status_unavailable": "Source status is unavailable",
     "source_loop_not_running": "Source loop is not running",
@@ -174,11 +175,49 @@ def compact_text(value: Any, *, max_length: int = 160) -> str | None:
     return text[:max_length] if text else None
 
 
+def sanitize_url_value(value: str) -> str:
+    parsed = urlparse(value)
+    if not parsed.scheme or not parsed.netloc:
+        return value
+    hostname = parsed.hostname or ""
+    netloc = hostname
+    try:
+        port = parsed.port
+    except ValueError:
+        port = None
+    if port is not None:
+        netloc = f"{netloc}:{port}"
+
+    path = parsed.path or ""
+    if parsed.params:
+        path = f"{path};{parsed.params}"
+    query = "[redacted]" if parsed.query else ""
+    fragment = "[redacted]" if parsed.fragment else ""
+    return urlunparse((parsed.scheme, netloc, path, "", query, fragment))
+
+
+def compact_url(value: Any, *, max_length: int = 160) -> str | None:
+    text = compact_text(value, max_length=max_length)
+    if text is None:
+        return None
+    return sanitize_url_value(text)
+
+
 def compact_int(value: Any) -> int | None:
     if isinstance(value, bool):
         return None
     try:
         parsed = int(value)
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed >= 0 else None
+
+
+def compact_float(value: Any) -> float | None:
+    if isinstance(value, bool):
+        return None
+    try:
+        parsed = float(value)
     except (TypeError, ValueError):
         return None
     return parsed if parsed >= 0 else None
@@ -249,6 +288,77 @@ def source_status_diagnostics(status: dict[str, Any]) -> dict[str, Any]:
     return diagnostics
 
 
+def source_bridge_summary(status: dict[str, Any]) -> dict[str, Any]:
+    bridge = status.get("bridge_summary")
+    if not isinstance(bridge, dict) or not bridge:
+        return {"available": False}
+
+    summary: dict[str, Any] = {"available": bridge.get("available") is True}
+    text_fields = {
+        "status_file": bridge.get("status_file"),
+        "status_file_status": bridge.get("status_file_status"),
+        "status_file_error": bridge.get("status_file_error"),
+        "status": bridge.get("status"),
+        "updated_at": bridge.get("updated_at"),
+        "bridge_started_at": bridge.get("bridge_started_at"),
+        "mode": bridge.get("mode"),
+    }
+    for key, value in text_fields.items():
+        compact_value = compact_text(value, max_length=240)
+        if compact_value is not None:
+            summary[key] = compact_value
+
+    url_fields = {
+        "public_url": bridge.get("public_url"),
+        "local_read_only_url": bridge.get("local_read_only_url"),
+        "ngrok_api_url": bridge.get("ngrok_api_url"),
+    }
+    for key, value in url_fields.items():
+        compact_value = compact_url(value, max_length=240)
+        if compact_value is not None:
+            summary[key] = compact_value
+
+    int_fields = {
+        "bridge_pid": bridge.get("bridge_pid"),
+        "bridge_status_sequence": bridge.get("bridge_status_sequence"),
+    }
+    for key, value in int_fields.items():
+        compact_value = compact_int(value)
+        if compact_value is not None:
+            summary[key] = compact_value
+
+    interval = compact_float(bridge.get("interval"))
+    if interval is not None:
+        summary["interval"] = interval
+
+    bridge_health = bridge.get("bridge_health")
+    if isinstance(bridge_health, dict):
+        reasons = bridge_health.get("reasons")
+        if not isinstance(reasons, list):
+            reasons = []
+        normalized_reasons = [str(reason) for reason in reasons if reason]
+        primary_reason = bridge_health.get("primary_reason")
+        if not isinstance(primary_reason, str) or not primary_reason:
+            primary_reason = normalized_reasons[0] if normalized_reasons else None
+        health_status = compact_text(bridge_health.get("status")) or (
+            "degraded" if normalized_reasons else "unknown"
+        )
+        ok = bridge_health.get("ok")
+        if not isinstance(ok, bool):
+            ok = health_status == "live"
+        label = compact_text(bridge_health.get("label")) or (
+            "Live" if primary_reason is None else primary_reason.replace("_", " ")
+        )
+        summary["bridge_health"] = {
+            "status": health_status,
+            "ok": ok,
+            "reasons": normalized_reasons,
+            "primary_reason": primary_reason,
+            "label": label,
+        }
+    return summary
+
+
 def cockpit_health(
     state: dict[str, Any],
     status: dict[str, Any],
@@ -256,6 +366,7 @@ def cockpit_health(
 ) -> dict[str, Any]:
     reasons: list[str] = []
     source_health = publisher_source_health(state)
+    source_bridge = source_bridge_summary(status)
     source_health_reasons = source_health.get("reasons")
     if not isinstance(source_health_reasons, list):
         source_health_reasons = []
@@ -297,6 +408,13 @@ def cockpit_health(
         reasons.append("source_status_failing")
     if source_summary.get("operator_attention") is True:
         reasons.append("source_cockpit_attention")
+    source_bridge_health = source_bridge.get("bridge_health")
+    if (
+        source_bridge.get("available") is True
+        and isinstance(source_bridge_health, dict)
+        and source_bridge_health.get("ok") is False
+    ):
+        reasons.append("source_bridge_degraded")
     for source_health_reason in source_health_reasons:
         if source_health_reason not in reasons:
             reasons.append(source_health_reason)
@@ -320,6 +438,7 @@ def cockpit_health(
         "source_cockpit_attention_primary_reason": source_attention_primary_reason,
         "source_cockpit_attention_label": source_attention_label,
         "source_status_diagnostics": source_status_diagnostics(status),
+        "source_bridge": source_bridge,
         "source_health": source_health,
         "publisher_identity": publisher_identity(state),
     }

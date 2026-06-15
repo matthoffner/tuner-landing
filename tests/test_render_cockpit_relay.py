@@ -310,6 +310,86 @@ class RenderCockpitRelayTest(unittest.TestCase):
             expected_source_health,
         )
 
+    def test_status_and_health_include_sanitized_source_bridge_summary(self) -> None:
+        self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
+        self.relay.update_state(
+            {
+                "pushed_at": "2026-06-14T19:59:30Z",
+                "status": {
+                    "status": "running",
+                    "loop_running": True,
+                    "bridge_summary": {
+                        "available": True,
+                        "status_file": ".automoat/state/mvp-bridge-status.json",
+                        "status_file_status": "loaded",
+                        "status": "viewer_exited",
+                        "public_url": (
+                            "https://bridge-user:bridge-secret@automoat-test.ngrok.app"
+                            "/viewer?token=public-secret#debug"
+                        ),
+                        "local_read_only_url": (
+                            "http://127.0.0.1:4181/?session=local-secret#panel"
+                        ),
+                        "ngrok_api_url": (
+                            "http://api-user:api-secret@127.0.0.1:4041"
+                            "/api/tunnels?token=api-secret#inspect"
+                        ),
+                        "bridge_pid": "12345",
+                        "bridge_status_sequence": "4",
+                        "interval": "5.5",
+                        "bridge_health": {
+                            "status": "degraded",
+                            "ok": False,
+                            "reasons": ["viewer_exited"],
+                            "primary_reason": "viewer_exited",
+                            "label": "Viewer exited",
+                        },
+                    },
+                },
+                "log_tail": "bridge viewer exited\n",
+            }
+        )
+        self.relay.utc_now = lambda: "2026-06-14T20:00:00Z"
+
+        health = self.relay.health_payload()
+        status = self.relay.relay_status_payload()
+
+        expected_bridge = {
+            "available": True,
+            "status_file": ".automoat/state/mvp-bridge-status.json",
+            "status_file_status": "loaded",
+            "status": "viewer_exited",
+            "public_url": "https://automoat-test.ngrok.app/viewer?[redacted]#[redacted]",
+            "local_read_only_url": "http://127.0.0.1:4181/?[redacted]#[redacted]",
+            "ngrok_api_url": "http://127.0.0.1:4041/api/tunnels?[redacted]#[redacted]",
+            "bridge_pid": 12345,
+            "bridge_status_sequence": 4,
+            "interval": 5.5,
+            "bridge_health": {
+                "status": "degraded",
+                "ok": False,
+                "reasons": ["viewer_exited"],
+                "primary_reason": "viewer_exited",
+                "label": "Viewer exited",
+            },
+        }
+        self.assertTrue(health["ok"])
+        self.assertFalse(health["cockpit_ok"])
+        self.assertEqual(health["cockpit_status"], "degraded")
+        self.assertEqual(health["cockpit_health"]["reasons"], ["source_bridge_degraded"])
+        self.assertEqual(
+            health["cockpit_health_primary_reason"],
+            "source_bridge_degraded",
+        )
+        self.assertEqual(health["cockpit_health_label"], "Source bridge is degraded")
+        self.assertEqual(health["cockpit_health"]["source_bridge"], expected_bridge)
+        self.assertEqual(status["cockpit_health"]["source_bridge"], expected_bridge)
+        health_text = json.dumps(health, sort_keys=True)
+        self.assertNotIn("bridge-secret", health_text)
+        self.assertNotIn("public-secret", health_text)
+        self.assertNotIn("local-secret", health_text)
+        self.assertNotIn("api-secret", health_text)
+
     def test_status_and_health_report_source_cockpit_attention(self) -> None:
         self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
         self.relay.update_state(
