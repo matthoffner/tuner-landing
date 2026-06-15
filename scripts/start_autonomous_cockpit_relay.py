@@ -24,6 +24,7 @@ STATE_DIR = ROOT / ".automoat" / "state"
 COCKPIT_PID = STATE_DIR / "mvp-cockpit-server.pid"
 PUBLISHER_PID = STATE_DIR / "cockpit-relay-publisher.pid"
 BRIDGE_RUNNER_PID = STATE_DIR / "mvp-bridge-runner.pid"
+MAX_RELAY_URL_CHARS = 500
 MAX_RELAY_TOKEN_CHARS = 8192
 
 
@@ -197,6 +198,8 @@ def validate_startup_configuration(args: argparse.Namespace) -> list[str]:
         errors.append("--relay-url must be a single-line URL without control characters")
     elif any(character.isspace() for character in raw_relay_url):
         errors.append("--relay-url must not contain whitespace")
+    elif len(raw_relay_url) > MAX_RELAY_URL_CHARS:
+        errors.append(f"--relay-url must be {MAX_RELAY_URL_CHARS} characters or fewer")
     elif not relay_url.startswith(("http://", "https://")):
         errors.append("--relay-url must start with http:// or https://")
     else:
