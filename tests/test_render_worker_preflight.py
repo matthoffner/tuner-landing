@@ -584,6 +584,46 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             ],
         )
 
+    def test_rejects_plain_http_nonlocal_urls_before_startup(self) -> None:
+        errors = self.worker.validate_worker_environment(
+            {
+                "AUTOMOAT_RELAY_URL": "http://automoat-cockpit-relay.example",
+                "AUTOMOAT_RELAY_TOKEN": "relay-token",
+                "AUTOMOAT_GIT_REPO": "http://github.com/example/private.git",
+                "GITHUB_TOKEN": "github-token",
+                "CODEX_ACCESS_TOKEN": "codex-token",
+            },
+            found_command,
+        )
+
+        self.assertEqual(
+            errors,
+            [
+                (
+                    "AUTOMOAT_RELAY_URL must use https:// unless the host is "
+                    "localhost or 127.0.0.1"
+                ),
+                (
+                    "AUTOMOAT_GIT_REPO must use https:// unless the host is "
+                    "localhost or 127.0.0.1"
+                ),
+            ],
+        )
+
+    def test_accepts_plain_http_local_urls_for_local_preflight(self) -> None:
+        errors = self.worker.validate_worker_environment(
+            {
+                "AUTOMOAT_RELAY_URL": "http://localhost:4180",
+                "AUTOMOAT_RELAY_TOKEN": "relay-token",
+                "AUTOMOAT_GIT_REPO": "http://127.0.0.1:3000/example/private.git",
+                "GITHUB_TOKEN": "github-token",
+                "CODEX_ACCESS_TOKEN": "codex-token",
+            },
+            found_command,
+        )
+
+        self.assertEqual(errors, [])
+
     def test_rejects_urls_with_empty_or_zero_ports_before_startup(self) -> None:
         errors = self.worker.validate_worker_environment(
             {

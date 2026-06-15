@@ -554,6 +554,16 @@ def validate_secret_safe_http_url(
             return
         if host_port.endswith(":") or port == 0:
             errors.append(f"{name} must include a valid port when a port is specified")
+            return
+        if parsed_value.scheme == "http" and not local_http_host(parsed_value.hostname):
+            errors.append(
+                f"{name} must use https:// unless the host is localhost or 127.0.0.1"
+            )
+
+
+def local_http_host(hostname: str) -> bool:
+    normalized = hostname.lower().strip("[]")
+    return normalized in {"localhost", "127.0.0.1", "::1"}
 
 
 def preflight_error_category(error: str) -> str:
