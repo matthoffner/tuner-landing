@@ -579,6 +579,7 @@ class RenderCockpitRelayTest(unittest.TestCase):
                                 "relay_token=another-secret"
                             ),
                         ],
+                        "policy_synthetic_row_count": 9,
                     },
                 },
                 "log_tail": "autonomy policy check failed\n",
@@ -634,7 +635,7 @@ class RenderCockpitRelayTest(unittest.TestCase):
                     "relay_token=[redacted]"
                 ),
             ],
-            "synthetic_row_samples_count": 1,
+            "synthetic_row_samples_count": 9,
         }
         self.assertEqual(
             health["cockpit_health"]["source_policy"],

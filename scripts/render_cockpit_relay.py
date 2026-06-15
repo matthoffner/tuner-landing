@@ -444,6 +444,10 @@ def source_policy_summary(status: dict[str, Any]) -> dict[str, Any]:
             summary[key] = compact_values
             summary[f"{key}_count"] = len(value)
 
+    synthetic_row_count = compact_int(source_summary.get("policy_synthetic_row_count"))
+    if synthetic_row_count is not None:
+        summary["synthetic_row_samples_count"] = synthetic_row_count
+
     summary["available"] = any(key != "available" for key in summary)
     return summary
 

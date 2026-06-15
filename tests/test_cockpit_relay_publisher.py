@@ -398,6 +398,18 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 "generated/raw/dallas-electrician-import-sample-v2/extra.csv",
                 "generated/raw/dallas-electrician-import-sample-v2/overflow.csv",
             ]
+            synthetic_rows = [
+                (
+                    "generated/raw/dallas-electrician-import-sample-v2/permits.csv:538 "
+                    "ELZ-2026-0737 https://row.example/export?token=row-secret#debug "
+                    "relay_token=sample-secret"
+                ),
+                "token=second-secret generated/raw/dallas-electrician-import-sample-v2/inspections.csv:1085",
+                "generated/raw/dallas-electrician-import-sample-v2/inspections.csv:1086",
+                "generated/raw/dallas-electrician-import-sample-v2/contractors.csv:7",
+                "generated/raw/dallas-electrician-import-sample-v2/rule_documents.csv:5",
+                "generated/raw/dallas-electrician-import-sample-v2/overflow.csv:6",
+            ]
             status_file = tmp_path / "status.json"
             status_file.write_text(
                 json.dumps(
@@ -415,6 +427,8 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                                     "https://relay.example/debug?token=url-secret#trace"
                                 ),
                                 "raw_dallas_csv_changed_paths": raw_paths,
+                                "synthetic_row_samples": synthetic_rows,
+                                "synthetic_row_count": 12,
                             }
                         ],
                         "artifacts": {
@@ -451,9 +465,19 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         )
         self.assertEqual(len(summary["policy_raw_dallas_csv_changed_paths"]), 8)
         self.assertEqual(summary["policy_raw_dallas_csv_changed_path_count"], 9)
+        self.assertEqual(len(summary["policy_synthetic_row_samples"]), 5)
+        self.assertEqual(summary["policy_synthetic_row_count"], 12)
         self.assertIn(
             "https://source.example/export.csv?[redacted]#[redacted]",
             summary["policy_raw_dallas_csv_changed_paths"],
+        )
+        self.assertIn(
+            "https://row.example/export?[redacted]#[redacted]",
+            summary["policy_synthetic_row_samples"][0],
+        )
+        self.assertIn(
+            "relay_token=[redacted]",
+            summary["policy_synthetic_row_samples"][0],
         )
         self.assertIn(
             "token=[redacted] generated/raw/private.csv",
@@ -464,6 +488,9 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertNotIn("url-secret", summary_text)
         self.assertNotIn("raw-secret", summary_text)
         self.assertNotIn("csv-secret", summary_text)
+        self.assertNotIn("row-secret", summary_text)
+        self.assertNotIn("sample-secret", summary_text)
+        self.assertNotIn("second-secret", summary_text)
         self.assertNotIn("overflow.csv", summary_text)
         self.assertNotIn("\n", summary["policy_failure_reason"])
 

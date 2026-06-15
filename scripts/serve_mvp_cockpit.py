@@ -37,7 +37,7 @@ BEARER_SECRET_PATTERN = re.compile(
     re.IGNORECASE,
 )
 SECRET_ASSIGNMENT_PATTERN = re.compile(
-    r"\b(token|access_token|api_key|x-automoat-relay-token)\s*[:=]\s*[^\s,;]+",
+    r"\b(token|relay_token|access_token|api_key|x-automoat-relay-token)\s*[:=]\s*[^\s,;]+",
     re.IGNORECASE,
 )
 OPERATOR_ATTENTION_LABELS = {

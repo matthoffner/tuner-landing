@@ -44,7 +44,7 @@ BEARER_SECRET_PATTERN = re.compile(
     re.IGNORECASE,
 )
 SECRET_ASSIGNMENT_PATTERN = re.compile(
-    r"\b(token|access_token|api_key|x-automoat-relay-token)\s*[:=]\s*[^\s,;]+",
+    r"\b(token|relay_token|access_token|api_key|x-automoat-relay-token)\s*[:=]\s*[^\s,;]+",
     re.IGNORECASE,
 )
 SOURCE_HEALTH_LABELS = {
@@ -64,6 +64,7 @@ OPERATOR_ATTENTION_LABELS = {
     "coverage_thin_groups_present": "Coverage has thin groups",
 }
 POLICY_RAW_PATH_SAMPLE_LIMIT = 8
+POLICY_ROW_SAMPLE_LIMIT = 5
 
 
 def utc_now() -> str:
@@ -428,6 +429,20 @@ def publisher_cockpit_summary(status: dict[str, Any]) -> dict[str, Any]:
     policy_raw_csv_path_count = len(
         as_string_list(policy_failure.get("raw_dallas_csv_changed_paths"))
     ) if policy_failure else 0
+    policy_synthetic_row_samples = (
+        compact_policy_detail_list(
+            policy_failure.get("synthetic_row_samples"),
+            max_items=POLICY_ROW_SAMPLE_LIMIT,
+            max_length=240,
+        )
+        if policy_failure
+        else []
+    )
+    policy_synthetic_row_count = (
+        compact_int(policy_failure.get("synthetic_row_count")) if policy_failure else None
+    )
+    if policy_synthetic_row_count is None:
+        policy_synthetic_row_count = len(policy_synthetic_row_samples)
     thin_group_categories = as_string_list(autonomy_policy.get("thin_group_categories"))
     thin_group_count = autonomy_policy.get("thin_group_count")
     if not isinstance(thin_group_count, int):
@@ -476,6 +491,8 @@ def publisher_cockpit_summary(status: dict[str, Any]) -> dict[str, Any]:
         "policy_failure_reason": policy_failure_reason,
         "policy_raw_dallas_csv_changed_paths": policy_raw_csv_paths,
         "policy_raw_dallas_csv_changed_path_count": policy_raw_csv_path_count,
+        "policy_synthetic_row_samples": policy_synthetic_row_samples,
+        "policy_synthetic_row_count": policy_synthetic_row_count,
         "dallas_pipeline_ready": autonomy_policy.get("dallas_pipeline_ready"),
         "thin_group_count": thin_group_count,
         "thin_group_categories": thin_group_categories,
