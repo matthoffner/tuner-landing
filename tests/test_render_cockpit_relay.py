@@ -310,6 +310,54 @@ class RenderCockpitRelayTest(unittest.TestCase):
         self.assertIn("--max-status-bytes must be greater than 0", errors)
         self.assertIn("--stale-after-seconds must be greater than 0", errors)
 
+    def test_relay_preflight_accepts_documented_runtime_limits(self) -> None:
+        limits = self.relay.RELAY_CONFIG_LIMITS
+        env = {
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            "PORT": "4180",
+            "AUTOMOAT_RELAY_MAX_BYTES": str(limits["max_ingest_bytes"]),
+            "AUTOMOAT_RELAY_MAX_LOG_CHARS": str(limits["max_log_chars"]),
+            "AUTOMOAT_RELAY_MAX_STATUS_BYTES": str(limits["max_status_bytes"]),
+            "AUTOMOAT_RELAY_STALE_AFTER_SECONDS": str(limits["stale_after_seconds"]),
+        }
+        with patch.dict(os.environ, env, clear=True), patch.object(
+            sys,
+            "argv",
+            ["render_cockpit_relay.py", "--check-env"],
+        ):
+            args = self.relay.parse_args()
+            errors = self.relay.validate_relay_configuration(args)
+
+        self.assertEqual(errors, [])
+
+    def test_relay_preflight_rejects_oversized_runtime_limits(self) -> None:
+        limits = self.relay.RELAY_CONFIG_LIMITS
+        env = {
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            "PORT": "4180",
+            "AUTOMOAT_RELAY_MAX_BYTES": str(limits["max_ingest_bytes"] + 1),
+            "AUTOMOAT_RELAY_MAX_LOG_CHARS": str(limits["max_log_chars"] + 1),
+            "AUTOMOAT_RELAY_MAX_STATUS_BYTES": str(limits["max_status_bytes"] + 1),
+            "AUTOMOAT_RELAY_STALE_AFTER_SECONDS": str(limits["stale_after_seconds"] + 1),
+        }
+        with patch.dict(os.environ, env, clear=True), patch.object(
+            sys,
+            "argv",
+            ["render_cockpit_relay.py", "--check-env"],
+        ):
+            args = self.relay.parse_args()
+            errors = self.relay.validate_relay_configuration(args)
+
+        self.assertEqual(
+            errors,
+            [
+                "--max-ingest-bytes must be less than or equal to 4194304",
+                "--max-log-chars must be less than or equal to 1048576",
+                "--max-status-bytes must be less than or equal to 524288",
+                "--stale-after-seconds must be less than or equal to 3600",
+            ],
+        )
+
     def test_relay_preflight_rejects_state_file_directory(self) -> None:
         with patch.dict(os.environ, {"AUTOMOAT_RELAY_TOKEN": "relay-token"}, clear=True), patch.object(
             sys,
@@ -380,6 +428,7 @@ class RenderCockpitRelayTest(unittest.TestCase):
         self.assertIn("relay environment preflight passed", stdout.getvalue())
         self.assertIn("state_file=memory-only", stdout.getvalue())
         self.assertIn("max_status_bytes=131072", stdout.getvalue())
+        self.assertIn("runtime_limits=", stdout.getvalue())
 
 
 if __name__ == "__main__":

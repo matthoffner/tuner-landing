@@ -23,6 +23,12 @@ DEFAULT_MAX_INGEST_BYTES = 1024 * 1024
 DEFAULT_MAX_LOG_CHARS = 160 * 1024
 DEFAULT_MAX_STATUS_BYTES = 128 * 1024
 DEFAULT_STALE_AFTER_SECONDS = 120
+RELAY_CONFIG_LIMITS = {
+    "max_ingest_bytes": 4 * 1024 * 1024,
+    "max_log_chars": 1024 * 1024,
+    "max_status_bytes": 512 * 1024,
+    "stale_after_seconds": 3600,
+}
 HTTP_REQUEST_METHODS = {
     "DELETE",
     "GET",
@@ -341,7 +347,13 @@ def relay_authentication_result(
     return True, ""
 
 
-def parse_positive_int(name: str, value: Any, errors: list[str]) -> int | None:
+def parse_positive_int(
+    name: str,
+    value: Any,
+    errors: list[str],
+    *,
+    maximum: int | None = None,
+) -> int | None:
     try:
         parsed = int(value)
     except (TypeError, ValueError):
@@ -349,6 +361,9 @@ def parse_positive_int(name: str, value: Any, errors: list[str]) -> int | None:
         return None
     if parsed <= 0:
         errors.append(f"{name} must be greater than 0")
+        return None
+    if maximum is not None and parsed > maximum:
+        errors.append(f"{name} must be less than or equal to {maximum}")
         return None
     return parsed
 
@@ -374,10 +389,30 @@ def validate_relay_configuration(
     port = parse_positive_int("--port", args.port, errors)
     if port is not None and port > 65535:
         errors.append("--port must be less than or equal to 65535")
-    parse_positive_int("--max-ingest-bytes", args.max_ingest_bytes, errors)
-    parse_positive_int("--max-log-chars", args.max_log_chars, errors)
-    parse_positive_int("--max-status-bytes", args.max_status_bytes, errors)
-    parse_positive_int("--stale-after-seconds", args.stale_after_seconds, errors)
+    parse_positive_int(
+        "--max-ingest-bytes",
+        args.max_ingest_bytes,
+        errors,
+        maximum=RELAY_CONFIG_LIMITS["max_ingest_bytes"],
+    )
+    parse_positive_int(
+        "--max-log-chars",
+        args.max_log_chars,
+        errors,
+        maximum=RELAY_CONFIG_LIMITS["max_log_chars"],
+    )
+    parse_positive_int(
+        "--max-status-bytes",
+        args.max_status_bytes,
+        errors,
+        maximum=RELAY_CONFIG_LIMITS["max_status_bytes"],
+    )
+    parse_positive_int(
+        "--stale-after-seconds",
+        args.stale_after_seconds,
+        errors,
+        maximum=RELAY_CONFIG_LIMITS["stale_after_seconds"],
+    )
     return errors
 
 
@@ -398,7 +433,8 @@ def emit_relay_preflight(args: argparse.Namespace) -> list[str]:
         f"max_ingest_bytes={int(args.max_ingest_bytes)} "
         f"max_log_chars={int(args.max_log_chars)} "
         f"max_status_bytes={int(args.max_status_bytes)} "
-        f"stale_after_seconds={int(args.stale_after_seconds)}",
+        f"stale_after_seconds={int(args.stale_after_seconds)} "
+        f"runtime_limits={json.dumps(RELAY_CONFIG_LIMITS, sort_keys=True)}",
         flush=True,
     )
     return []
