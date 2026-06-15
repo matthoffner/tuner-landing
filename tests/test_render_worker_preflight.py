@@ -559,6 +559,69 @@ class RenderWorkerPreflightTest(unittest.TestCase):
 
                 self.assertEqual(errors, [expected_error])
 
+    def test_rejects_bad_reserved_runtime_file_paths_before_git_auth_setup(self) -> None:
+        base_env = {
+            "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            "GITHUB_TOKEN": "github-token",
+            "CODEX_ACCESS_TOKEN": "codex-token",
+        }
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            askpass_path = temp_path / "askpass"
+            askpass_path.mkdir()
+            token_path = temp_path / "missing-parent" / "github-token"
+            self.worker.GIT_ASKPASS = askpass_path
+            self.worker.GITHUB_TOKEN_FILE = token_path
+            self.worker.RESERVED_RUNTIME_FILE_PATHS = (askpass_path, token_path)
+
+            errors = self.worker.validate_worker_environment(base_env, found_command)
+
+        self.assertEqual(
+            errors,
+            [
+                f"reserved runtime file {askpass_path} must be a regular file",
+                f"reserved runtime file {token_path} parent directory must exist",
+            ],
+        )
+
+    def test_check_env_json_categorizes_reserved_runtime_file_failures(self) -> None:
+        env = {
+            "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            "GITHUB_TOKEN": "github-token",
+            "CODEX_ACCESS_TOKEN": "codex-token",
+        }
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            runtime_path = Path(temp_dir) / "askpass"
+            runtime_path.mkdir()
+            self.worker.GIT_ASKPASS = runtime_path
+            self.worker.GITHUB_TOKEN_FILE = Path(temp_dir) / "github-token"
+            self.worker.RESERVED_RUNTIME_FILE_PATHS = (
+                self.worker.GIT_ASKPASS,
+                self.worker.GITHUB_TOKEN_FILE,
+            )
+            output = io.StringIO()
+
+            with redirect_stdout(output):
+                errors = self.worker.emit_environment_preflight(
+                    env,
+                    found_command,
+                    output_format="json",
+                )
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(
+            errors,
+            [f"reserved runtime file {runtime_path} must be a regular file"],
+        )
+        self.assertEqual(payload["status"], "failed")
+        self.assertEqual(payload["diagnostics"]["error_categories"], ["invalid_path"])
+        self.assertNotIn("github-token", output.getvalue())
+        self.assertNotIn("codex-token", output.getvalue())
+
     def test_passed_preflight_reports_safe_workdir(self) -> None:
         env = {
             "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",

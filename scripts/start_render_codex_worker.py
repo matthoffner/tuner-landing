@@ -331,6 +331,7 @@ def validate_worker_environment(
     validate_git_branch_name(env.get("AUTOMOAT_GIT_BRANCH", "main"), errors)
     validate_workdir_path(WORKDIR, errors)
     validate_codex_home_path(CODEX_HOME, WORKDIR, errors)
+    validate_reserved_runtime_file_paths(errors)
 
     if not env.get("AUTOMOAT_RELAY_TOKEN", "").strip():
         errors.append("AUTOMOAT_RELAY_TOKEN is required")
@@ -474,6 +475,8 @@ def preflight_error_category(error: str) -> str:
     if error.startswith("AUTOMOAT_GIT_BRANCH"):
         return "invalid_git_branch"
     if error.startswith("AUTOMOAT_WORKDIR") or error.startswith("CODEX_HOME"):
+        return "invalid_path"
+    if error.startswith("reserved runtime file "):
         return "invalid_path"
     if error.startswith("CODEX_AUTH_JSON_B64 must decode"):
         return "invalid_codex_auth_payload"
@@ -623,6 +626,26 @@ def reserved_runtime_file_conflict(path: Path) -> Path | None:
         if path == resolved_runtime_file or path.is_relative_to(resolved_runtime_file):
             return resolved_runtime_file
     return None
+
+
+def validate_reserved_runtime_file_paths(errors: list[str]) -> None:
+    for runtime_file in RESERVED_RUNTIME_FILE_PATHS:
+        expanded_path = runtime_file.expanduser()
+        try:
+            resolved_path = expanded_path.resolve(strict=False)
+        except OSError as exc:
+            errors.append(f"reserved runtime file {runtime_file} could not be resolved: {exc}")
+            continue
+
+        if resolved_path.exists() and not resolved_path.is_file():
+            errors.append(f"reserved runtime file {runtime_file} must be a regular file")
+            continue
+
+        parent = resolved_path.parent
+        if not parent.exists():
+            errors.append(f"reserved runtime file {runtime_file} parent directory must exist")
+        elif not parent.is_dir():
+            errors.append(f"reserved runtime file {runtime_file} parent path must be a directory")
 
 
 def environment_preflight_summary(
