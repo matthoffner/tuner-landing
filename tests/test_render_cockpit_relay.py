@@ -651,11 +651,55 @@ class RenderCockpitRelayTest(unittest.TestCase):
         self.assertEqual(health["cockpit_status"], "waiting")
         self.assertIn("relay_state_load_failed", health["cockpit_health"]["reasons"])
         self.assertEqual(health["relay_status"], "state_load_failed")
+        self.assertEqual(
+            health["relay_startup"]["state_file"],
+            "<external>/relay-state.json",
+        )
         self.assertEqual(health["relay_startup"]["state_load_status"], "failed")
         self.assertIn("invalid_state_json", health["relay_startup"]["state_load_error"])
+        self.assertNotIn(str(state_file.parent), json.dumps(health, sort_keys=True))
         self.assertEqual(status["relay"]["status"], "state_load_failed")
+        self.assertEqual(
+            status["relay"]["startup"]["state_file"],
+            "<external>/relay-state.json",
+        )
         self.assertEqual(status["relay"]["startup"]["state_load_status"], "failed")
         self.assertIn("invalid_state_json", status["relay"]["startup"]["state_load_error"])
+        self.assertNotIn(str(state_file.parent), json.dumps(status, sort_keys=True))
+
+    def test_unreadable_persisted_state_error_uses_safe_state_file_label(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            state_file = Path(tmp) / "relay-state-dir"
+            state_file.mkdir()
+            loaded_state = self.relay.load_state(state_file)
+
+        with self.relay.STATE_LOCK:
+            self.relay.STATE.clear()
+            self.relay.STATE.update(loaded_state)
+
+        health = self.relay.health_payload()
+        status = self.relay.relay_status_payload()
+
+        self.assertEqual(health["relay_status"], "state_load_failed")
+        self.assertEqual(
+            health["relay_startup"]["state_file"],
+            "<external>/relay-state-dir",
+        )
+        self.assertEqual(health["relay_startup"]["state_load_status"], "failed")
+        self.assertIn(
+            "failed_to_read_state_file",
+            health["relay_startup"]["state_load_error"],
+        )
+        self.assertIn(
+            "<external>/relay-state-dir",
+            health["relay_startup"]["state_load_error"],
+        )
+        self.assertNotIn(tmp, json.dumps(health, sort_keys=True))
+        self.assertEqual(
+            status["relay"]["startup"]["state_file"],
+            "<external>/relay-state-dir",
+        )
+        self.assertNotIn(tmp, json.dumps(status, sort_keys=True))
 
     def test_authentication_accepts_matching_supplied_tokens(self) -> None:
         self.assertEqual(

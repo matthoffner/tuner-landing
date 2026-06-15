@@ -17,6 +17,7 @@ from typing import Any
 from urllib.parse import urlparse, urlunparse
 
 
+ROOT = Path(__file__).resolve().parents[1]
 STATE_LOCK = threading.Lock()
 STATE: dict[str, Any] = {}
 CONFIG: dict[str, Any] = {}
@@ -181,6 +182,30 @@ def compact_text(value: Any, *, max_length: int = 160) -> str | None:
     )
     text = " ".join(text.split())
     return text[:max_length] if text else None
+
+
+def repo_relative(path: Path) -> str:
+    resolved_path = path.resolve(strict=False)
+    try:
+        relative_path = resolved_path.relative_to(ROOT)
+    except ValueError:
+        return f"<external>/{resolved_path.name}" if resolved_path.name else "<external>"
+    relative_text = relative_path.as_posix()
+    return relative_text if relative_text else "."
+
+
+def compact_path_error(exc: BaseException, path: Path, *, max_length: int = 180) -> str:
+    message = str(exc)
+    safe_label = repo_relative(path)
+    path_strings = {str(path)}
+    try:
+        path_strings.add(str(path.resolve(strict=False)))
+    except OSError:
+        pass
+    for path_string in sorted(path_strings, key=len, reverse=True):
+        if path_string:
+            message = message.replace(path_string, safe_label)
+    return compact_text(message, max_length=max_length) or type(exc).__name__
 
 
 def compact_policy_detail(value: Any, *, max_length: int = 240) -> str | None:
@@ -530,7 +555,7 @@ def read_json_with_error(path: Path) -> tuple[dict[str, Any] | None, str | None]
         with path.open("r", encoding="utf-8") as handle:
             payload = json.load(handle)
     except OSError as exc:
-        return None, f"failed_to_read_state_file: {exc}"
+        return None, f"failed_to_read_state_file: {compact_path_error(exc, path)}"
     except json.JSONDecodeError as exc:
         return None, f"invalid_state_json: line {exc.lineno} column {exc.colno}: {exc.msg}"
     if not isinstance(payload, dict):
@@ -546,9 +571,10 @@ def load_state(path: Path | None) -> dict[str, Any]:
             "state_load_status": "memory_only",
         }
         return state
+    state_file = repo_relative(path)
     if not path.exists():
         state["relay_startup"] = {
-            "state_file": str(path),
+            "state_file": state_file,
             "state_load_status": "missing",
         }
         return state
@@ -556,14 +582,14 @@ def load_state(path: Path | None) -> dict[str, Any]:
     if payload is None:
         state["relay_status"] = "state_load_failed"
         state["relay_startup"] = {
-            "state_file": str(path),
+            "state_file": state_file,
             "state_load_status": "failed",
             "state_load_error": error,
         }
         return state
     state.update(payload)
     state["relay_startup"] = {
-        "state_file": str(path),
+        "state_file": state_file,
         "state_load_status": "loaded",
     }
     return state
