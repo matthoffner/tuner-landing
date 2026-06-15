@@ -1598,6 +1598,10 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             payload["diagnostics"]["failed_configuration_keys"],
             ["AUTOMOAT_WORKDIR", "CODEX_HOME"],
         )
+        self.assertEqual(
+            payload["diagnostics"]["path_configured_keys"],
+            ["AUTOMOAT_WORKDIR", "CODEX_HOME"],
+        )
         self.assertNotIn("secret-workdir-segment", output.getvalue())
         self.assertNotIn("secret-codex-segment", output.getvalue())
         self.assertNotIn("relay-token", output.getvalue())
@@ -2120,6 +2124,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             {"git": "<found>", "codex": "<found>"},
         )
         self.assertEqual(payload["diagnostics"]["runtime_configured_keys"], [])
+        self.assertEqual(payload["diagnostics"]["path_configured_keys"], [])
         self.assertEqual(
             payload["diagnostics"]["runtime_limits"],
             self.worker.RUNTIME_CONFIG_LIMITS,
@@ -2186,6 +2191,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                 "AUTOMOAT_BRIDGE_STATUS_STALE_AFTER_SECONDS",
             ],
         )
+        self.assertEqual(payload["diagnostics"]["path_configured_keys"], [])
         self.assertNotIn("config", payload)
         self.assertNotIn("relay-token", output.getvalue())
         self.assertNotIn("github-token", output.getvalue())

@@ -66,6 +66,7 @@ RUNTIME_CONFIG_LIMITS = {
     "AUTOMOAT_STATUS_STALE_AFTER_SECONDS": 3600,
     "AUTOMOAT_BRIDGE_STATUS_STALE_AFTER_SECONDS": 3600,
 }
+WORKER_PATH_ENV_NAMES = ("AUTOMOAT_WORKDIR", "CODEX_HOME")
 PUBLISHER_FILE_PATH_ENV_NAMES = ("AUTOMOAT_BRIDGE_STATUS_FILE",)
 DEFAULT_BRIDGE_STATUS_FILE = ".automoat/state/mvp-bridge-status.json"
 MAX_GIT_BRANCH_CHARS = 240
@@ -654,6 +655,11 @@ def configured_runtime_keys(env: os._Environ[str] | dict[str, str]) -> list[str]
     )
 
 
+def configured_worker_path_keys(env: os._Environ[str] | dict[str, str]) -> list[str]:
+    """Return configured worker path keys without exposing their path values."""
+    return sorted(name for name in WORKER_PATH_ENV_NAMES if name in env)
+
+
 def validate_secret_safe_http_url(
     name: str,
     value: str,
@@ -1151,6 +1157,7 @@ def environment_preflight_summary(
             "command_paths": command_path_labels,
             "missing_commands": missing_required_commands(command_paths),
             "runtime_configured_keys": configured_runtime_keys(env),
+            "path_configured_keys": configured_worker_path_keys(env),
             "runtime_limits": RUNTIME_CONFIG_LIMITS,
         }
         return payload
