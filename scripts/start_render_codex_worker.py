@@ -760,6 +760,7 @@ def monitor_worker_children(
         loop_status = loop_process.poll()
         if loop_status is not None:
             emit(f"autonomous loop exited status={loop_status}")
+            stop_children()
             return loop_status
 
         publisher_status = publisher_process.poll()

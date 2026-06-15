@@ -750,7 +750,8 @@ class RenderWorkerPreflightTest(unittest.TestCase):
 
         self.assertEqual(status, 7)
         self.assertFalse(loop.terminated)
-        self.assertFalse(publisher.terminated)
+        self.assertTrue(publisher.terminated)
+        self.assertFalse(publisher.killed)
 
     def test_monitor_fails_fast_when_publisher_exits_first(self) -> None:
         loop = FakeProcess(pid=101)

@@ -4,6 +4,12 @@ Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
 - lane: editor
+- status: tightened Render Codex worker child cleanup so when the autonomous loop exits first the worker terminates the relay publisher before returning the loop status, preventing orphan publisher processes from relaying stale cockpit snapshots; no Dallas raw CSV rows were edited
+- files: scripts/start_render_codex_worker.py, tests/test_render_worker_preflight.py, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- checks: `python3 -m unittest tests/test_render_worker_preflight.py -v`; `python3 -m py_compile scripts/start_render_codex_worker.py tests/test_render_worker_preflight.py`; `python3 -m unittest discover -s tests -v`; `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json > /tmp/automoat-render-worker-loop-cleanup-ready.json`; JSON assertion for readiness `ready`, `535/535` corrections, `535` permits, `1082` inspections, and zero thin groups; `cmp -s generated/landing.html index.html`; `git diff --exit-code -- .pxcode/preview.json`; `git diff --check`
+- next: keep prioritizing autonomy/cockpit/Render reliability, real ingest, policy/checking, product clarity, or tests while Dallas readiness remains green; monitor cleanup now stops the publisher if the loop exits before the publisher
+
+- lane: editor
 - status: bounded Render Codex worker runtime knobs in preflight so oversized loop intervals, iteration counts, relay intervals/timeouts, publisher failure/stale budgets, relay tail lines, relay log byte caps, and source-status stale thresholds fail before Git/Codex setup or autonomous child launch; passing text and JSON preflight output now expose the documented limits for operator tooling, and no Dallas raw CSV rows were edited
 - files: scripts/start_render_codex_worker.py, tests/test_render_worker_preflight.py, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
 - checks: `python3 -m unittest tests/test_render_worker_preflight.py -v`; `python3 -m py_compile scripts/start_render_codex_worker.py tests/test_render_worker_preflight.py`; `python3 -m unittest discover -s tests -v`; `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json > /tmp/automoat-worker-runtime-bounds-ready.json`; JSON assertion for readiness `ready`, `535/535` corrections, `535` permits, `1082` inspections, and zero thin groups; `cmp -s generated/landing.html index.html`; `git diff --exit-code -- .pxcode/preview.json`; `git diff --check`
