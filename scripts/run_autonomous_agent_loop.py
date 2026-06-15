@@ -397,23 +397,40 @@ def autonomy_policy_snapshot() -> dict[str, Any]:
         readiness = {}
     if not isinstance(thin_groups, dict):
         thin_groups = {}
+    blockers = readiness.get("blockers", [])
+    if not isinstance(blockers, list):
+        blockers = []
     thin_group_count = sum(
         len(value) for value in thin_groups.values() if isinstance(value, list)
+    )
+    thin_group_categories = sorted(
+        key for key, value in thin_groups.items() if isinstance(value, list) and value
     )
     ready = (
         readiness.get("ready_for_next_import_records") is True
         and readiness.get("status") == "ready"
         and thin_group_count == 0
     )
+    if ready:
+        decision_reason = "dallas_ready_no_thin_groups"
+    elif thin_group_count:
+        decision_reason = "coverage_thin_groups_present"
+    else:
+        decision_reason = "import_readiness_not_ready"
     return {
         "current_focus": (
             "autonomy_visibility_or_real_ingest"
             if ready
             else "fix_import_readiness_blockers"
         ),
+        "decision_reason": decision_reason,
         "dallas_pipeline_ready": ready,
+        "readiness_status": readiness.get("status"),
+        "ready_for_next_import_records": readiness.get("ready_for_next_import_records"),
+        "readiness_blockers": blockers,
         "synthetic_example_local_dallas_appends_allowed": False,
         "thin_group_count": thin_group_count,
+        "thin_group_categories": thin_group_categories,
         "policy": (
             "When Dallas readiness is already green, do not append another "
             "synthetic ELZ fixture row unless paired with a real product, "

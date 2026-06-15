@@ -53,9 +53,14 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
         snapshot = self.loop.autonomy_policy_snapshot()
 
         self.assertEqual(snapshot["current_focus"], "autonomy_visibility_or_real_ingest")
+        self.assertEqual(snapshot["decision_reason"], "dallas_ready_no_thin_groups")
         self.assertTrue(snapshot["dallas_pipeline_ready"])
+        self.assertEqual(snapshot["readiness_status"], "ready")
+        self.assertTrue(snapshot["ready_for_next_import_records"])
+        self.assertEqual(snapshot["readiness_blockers"], [])
         self.assertFalse(snapshot["synthetic_example_local_dallas_appends_allowed"])
         self.assertEqual(snapshot["thin_group_count"], 0)
+        self.assertEqual(snapshot["thin_group_categories"], [])
 
     def test_policy_snapshot_focuses_readiness_when_thin_groups_remain(self) -> None:
         self.loop.import_pipeline_snapshot = lambda: {
@@ -74,8 +79,30 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
         snapshot = self.loop.autonomy_policy_snapshot()
 
         self.assertEqual(snapshot["current_focus"], "fix_import_readiness_blockers")
+        self.assertEqual(snapshot["decision_reason"], "coverage_thin_groups_present")
         self.assertFalse(snapshot["dallas_pipeline_ready"])
         self.assertEqual(snapshot["thin_group_count"], 1)
+        self.assertEqual(snapshot["thin_group_categories"], ["result_states"])
+
+    def test_policy_snapshot_reports_readiness_blockers_when_not_ready(self) -> None:
+        self.loop.import_pipeline_snapshot = lambda: {
+            "execution_readiness": {
+                "status": "blocked",
+                "ready_for_next_import_records": False,
+                "blockers": ["correction_ledger_incomplete"],
+            },
+            "coverage": {"thin_groups": {}},
+        }
+
+        snapshot = self.loop.autonomy_policy_snapshot()
+
+        self.assertEqual(snapshot["current_focus"], "fix_import_readiness_blockers")
+        self.assertEqual(snapshot["decision_reason"], "import_readiness_not_ready")
+        self.assertFalse(snapshot["dallas_pipeline_ready"])
+        self.assertEqual(snapshot["readiness_status"], "blocked")
+        self.assertFalse(snapshot["ready_for_next_import_records"])
+        self.assertEqual(snapshot["readiness_blockers"], ["correction_ledger_incomplete"])
+        self.assertEqual(snapshot["thin_group_count"], 0)
 
     def test_docs_and_status_files_do_not_make_synthetic_rows_productive(self) -> None:
         paths = [
