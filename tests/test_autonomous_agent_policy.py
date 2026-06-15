@@ -438,6 +438,34 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
             )
         )
 
+    def test_synthetic_row_detector_flags_quoted_exact_dallas_source_url(self) -> None:
+        self.assertTrue(
+            self.loop.synthetic_dallas_csv_row(
+                'ELZ-2026-9995,100 Example Ave,Dallas,'
+                '"https://example.local/dallas"'
+            )
+        )
+
+        diff_output = "\n".join(
+            [
+                (
+                    "diff --git "
+                    "a/generated/raw/dallas-electrician-import-sample-v2/permits.csv "
+                    "b/generated/raw/dallas-electrician-import-sample-v2/permits.csv"
+                ),
+                "+++ b/generated/raw/dallas-electrician-import-sample-v2/permits.csv",
+                (
+                    '+ELZ-2026-9995,100 Example Ave,Dallas,'
+                    '"https://example.local/dallas"'
+                ),
+            ]
+        )
+
+        rows = self.loop.added_synthetic_rows_from_diff(diff_output)
+
+        self.assertEqual(len(rows), 1)
+        self.assertIn("ELZ-2026-9995", rows[0])
+
     def test_added_synthetic_rows_ignores_documented_non_elz_source_rows(self) -> None:
         diff_output = "\n".join(
             [

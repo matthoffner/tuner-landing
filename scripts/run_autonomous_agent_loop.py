@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import os
 import re
@@ -469,9 +470,15 @@ def changed_dallas_raw_csv_paths(paths: list[str]) -> list[str]:
 
 def synthetic_dallas_csv_row(row: str) -> bool:
     """Return whether a raw CSV row is hidden Dallas example.local fixture growth."""
-    return (
-        SYNTHETIC_DALLAS_PERMIT_PATTERN.search(row) is not None
-        and EXAMPLE_LOCAL_DALLAS_PATTERN.search(row) is not None
+    if SYNTHETIC_DALLAS_PERMIT_PATTERN.search(row) is None:
+        return False
+    try:
+        cells = next(csv.reader([row]))
+    except csv.Error:
+        cells = []
+    return any(
+        EXAMPLE_LOCAL_DALLAS_PATTERN.search(candidate) is not None
+        for candidate in [row, *cells]
     )
 
 
