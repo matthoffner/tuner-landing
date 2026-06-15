@@ -35,12 +35,27 @@ function normalizeBaseUrl(value, options = {}) {
   if (parsed.search || parsed.hash) {
     return { url: "", error: "must not include query strings or fragments" };
   }
+  if (
+    options.requireHttpsUnlessLocal
+    && parsed.protocol === "http:"
+    && !isLocalHttpHost(parsed.hostname)
+  ) {
+    return {
+      url: "",
+      error: "must use https:// unless the host is localhost, 127.0.0.1, or ::1",
+    };
+  }
 
   const pathname = parsed.pathname.replace(/\/+$/, "");
   if (options.requireNoPath && pathname) {
     return { url: "", error: "must be a relay base URL without a path" };
   }
   return { url: `${parsed.origin}${pathname === "/" ? "" : pathname}`, error: null };
+}
+
+function isLocalHttpHost(hostname) {
+  const normalized = String(hostname || "").toLowerCase().replace(/^\[|\]$/g, "");
+  return normalized === "localhost" || normalized === "127.0.0.1" || normalized === "::1";
 }
 
 function normalizeUpstreamTimeoutMs(value) {
@@ -214,7 +229,10 @@ function upstreams({ relayPath, bridgePath, env = process.env }) {
     invalid.push({ kind: "timeout", error: timeout.error });
   }
 
-  const relay = normalizeBaseUrl(env.AUTOMOAT_RELAY_URL, { requireNoPath: true });
+  const relay = normalizeBaseUrl(env.AUTOMOAT_RELAY_URL, {
+    requireNoPath: true,
+    requireHttpsUnlessLocal: true,
+  });
   if (relay.url) {
     configured.push({
       kind: "relay",
@@ -247,6 +265,7 @@ module.exports = {
   classifyUpstreamError,
   fetchUpstreamText,
   invalidUpstreamsHeader,
+  isLocalHttpHost,
   normalizeBaseUrl,
   normalizeUpstreamTimeoutMs,
   relayHeaders,

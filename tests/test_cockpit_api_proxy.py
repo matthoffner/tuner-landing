@@ -85,6 +85,46 @@ class CockpitApiProxyTest(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_upstreams_reject_plain_http_remote_relay_but_allow_local(self) -> None:
+        result = run_node(
+            """
+            const assert = require("assert");
+            const { upstreams } = require("./api/cockpit-upstreams");
+
+            const remote = upstreams({
+              relayPath: "/api/status",
+              bridgePath: "/api/status",
+              env: {
+                AUTOMOAT_RELAY_URL: "http://automoat-cockpit-relay.example",
+              },
+            });
+            assert.deepStrictEqual(remote.configured, []);
+            assert.deepStrictEqual(remote.invalid, [{
+              kind: "relay",
+              error: "must use https:// unless the host is localhost, 127.0.0.1, or ::1",
+            }]);
+
+            for (const relayUrl of [
+              "http://localhost:4180",
+              "http://127.0.0.1:4180",
+              "http://[::1]:4180",
+            ]) {
+              const local = upstreams({
+                relayPath: "/api/status",
+                bridgePath: "/api/status",
+                env: {
+                  AUTOMOAT_RELAY_URL: relayUrl,
+                },
+              });
+              assert.deepStrictEqual(local.invalid, []);
+              assert.strictEqual(local.configured.length, 1);
+              assert.strictEqual(local.configured[0].kind, "relay");
+            }
+            """
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_upstreams_validate_configured_timeout(self) -> None:
         result = run_node(
             """
@@ -197,6 +237,71 @@ class CockpitApiProxyTest(unittest.TestCase):
             assert.strictEqual(headResponse.statusCode, 503);
             assert.strictEqual(headResponse.body, "");
             assert.strictEqual(headResponse.headers["Content-Type"], "text/plain; charset=utf-8");
+            """
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_handlers_reject_plain_http_remote_relay_without_fetching(self) -> None:
+        result = run_node(
+            """
+            const assert = require("assert");
+            const statusHandler = require("./api/cockpit-status");
+            const logHandler = require("./api/cockpit-log");
+
+            function response() {
+              return {
+                statusCode: null,
+                body: "",
+                headers: {},
+                setHeader(name, value) {
+                  this.headers[name] = value;
+                },
+                status(code) {
+                  this.statusCode = code;
+                  return this;
+                },
+                send(body) {
+                  this.body = String(body);
+                  return this;
+                },
+                end(body = "") {
+                  this.body = String(body);
+                  return this;
+                },
+              };
+            }
+
+            process.env.AUTOMOAT_RELAY_URL = "http://automoat-cockpit-relay.example";
+            process.env.AUTOMOAT_RELAY_READ_TOKEN = "read-token";
+            process.env.AUTOMOAT_RELAY_TOKEN = "write-token";
+            process.env.AUTOMOAT_BRIDGE_URL = "";
+            global.fetch = async () => {
+              throw new Error("fetch should not be called for plaintext remote relay URLs");
+            };
+
+            (async () => {
+              const statusResponse = response();
+              await statusHandler({ method: "GET" }, statusResponse);
+              assert.strictEqual(statusResponse.statusCode, 503);
+              assert(statusResponse.body.includes("cockpit_relay_invalid_configuration"));
+              assert(statusResponse.body.includes("must use https://"));
+              assert(!statusResponse.body.includes("automoat-cockpit-relay.example"));
+              assert(!statusResponse.body.includes("read-token"));
+              assert(!statusResponse.body.includes("write-token"));
+
+              const logResponse = response();
+              await logHandler({ method: "GET" }, logResponse);
+              assert.strictEqual(logResponse.statusCode, 503);
+              assert(logResponse.body.includes("cockpit_relay_invalid_configuration"));
+              assert(logResponse.body.includes("must use https://"));
+              assert(!logResponse.body.includes("automoat-cockpit-relay.example"));
+              assert(!logResponse.body.includes("read-token"));
+              assert(!logResponse.body.includes("write-token"));
+            })().catch((error) => {
+              console.error(error.stack || error);
+              process.exit(1);
+            });
             """
         )
 
