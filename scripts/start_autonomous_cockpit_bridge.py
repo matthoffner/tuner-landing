@@ -25,6 +25,16 @@ BRIDGE_RUNNER_PID = STATE_DIR / "mvp-bridge-runner.pid"
 BRIDGE_STATUS = STATE_DIR / "mvp-bridge-status.json"
 
 
+def repo_relative(path: Path) -> str:
+    resolved_path = path.resolve()
+    try:
+        relative_path = resolved_path.relative_to(ROOT)
+    except ValueError:
+        return f"<external>/{resolved_path.name}" if resolved_path.name else "<external>"
+    relative_text = relative_path.as_posix()
+    return relative_text if relative_text else "."
+
+
 def read_pid(path: Path) -> int | None:
     try:
         return int(path.read_text(encoding="utf-8").strip())
@@ -151,6 +161,52 @@ def validate_positive_float(name: str, value: float) -> list[str]:
     return []
 
 
+def blocking_parent_path_component(path: Path) -> Path | None:
+    current_path = path.parent
+    while True:
+        if current_path.exists():
+            return None if current_path.is_dir() else current_path
+        if current_path.parent == current_path:
+            return None
+        current_path = current_path.parent
+
+
+def validate_directory_path(label: str, path: Path) -> list[str]:
+    if path.exists() and not path.is_dir():
+        return [f"{label} path {repo_relative(path)} must be a directory"]
+    blocking_path = blocking_parent_path_component(path)
+    if blocking_path is not None:
+        return [f"{label} parent path {repo_relative(blocking_path)} must be a directory"]
+    return []
+
+
+def validate_file_path(label: str, path: Path) -> list[str]:
+    if path.exists() and path.is_dir():
+        return [f"{label} path {repo_relative(path)} must be a file path, not a directory"]
+    blocking_path = blocking_parent_path_component(path)
+    if blocking_path is not None:
+        return [f"{label} parent path {repo_relative(blocking_path)} must be a directory"]
+    return []
+
+
+def validate_startup_file_paths() -> list[str]:
+    errors: list[str] = []
+    for label, path in {
+        "LOG_DIR": LOG_DIR,
+        "STATE_DIR": STATE_DIR,
+    }.items():
+        errors.extend(validate_directory_path(label, path))
+    for label, path in {
+        "COCKPIT_PID": COCKPIT_PID,
+        "BRIDGE_RUNNER_PID": BRIDGE_RUNNER_PID,
+        "BRIDGE_STATUS": BRIDGE_STATUS,
+        "COCKPIT_LOG": LOG_DIR / "mvp-cockpit-server.log",
+        "BRIDGE_RUNNER_LOG": LOG_DIR / "mvp-bridge-runner.log",
+    }.items():
+        errors.extend(validate_file_path(label, path))
+    return errors
+
+
 def validate_startup_configuration(args: argparse.Namespace) -> list[str]:
     errors: list[str] = []
     errors.extend(validate_port("--port", int(args.port)))
@@ -166,12 +222,26 @@ def validate_startup_configuration(args: argparse.Namespace) -> list[str]:
         errors.append("--bridge-port must not equal --ngrok-web-port")
     if not args.keep_bridge and shutil.which("ngrok") is None:
         errors.append("ngrok is required unless --keep-bridge is set")
+    errors.extend(validate_startup_file_paths())
     return errors
 
 
 def startup_preflight_error_category(error: str) -> str:
     if error.startswith("ngrok "):
         return "missing_command"
+    if any(
+        error.startswith(prefix)
+        for prefix in (
+            "LOG_DIR",
+            "STATE_DIR",
+            "COCKPIT_PID",
+            "BRIDGE_RUNNER_PID",
+            "BRIDGE_STATUS",
+            "COCKPIT_LOG",
+            "BRIDGE_RUNNER_LOG",
+        )
+    ):
+        return "invalid_file_path"
     if error.startswith("--"):
         return "invalid_runtime_config"
     return "invalid_configuration"
@@ -182,6 +252,18 @@ def startup_preflight_error_categories(errors: list[str]) -> list[str]:
 
 
 def startup_preflight_error_key(error: str) -> str:
+    file_path_keys = (
+        "BRIDGE_RUNNER_LOG",
+        "BRIDGE_RUNNER_PID",
+        "BRIDGE_STATUS",
+        "COCKPIT_LOG",
+        "COCKPIT_PID",
+        "LOG_DIR",
+        "STATE_DIR",
+    )
+    for key in file_path_keys:
+        if error.startswith(key):
+            return key
     if error.startswith("ngrok "):
         return "PATH:ngrok"
     if error == "--port must not equal --bridge-port":

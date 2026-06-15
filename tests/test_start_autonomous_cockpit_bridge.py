@@ -130,6 +130,49 @@ class StartAutonomousCockpitBridgeTest(unittest.TestCase):
 
         self.assertEqual(errors, ["--bridge-port must not equal --ngrok-web-port"])
 
+    def test_validate_startup_configuration_rejects_blocked_runtime_paths(self) -> None:
+        args = Namespace(
+            interval=60,
+            port=4174,
+            bridge_port=4175,
+            ngrok_web_port=4040,
+            bridge_interval=5,
+            keep_bridge=True,
+            no_stop_existing=False,
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            blocked_parent = root / "blocked-parent"
+            blocked_parent.write_text("not a directory", encoding="utf-8")
+            with patch.object(self.launcher, "LOG_DIR", blocked_parent / "logs"), patch.object(
+                self.launcher,
+                "STATE_DIR",
+                root / "state",
+            ), patch.object(
+                self.launcher,
+                "COCKPIT_PID",
+                root / "state" / "mvp-cockpit-server.pid",
+            ), patch.object(
+                self.launcher,
+                "BRIDGE_RUNNER_PID",
+                root / "state" / "mvp-bridge-runner.pid",
+            ), patch.object(
+                self.launcher,
+                "BRIDGE_STATUS",
+                root / "state" / "mvp-bridge-status.json",
+            ):
+                errors = self.launcher.validate_startup_configuration(args)
+
+        self.assertEqual(
+            errors,
+            [
+                "LOG_DIR parent path <external>/blocked-parent must be a directory",
+                "COCKPIT_LOG parent path <external>/blocked-parent must be a directory",
+                "BRIDGE_RUNNER_LOG parent path <external>/blocked-parent must be a directory",
+            ],
+        )
+
     def test_check_env_keep_bridge_validates_without_starting_processes(self) -> None:
         output = io.StringIO()
         self.launcher.start_detached = lambda *args, **kwargs: self.fail("start_detached should not run")
@@ -323,6 +366,58 @@ class StartAutonomousCockpitBridgeTest(unittest.TestCase):
             payload["diagnostics"]["failed_configuration_keys"],
             ["--bridge-port|--ngrok-web-port"],
         )
+
+    def test_check_env_json_reports_blocked_status_file_path_safely(self) -> None:
+        output = io.StringIO()
+        self.launcher.start_detached = lambda *args, **kwargs: self.fail("start_detached should not run")
+        self.launcher.wait_http = lambda *args, **kwargs: self.fail("wait_http should not run")
+        self.launcher.wait_bridge = lambda *args, **kwargs: self.fail("wait_bridge should not run")
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            status_file = root / "mvp-bridge-status.json"
+            status_file.mkdir()
+            with patch.object(self.launcher, "LOG_DIR", root / "logs"), patch.object(
+                self.launcher,
+                "STATE_DIR",
+                root / "state",
+            ), patch.object(
+                self.launcher,
+                "COCKPIT_PID",
+                root / "state" / "mvp-cockpit-server.pid",
+            ), patch.object(
+                self.launcher,
+                "BRIDGE_RUNNER_PID",
+                root / "state" / "mvp-bridge-runner.pid",
+            ), patch.object(
+                self.launcher,
+                "BRIDGE_STATUS",
+                status_file,
+            ), patch.object(
+                sys,
+                "argv",
+                [
+                    "start_autonomous_cockpit_bridge.py",
+                    "--check-env",
+                    "--format",
+                    "json",
+                    "--keep-bridge",
+                ],
+            ), redirect_stdout(output):
+                status = self.launcher.main()
+
+            output_text = output.getvalue()
+
+        payload = json.loads(output_text)
+        self.assertEqual(status, 2)
+        self.assertEqual(payload["status"], "failed")
+        self.assertEqual(
+            payload["errors"],
+            ["BRIDGE_STATUS path <external>/mvp-bridge-status.json must be a file path, not a directory"],
+        )
+        self.assertEqual(payload["diagnostics"]["error_categories"], ["invalid_file_path"])
+        self.assertEqual(payload["diagnostics"]["failed_configuration_keys"], ["BRIDGE_STATUS"])
+        self.assertNotIn(str(root), output_text)
 
     def test_json_format_is_only_supported_for_check_env(self) -> None:
         stderr = io.StringIO()
