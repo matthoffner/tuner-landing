@@ -771,6 +771,82 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             ],
         )
 
+    def test_rejects_urls_with_invalid_hostnames_before_startup(self) -> None:
+        base_env = {
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            "GITHUB_TOKEN": "github-token",
+            "CODEX_ACCESS_TOKEN": "codex-token",
+        }
+        cases = (
+            (
+                "https://relay_host.example",
+                "https://github.com/example/private.git",
+                ["AUTOMOAT_RELAY_URL must include a valid host"],
+            ),
+            (
+                "https://automoat-cockpit-relay.example",
+                "https://github.com_/example/private.git",
+                ["AUTOMOAT_GIT_REPO must include a valid host"],
+            ),
+            (
+                "https://-relay.example",
+                "https://github.com/example/private.git",
+                ["AUTOMOAT_RELAY_URL must include a valid host"],
+            ),
+            (
+                "https://automoat-cockpit-relay.example",
+                "https://github.com/example/private.git",
+                [],
+            ),
+            (
+                "http://[::1]:4180",
+                "http://127.0.0.1:3000/example/private.git",
+                [],
+            ),
+        )
+
+        for relay_url, git_repo, expected_errors in cases:
+            with self.subTest(relay_url=relay_url, git_repo=git_repo):
+                errors = self.worker.validate_worker_environment(
+                    {
+                        **base_env,
+                        "AUTOMOAT_RELAY_URL": relay_url,
+                        "AUTOMOAT_GIT_REPO": git_repo,
+                    },
+                    found_command,
+                )
+
+                self.assertEqual(errors, expected_errors)
+
+    def test_check_env_json_categorizes_invalid_hostname_without_echoing_value(self) -> None:
+        output = io.StringIO()
+
+        with redirect_stdout(output):
+            errors = self.worker.emit_environment_preflight(
+                {
+                    "AUTOMOAT_RELAY_URL": "https://relay_host.example",
+                    "AUTOMOAT_RELAY_TOKEN": "relay-token",
+                    "AUTOMOAT_GIT_REPO": "https://github.com/example/private.git",
+                    "GITHUB_TOKEN": "github-token",
+                    "CODEX_ACCESS_TOKEN": "codex-token",
+                },
+                found_command,
+                output_format="json",
+            )
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(errors, ["AUTOMOAT_RELAY_URL must include a valid host"])
+        self.assertEqual(payload["status"], "failed")
+        self.assertEqual(payload["diagnostics"]["error_categories"], ["invalid_url"])
+        self.assertEqual(
+            payload["diagnostics"]["failed_configuration_keys"],
+            ["AUTOMOAT_RELAY_URL"],
+        )
+        self.assertNotIn("relay_host", output.getvalue())
+        self.assertNotIn("relay-token", output.getvalue())
+        self.assertNotIn("github-token", output.getvalue())
+        self.assertNotIn("codex-token", output.getvalue())
+
     def test_check_env_json_categorizes_invalid_url_ports(self) -> None:
         env = {
             "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example:abc",
@@ -1008,18 +1084,27 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertEqual(errors, ["AUTOMOAT_GIT_REPO repository name must not be empty"])
 
     def test_accepts_single_segment_non_github_git_repo_path(self) -> None:
-        errors = self.worker.validate_worker_environment(
-            {
-                "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
-                "AUTOMOAT_RELAY_TOKEN": "relay-token",
-                "AUTOMOAT_GIT_REPO": "https://git.example.internal/automoat.git",
-                "GITHUB_TOKEN": "github-token",
-                "CODEX_ACCESS_TOKEN": "codex-token",
-            },
-            found_command,
-        )
+        base_env = {
+            "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            "GITHUB_TOKEN": "github-token",
+            "CODEX_ACCESS_TOKEN": "codex-token",
+        }
 
-        self.assertEqual(errors, [])
+        for git_repo in (
+            "https://git.example.internal/automoat.git",
+            "https://gitserver/automoat.git",
+        ):
+            with self.subTest(git_repo=git_repo):
+                errors = self.worker.validate_worker_environment(
+                    {
+                        **base_env,
+                        "AUTOMOAT_GIT_REPO": git_repo,
+                    },
+                    found_command,
+                )
+
+                self.assertEqual(errors, [])
 
     def test_check_env_json_categorizes_git_repo_without_repository_path(self) -> None:
         env = {

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import base64
+import ipaddress
 import json
 import math
 import os
@@ -614,6 +615,8 @@ def validate_secret_safe_http_url(
 
     if not parsed_value.netloc or not parsed_value.hostname:
         errors.append(f"{name} must include a host")
+    elif not is_valid_url_hostname(parsed_value.hostname):
+        errors.append(f"{name} must include a valid host")
     elif parsed_value.username or parsed_value.password:
         errors.append(f"{name} must not include embedded credentials")
     elif parsed_value.params:
@@ -646,6 +649,33 @@ def validate_secret_safe_http_url(
             errors.append(
                 f"{name} must use https:// unless the host is localhost or 127.0.0.1"
             )
+
+
+def is_valid_url_hostname(hostname: str) -> bool:
+    normalized = hostname.strip("[]").rstrip(".").lower()
+    if not normalized:
+        return False
+    if normalized == "localhost":
+        return True
+    try:
+        ipaddress.ip_address(normalized)
+        return True
+    except ValueError:
+        pass
+    if len(normalized) > 253:
+        return False
+    labels = normalized.split(".")
+    for label in labels:
+        if not label or len(label) > 63:
+            return False
+        if label.startswith("-") or label.endswith("-"):
+            return False
+        if not all(
+            character.isascii() and (character.isalnum() or character == "-")
+            for character in label
+        ):
+            return False
+    return True
 
 
 def local_http_host(hostname: str) -> bool:
