@@ -9,6 +9,7 @@ import importlib.util
 import io
 import json
 from pathlib import Path
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -976,6 +977,80 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             payload["diagnostics"]["command_paths"],
             {"git": "/usr/bin/git", "codex": None},
         )
+
+    def test_relay_publisher_command_exposes_runtime_knobs_without_secrets(self) -> None:
+        env = {
+            "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            "AUTOMOAT_RELAY_INTERVAL": "4.5",
+            "AUTOMOAT_RELAY_TIMEOUT": "11.25",
+            "AUTOMOAT_RELAY_TAIL_LINES": "77",
+            "AUTOMOAT_RELAY_MAX_LOG_BYTES": "4096",
+            "AUTOMOAT_STATUS_STALE_AFTER_SECONDS": "900",
+            "AUTOMOAT_RELAY_MAX_CONSECUTIVE_FAILURES": "5",
+            "AUTOMOAT_RELAY_MAX_CONSECUTIVE_STALE_STATUSES": "6",
+        }
+
+        command = self.worker.relay_publisher_command(env)
+
+        self.assertEqual(
+            command,
+            [
+                sys.executable,
+                "scripts/publish_cockpit_to_relay.py",
+                "--interval",
+                "4.5",
+                "--timeout",
+                "11.25",
+                "--tail-lines",
+                "77",
+                "--max-log-bytes",
+                "4096",
+                "--status-stale-after-seconds",
+                "900",
+                "--max-consecutive-failures",
+                "5",
+                "--max-consecutive-stale-statuses",
+                "6",
+            ],
+        )
+        self.assertNotIn("relay-token", command)
+        self.assertNotIn("https://automoat-cockpit-relay.example", command)
+
+    def test_start_publisher_logs_runtime_knobs_without_secret_values(self) -> None:
+        env = {
+            "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            "AUTOMOAT_RELAY_INTERVAL": "4.5",
+            "AUTOMOAT_RELAY_TIMEOUT": "11.25",
+            "AUTOMOAT_RELAY_TAIL_LINES": "77",
+            "AUTOMOAT_RELAY_MAX_LOG_BYTES": "4096",
+            "AUTOMOAT_STATUS_STALE_AFTER_SECONDS": "900",
+            "AUTOMOAT_RELAY_MAX_CONSECUTIVE_FAILURES": "5",
+            "AUTOMOAT_RELAY_MAX_CONSECUTIVE_STALE_STATUSES": "6",
+        }
+        fake_publisher = FakeProcess(pid=303)
+        output = io.StringIO()
+
+        with patch.dict(self.worker.os.environ, env, clear=True), patch.object(
+            self.worker.subprocess,
+            "Popen",
+            return_value=fake_publisher,
+        ) as popen, redirect_stdout(output):
+            process = self.worker.start_publisher()
+
+        self.assertIs(process, fake_publisher)
+        self.assertEqual(self.worker.CHILDREN, [fake_publisher])
+        launched_command = popen.call_args.args[0]
+        self.assertEqual(launched_command, self.worker.relay_publisher_command(env))
+        self.assertEqual(popen.call_args.kwargs["cwd"], self.worker.WORKDIR)
+        self.assertEqual(popen.call_args.kwargs["env"]["AUTOMOAT_RELAY_TOKEN"], "relay-token")
+        log_line = output.getvalue()
+        self.assertIn("started relay publisher pid=303", log_line)
+        self.assertIn("publisher_timeout=11.25", log_line)
+        self.assertIn("publisher_max_consecutive_stale_statuses=6", log_line)
+        self.assertNotIn("relay-token", log_line)
+        self.assertNotIn("https://automoat-cockpit-relay.example", log_line)
 
     def test_monitor_returns_loop_status_when_loop_exits_first(self) -> None:
         loop = FakeProcess(pid=101, initial_status=7)

@@ -51,6 +51,19 @@ GIT_IDENTITY_ENV_DEFAULTS = {
     "GIT_COMMITTER_NAME": "automoat-render-agent",
     "GIT_COMMITTER_EMAIL": "automoat-render-agent@users.noreply.github.com",
 }
+PUBLISHER_RUNTIME_ENV_ARGS = (
+    ("AUTOMOAT_RELAY_INTERVAL", "--interval", "3"),
+    ("AUTOMOAT_RELAY_TIMEOUT", "--timeout", "8"),
+    ("AUTOMOAT_RELAY_TAIL_LINES", "--tail-lines", "180"),
+    ("AUTOMOAT_RELAY_MAX_LOG_BYTES", "--max-log-bytes", str(256 * 1024)),
+    ("AUTOMOAT_STATUS_STALE_AFTER_SECONDS", "--status-stale-after-seconds", "660"),
+    ("AUTOMOAT_RELAY_MAX_CONSECUTIVE_FAILURES", "--max-consecutive-failures", "3"),
+    (
+        "AUTOMOAT_RELAY_MAX_CONSECUTIVE_STALE_STATUSES",
+        "--max-consecutive-stale-statuses",
+        "0",
+    ),
+)
 
 
 def emit(message: str) -> None:
@@ -62,6 +75,24 @@ def require_env(name: str) -> str:
     if not value:
         raise RuntimeError(f"{name} is required")
     return value
+
+
+def relay_publisher_runtime_config(
+    env: os._Environ[str] | dict[str, str],
+) -> dict[str, str]:
+    return {
+        option.lstrip("-").replace("-", "_"): env.get(env_name, default).strip() or default
+        for env_name, option, default in PUBLISHER_RUNTIME_ENV_ARGS
+    }
+
+
+def relay_publisher_command(
+    env: os._Environ[str] | dict[str, str],
+) -> list[str]:
+    command = [sys.executable, "scripts/publish_cockpit_to_relay.py"]
+    for env_name, option, default in PUBLISHER_RUNTIME_ENV_ARGS:
+        command.extend([option, env.get(env_name, default).strip() or default])
+    return command
 
 
 def env_has_any(env: os._Environ[str] | dict[str, str], names: tuple[str, ...]) -> bool:
@@ -788,14 +819,18 @@ def sync_repo() -> None:
 def start_publisher() -> subprocess.Popen[object]:
     require_env("AUTOMOAT_RELAY_URL")
     require_env("AUTOMOAT_RELAY_TOKEN")
-    interval = os.environ.get("AUTOMOAT_RELAY_INTERVAL", "3")
+    command = relay_publisher_command(os.environ)
+    runtime_config = relay_publisher_runtime_config(os.environ)
     process = subprocess.Popen(
-        [sys.executable, "scripts/publish_cockpit_to_relay.py", "--interval", interval],
+        command,
         cwd=WORKDIR,
         env=os.environ.copy(),
     )
     CHILDREN.append(process)
-    emit(f"started relay publisher pid={process.pid}")
+    runtime_fields = " ".join(
+        f"publisher_{key}={value}" for key, value in runtime_config.items()
+    )
+    emit(f"started relay publisher pid={process.pid} {runtime_fields}")
     return process
 
 
