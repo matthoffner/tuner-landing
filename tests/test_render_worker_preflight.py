@@ -1237,6 +1237,90 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertEqual(payload["config"]["workdir"], env["AUTOMOAT_WORKDIR"])
         self.assertEqual(payload["config"]["codex_home"], env["CODEX_HOME"])
 
+    def test_write_codex_config_uses_supplied_runtime_path_env_values(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workdir = Path(temp_dir) / "runtime-repo"
+            codex_home = Path(temp_dir) / "runtime-codex-home"
+            with patch.dict(
+                self.worker.os.environ,
+                {
+                    "AUTOMOAT_WORKDIR": str(workdir),
+                    "CODEX_HOME": str(codex_home),
+                },
+                clear=True,
+            ):
+                self.worker.write_codex_config()
+
+                config = (codex_home / "config.toml").read_text(encoding="utf-8")
+                configured_codex_home = self.worker.os.environ["CODEX_HOME"]
+
+        self.assertIn(
+            f"[projects.{self.worker.toml_basic_string(workdir.as_posix())}]",
+            config,
+        )
+        self.assertEqual(configured_codex_home, str(codex_home))
+
+    def test_sync_repo_uses_supplied_runtime_workdir_env_value(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workdir = Path(temp_dir) / "runtime-repo"
+            (workdir / ".git").mkdir(parents=True)
+            env = {
+                "AUTOMOAT_WORKDIR": str(workdir),
+                "AUTOMOAT_GIT_REPO": "https://github.com/example/private-automoat.git",
+                "AUTOMOAT_GIT_BRANCH": "release/2026.06",
+            }
+
+            with patch.dict(self.worker.os.environ, env, clear=True), patch.object(
+                self.worker,
+                "run",
+            ) as run:
+                self.worker.sync_repo()
+
+        self.assertEqual(
+            run.call_args_list[0].args[0],
+            ["git", "fetch", "origin", "release/2026.06"],
+        )
+        self.assertEqual(run.call_args_list[0].kwargs["cwd"], workdir)
+        self.assertEqual(run.call_args_list[-1].kwargs["cwd"], workdir)
+
+    def test_child_processes_use_supplied_runtime_workdir_env_value(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workdir = Path(temp_dir) / "runtime-repo"
+            workdir.mkdir()
+            env = {
+                "AUTOMOAT_WORKDIR": str(workdir),
+                "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+                "AUTOMOAT_RELAY_TOKEN": "relay-token",
+                "AUTOMOAT_AGENT_INTERVAL": "44",
+                "AUTOMOAT_AGENT_ITERATIONS": "2",
+            }
+            fake_publisher = FakeProcess(pid=303)
+            fake_loop = FakeProcess(pid=404)
+
+            with patch.dict(self.worker.os.environ, env, clear=True), patch.object(
+                self.worker.subprocess,
+                "Popen",
+                side_effect=[fake_publisher, fake_loop],
+            ) as popen, redirect_stdout(io.StringIO()):
+                publisher = self.worker.start_publisher()
+                loop = self.worker.start_loop()
+
+        self.assertIs(publisher, fake_publisher)
+        self.assertIs(loop, fake_loop)
+        self.assertEqual(popen.call_args_list[0].kwargs["cwd"], workdir)
+        self.assertEqual(popen.call_args_list[1].kwargs["cwd"], workdir)
+        self.assertEqual(
+            popen.call_args_list[1].args[0],
+            [
+                sys.executable,
+                "scripts/run_autonomous_agent_loop.py",
+                "--iterations",
+                "2",
+                "--interval",
+                "44",
+            ],
+        )
+
     def test_check_env_json_failure_does_not_print_invalid_url_values(self) -> None:
         env = {
             "AUTOMOAT_RELAY_URL": "https://relay-user:relay-secret@example.test",
@@ -1539,6 +1623,8 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             with patch.dict(
                 self.worker.os.environ,
                 {
+                    "AUTOMOAT_WORKDIR": str(self.worker.WORKDIR),
+                    "CODEX_HOME": str(self.worker.CODEX_HOME),
                     "AUTOMOAT_CODEX_MODEL": 'gpt"quoted',
                     "AUTOMOAT_CODEX_REASONING_EFFORT": 'high"quoted',
                 },

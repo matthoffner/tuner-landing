@@ -896,8 +896,9 @@ def run(command: list[str], *, cwd: Path | None = None, input_text: str | None =
 
 
 def write_codex_config() -> None:
-    CODEX_HOME.mkdir(parents=True, exist_ok=True)
-    config = CODEX_HOME / "config.toml"
+    workdir, codex_home = configured_worker_paths(os.environ)
+    codex_home.mkdir(parents=True, exist_ok=True)
+    config = codex_home / "config.toml"
     model = codex_config_value(os.environ, "AUTOMOAT_CODEX_MODEL")
     reasoning = codex_config_value(os.environ, "AUTOMOAT_CODEX_REASONING_EFFORT")
     config.write_text(
@@ -908,24 +909,25 @@ def write_codex_config() -> None:
                 'approval_policy = "never"',
                 'sandbox_mode = "danger-full-access"',
                 "",
-                f"[projects.{toml_basic_string(WORKDIR.as_posix())}]",
+                f"[projects.{toml_basic_string(workdir.as_posix())}]",
                 'trust_level = "trusted"',
                 "",
             ]
         ),
         encoding="utf-8",
     )
-    os.environ["CODEX_HOME"] = str(CODEX_HOME)
+    os.environ["CODEX_HOME"] = str(codex_home)
 
 
 def configure_codex_auth() -> None:
     write_codex_config()
+    _workdir, codex_home = configured_worker_paths(os.environ)
     auth_b64 = os.environ.get("CODEX_AUTH_JSON_B64", "").strip()
     access_token = os.environ.get("CODEX_ACCESS_TOKEN", "").strip()
     api_key = os.environ.get("OPENAI_API_KEY", "").strip()
 
     if auth_b64:
-        auth_path = CODEX_HOME / "auth.json"
+        auth_path = codex_home / "auth.json"
         auth_path.write_bytes(decode_codex_auth_json_b64(auth_b64))
         auth_path.chmod(0o600)
         emit(f"wrote Codex auth file to {auth_path}")
@@ -966,28 +968,30 @@ def configure_git_auth() -> None:
 
 
 def sync_repo() -> None:
+    workdir, _codex_home = configured_worker_paths(os.environ)
     repo = os.environ.get("AUTOMOAT_GIT_REPO", DEFAULT_REPO)
     branch = os.environ.get("AUTOMOAT_GIT_BRANCH", "main").strip() or "main"
-    WORKDIR.parent.mkdir(parents=True, exist_ok=True)
-    if not (WORKDIR / ".git").exists():
-        if WORKDIR.exists():
-            shutil.rmtree(WORKDIR)
-        run(["git", "clone", "--branch", branch, repo, str(WORKDIR)])
+    workdir.parent.mkdir(parents=True, exist_ok=True)
+    if not (workdir / ".git").exists():
+        if workdir.exists():
+            shutil.rmtree(workdir)
+        run(["git", "clone", "--branch", branch, repo, str(workdir)])
     else:
-        run(["git", "fetch", "origin", branch], cwd=WORKDIR)
-        run(["git", "checkout", branch], cwd=WORKDIR)
-        run(["git", "reset", "--hard", f"origin/{branch}"], cwd=WORKDIR)
-    run(["git", "status", "--short", "--branch"], cwd=WORKDIR)
+        run(["git", "fetch", "origin", branch], cwd=workdir)
+        run(["git", "checkout", branch], cwd=workdir)
+        run(["git", "reset", "--hard", f"origin/{branch}"], cwd=workdir)
+    run(["git", "status", "--short", "--branch"], cwd=workdir)
 
 
 def start_publisher() -> subprocess.Popen[object]:
     require_env("AUTOMOAT_RELAY_URL")
     require_env("AUTOMOAT_RELAY_TOKEN")
+    workdir, _codex_home = configured_worker_paths(os.environ)
     command = relay_publisher_command(os.environ)
     runtime_config = relay_publisher_runtime_config(os.environ)
     process = subprocess.Popen(
         command,
-        cwd=WORKDIR,
+        cwd=workdir,
         env=os.environ.copy(),
     )
     CHILDREN.append(process)
@@ -999,6 +1003,7 @@ def start_publisher() -> subprocess.Popen[object]:
 
 
 def start_loop() -> subprocess.Popen[object]:
+    workdir, _codex_home = configured_worker_paths(os.environ)
     interval = os.environ.get("AUTOMOAT_AGENT_INTERVAL", "300")
     iterations = os.environ.get("AUTOMOAT_AGENT_ITERATIONS", "0")
     command = [
@@ -1009,7 +1014,7 @@ def start_loop() -> subprocess.Popen[object]:
         "--interval",
         interval,
     ]
-    process = subprocess.Popen(command, cwd=WORKDIR, env=os.environ.copy())
+    process = subprocess.Popen(command, cwd=workdir, env=os.environ.copy())
     CHILDREN.append(process)
     emit(f"started autonomous loop pid={process.pid}")
     return process
