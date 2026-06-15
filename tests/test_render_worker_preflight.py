@@ -149,6 +149,32 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             ],
         )
 
+    def test_rejects_secret_values_with_leading_or_trailing_whitespace(self) -> None:
+        auth_b64 = base64.b64encode(b'{"tokens":{"access_token":"token"}}').decode("ascii")
+
+        errors = self.worker.validate_worker_environment(
+            {
+                "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+                "AUTOMOAT_RELAY_TOKEN": " relay-token",
+                "GITHUB_TOKEN": "github-token ",
+                "GH_TOKEN": "github-token",
+                "CODEX_AUTH_JSON_B64": f" {auth_b64}",
+                "CODEX_ACCESS_TOKEN": "codex-token",
+                "OPENAI_API_KEY": "api-key ",
+            },
+            found_command,
+        )
+
+        self.assertEqual(
+            errors,
+            [
+                "AUTOMOAT_RELAY_TOKEN must not include leading or trailing whitespace",
+                "GITHUB_TOKEN must not include leading or trailing whitespace",
+                "CODEX_AUTH_JSON_B64 must not include leading or trailing whitespace",
+                "OPENAI_API_KEY must not include leading or trailing whitespace",
+            ],
+        )
+
     def test_rejects_bad_url_codex_auth_base64_and_intervals(self) -> None:
         errors = self.worker.validate_worker_environment(
             {
