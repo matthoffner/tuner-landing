@@ -2501,6 +2501,37 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             config,
         )
 
+    def test_configure_codex_auth_logs_sanitized_auth_file_label(self) -> None:
+        auth_b64 = base64.b64encode(b'{"tokens":{"access_token":"token"}}').decode(
+            "ascii"
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            codex_home = Path(temp_dir) / "codex-home"
+            env = {
+                "CODEX_HOME": str(codex_home),
+                "CODEX_AUTH_JSON_B64": auth_b64,
+            }
+            output = io.StringIO()
+
+            with patch.dict(self.worker.os.environ, env, clear=True), patch.object(
+                self.worker,
+                "run",
+                return_value="",
+            ) as run_command, redirect_stdout(output):
+                self.worker.configure_codex_auth()
+
+            auth_path = codex_home / "auth.json"
+            self.assertEqual(
+                json.loads(auth_path.read_text(encoding="utf-8")),
+                {"tokens": {"access_token": "token"}},
+            )
+
+        log_text = output.getvalue()
+        self.assertIn("wrote Codex auth file to <external>/auth.json", log_text)
+        self.assertNotIn(str(codex_home), log_text)
+        run_command.assert_called_once_with(["codex", "login", "status"])
+
     def test_git_repo_preflight_does_not_print_url_secrets(self) -> None:
         env = {
             "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",

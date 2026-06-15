@@ -1289,7 +1289,7 @@ def configure_codex_auth() -> None:
         auth_path = codex_home / "auth.json"
         auth_path.write_bytes(decode_codex_auth_json_b64(auth_b64))
         auth_path.chmod(0o600)
-        emit(f"wrote Codex auth file to {auth_path}")
+        emit(f"wrote Codex auth file to {worker_config_path_label(auth_path)}")
     elif access_token:
         run(["codex", "login", "--with-access-token"], input_text=access_token)
     elif api_key:
