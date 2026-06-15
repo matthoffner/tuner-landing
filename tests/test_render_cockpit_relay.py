@@ -524,6 +524,31 @@ class RenderCockpitRelayTest(unittest.TestCase):
         self.assertIn("--max-status-bytes must be greater than 0", errors)
         self.assertIn("--stale-after-seconds must be greater than 0", errors)
 
+    def test_relay_preflight_rejects_malformed_token_before_serving(self) -> None:
+        cases = {
+            " relay-token": (
+                "AUTOMOAT_RELAY_TOKEN must not include leading or trailing whitespace"
+            ),
+            "relay-token\nsecond-line": (
+                "AUTOMOAT_RELAY_TOKEN must be a single-line value without control characters"
+            ),
+        }
+        for token, expected_error in cases.items():
+            with self.subTest(token=repr(token)):
+                with patch.dict(
+                    os.environ,
+                    {"AUTOMOAT_RELAY_TOKEN": token, "PORT": "4180"},
+                    clear=True,
+                ), patch.object(
+                    sys,
+                    "argv",
+                    ["render_cockpit_relay.py", "--check-env"],
+                ):
+                    args = self.relay.parse_args()
+                    errors = self.relay.validate_relay_configuration(args)
+
+                self.assertIn(expected_error, errors)
+
     def test_relay_preflight_accepts_documented_runtime_limits(self) -> None:
         limits = self.relay.RELAY_CONFIG_LIMITS
         env = {
@@ -676,7 +701,7 @@ class RenderCockpitRelayTest(unittest.TestCase):
 
     def test_check_env_json_failure_groups_errors_without_printing_token(self) -> None:
         env = {
-            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            "AUTOMOAT_RELAY_TOKEN": "relay-token\nsecond-line",
             "PORT": "not-a-port",
             "AUTOMOAT_RELAY_MAX_BYTES": "bad",
             "AUTOMOAT_RELAY_MAX_STATUS_BYTES": "0",
@@ -692,16 +717,20 @@ class RenderCockpitRelayTest(unittest.TestCase):
         payload = json.loads(stdout.getvalue())
         self.assertEqual(status, 2)
         self.assertEqual(payload["status"], "failed")
+        self.assertIn(
+            "AUTOMOAT_RELAY_TOKEN must be a single-line value without control characters",
+            payload["errors"],
+        )
         self.assertIn("--port must be an integer", payload["errors"])
         self.assertIn("--max-ingest-bytes must be an integer", payload["errors"])
         self.assertIn(
             "--max-status-bytes must be greater than 0",
             payload["errors"],
         )
-        self.assertEqual(payload["diagnostics"]["error_count"], 3)
+        self.assertEqual(payload["diagnostics"]["error_count"], 4)
         self.assertEqual(
             payload["diagnostics"]["error_categories"],
-            ["invalid_port", "invalid_runtime_config"],
+            ["invalid_port", "invalid_runtime_config", "invalid_secret"],
         )
         self.assertTrue(payload["diagnostics"]["relay_token_configured"])
         self.assertEqual(
@@ -709,6 +738,7 @@ class RenderCockpitRelayTest(unittest.TestCase):
             self.relay.RELAY_CONFIG_LIMITS,
         )
         self.assertNotIn("relay-token", stdout.getvalue())
+        self.assertNotIn("second-line", stdout.getvalue())
 
 
 if __name__ == "__main__":

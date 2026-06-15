@@ -466,8 +466,21 @@ def validate_relay_configuration(
 ) -> list[str]:
     env = env if env is not None else os.environ
     errors: list[str] = []
-    if not str(env.get("AUTOMOAT_RELAY_TOKEN", "")).strip():
+    token_value = str(env.get("AUTOMOAT_RELAY_TOKEN", ""))
+    token = token_value.strip()
+    if not token:
         errors.append("AUTOMOAT_RELAY_TOKEN is required")
+    elif any(
+        character in "\r\n" or ord(character) < 32 or ord(character) == 127
+        for character in token_value
+    ):
+        errors.append(
+            "AUTOMOAT_RELAY_TOKEN must be a single-line value without control characters"
+        )
+    elif token_value != token:
+        errors.append(
+            "AUTOMOAT_RELAY_TOKEN must not include leading or trailing whitespace"
+        )
     if not str(args.host).strip():
         errors.append("--host must not be empty")
     state_file = str(args.state_file).strip()
@@ -511,6 +524,8 @@ def validate_relay_configuration(
 def relay_preflight_error_category(error: str) -> str:
     if error == "AUTOMOAT_RELAY_TOKEN is required":
         return "missing_required"
+    if error.startswith("AUTOMOAT_RELAY_TOKEN"):
+        return "invalid_secret"
     if error.startswith("--port"):
         return "invalid_port"
     if error.startswith("--state-file"):
