@@ -25,6 +25,7 @@ ROOT = Path(__file__).resolve().parents[1]
 LOG_FILE = ROOT / ".automoat" / "logs" / "mvp-loop.log"
 STATUS_FILE = ROOT / ".automoat" / "state" / "mvp-loop-status.json"
 PID_FILE = ROOT / ".automoat" / "state" / "mvp-loop.pid"
+BRIDGE_STATUS_FILE = ROOT / ".automoat" / "state" / "mvp-bridge-status.json"
 MAX_CORRECTION_BYTES = 8192
 STATUS_STALE_AFTER_SECONDS = 120
 OPERATOR_ATTENTION_LABELS = {
@@ -74,6 +75,40 @@ def as_string_list(value: object) -> list[str]:
     return [str(item) for item in value if isinstance(item, (str, int, float))]
 
 
+def compact_text(value: object, *, max_length: int = 180) -> str | None:
+    if not isinstance(value, (str, int, float)):
+        return None
+    text = str(value).strip()
+    if not text:
+        return None
+    text = "".join(
+        " " if character in "\r\n" or ord(character) < 32 or ord(character) == 127 else character
+        for character in text
+    )
+    text = " ".join(text.split())
+    return text[:max_length] if text else None
+
+
+def compact_int(value: object) -> int | None:
+    if isinstance(value, bool):
+        return None
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed >= 0 else None
+
+
+def compact_float(value: object) -> float | None:
+    if isinstance(value, bool):
+        return None
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed >= 0 else None
+
+
 def operator_attention_label(reason: str | None) -> str:
     if reason is None:
         return "Clear"
@@ -109,6 +144,95 @@ def utc_timestamp_age_seconds(value: object, now: datetime | None = None) -> int
     current = now or datetime.now(timezone.utc)
     age = int((current - timestamp.astimezone(timezone.utc)).total_seconds())
     return max(age, 0)
+
+
+def bridge_health_summary(value: object) -> dict[str, object]:
+    health = value if isinstance(value, dict) else {}
+    reasons = as_string_list(health.get("reasons"))
+    primary_reason = compact_text(health.get("primary_reason"))
+    if primary_reason is None and reasons:
+        primary_reason = reasons[0]
+    status = compact_text(health.get("status")) or ("degraded" if reasons else "unknown")
+    ok = health.get("ok")
+    if not isinstance(ok, bool):
+        ok = status == "live"
+    label = compact_text(health.get("label")) or (
+        "Live" if primary_reason is None else primary_reason.replace("_", " ")
+    )
+    return {
+        "status": status,
+        "ok": ok,
+        "reasons": reasons,
+        "primary_reason": primary_reason,
+        "label": label,
+    }
+
+
+def read_bridge_summary() -> dict[str, object]:
+    status_file = ".automoat/state/mvp-bridge-status.json"
+    if not BRIDGE_STATUS_FILE.exists():
+        return {
+            "available": False,
+            "status_file": status_file,
+            "status_file_status": "missing",
+        }
+    try:
+        payload = json.loads(BRIDGE_STATUS_FILE.read_text(encoding="utf-8"))
+    except OSError as exc:
+        return {
+            "available": False,
+            "status_file": status_file,
+            "status_file_status": "read_failed",
+            "status_file_error": compact_text(str(exc)),
+        }
+    except json.JSONDecodeError as exc:
+        return {
+            "available": False,
+            "status_file": status_file,
+            "status_file_status": "invalid_json",
+            "status_file_error": f"line {exc.lineno} column {exc.colno}: {exc.msg}",
+        }
+    if not isinstance(payload, dict):
+        return {
+            "available": False,
+            "status_file": status_file,
+            "status_file_status": "not_object",
+            "status_file_error": type(payload).__name__,
+        }
+
+    summary: dict[str, object] = {
+        "available": True,
+        "status_file": status_file,
+        "status_file_status": "loaded",
+        "bridge_health": bridge_health_summary(payload.get("bridge_health")),
+    }
+    text_fields = {
+        "status": payload.get("status"),
+        "public_url": payload.get("public_url"),
+        "local_read_only_url": payload.get("local_read_only_url"),
+        "ngrok_api_url": payload.get("ngrok_api_url"),
+        "updated_at": payload.get("updated_at"),
+        "bridge_started_at": payload.get("bridge_started_at"),
+        "mode": payload.get("mode"),
+    }
+    for key, value in text_fields.items():
+        compact_value = compact_text(value)
+        if compact_value is not None:
+            summary[key] = compact_value
+
+    int_fields = {
+        "bridge_pid": payload.get("bridge_pid"),
+        "bridge_status_sequence": payload.get("bridge_status_sequence"),
+    }
+    for key, value in int_fields.items():
+        compact_value = compact_int(value)
+        if compact_value is not None:
+            summary[key] = compact_value
+
+    interval = compact_float(payload.get("interval"))
+    if interval is not None:
+        summary["interval"] = interval
+    return summary
 
 
 def cockpit_summary(status: dict[str, object]) -> dict[str, object]:
@@ -225,6 +349,7 @@ def read_status() -> dict[str, object]:
     status["loop_running"] = running
     status["loop_pid"] = pid
     status["cockpit_summary"] = cockpit_summary(status)
+    status["bridge_summary"] = read_bridge_summary()
     return status
 
 
@@ -556,6 +681,7 @@ def cockpit_html() -> str:
               <div class="detail"><span>artifact health</span><strong id="artifactHealth">...</strong></div>
               <div class="detail"><span>status freshness</span><strong id="freshness">...</strong></div>
               <div class="detail"><span>operator attention</span><strong id="attention">...</strong></div>
+              <div class="detail"><span>bridge health</span><strong id="bridgeHealth">...</strong></div>
             </div>
             <div class="links">
               <a href="/.automoat/logs/mvp-loop.log">raw loop log</a>
@@ -583,6 +709,7 @@ def cockpit_html() -> str:
       const artifactHealth = document.getElementById("artifactHealth");
       const freshness = document.getElementById("freshness");
       const attention = document.getElementById("attention");
+      const bridgeHealth = document.getElementById("bridgeHealth");
 
       async function post(path) {{
         const response = await fetch(path, {{ method: "POST" }});
@@ -594,6 +721,9 @@ def cockpit_html() -> str:
         const response = await fetch("/api/status", {{ cache: "no-store" }});
         const status = await response.json();
         const cockpit = status.cockpit_summary || {{}};
+        const bridge = status.bridge_summary || {{}};
+        const bridgeCompact = bridge.bridge_health || {{}};
+        const bridgeReasons = Array.isArray(bridgeCompact.reasons) ? bridgeCompact.reasons : [];
         summary.textContent = `Current status: ${{cockpit.status || status.status || "waiting"}}`;
         loop.textContent = cockpit.loop_running ? `running #${{cockpit.loop_pid}}` : "stopped";
         iteration.textContent = cockpit.iteration || status.iteration || "0";
@@ -615,6 +745,12 @@ def cockpit_html() -> str:
           ? cockpit.operator_attention_label || reasons.join(", ") || "Required"
           : cockpit.operator_attention_label || "Clear";
         attention.title = reasons.join(", ");
+        bridgeHealth.textContent = bridge.available
+          ? bridgeCompact.label || bridgeCompact.status || bridge.status || "Live"
+          : bridge.status_file_status || "missing";
+        bridgeHealth.title = bridge.available
+          ? [bridge.public_url, bridgeReasons.join(", ")].filter(Boolean).join(" | ")
+          : bridge.status_file || "";
       }}
 
       const startButton = document.getElementById("start");

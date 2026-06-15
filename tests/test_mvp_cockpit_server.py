@@ -213,11 +213,85 @@ class MvpCockpitServerTest(unittest.TestCase):
             ],
         )
 
+    def test_read_bridge_summary_compacts_loaded_status(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            self.cockpit.BRIDGE_STATUS_FILE = tmp_path / "mvp-bridge-status.json"
+            self.cockpit.BRIDGE_STATUS_FILE.write_text(
+                json.dumps(
+                    {
+                        "status": "running",
+                        "public_url": "https://automoat-test.ngrok.app",
+                        "local_read_only_url": "http://127.0.0.1:4181/",
+                        "ngrok_api_url": "http://127.0.0.1:4041/api/tunnels",
+                        "updated_at": "2026-06-15T03:20:00Z",
+                        "bridge_started_at": "2026-06-15T03:19:00Z",
+                        "bridge_pid": "12345",
+                        "bridge_status_sequence": "4",
+                        "interval": "5.5",
+                        "mode": "read-only",
+                        "bridge_health": {
+                            "status": "live",
+                            "ok": True,
+                            "reasons": [],
+                            "primary_reason": None,
+                            "label": "Live",
+                        },
+                        "debug_path": "/tmp/local-only/path",
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            summary = self.cockpit.read_bridge_summary()
+
+        self.assertTrue(summary["available"])
+        self.assertEqual(summary["status_file_status"], "loaded")
+        self.assertEqual(summary["status"], "running")
+        self.assertEqual(summary["public_url"], "https://automoat-test.ngrok.app")
+        self.assertEqual(summary["local_read_only_url"], "http://127.0.0.1:4181/")
+        self.assertEqual(summary["ngrok_api_url"], "http://127.0.0.1:4041/api/tunnels")
+        self.assertEqual(summary["bridge_pid"], 12345)
+        self.assertEqual(summary["bridge_status_sequence"], 4)
+        self.assertEqual(summary["interval"], 5.5)
+        self.assertEqual(summary["mode"], "read-only")
+        self.assertEqual(
+            summary["bridge_health"],
+            {
+                "status": "live",
+                "ok": True,
+                "reasons": [],
+                "primary_reason": None,
+                "label": "Live",
+            },
+        )
+        self.assertNotIn("debug_path", summary)
+
+    def test_read_bridge_summary_handles_missing_and_invalid_status(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            self.cockpit.BRIDGE_STATUS_FILE = tmp_path / "missing.json"
+
+            missing = self.cockpit.read_bridge_summary()
+
+            self.cockpit.BRIDGE_STATUS_FILE = tmp_path / "invalid.json"
+            self.cockpit.BRIDGE_STATUS_FILE.write_text("{not-json\n", encoding="utf-8")
+
+            invalid = self.cockpit.read_bridge_summary()
+
+        self.assertFalse(missing["available"])
+        self.assertEqual(missing["status_file_status"], "missing")
+        self.assertFalse(invalid["available"])
+        self.assertEqual(invalid["status_file_status"], "invalid_json")
+        self.assertIn("line 1 column 2", invalid["status_file_error"])
+
     def test_read_status_adds_cockpit_summary(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
             self.cockpit.STATUS_FILE = tmp_path / "status.json"
             self.cockpit.PID_FILE = tmp_path / "mvp-loop.pid"
+            self.cockpit.BRIDGE_STATUS_FILE = tmp_path / "mvp-bridge-status.json"
             self.cockpit.LOOP_PROCESS = None
             self.cockpit.STATUS_FILE.write_text(
                 json.dumps(
@@ -241,6 +315,7 @@ class MvpCockpitServerTest(unittest.TestCase):
             status = self.cockpit.read_status()
 
         self.assertIn("cockpit_summary", status)
+        self.assertIn("bridge_summary", status)
         self.assertEqual(status["cockpit_summary"]["status"], "running")
         self.assertEqual(status["cockpit_summary"]["phase"], "codex_exec")
         self.assertEqual(status["cockpit_summary"]["iteration"], 2)
@@ -257,6 +332,8 @@ class MvpCockpitServerTest(unittest.TestCase):
             "Loop is not running",
         )
         self.assertFalse(status["cockpit_summary"]["loop_running"])
+        self.assertFalse(status["bridge_summary"]["available"])
+        self.assertEqual(status["bridge_summary"]["status_file_status"], "missing")
 
     def test_cockpit_html_includes_operator_diagnostic_targets(self) -> None:
         self.cockpit.read_status = lambda: {
@@ -272,6 +349,17 @@ class MvpCockpitServerTest(unittest.TestCase):
                 "operator_attention_primary_reason": "status_stale",
                 "operator_attention_label": "Status is stale",
             },
+            "bridge_summary": {
+                "available": True,
+                "public_url": "https://automoat-test.ngrok.app",
+                "bridge_health": {
+                    "status": "live",
+                    "ok": True,
+                    "reasons": [],
+                    "primary_reason": None,
+                    "label": "Live",
+                },
+            },
         }
 
         markup = self.cockpit.cockpit_html()
@@ -282,7 +370,9 @@ class MvpCockpitServerTest(unittest.TestCase):
         self.assertIn('id="artifactHealth"', markup)
         self.assertIn('id="freshness"', markup)
         self.assertIn('id="attention"', markup)
+        self.assertIn('id="bridgeHealth"', markup)
         self.assertIn("status.cockpit_summary", markup)
+        self.assertIn("status.bridge_summary", markup)
         self.assertIn("status_age_seconds", markup)
         self.assertIn("operator_attention_reasons", markup)
         self.assertIn("operator_attention_label", markup)
