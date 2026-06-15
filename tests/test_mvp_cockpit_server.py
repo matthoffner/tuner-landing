@@ -110,6 +110,8 @@ class MvpCockpitServerTest(unittest.TestCase):
         self.assertEqual(summary["operator_attention_primary_reason"], "status_stale")
         self.assertEqual(summary["operator_attention_label"], "Status is stale")
         self.assertEqual(summary["artifact_health"], "loaded")
+        self.assertEqual(summary["artifact_statuses"], {})
+        self.assertEqual(summary["artifact_problem_artifacts"], [])
         self.assertEqual(summary["import_readiness"], "ready")
         self.assertEqual(summary["readiness_blockers"], [])
         self.assertTrue(summary["ready_for_next_import_records"])
@@ -127,7 +129,14 @@ class MvpCockpitServerTest(unittest.TestCase):
             "updated_at": "2026-06-15T00:00:00Z",
             "loop_running": False,
             "artifacts": {
-                "artifact_health": {"status": "degraded"},
+                "artifact_health": {
+                    "status": "degraded",
+                    "statuses": {
+                        "contract": "loaded",
+                        "coverage": "invalid",
+                        "workflow": "missing",
+                    },
+                },
                 "import_pipeline": {
                     "execution_readiness": {
                         "status": "blocked",
@@ -158,6 +167,18 @@ class MvpCockpitServerTest(unittest.TestCase):
         )
         self.assertEqual(summary["operator_attention_primary_reason"], "loop_not_running")
         self.assertEqual(summary["operator_attention_label"], "Loop is not running")
+        self.assertEqual(
+            summary["artifact_statuses"],
+            {
+                "contract": "loaded",
+                "coverage": "invalid",
+                "workflow": "missing",
+            },
+        )
+        self.assertEqual(
+            summary["artifact_problem_artifacts"],
+            ["coverage", "workflow"],
+        )
         self.assertEqual(summary["readiness_blockers"], ["correction_ledger_incomplete"])
         self.assertEqual(summary["thin_group_count"], 2)
         self.assertEqual(
@@ -342,6 +363,9 @@ class MvpCockpitServerTest(unittest.TestCase):
             "cockpit_summary": {
                 "import_readiness": "ready",
                 "current_focus": "autonomy_visibility_or_real_ingest",
+                "artifact_health": "degraded",
+                "artifact_statuses": {"coverage": "invalid"},
+                "artifact_problem_artifacts": ["coverage"],
                 "status_age_seconds": 14,
                 "status_stale": False,
                 "operator_attention": True,
@@ -377,6 +401,9 @@ class MvpCockpitServerTest(unittest.TestCase):
         self.assertIn("operator_attention_reasons", markup)
         self.assertIn("operator_attention_label", markup)
         self.assertIn("operator_attention", markup)
+        self.assertIn("artifact_statuses", markup)
+        self.assertIn("artifact_problem_artifacts", markup)
+        self.assertIn("artifactProblems.join", markup)
 
     def test_access_log_redacts_query_strings_from_request_lines(self) -> None:
         request_line = "GET /api/status?token=secret&relay=abc HTTP/1.1"

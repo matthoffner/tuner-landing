@@ -168,6 +168,17 @@ def bridge_health_summary(value: object) -> dict[str, object]:
     }
 
 
+def artifact_status_summary(value: object) -> dict[str, str]:
+    statuses = value if isinstance(value, dict) else {}
+    summary: dict[str, str] = {}
+    for key, status in sorted(statuses.items()):
+        artifact_name = compact_text(key, max_length=80)
+        artifact_status = compact_text(status, max_length=80)
+        if artifact_name is not None and artifact_status is not None:
+            summary[artifact_name] = artifact_status
+    return summary
+
+
 def read_bridge_summary() -> dict[str, object]:
     status_file = ".automoat/state/mvp-bridge-status.json"
     if not BRIDGE_STATUS_FILE.exists():
@@ -259,6 +270,10 @@ def cockpit_summary(status: dict[str, object]) -> dict[str, object]:
     status_value = status.get("status") or "waiting"
     loop_running = bool(status.get("loop_running"))
     artifact_health_status = artifact_health.get("status") or "unknown"
+    artifact_statuses = artifact_status_summary(artifact_health.get("statuses"))
+    artifact_problem_artifacts = [
+        name for name, artifact_status in artifact_statuses.items() if artifact_status != "loaded"
+    ]
     import_readiness = readiness.get("status") or "unknown"
     readiness_blockers = as_string_list(readiness.get("blockers"))
     policy_failure = failed_autonomy_policy_step(status)
@@ -312,6 +327,8 @@ def cockpit_summary(status: dict[str, object]) -> dict[str, object]:
         "operator_attention_primary_reason": primary_attention_reason,
         "operator_attention_label": operator_attention_label(primary_attention_reason),
         "artifact_health": artifact_health_status,
+        "artifact_statuses": artifact_statuses,
+        "artifact_problem_artifacts": artifact_problem_artifacts,
         "import_readiness": import_readiness,
         "readiness_blockers": readiness_blockers,
         "ready_for_next_import_records": readiness.get("ready_for_next_import_records"),
@@ -733,7 +750,17 @@ def cockpit_html() -> str:
         readiness.textContent = cockpit.import_readiness || "unknown";
         focus.textContent = cockpit.current_focus || "mvp_loop";
         phase.textContent = cockpit.phase || "...";
-        artifactHealth.textContent = cockpit.artifact_health || "unknown";
+        const artifactStatuses = cockpit.artifact_statuses || {{}};
+        const artifactProblems = Array.isArray(cockpit.artifact_problem_artifacts)
+          ? cockpit.artifact_problem_artifacts
+          : [];
+        const artifactBase = cockpit.artifact_health || "unknown";
+        artifactHealth.textContent = artifactProblems.length
+          ? `${{artifactBase}}: ${{artifactProblems.join(", ")}}`
+          : artifactBase;
+        artifactHealth.title = Object.entries(artifactStatuses)
+          .map(([name, value]) => `${{name}}: ${{value}}`)
+          .join(", ");
         const age = cockpit.status_age_seconds;
         if (typeof age === "number") {{
           freshness.textContent = cockpit.status_stale ? `stale ${{age}}s` : `fresh ${{age}}s`;
