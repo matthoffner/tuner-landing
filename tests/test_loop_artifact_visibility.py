@@ -102,6 +102,8 @@ class LoopArtifactVisibilityTest(unittest.TestCase):
                 self.assertEqual(artifacts["coverage"]["artifact_status"], "loaded")
                 self.assertEqual(artifacts["workflow"]["artifact_status"], "loaded")
                 self.assertEqual(artifacts["artifact_health"]["degraded_artifacts"], [])
+                self.assertEqual(artifacts["artifact_health"]["degraded_artifact_count"], 0)
+                self.assertEqual(artifacts["artifact_health"]["degradation_details"], [])
                 self.assertEqual(artifacts["contract"]["passed_checks"], 1)
                 self.assertEqual(artifacts["contract"]["total_checks"], 2)
                 self.assertEqual(artifacts["workflow"]["queue_items"], 2)
@@ -125,6 +127,35 @@ class LoopArtifactVisibilityTest(unittest.TestCase):
                 self.assertEqual(
                     artifacts["artifact_health"]["degraded_artifacts"],
                     ["contract", "coverage", "workflow", "import_pipeline"],
+                )
+                self.assertEqual(artifacts["artifact_health"]["degraded_artifact_count"], 4)
+                self.assertEqual(
+                    [detail["name"] for detail in artifacts["artifact_health"]["degradation_details"]],
+                    ["contract", "coverage", "workflow", "import_pipeline"],
+                )
+                self.assertEqual(
+                    artifacts["artifact_health"]["degradation_details"][1],
+                    {
+                        "name": "coverage",
+                        "status": "missing",
+                        "reason": "coverage_artifact_missing",
+                    },
+                )
+                self.assertEqual(
+                    artifacts["artifact_health"]["degradation_details"][2],
+                    {
+                        "name": "workflow",
+                        "status": "invalid",
+                        "reason": "artifact JSON must be an object",
+                    },
+                )
+                self.assertEqual(
+                    artifacts["artifact_health"]["degradation_details"][3],
+                    {
+                        "name": "import_pipeline",
+                        "status": "missing",
+                        "reason": "pipeline_summary_missing",
+                    },
                 )
                 self.assertIn("artifact_error", artifacts["contract"])
                 self.assertIn("artifact_error", artifacts["workflow"])
@@ -155,6 +186,43 @@ class LoopArtifactVisibilityTest(unittest.TestCase):
                 self.assertEqual(artifacts["import_pipeline"]["status"], "invalid")
                 self.assertIn("invalid JSON constant", artifacts["coverage"]["artifact_error"])
                 self.assertIn("invalid JSON constant", artifacts["import_pipeline"]["error"])
+                self.assertEqual(artifacts["artifact_health"]["degraded_artifact_count"], 2)
+                self.assertEqual(
+                    [detail["name"] for detail in artifacts["artifact_health"]["degradation_details"]],
+                    ["coverage", "import_pipeline"],
+                )
+
+    def test_artifact_degradation_details_are_bounded(self) -> None:
+        for script_path in LOOP_SCRIPTS:
+            with self.subTest(script=script_path.name):
+                module = load_module(script_path)
+                long_error = "bad\n" + ("x" * 320)
+
+                details = module.artifact_degradation_details(
+                    {
+                        "contract": "invalid",
+                        "coverage": "missing",
+                        "workflow": "loaded",
+                    },
+                    {
+                        "contract": {"artifact_error": long_error},
+                        "coverage": {},
+                    },
+                )
+
+                self.assertEqual(len(details), 2)
+                self.assertEqual(details[0]["name"], "contract")
+                self.assertEqual(details[0]["status"], "invalid")
+                self.assertNotIn("\n", details[0]["reason"])
+                self.assertLessEqual(len(details[0]["reason"]), 240)
+                self.assertEqual(
+                    details[1],
+                    {
+                        "name": "coverage",
+                        "status": "missing",
+                        "reason": "coverage_artifact_missing",
+                    },
+                )
 
     def test_loop_status_writers_reject_non_finite_payloads(self) -> None:
         for script_path in LOOP_SCRIPTS:
@@ -222,6 +290,13 @@ class LoopArtifactVisibilityTest(unittest.TestCase):
                         "workflow": "loaded",
                         "import_pipeline": "loaded",
                     },
+                    "degradation_details": [
+                        {
+                            "name": "coverage",
+                            "status": "invalid",
+                            "reason": "invalid JSON constant: NaN",
+                        }
+                    ],
                 }
             }
 
@@ -231,6 +306,16 @@ class LoopArtifactVisibilityTest(unittest.TestCase):
             self.assertEqual(step["artifact_health_status"], "degraded")
             self.assertEqual(step["artifact_statuses"]["coverage"], "invalid")
             self.assertEqual(step["degraded_artifacts"], ["coverage"])
+            self.assertEqual(
+                step["degradation_details"],
+                [
+                    {
+                        "name": "coverage",
+                        "status": "invalid",
+                        "reason": "invalid JSON constant: NaN",
+                    }
+                ],
+            )
 
 
 if __name__ == "__main__":

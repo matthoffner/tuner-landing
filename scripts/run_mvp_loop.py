@@ -31,6 +31,8 @@ HANDOFF_PATH = ROOT / ".pixelbox/handoff.md"
 
 
 STOP_REQUESTED = False
+MAX_ARTIFACT_HEALTH_DETAILS = 8
+MAX_ARTIFACT_HEALTH_DETAIL_CHARS = 240
 
 
 def utc_now() -> str:
@@ -75,6 +77,45 @@ def read_json_artifact(path: Path) -> tuple[dict[str, Any], dict[str, Any]]:
     if not isinstance(payload, dict):
         return {}, artifact_error("invalid", path, "artifact JSON must be an object")
     return payload, artifact_error("loaded", path)
+
+
+def bounded_artifact_health_detail(value: Any) -> str:
+    text = str(value).replace("\r", " ").replace("\n", " ")
+    if len(text) > MAX_ARTIFACT_HEALTH_DETAIL_CHARS:
+        return text[: MAX_ARTIFACT_HEALTH_DETAIL_CHARS - 3] + "..."
+    return text
+
+
+def artifact_degradation_details(
+    artifact_statuses: dict[str, Any],
+    artifact_details: dict[str, dict[str, Any]],
+) -> list[dict[str, str]]:
+    details: list[dict[str, str]] = []
+    for name, status in artifact_statuses.items():
+        if status == "loaded":
+            continue
+        detail = {
+            "name": bounded_artifact_health_detail(name),
+            "status": bounded_artifact_health_detail(status or "unknown"),
+        }
+        source = artifact_details.get(name, {})
+        reason = source.get("artifact_error")
+        if name == "import_pipeline":
+            reason = source.get("error")
+            if not reason and status == "missing":
+                reason = "pipeline_summary_missing"
+            elif not reason and status == "invalid":
+                reason = "pipeline_summary_invalid"
+            elif not reason:
+                reason = "pipeline_status_unavailable"
+        elif not reason and status == "missing":
+            reason = f"{name}_artifact_missing"
+        elif not reason and status == "invalid":
+            reason = f"{name}_artifact_invalid"
+        if reason:
+            detail["reason"] = bounded_artifact_health_detail(reason)
+        details.append(detail)
+    return details[:MAX_ARTIFACT_HEALTH_DETAILS]
 
 
 def emit(log_file: Path, message: str) -> None:
@@ -258,9 +299,19 @@ def inspect_artifacts() -> dict[str, Any]:
         "workflow": queue_artifact["artifact_status"],
         "import_pipeline": import_pipeline.get("status"),
     }
+    artifact_details = {
+        "contract": contract_artifact,
+        "coverage": coverage_artifact,
+        "workflow": queue_artifact,
+        "import_pipeline": import_pipeline,
+    }
     degraded_artifacts = [
         name for name, status in artifact_statuses.items() if status != "loaded"
     ]
+    degradation_details = artifact_degradation_details(
+        artifact_statuses,
+        artifact_details,
+    )
     return {
         "artifact_health": {
             "status": (
@@ -270,6 +321,8 @@ def inspect_artifacts() -> dict[str, Any]:
             ),
             "statuses": artifact_statuses,
             "degraded_artifacts": degraded_artifacts,
+            "degraded_artifact_count": len(degraded_artifacts),
+            "degradation_details": degradation_details,
         },
         "contract": {
             **contract_artifact,
