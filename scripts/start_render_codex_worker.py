@@ -440,6 +440,12 @@ def validate_secret_safe_http_url(
     if value != value.strip():
         errors.append(f"{name} must not include leading or trailing whitespace")
         return
+    if any(
+        character in "\r\n" or ord(character) < 32 or ord(character) == 127
+        for character in value
+    ):
+        errors.append(f"{name} must be a single-line URL without control characters")
+        return
     value = value.strip()
     if not value.startswith(("http://", "https://")):
         errors.append(f"{name} must start with http:// or https://")

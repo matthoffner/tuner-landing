@@ -355,6 +355,26 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             ["AUTOMOAT_RELAY_URL must not include leading or trailing whitespace"],
         )
 
+    def test_rejects_urls_with_embedded_control_characters(self) -> None:
+        errors = self.worker.validate_worker_environment(
+            {
+                "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example\n/ingest",
+                "AUTOMOAT_RELAY_TOKEN": "relay-token",
+                "AUTOMOAT_GIT_REPO": "https://github.com/example/private.git\tdebug",
+                "GITHUB_TOKEN": "github-token",
+                "CODEX_ACCESS_TOKEN": "codex-token",
+            },
+            found_command,
+        )
+
+        self.assertEqual(
+            errors,
+            [
+                "AUTOMOAT_RELAY_URL must be a single-line URL without control characters",
+                "AUTOMOAT_GIT_REPO must be a single-line URL without control characters",
+            ],
+        )
+
     def test_rejects_git_repo_with_embedded_credentials(self) -> None:
         errors = self.worker.validate_worker_environment(
             {
