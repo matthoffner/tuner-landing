@@ -503,6 +503,7 @@ class MvpCockpitServerTest(unittest.TestCase):
 
         self.assertIn("cockpit_summary", status)
         self.assertIn("bridge_summary", status)
+        self.assertEqual(status["source_status_file_status"], "loaded")
         self.assertEqual(status["cockpit_summary"]["status"], "running")
         self.assertEqual(status["cockpit_summary"]["phase"], "codex_exec")
         self.assertEqual(status["cockpit_summary"]["iteration"], 2)
@@ -521,6 +522,44 @@ class MvpCockpitServerTest(unittest.TestCase):
         self.assertFalse(status["cockpit_summary"]["loop_running"])
         self.assertFalse(status["bridge_summary"]["available"])
         self.assertEqual(status["bridge_summary"]["status_file_status"], "missing")
+
+    def test_read_status_rejects_nonstandard_json_constants(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            self.cockpit.STATUS_FILE = tmp_path / "status.json"
+            self.cockpit.PID_FILE = tmp_path / "mvp-loop.pid"
+            self.cockpit.BRIDGE_STATUS_FILE = tmp_path / "mvp-bridge-status.json"
+            self.cockpit.LOOP_PROCESS = None
+            self.cockpit.STATUS_FILE.write_text(
+                '{"status":"running","artifacts":{"contract":{"passed_checks":NaN}}}\n',
+                encoding="utf-8",
+            )
+
+            status = self.cockpit.read_status()
+            status_text = json.dumps(status, sort_keys=True, allow_nan=False)
+
+        self.assertEqual(status["status"], "invalid-status-json")
+        self.assertEqual(status["source_status_file_status"], "invalid_json")
+        self.assertIn("invalid JSON constant NaN", status["source_status_file_error"])
+        self.assertEqual(status["cockpit_summary"]["status"], "invalid-status-json")
+        self.assertIn("status_failing", status["cockpit_summary"]["operator_attention_reasons"])
+        self.assertNotIn('"passed_checks": NaN', status_text)
+
+    def test_read_status_rejects_non_object_json_payload(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            self.cockpit.STATUS_FILE = tmp_path / "status.json"
+            self.cockpit.PID_FILE = tmp_path / "mvp-loop.pid"
+            self.cockpit.BRIDGE_STATUS_FILE = tmp_path / "mvp-bridge-status.json"
+            self.cockpit.LOOP_PROCESS = None
+            self.cockpit.STATUS_FILE.write_text('["not", "an", "object"]\n', encoding="utf-8")
+
+            status = self.cockpit.read_status()
+
+        self.assertEqual(status["status"], "invalid-status-json")
+        self.assertEqual(status["source_status_file_status"], "not_object")
+        self.assertEqual(status["source_status_file_error"], "list")
+        self.assertEqual(status["cockpit_summary"]["status"], "invalid-status-json")
 
     def test_cockpit_html_includes_operator_diagnostic_targets(self) -> None:
         self.cockpit.read_status = lambda: {

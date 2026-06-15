@@ -531,13 +531,53 @@ def cockpit_summary(status: dict[str, object]) -> dict[str, object]:
 
 
 def read_status() -> dict[str, object]:
+    status_file = repo_relative(STATUS_FILE)
     if STATUS_FILE.exists():
         try:
-            status = json.loads(STATUS_FILE.read_text(encoding="utf-8"))
-        except json.JSONDecodeError:
-            status = {"status": "invalid-status-json"}
+            payload = json.loads(
+                STATUS_FILE.read_text(encoding="utf-8"),
+                parse_constant=reject_json_constant,
+            )
+        except OSError as exc:
+            status = {
+                "status": "invalid-status-json",
+                "source_status_file": status_file,
+                "source_status_file_status": "read_failed",
+                "source_status_file_error": compact_path_error(exc, STATUS_FILE),
+            }
+        except json.JSONDecodeError as exc:
+            status = {
+                "status": "invalid-status-json",
+                "source_status_file": status_file,
+                "source_status_file_status": "invalid_json",
+                "source_status_file_error": f"line {exc.lineno} column {exc.colno}: {exc.msg}",
+            }
+        except ValueError as exc:
+            status = {
+                "status": "invalid-status-json",
+                "source_status_file": status_file,
+                "source_status_file_status": "invalid_json",
+                "source_status_file_error": compact_text(str(exc)) or type(exc).__name__,
+            }
+        else:
+            if isinstance(payload, dict):
+                status = payload
+                status["source_status_file"] = status_file
+                status["source_status_file_status"] = "loaded"
+            else:
+                status = {
+                    "status": "invalid-status-json",
+                    "source_status_file": status_file,
+                    "source_status_file_status": "not_object",
+                    "source_status_file_error": type(payload).__name__,
+                }
     else:
-        status = {"status": "waiting", "updated_at": None}
+        status = {
+            "status": "waiting",
+            "updated_at": None,
+            "source_status_file": status_file,
+            "source_status_file_status": "missing",
+        }
     with LOOP_LOCK:
         running = LOOP_PROCESS is not None and LOOP_PROCESS.poll() is None
         pid = LOOP_PROCESS.pid if running and LOOP_PROCESS is not None else None
