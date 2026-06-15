@@ -38,6 +38,16 @@ HTTP_REQUEST_METHODS = {
     "POST",
     "PUT",
 }
+COCKPIT_HEALTH_LABELS = {
+    "relay_state_load_failed": "Relay state failed to load",
+    "relay_snapshot_missing": "Relay snapshot is missing",
+    "relay_snapshot_stale": "Relay snapshot is stale",
+    "source_status_stale": "Source status is stale",
+    "source_status_unavailable": "Source status is unavailable",
+    "source_loop_not_running": "Source loop is not running",
+    "source_status_failing": "Source status is failing",
+    "source_cockpit_attention": "Source cockpit needs attention",
+}
 
 
 class RelayPersistenceError(RuntimeError):
@@ -106,6 +116,14 @@ def snapshot_freshness(state: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def cockpit_health_label(reason: str | None, source_attention_label: str | None = None) -> str:
+    if reason is None:
+        return "Live"
+    if reason == "source_cockpit_attention" and source_attention_label:
+        return source_attention_label
+    return COCKPIT_HEALTH_LABELS.get(reason, reason.replace("_", " "))
+
+
 def cockpit_health(
     state: dict[str, Any],
     status: dict[str, Any],
@@ -155,10 +173,13 @@ def cockpit_health(
         health_status = "degraded"
     else:
         health_status = "live"
+    primary_reason = reasons[0] if reasons else None
     return {
         "status": health_status,
         "ok": health_status == "live",
         "reasons": reasons,
+        "primary_reason": primary_reason,
+        "label": cockpit_health_label(primary_reason, source_attention_label),
         "source_cockpit_attention_reasons": [
             str(reason) for reason in source_attention_reasons if reason
         ],
@@ -306,6 +327,8 @@ def relay_status_payload() -> dict[str, Any]:
     status["cockpit_health"] = health
     status["cockpit_status"] = health["status"]
     status["cockpit_ok"] = health["ok"]
+    status["cockpit_health_primary_reason"] = health["primary_reason"]
+    status["cockpit_health_label"] = health["label"]
     status["relay"] = {
         "status": state.get("relay_status", "waiting"),
         "received_at": state.get("received_at"),
@@ -329,6 +352,8 @@ def health_payload() -> dict[str, Any]:
         "service": "automoat-cockpit-relay",
         "cockpit_status": health["status"],
         "cockpit_ok": health["ok"],
+        "cockpit_health_primary_reason": health["primary_reason"],
+        "cockpit_health_label": health["label"],
         "cockpit_health": health,
         "relay_status": state.get("relay_status", "waiting"),
         "relay_startup": state.get("relay_startup", {}),

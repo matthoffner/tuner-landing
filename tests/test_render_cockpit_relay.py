@@ -60,11 +60,25 @@ class RenderCockpitRelayTest(unittest.TestCase):
                 "source_loop_not_running",
             ],
         )
+        self.assertEqual(
+            health["cockpit_health"]["primary_reason"], "relay_snapshot_missing"
+        )
+        self.assertEqual(
+            health["cockpit_health"]["label"], "Relay snapshot is missing"
+        )
+        self.assertEqual(
+            health["cockpit_health_primary_reason"], "relay_snapshot_missing"
+        )
+        self.assertEqual(health["cockpit_health_label"], "Relay snapshot is missing")
         self.assertFalse(health["has_snapshot"])
         self.assertTrue(health["snapshot_stale"])
         self.assertIsNone(health["snapshot_age_seconds"])
         self.assertEqual(status["cockpit_status"], "waiting")
         self.assertFalse(status["cockpit_ok"])
+        self.assertEqual(status["cockpit_health_label"], "Relay snapshot is missing")
+        self.assertEqual(
+            status["cockpit_health_primary_reason"], "relay_snapshot_missing"
+        )
         self.assertTrue(status["relay"]["snapshot_stale"])
 
     def test_status_and_health_report_fresh_snapshot_age(self) -> None:
@@ -86,11 +100,16 @@ class RenderCockpitRelayTest(unittest.TestCase):
         self.assertTrue(health["cockpit_ok"])
         self.assertEqual(health["cockpit_status"], "live")
         self.assertEqual(health["cockpit_health"]["reasons"], [])
+        self.assertIsNone(health["cockpit_health"]["primary_reason"])
+        self.assertEqual(health["cockpit_health"]["label"], "Live")
+        self.assertIsNone(health["cockpit_health_primary_reason"])
+        self.assertEqual(health["cockpit_health_label"], "Live")
         self.assertEqual(health["snapshot_age_seconds"], 30)
         self.assertFalse(health["snapshot_stale"])
         self.assertTrue(status["cockpit_ok"])
         self.assertEqual(status["cockpit_status"], "live")
         self.assertEqual(status["cockpit_health"]["reasons"], [])
+        self.assertEqual(status["cockpit_health_label"], "Live")
         self.assertEqual(status["relay"]["snapshot_age_seconds"], 30)
         self.assertFalse(status["relay"]["snapshot_stale"])
 
@@ -112,11 +131,17 @@ class RenderCockpitRelayTest(unittest.TestCase):
         self.assertFalse(health["cockpit_ok"])
         self.assertEqual(health["cockpit_status"], "degraded")
         self.assertEqual(health["cockpit_health"]["reasons"], ["relay_snapshot_stale"])
+        self.assertEqual(
+            health["cockpit_health"]["primary_reason"], "relay_snapshot_stale"
+        )
+        self.assertEqual(health["cockpit_health"]["label"], "Relay snapshot is stale")
+        self.assertEqual(health["cockpit_health_label"], "Relay snapshot is stale")
         self.assertEqual(health["snapshot_age_seconds"], 150)
         self.assertTrue(health["snapshot_stale"])
         self.assertFalse(status["cockpit_ok"])
         self.assertEqual(status["cockpit_status"], "degraded")
         self.assertEqual(status["cockpit_health"]["reasons"], ["relay_snapshot_stale"])
+        self.assertEqual(status["cockpit_health_label"], "Relay snapshot is stale")
         self.assertEqual(status["relay"]["snapshot_age_seconds"], 150)
         self.assertTrue(status["relay"]["snapshot_stale"])
 
@@ -190,6 +215,15 @@ class RenderCockpitRelayTest(unittest.TestCase):
             health["cockpit_health"]["source_cockpit_attention_label"],
             "Artifact health is not loaded",
         )
+        self.assertEqual(
+            health["cockpit_health"]["primary_reason"], "source_cockpit_attention"
+        )
+        self.assertEqual(
+            health["cockpit_health"]["label"], "Artifact health is not loaded"
+        )
+        self.assertEqual(
+            health["cockpit_health_label"], "Artifact health is not loaded"
+        )
         self.assertFalse(status["cockpit_ok"])
         self.assertEqual(status["cockpit_status"], "degraded")
         self.assertEqual(
@@ -199,6 +233,7 @@ class RenderCockpitRelayTest(unittest.TestCase):
             status["cockpit_health"]["source_cockpit_attention_label"],
             "Artifact health is not loaded",
         )
+        self.assertEqual(status["cockpit_health_label"], "Artifact health is not loaded")
 
     def test_status_and_health_report_unavailable_source_status_file(self) -> None:
         self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
