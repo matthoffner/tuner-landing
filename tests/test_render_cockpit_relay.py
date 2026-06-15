@@ -933,9 +933,23 @@ class RenderCockpitRelayTest(unittest.TestCase):
                             "policy_raw_dallas_csv_changed",
                         ],
                         "policy_failure_reason": "synthetic_example_local_dallas_append_disallowed",
+                        "policy_diagnostics_status": "failed",
+                        "policy_route_hint": "raw_dallas_csv_changed_without_productive_companion",
+                        "policy_diagnostics_decision_reason": "dallas_ready_no_thin_groups",
+                        "policy_diagnostics_current_focus": "autonomy_visibility_or_real_ingest",
+                        "policy_preview_json_changed": False,
                         "policy_raw_dallas_csv_changed_paths": [
                             "generated/raw/dallas-electrician-import-sample-v2/permits.csv",
                         ],
+                        "policy_raw_dallas_csv_changed_path_count": 7,
+                        "policy_productive_changed_paths": [
+                            "scripts/run_autonomous_agent_loop.py",
+                            (
+                                "https://source.example/productive?"
+                                "token=productive-secret#debug"
+                            ),
+                        ],
+                        "policy_productive_changed_path_count": 2,
                         "policy_synthetic_row_samples": [
                             (
                                 "generated/raw/dallas-electrician-import-sample-v2/permits.csv:538 "
@@ -944,6 +958,8 @@ class RenderCockpitRelayTest(unittest.TestCase):
                             ),
                         ],
                         "policy_synthetic_row_count": 9,
+                        "policy_allows_synthetic_append": False,
+                        "policy_override": True,
                     },
                 },
                 "log_tail": "autonomy policy check failed\n",
@@ -981,6 +997,10 @@ class RenderCockpitRelayTest(unittest.TestCase):
         expected_source_policy = {
             "available": True,
             "policy_failure_reason": "synthetic_example_local_dallas_append_disallowed",
+            "policy_diagnostics_status": "failed",
+            "policy_route_hint": "raw_dallas_csv_changed_without_productive_companion",
+            "policy_diagnostics_decision_reason": "dallas_ready_no_thin_groups",
+            "policy_diagnostics_current_focus": "autonomy_visibility_or_real_ingest",
             "operator_attention_primary_reason": "autonomy_policy_failed",
             "operator_attention_label": "Autonomy policy failed",
             "operator_attention_reasons": [
@@ -991,7 +1011,12 @@ class RenderCockpitRelayTest(unittest.TestCase):
             "raw_dallas_csv_changed_paths": [
                 "generated/raw/dallas-electrician-import-sample-v2/permits.csv",
             ],
-            "raw_dallas_csv_changed_paths_count": 1,
+            "raw_dallas_csv_changed_paths_count": 7,
+            "productive_changed_paths": [
+                "scripts/run_autonomous_agent_loop.py",
+                "https://source.example/productive?[redacted]#[redacted]",
+            ],
+            "productive_changed_paths_count": 2,
             "synthetic_row_samples": [
                 (
                     "generated/raw/dallas-electrician-import-sample-v2/permits.csv:538 "
@@ -1000,6 +1025,9 @@ class RenderCockpitRelayTest(unittest.TestCase):
                 ),
             ],
             "synthetic_row_samples_count": 9,
+            "preview_json_changed": False,
+            "policy_allows_synthetic_append": False,
+            "policy_override": True,
         }
         self.assertEqual(
             health["cockpit_health"]["source_policy"],
@@ -1020,6 +1048,7 @@ class RenderCockpitRelayTest(unittest.TestCase):
         health_text = json.dumps(health, sort_keys=True)
         self.assertNotIn("row-secret", health_text)
         self.assertNotIn("another-secret", health_text)
+        self.assertNotIn("productive-secret", health_text)
 
     def test_status_and_health_report_unavailable_source_status_file(self) -> None:
         self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"

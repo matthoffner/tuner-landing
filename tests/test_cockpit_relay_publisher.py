@@ -662,7 +662,27 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                                     "token=reason-secret "
                                     "https://relay.example/debug?token=url-secret#trace"
                                 ),
+                                "policy_diagnostics": {
+                                    "status": "failed",
+                                    "route_hint": "raw_dallas_csv_changed_without_productive_companion",
+                                    "decision_reason": "dallas_ready_no_thin_groups",
+                                    "current_focus": "autonomy_visibility_or_real_ingest",
+                                    "failure_reason": (
+                                        "diagnostic failure token=diagnostic-secret"
+                                    ),
+                                    "raw_dallas_csv_changed_path_count": 9,
+                                    "productive_changed_path_count": 3,
+                                    "synthetic_row_count": 12,
+                                    "preview_json_changed": True,
+                                    "policy_allows_synthetic_append": False,
+                                    "policy_override": True,
+                                },
                                 "raw_dallas_csv_changed_paths": raw_paths,
+                                "productive_changed_paths": [
+                                    "scripts/run_autonomous_agent_loop.py",
+                                    "tests/test_autonomous_agent_policy.py",
+                                    "https://source.example/productive?token=productive-secret#debug",
+                                ],
                                 "synthetic_row_samples": synthetic_rows,
                                 "synthetic_row_count": 12,
                             }
@@ -694,15 +714,36 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         summary = status["cockpit_summary"]
         summary_text = json.dumps(summary, sort_keys=True)
         self.assertEqual(summary["operator_attention_reasons"], ["autonomy_policy_failed"])
-        self.assertIn("synthetic append rejected", summary["policy_failure_reason"])
-        self.assertIn(
-            "https://relay.example/debug?[redacted]#[redacted]",
+        self.assertEqual(
             summary["policy_failure_reason"],
+            "diagnostic failure token=[redacted]",
+        )
+        self.assertEqual(summary["policy_diagnostics_status"], "failed")
+        self.assertEqual(
+            summary["policy_route_hint"],
+            "raw_dallas_csv_changed_without_productive_companion",
+        )
+        self.assertEqual(
+            summary["policy_diagnostics_decision_reason"],
+            "dallas_ready_no_thin_groups",
+        )
+        self.assertEqual(
+            summary["policy_diagnostics_current_focus"],
+            "autonomy_visibility_or_real_ingest",
         )
         self.assertEqual(len(summary["policy_raw_dallas_csv_changed_paths"]), 8)
         self.assertEqual(summary["policy_raw_dallas_csv_changed_path_count"], 9)
+        self.assertEqual(len(summary["policy_productive_changed_paths"]), 3)
+        self.assertEqual(summary["policy_productive_changed_path_count"], 3)
+        self.assertIn(
+            "https://source.example/productive?[redacted]#[redacted]",
+            summary["policy_productive_changed_paths"],
+        )
         self.assertEqual(len(summary["policy_synthetic_row_samples"]), 5)
         self.assertEqual(summary["policy_synthetic_row_count"], 12)
+        self.assertTrue(summary["policy_preview_json_changed"])
+        self.assertFalse(summary["policy_allows_synthetic_append"])
+        self.assertTrue(summary["policy_override"])
         self.assertIn(
             "https://source.example/export.csv?[redacted]#[redacted]",
             summary["policy_raw_dallas_csv_changed_paths"],
@@ -722,11 +763,13 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertNotIn("policy-secret", summary_text)
         self.assertNotIn("reason-secret", summary_text)
         self.assertNotIn("url-secret", summary_text)
+        self.assertNotIn("diagnostic-secret", summary_text)
         self.assertNotIn("raw-secret", summary_text)
         self.assertNotIn("csv-secret", summary_text)
         self.assertNotIn("row-secret", summary_text)
         self.assertNotIn("sample-secret", summary_text)
         self.assertNotIn("second-secret", summary_text)
+        self.assertNotIn("productive-secret", summary_text)
         self.assertNotIn("overflow.csv", summary_text)
         self.assertNotIn("\n", summary["policy_failure_reason"])
 

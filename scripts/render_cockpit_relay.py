@@ -577,6 +577,14 @@ def source_policy_summary(status: dict[str, Any]) -> dict[str, Any]:
     summary: dict[str, Any] = {"available": False}
     text_fields = {
         "policy_failure_reason": source_summary.get("policy_failure_reason"),
+        "policy_diagnostics_status": source_summary.get("policy_diagnostics_status"),
+        "policy_route_hint": source_summary.get("policy_route_hint"),
+        "policy_diagnostics_decision_reason": source_summary.get(
+            "policy_diagnostics_decision_reason"
+        ),
+        "policy_diagnostics_current_focus": source_summary.get(
+            "policy_diagnostics_current_focus"
+        ),
         "operator_attention_primary_reason": source_summary.get(
             "operator_attention_primary_reason"
         ),
@@ -591,6 +599,9 @@ def source_policy_summary(status: dict[str, Any]) -> dict[str, Any]:
         "operator_attention_reasons": source_summary.get("operator_attention_reasons"),
         "raw_dallas_csv_changed_paths": source_summary.get(
             "policy_raw_dallas_csv_changed_paths"
+        ),
+        "productive_changed_paths": source_summary.get(
+            "policy_productive_changed_paths"
         ),
         "synthetic_row_samples": source_summary.get("policy_synthetic_row_samples"),
     }
@@ -609,9 +620,33 @@ def source_policy_summary(status: dict[str, Any]) -> dict[str, Any]:
             summary[key] = compact_values
             summary[f"{key}_count"] = len(value)
 
+    int_count_fields = {
+        "raw_dallas_csv_changed_paths_count": source_summary.get(
+            "policy_raw_dallas_csv_changed_path_count"
+        ),
+        "productive_changed_paths_count": source_summary.get(
+            "policy_productive_changed_path_count"
+        ),
+    }
+    for key, value in int_count_fields.items():
+        compact_value = compact_int(value)
+        if compact_value is not None:
+            summary[key] = compact_value
+
     synthetic_row_count = compact_int(source_summary.get("policy_synthetic_row_count"))
     if synthetic_row_count is not None:
         summary["synthetic_row_samples_count"] = synthetic_row_count
+
+    bool_fields = {
+        "preview_json_changed": source_summary.get("policy_preview_json_changed"),
+        "policy_allows_synthetic_append": source_summary.get(
+            "policy_allows_synthetic_append"
+        ),
+        "policy_override": source_summary.get("policy_override"),
+    }
+    for key, value in bool_fields.items():
+        if isinstance(value, bool):
+            summary[key] = value
 
     summary["available"] = any(key != "available" for key in summary)
     return summary
