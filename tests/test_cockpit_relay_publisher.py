@@ -216,6 +216,52 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertNotIn("debug_path", summary)
         self.assertNotIn(str(tmp_path), json.dumps(summary, sort_keys=True))
 
+    def test_read_bridge_summary_sanitizes_url_fields_for_remote_snapshots(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            bridge_status_file = tmp_path / "mvp-bridge-status.json"
+            bridge_status_file.write_text(
+                json.dumps(
+                    {
+                        "status": "running",
+                        "public_url": (
+                            "https://bridge-user:bridge-secret@automoat-test.ngrok.app"
+                            "/viewer?token=public-secret#debug"
+                        ),
+                        "local_read_only_url": (
+                            "http://127.0.0.1:4181/?session=local-secret#panel"
+                        ),
+                        "ngrok_api_url": (
+                            "http://api-user:api-secret@127.0.0.1:4041"
+                            "/api/tunnels?token=api-secret#inspect"
+                        ),
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            summary = self.publisher.read_bridge_summary(bridge_status_file)
+            summary_text = json.dumps(summary, sort_keys=True)
+
+        self.assertEqual(
+            summary["public_url"],
+            "https://automoat-test.ngrok.app/viewer?[redacted]#[redacted]",
+        )
+        self.assertEqual(
+            summary["local_read_only_url"],
+            "http://127.0.0.1:4181/?[redacted]#[redacted]",
+        )
+        self.assertEqual(
+            summary["ngrok_api_url"],
+            "http://127.0.0.1:4041/api/tunnels?[redacted]#[redacted]",
+        )
+        self.assertNotIn("bridge-user", summary_text)
+        self.assertNotIn("bridge-secret", summary_text)
+        self.assertNotIn("public-secret", summary_text)
+        self.assertNotIn("local-secret", summary_text)
+        self.assertNotIn("api-secret", summary_text)
+
     def test_read_status_derives_cockpit_summary_for_remote_attention(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)

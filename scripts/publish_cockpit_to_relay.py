@@ -182,6 +182,34 @@ def compact_text(value: Any, *, max_length: int = 180) -> str | None:
     return text[:max_length] if text else None
 
 
+def sanitize_url_value(value: str) -> str:
+    parsed = urlparse(value)
+    if not parsed.scheme or not parsed.netloc:
+        return value
+    hostname = parsed.hostname or ""
+    netloc = hostname
+    try:
+        port = parsed.port
+    except ValueError:
+        port = None
+    if port is not None:
+        netloc = f"{netloc}:{port}"
+
+    path = parsed.path or ""
+    if parsed.params:
+        path = f"{path};{parsed.params}"
+    query = "[redacted]" if parsed.query else ""
+    fragment = "[redacted]" if parsed.fragment else ""
+    return urlunparse((parsed.scheme, netloc, path, "", query, fragment))
+
+
+def compact_url(value: Any, *, max_length: int = 180) -> str | None:
+    text = compact_text(value, max_length=max_length)
+    if text is None:
+        return None
+    return sanitize_url_value(text)
+
+
 def compact_int(value: Any) -> int | None:
     if isinstance(value, bool):
         return None
@@ -266,15 +294,22 @@ def read_bridge_summary(path: Path | None = None) -> dict[str, Any]:
     }
     text_fields = {
         "status": payload.get("status"),
-        "public_url": payload.get("public_url"),
-        "local_read_only_url": payload.get("local_read_only_url"),
-        "ngrok_api_url": payload.get("ngrok_api_url"),
         "updated_at": payload.get("updated_at"),
         "bridge_started_at": payload.get("bridge_started_at"),
         "mode": payload.get("mode"),
     }
     for key, value in text_fields.items():
         compact_value = compact_text(value)
+        if compact_value is not None:
+            summary[key] = compact_value
+
+    url_fields = {
+        "public_url": payload.get("public_url"),
+        "local_read_only_url": payload.get("local_read_only_url"),
+        "ngrok_api_url": payload.get("ngrok_api_url"),
+    }
+    for key, value in url_fields.items():
+        compact_value = compact_url(value)
         if compact_value is not None:
             summary[key] = compact_value
 
@@ -629,25 +664,7 @@ def http_error_summary(exc: HTTPError) -> dict[str, Any]:
 
 
 def sanitize_url_for_log(match: re.Match[str]) -> str:
-    value = match.group(0)
-    parsed = urlparse(value)
-    if not parsed.scheme or not parsed.netloc:
-        return value
-    hostname = parsed.hostname or ""
-    netloc = hostname
-    try:
-        port = parsed.port
-    except ValueError:
-        port = None
-    if port is not None:
-        netloc = f"{netloc}:{port}"
-
-    path = parsed.path or ""
-    if parsed.params:
-        path = f"{path};{parsed.params}"
-    query = "[redacted]" if parsed.query else ""
-    fragment = "[redacted]" if parsed.fragment else ""
-    return urlunparse((parsed.scheme, netloc, path, "", query, fragment))
+    return sanitize_url_value(match.group(0))
 
 
 def sanitize_error_for_log(exc: BaseException) -> str:
