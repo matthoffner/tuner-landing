@@ -609,6 +609,55 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
         self.assertIn("ELZ-2026-9996", rows[0])
         self.assertIn("https://example.local/dallas", rows[0])
 
+    def test_synthetic_row_detector_reads_multiline_tracked_diff_records(self) -> None:
+        diff_output = "\n".join(
+            [
+                (
+                    "diff --git "
+                    "a/generated/raw/dallas-electrician-import-sample-v2/permits.csv "
+                    "b/generated/raw/dallas-electrician-import-sample-v2/permits.csv"
+                ),
+                "+++ b/generated/raw/dallas-electrician-import-sample-v2/permits.csv",
+                '+ELZ-2026-9994,100 Example Ave,"repair note',
+                '+https://example.local/dallas",Finaled',
+            ]
+        )
+
+        rows = self.loop.added_synthetic_rows_from_diff(diff_output)
+
+        self.assertEqual(len(rows), 1)
+        self.assertIn("ELZ-2026-9994", rows[0])
+        self.assertIn("https://example.local/dallas", rows[0])
+
+    def test_synthetic_row_detector_scans_staged_multiline_raw_dallas_csv_diff(self) -> None:
+        staged_diff = "\n".join(
+            [
+                (
+                    "diff --git "
+                    "a/generated/raw/dallas-electrician-import-sample-v2/permits.csv "
+                    "b/generated/raw/dallas-electrician-import-sample-v2/permits.csv"
+                ),
+                "+++ b/generated/raw/dallas-electrician-import-sample-v2/permits.csv",
+                '+ELZ-2026-9993,100 Example Ave,"repair note',
+                '+https://example.local/dallas",Finaled',
+            ]
+        )
+
+        def fake_shell(command):
+            if command[1] == "ls-files":
+                return SimpleNamespace(stdout="")
+            if "--cached" in command:
+                return SimpleNamespace(stdout=staged_diff)
+            return SimpleNamespace(stdout="")
+
+        self.loop.shell = fake_shell
+
+        rows = self.loop.added_synthetic_dallas_rows()
+
+        self.assertEqual(len(rows), 1)
+        self.assertIn("ELZ-2026-9993", rows[0])
+        self.assertIn("https://example.local/dallas", rows[0])
+
     def test_policy_check_rejects_docs_only_synthetic_row_append(self) -> None:
         self.loop.dirty_paths_excluding_preview = lambda: [
             "README.md",

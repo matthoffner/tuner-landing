@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import io
 import json
 import os
 import re
@@ -619,12 +620,31 @@ def untracked_dallas_raw_csv_paths() -> list[str]:
 
 def added_synthetic_rows_from_diff(diff_output: str) -> list[str]:
     rows: list[str] = []
+    added_record_lines: list[str] = []
+
+    def flush_added_records() -> None:
+        if not added_record_lines:
+            return
+        try:
+            reader = csv.reader(io.StringIO("\n".join(added_record_lines) + "\n"))
+            for cells in reader:
+                if synthetic_dallas_csv_record(cells):
+                    rows.append(",".join(cells))
+        except csv.Error:
+            for row in added_record_lines:
+                if synthetic_dallas_csv_row(row):
+                    rows.append(row)
+        added_record_lines.clear()
+
     for line in diff_output.splitlines():
-        if not line.startswith("+") or line.startswith("+++"):
+        if line.startswith("diff --git "):
+            flush_added_records()
             continue
-        row = line[1:]
-        if synthetic_dallas_csv_row(row):
-            rows.append(row)
+        if not line.startswith("+") or line.startswith("+++"):
+            flush_added_records()
+            continue
+        added_record_lines.append(line[1:])
+    flush_added_records()
     return rows
 
 
