@@ -279,6 +279,16 @@ def artifact_status_summary(value: object) -> dict[str, str]:
     return summary
 
 
+def artifact_problem_summary(value: object, statuses: dict[str, str]) -> list[str]:
+    explicit = as_string_list(value)
+    derived = [
+        name for name, artifact_status in statuses.items() if artifact_status != "loaded"
+    ]
+    if not explicit:
+        return derived
+    return explicit + [name for name in derived if name not in explicit]
+
+
 def read_bridge_summary() -> dict[str, object]:
     status_file = repo_relative(BRIDGE_STATUS_FILE)
     if not BRIDGE_STATUS_FILE.exists():
@@ -431,9 +441,10 @@ def cockpit_summary(status: dict[str, object]) -> dict[str, object]:
     loop_running = bool(status.get("loop_running"))
     artifact_health_status = artifact_health.get("status") or "unknown"
     artifact_statuses = artifact_status_summary(artifact_health.get("statuses"))
-    artifact_problem_artifacts = [
-        name for name, artifact_status in artifact_statuses.items() if artifact_status != "loaded"
-    ]
+    artifact_problem_artifacts = artifact_problem_summary(
+        artifact_health.get("degraded_artifacts"),
+        artifact_statuses,
+    )
     import_readiness = readiness.get("status") or "unknown"
     readiness_blockers = as_string_list(readiness.get("blockers"))
     policy_failure = failed_autonomy_policy_step(status)

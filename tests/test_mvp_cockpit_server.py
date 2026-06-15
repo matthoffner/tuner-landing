@@ -189,6 +189,7 @@ class MvpCockpitServerTest(unittest.TestCase):
             "artifacts": {
                 "artifact_health": {
                     "status": "degraded",
+                    "degraded_artifacts": ["coverage"],
                     "statuses": {
                         "contract": "loaded",
                         "coverage": "invalid",

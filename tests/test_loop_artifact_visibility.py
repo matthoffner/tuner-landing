@@ -101,6 +101,7 @@ class LoopArtifactVisibilityTest(unittest.TestCase):
                 self.assertEqual(artifacts["contract"]["artifact_status"], "loaded")
                 self.assertEqual(artifacts["coverage"]["artifact_status"], "loaded")
                 self.assertEqual(artifacts["workflow"]["artifact_status"], "loaded")
+                self.assertEqual(artifacts["artifact_health"]["degraded_artifacts"], [])
                 self.assertEqual(artifacts["contract"]["passed_checks"], 1)
                 self.assertEqual(artifacts["contract"]["total_checks"], 2)
                 self.assertEqual(artifacts["workflow"]["queue_items"], 2)
@@ -121,6 +122,10 @@ class LoopArtifactVisibilityTest(unittest.TestCase):
                 self.assertEqual(artifacts["coverage"]["artifact_status"], "missing")
                 self.assertEqual(artifacts["workflow"]["artifact_status"], "invalid")
                 self.assertEqual(artifacts["import_pipeline"]["status"], "missing")
+                self.assertEqual(
+                    artifacts["artifact_health"]["degraded_artifacts"],
+                    ["contract", "coverage", "workflow", "import_pipeline"],
+                )
                 self.assertIn("artifact_error", artifacts["contract"])
                 self.assertIn("artifact_error", artifacts["workflow"])
                 self.assertEqual(artifacts["contract"]["passed_checks"], 0)
@@ -222,9 +227,10 @@ class LoopArtifactVisibilityTest(unittest.TestCase):
 
             step = module.run_artifact_health_check(tmp_path / "loop.log")
 
-        self.assertEqual(step["exit_status"], 1)
-        self.assertEqual(step["artifact_health_status"], "degraded")
-        self.assertEqual(step["artifact_statuses"]["coverage"], "invalid")
+            self.assertEqual(step["exit_status"], 1)
+            self.assertEqual(step["artifact_health_status"], "degraded")
+            self.assertEqual(step["artifact_statuses"]["coverage"], "invalid")
+            self.assertEqual(step["degraded_artifacts"], ["coverage"])
 
 
 if __name__ == "__main__":

@@ -305,6 +305,9 @@ def inspect_artifacts() -> dict[str, Any]:
         "workflow": queue_artifact["artifact_status"],
         "import_pipeline": import_pipeline.get("status"),
     }
+    degraded_artifacts = [
+        name for name, status in artifact_statuses.items() if status != "loaded"
+    ]
     return {
         "artifact_health": {
             "status": (
@@ -313,6 +316,7 @@ def inspect_artifacts() -> dict[str, Any]:
                 else "degraded"
             ),
             "statuses": artifact_statuses,
+            "degraded_artifacts": degraded_artifacts,
         },
         "contract": {
             **contract_artifact,
@@ -848,12 +852,22 @@ def run_artifact_health_check(log_file: Path) -> dict[str, Any]:
         artifact_health = {}
     health_status = artifact_health.get("status")
     statuses = artifact_health.get("statuses", {})
+    if not isinstance(statuses, dict):
+        statuses = {}
+    degraded_artifacts = artifact_health.get("degraded_artifacts", [])
+    if not isinstance(degraded_artifacts, list):
+        degraded_artifacts = []
+    if not degraded_artifacts:
+        degraded_artifacts = [
+            name for name, status in statuses.items() if status != "loaded"
+        ]
     exit_status = 0 if artifact_health_loaded(artifacts) else 1
     emit(
         log_file,
         "artifact health: "
         f"status={health_status} "
-        f"statuses={json.dumps(statuses, sort_keys=True)}",
+        f"statuses={json.dumps(statuses, sort_keys=True)} "
+        f"degraded_artifacts={json.dumps(degraded_artifacts)}",
     )
     elapsed = round(time.monotonic() - started, 3)
     emit(log_file, f"step end: {name} status={exit_status} seconds={elapsed}")
@@ -864,6 +878,7 @@ def run_artifact_health_check(log_file: Path) -> dict[str, Any]:
         "seconds": elapsed,
         "artifact_health_status": health_status,
         "artifact_statuses": statuses,
+        "degraded_artifacts": degraded_artifacts,
     }
 
 

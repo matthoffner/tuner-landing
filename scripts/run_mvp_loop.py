@@ -258,6 +258,9 @@ def inspect_artifacts() -> dict[str, Any]:
         "workflow": queue_artifact["artifact_status"],
         "import_pipeline": import_pipeline.get("status"),
     }
+    degraded_artifacts = [
+        name for name, status in artifact_statuses.items() if status != "loaded"
+    ]
     return {
         "artifact_health": {
             "status": (
@@ -266,6 +269,7 @@ def inspect_artifacts() -> dict[str, Any]:
                 else "degraded"
             ),
             "statuses": artifact_statuses,
+            "degraded_artifacts": degraded_artifacts,
         },
         "contract": {
             **contract_artifact,
