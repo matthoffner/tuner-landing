@@ -32,6 +32,20 @@ class StartAutonomousCockpitBridgeTest(unittest.TestCase):
     def setUp(self) -> None:
         self.launcher = load_launcher_module()
 
+    def write_running_bridge_status(self, path: Path) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(
+            json.dumps(
+                {
+                    "status": "running",
+                    "public_url": "https://automoat-test.ngrok.app",
+                    "bridge_health": {"status": "live", "ok": True},
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+
     def test_start_detached_closes_parent_log_handle_and_writes_pid(self) -> None:
         captured: dict[str, object] = {}
 
@@ -100,7 +114,11 @@ class StartAutonomousCockpitBridgeTest(unittest.TestCase):
             no_stop_existing=False,
         )
 
-        errors = self.launcher.validate_startup_configuration(args)
+        with tempfile.TemporaryDirectory() as temp_dir:
+            status_file = Path(temp_dir) / "mvp-bridge-status.json"
+            self.write_running_bridge_status(status_file)
+            with patch.object(self.launcher, "BRIDGE_STATUS", status_file):
+                errors = self.launcher.validate_startup_configuration(args)
 
         self.assertEqual(
             errors,
@@ -121,12 +139,20 @@ class StartAutonomousCockpitBridgeTest(unittest.TestCase):
             no_stop_existing=False,
         )
 
-        errors = self.launcher.validate_startup_configuration(args)
+        with tempfile.TemporaryDirectory() as temp_dir:
+            status_file = Path(temp_dir) / "mvp-bridge-status.json"
+            self.write_running_bridge_status(status_file)
+            with patch.object(self.launcher, "BRIDGE_STATUS", status_file):
+                errors = self.launcher.validate_startup_configuration(args)
 
         self.assertEqual(errors, ["--port must not equal --ngrok-web-port"])
 
         args.ngrok_web_port = 4175
-        errors = self.launcher.validate_startup_configuration(args)
+        with tempfile.TemporaryDirectory() as temp_dir:
+            status_file = Path(temp_dir) / "mvp-bridge-status.json"
+            self.write_running_bridge_status(status_file)
+            with patch.object(self.launcher, "BRIDGE_STATUS", status_file):
+                errors = self.launcher.validate_startup_configuration(args)
 
         self.assertEqual(errors, ["--bridge-port must not equal --ngrok-web-port"])
 
@@ -145,6 +171,8 @@ class StartAutonomousCockpitBridgeTest(unittest.TestCase):
             root = Path(temp_dir)
             blocked_parent = root / "blocked-parent"
             blocked_parent.write_text("not a directory", encoding="utf-8")
+            status_file = root / "state" / "mvp-bridge-status.json"
+            self.write_running_bridge_status(status_file)
             with patch.object(self.launcher, "LOG_DIR", blocked_parent / "logs"), patch.object(
                 self.launcher,
                 "STATE_DIR",
@@ -160,7 +188,7 @@ class StartAutonomousCockpitBridgeTest(unittest.TestCase):
             ), patch.object(
                 self.launcher,
                 "BRIDGE_STATUS",
-                root / "state" / "mvp-bridge-status.json",
+                status_file,
             ):
                 errors = self.launcher.validate_startup_configuration(args)
 
@@ -179,26 +207,33 @@ class StartAutonomousCockpitBridgeTest(unittest.TestCase):
         self.launcher.wait_http = lambda *args, **kwargs: self.fail("wait_http should not run")
         self.launcher.wait_bridge = lambda *args, **kwargs: self.fail("wait_bridge should not run")
 
-        with patch.object(self.launcher.shutil, "which", return_value=None), patch.object(
-            sys,
-            "argv",
-            [
-                "start_autonomous_cockpit_bridge.py",
-                "--check-env",
-                "--keep-bridge",
-                "--interval",
-                "120",
-                "--bridge-interval",
-                "4",
-                "--port",
-                "4180",
-                "--bridge-port",
-                "4181",
-                "--ngrok-web-port",
-                "4041",
-            ],
-        ), redirect_stdout(output):
-            status = self.launcher.main()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            status_file = Path(temp_dir) / "mvp-bridge-status.json"
+            self.write_running_bridge_status(status_file)
+            with patch.object(self.launcher, "BRIDGE_STATUS", status_file), patch.object(
+                self.launcher.shutil,
+                "which",
+                return_value=None,
+            ), patch.object(
+                sys,
+                "argv",
+                [
+                    "start_autonomous_cockpit_bridge.py",
+                    "--check-env",
+                    "--keep-bridge",
+                    "--interval",
+                    "120",
+                    "--bridge-interval",
+                    "4",
+                    "--port",
+                    "4180",
+                    "--bridge-port",
+                    "4181",
+                    "--ngrok-web-port",
+                    "4041",
+                ],
+            ), redirect_stdout(output):
+                status = self.launcher.main()
 
         self.assertEqual(status, 0)
         self.assertIn("autonomous bridge startup preflight passed", output.getvalue())
@@ -297,22 +332,29 @@ class StartAutonomousCockpitBridgeTest(unittest.TestCase):
         self.launcher.wait_http = lambda *args, **kwargs: self.fail("wait_http should not run")
         self.launcher.wait_bridge = lambda *args, **kwargs: self.fail("wait_bridge should not run")
 
-        with patch.object(self.launcher.shutil, "which", return_value=None), patch.object(
-            sys,
-            "argv",
-            [
-                "start_autonomous_cockpit_bridge.py",
-                "--check-env",
-                "--format",
-                "json",
-                "--keep-bridge",
-                "--interval",
-                "nan",
-                "--bridge-interval",
-                "inf",
-            ],
-        ), redirect_stdout(output):
-            status = self.launcher.main()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            status_file = Path(temp_dir) / "mvp-bridge-status.json"
+            self.write_running_bridge_status(status_file)
+            with patch.object(self.launcher, "BRIDGE_STATUS", status_file), patch.object(
+                self.launcher.shutil,
+                "which",
+                return_value=None,
+            ), patch.object(
+                sys,
+                "argv",
+                [
+                    "start_autonomous_cockpit_bridge.py",
+                    "--check-env",
+                    "--format",
+                    "json",
+                    "--keep-bridge",
+                    "--interval",
+                    "nan",
+                    "--bridge-interval",
+                    "inf",
+                ],
+            ), redirect_stdout(output):
+                status = self.launcher.main()
 
         payload = json.loads(output.getvalue())
         self.assertEqual(status, 2)
@@ -332,6 +374,57 @@ class StartAutonomousCockpitBridgeTest(unittest.TestCase):
             payload["diagnostics"]["failed_configuration_keys"],
             ["--bridge-interval", "--interval"],
         )
+
+    def test_check_env_json_reports_unusable_keep_bridge_status(self) -> None:
+        output = io.StringIO()
+        self.launcher.start_detached = lambda *args, **kwargs: self.fail("start_detached should not run")
+        self.launcher.wait_http = lambda *args, **kwargs: self.fail("wait_http should not run")
+        self.launcher.wait_bridge = lambda *args, **kwargs: self.fail("wait_bridge should not run")
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            status_file = root / "mvp-bridge-status.json"
+            status_file.write_text(
+                json.dumps(
+                    {
+                        "status": "running",
+                        "public_url": "http://user:secret@localhost:4175/?token=secret",
+                        "bridge_health": {"status": "degraded", "ok": False},
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            with patch.object(self.launcher, "BRIDGE_STATUS", status_file), patch.object(
+                self.launcher.shutil,
+                "which",
+                return_value=None,
+            ), patch.object(
+                sys,
+                "argv",
+                [
+                    "start_autonomous_cockpit_bridge.py",
+                    "--check-env",
+                    "--format",
+                    "json",
+                    "--keep-bridge",
+                ],
+            ), redirect_stdout(output):
+                status = self.launcher.main()
+
+            output_text = output.getvalue()
+
+        payload = json.loads(output_text)
+        self.assertEqual(status, 2)
+        self.assertEqual(payload["status"], "failed")
+        self.assertEqual(
+            payload["errors"],
+            ["BRIDGE_STATUS must include a sanitized HTTPS public_url when --keep-bridge is set"],
+        )
+        self.assertEqual(payload["diagnostics"]["error_categories"], ["invalid_bridge_status"])
+        self.assertEqual(payload["diagnostics"]["failed_configuration_keys"], ["BRIDGE_STATUS"])
+        self.assertNotIn("secret", output_text)
+        self.assertNotIn(str(root), output_text)
 
     def test_check_env_json_reports_ngrok_web_port_collision(self) -> None:
         output = io.StringIO()

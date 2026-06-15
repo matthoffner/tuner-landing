@@ -14,6 +14,7 @@ import sys
 import time
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 from urllib.request import urlopen
 
 
@@ -189,6 +190,61 @@ def validate_file_path(label: str, path: Path) -> list[str]:
     return []
 
 
+def reject_json_constant(value: str) -> None:
+    raise ValueError(f"non-standard JSON constant {value} is not allowed")
+
+
+def valid_bridge_public_url(value: object) -> bool:
+    if not isinstance(value, str) or not value.strip():
+        return False
+    try:
+        parsed = urlparse(value.strip())
+        parsed.port
+    except ValueError:
+        return False
+    return (
+        parsed.scheme == "https"
+        and bool(parsed.hostname)
+        and not parsed.username
+        and not parsed.password
+        and not parsed.params
+        and not parsed.query
+        and not parsed.fragment
+        and not parsed.path.strip("/")
+    )
+
+
+def validate_keep_bridge_status_file() -> list[str]:
+    status_file = repo_relative(BRIDGE_STATUS)
+    if not BRIDGE_STATUS.exists():
+        return [f"BRIDGE_STATUS status file {status_file} is required when --keep-bridge is set"]
+    try:
+        payload = json.loads(
+            BRIDGE_STATUS.read_text(encoding="utf-8"),
+            parse_constant=reject_json_constant,
+        )
+    except OSError as exc:
+        return [f"BRIDGE_STATUS status file {status_file} could not be read: {exc.__class__.__name__}"]
+    except (json.JSONDecodeError, ValueError) as exc:
+        if isinstance(exc, json.JSONDecodeError):
+            location = f"line {exc.lineno} column {exc.colno}: {exc.msg}"
+        else:
+            location = str(exc)
+        return [f"BRIDGE_STATUS status file {status_file} must contain valid strict JSON: {location}"]
+    if not isinstance(payload, dict):
+        return [f"BRIDGE_STATUS status file {status_file} must contain a JSON object"]
+    if payload.get("status") != "running":
+        return ["BRIDGE_STATUS must report status=running when --keep-bridge is set"]
+    if not valid_bridge_public_url(payload.get("public_url")):
+        return ["BRIDGE_STATUS must include a sanitized HTTPS public_url when --keep-bridge is set"]
+    bridge_health = payload.get("bridge_health")
+    if isinstance(bridge_health, dict) and (
+        bridge_health.get("ok") is False or bridge_health.get("status") == "degraded"
+    ):
+        return ["BRIDGE_STATUS bridge_health must be live when --keep-bridge is set"]
+    return []
+
+
 def validate_startup_file_paths() -> list[str]:
     errors: list[str] = []
     for label, path in {
@@ -222,13 +278,18 @@ def validate_startup_configuration(args: argparse.Namespace) -> list[str]:
         errors.append("--bridge-port must not equal --ngrok-web-port")
     if not args.keep_bridge and shutil.which("ngrok") is None:
         errors.append("ngrok is required unless --keep-bridge is set")
-    errors.extend(validate_startup_file_paths())
+    path_errors = validate_startup_file_paths()
+    errors.extend(path_errors)
+    if args.keep_bridge and not any(error.startswith("BRIDGE_STATUS") for error in path_errors):
+        errors.extend(validate_keep_bridge_status_file())
     return errors
 
 
 def startup_preflight_error_category(error: str) -> str:
     if error.startswith("ngrok "):
         return "missing_command"
+    if error.startswith("BRIDGE_STATUS") and " path " not in error and " parent path " not in error:
+        return "invalid_bridge_status"
     if any(
         error.startswith(prefix)
         for prefix in (
