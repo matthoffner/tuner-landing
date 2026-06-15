@@ -529,6 +529,10 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             "feature/with space": (
                 "AUTOMOAT_GIT_BRANCH must not contain whitespace or control characters"
             ),
+            "@": "AUTOMOAT_GIT_BRANCH must be a valid git branch name",
+            ".hidden": "AUTOMOAT_GIT_BRANCH must be a valid git branch name",
+            "feature/.hidden": "AUTOMOAT_GIT_BRANCH must be a valid git branch name",
+            "release.lock/candidate": "AUTOMOAT_GIT_BRANCH must be a valid git branch name",
             "release..candidate": "AUTOMOAT_GIT_BRANCH must be a valid git branch name",
             "feature/@{bad}": "AUTOMOAT_GIT_BRANCH must be a valid git branch name",
             "topic.lock": "AUTOMOAT_GIT_BRANCH must be a valid git branch name",

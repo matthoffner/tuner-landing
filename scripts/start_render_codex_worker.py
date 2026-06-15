@@ -547,13 +547,16 @@ def validate_git_branch_name(value: str, errors: list[str]) -> None:
         errors.append("AUTOMOAT_GIT_BRANCH must not contain whitespace or control characters")
         return
 
+    branch_components = branch.split("/")
     invalid_fragments = ("..", "//", "@{", "\\")
     invalid_characters = set("~^:?*[")
     if (
-        branch.startswith("/")
+        branch == "@"
+        or branch.startswith("/")
         or branch.endswith("/")
         or branch.endswith(".")
-        or branch.endswith(".lock")
+        or any(component.startswith(".") for component in branch_components)
+        or any(component.endswith(".lock") for component in branch_components)
         or any(fragment in branch for fragment in invalid_fragments)
         or any(character in invalid_characters for character in branch)
     ):
