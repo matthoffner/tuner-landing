@@ -1860,12 +1860,19 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                 "AUTOMOAT_RELAY_INTERVAL": "4",
                 "AUTOMOAT_RELAY_TIMEOUT": "9",
                 "AUTOMOAT_BRIDGE_STATUS_STALE_AFTER_SECONDS": "240",
+                "AUTOMOAT_BRIDGE_STATUS_FILE": ".automoat/state/custom-bridge-status.json",
             }
         )
 
         self.assertIn("--bridge-status-stale-after-seconds", command)
         threshold_index = command.index("--bridge-status-stale-after-seconds")
         self.assertEqual(command[threshold_index + 1], "240")
+        self.assertIn("--bridge-status-file", command)
+        bridge_status_file_index = command.index("--bridge-status-file")
+        self.assertEqual(
+            command[bridge_status_file_index + 1],
+            ".automoat/state/custom-bridge-status.json",
+        )
 
     def test_relay_publisher_preflight_command_extends_runtime_command(self) -> None:
         env = {
@@ -2734,6 +2741,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             "AUTOMOAT_STATUS_STALE_AFTER_SECONDS": "900",
             "AUTOMOAT_RELAY_MAX_CONSECUTIVE_FAILURES": "5",
             "AUTOMOAT_RELAY_MAX_CONSECUTIVE_STALE_STATUSES": "6",
+            "AUTOMOAT_BRIDGE_STATUS_FILE": ".automoat/state/custom-bridge-status.json",
         }
 
         command = self.worker.relay_publisher_command(env)
@@ -2759,6 +2767,8 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                 "6",
                 "--bridge-status-stale-after-seconds",
                 "660",
+                "--bridge-status-file",
+                ".automoat/state/custom-bridge-status.json",
             ],
         )
         self.assertNotIn("relay-token", command)
@@ -2818,6 +2828,9 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                 "AUTOMOAT_RELAY_TOKEN": "relay-token",
                 "AUTOMOAT_RELAY_INTERVAL": "4",
                 "AUTOMOAT_RELAY_TIMEOUT": "9",
+                "AUTOMOAT_BRIDGE_STATUS_FILE": str(
+                    workdir / ".automoat" / "state" / "bridge-status.json"
+                ),
             }
             preflight_payload = json.dumps(
                 {
@@ -2855,8 +2868,13 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertIn("checking checked-out relay publisher preflight", output.getvalue())
         self.assertIn("<stdout captured:", output.getvalue())
         self.assertIn("checked-out relay publisher preflight passed", output.getvalue())
+        self.assertIn(
+            "--bridge-status-file .automoat/state/bridge-status.json",
+            output.getvalue(),
+        )
         self.assertNotIn("relay-token", output.getvalue())
         self.assertNotIn("https://automoat-cockpit-relay.example", output.getvalue())
+        self.assertNotIn(str(workdir), output.getvalue())
 
     def test_run_times_out_bounded_preflight_commands(self) -> None:
         output = io.StringIO()

@@ -117,6 +117,13 @@ def relay_publisher_command(
     command = [sys.executable, "scripts/publish_cockpit_to_relay.py"]
     for env_name, option, default in PUBLISHER_RUNTIME_ENV_ARGS:
         command.extend([option, env.get(env_name, default).strip() or default])
+    command.extend(
+        [
+            "--bridge-status-file",
+            env.get("AUTOMOAT_BRIDGE_STATUS_FILE", DEFAULT_BRIDGE_STATUS_FILE).strip()
+            or DEFAULT_BRIDGE_STATUS_FILE,
+        ]
+    )
     return command
 
 
@@ -1223,8 +1230,27 @@ def publisher_preflight_diagnostic_tokens(diagnostics: Any, key: str) -> list[st
     return tokens
 
 
+def publisher_preflight_command_log_text(command: list[str]) -> str:
+    safe_parts: list[str] = []
+    skip_next = False
+    for index, part in enumerate(command):
+        if skip_next:
+            skip_next = False
+            continue
+        if part == "--bridge-status-file" and index + 1 < len(command):
+            safe_parts.extend([part, worker_file_label(command[index + 1], os.environ)])
+            skip_next = True
+            continue
+        if part in {"--token", "--relay-token"} and index + 1 < len(command):
+            safe_parts.extend([part, "[redacted]"])
+            skip_next = True
+            continue
+        safe_parts.append(part)
+    return " ".join(safe_parts)
+
+
 def run_relay_publisher_preflight_command(command: list[str], *, cwd: Path) -> str:
-    printable = " ".join(command)
+    printable = publisher_preflight_command_log_text(command)
     emit(f"$ {printable}")
     try:
         result = subprocess.run(
