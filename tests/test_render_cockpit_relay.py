@@ -100,6 +100,17 @@ class RenderCockpitRelayTest(unittest.TestCase):
                     "pid": 4321,
                     "publisher_started_at": "2026-06-14T19:58:00Z",
                     "snapshot_sequence": 7,
+                    "runtime_config": {
+                        "interval": "4.5",
+                        "timeout": 11.25,
+                        "tail_lines": "77",
+                        "max_log_bytes": 4096,
+                        "status_stale_after_seconds": "900",
+                        "bridge_status_stale_after_seconds": 240,
+                        "max_consecutive_failures": "5",
+                        "max_consecutive_stale_statuses": 6,
+                        "relay_url": "https://relay.example?token=secret",
+                    },
                     "repo": "/work/automoat",
                     "git": {
                         "head": "abc1234",
@@ -147,6 +158,28 @@ class RenderCockpitRelayTest(unittest.TestCase):
             expected_identity,
         )
         self.assertEqual(status["relay"]["publisher_identity"], expected_identity)
+        expected_runtime_config = {
+            "available": True,
+            "interval": 4.5,
+            "timeout": 11.25,
+            "tail_lines": 77,
+            "max_log_bytes": 4096,
+            "status_stale_after_seconds": 900,
+            "bridge_status_stale_after_seconds": 240,
+            "max_consecutive_failures": 5,
+            "max_consecutive_stale_statuses": 6,
+        }
+        self.assertEqual(health["publisher_runtime_config"], expected_runtime_config)
+        self.assertEqual(status["publisher_runtime_config"], expected_runtime_config)
+        self.assertEqual(
+            status["cockpit_health"]["publisher_runtime_config"],
+            expected_runtime_config,
+        )
+        self.assertEqual(
+            status["relay"]["publisher_runtime_config"],
+            expected_runtime_config,
+        )
+        self.assertNotIn("relay_url", health["publisher_runtime_config"])
         self.assertNotIn("repo", health["publisher_identity"])
         self.assertNotIn("dirty_paths", health["publisher_identity"])
         self.assertEqual(status["relay"]["snapshot_age_seconds"], 30)

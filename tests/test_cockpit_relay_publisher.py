@@ -80,8 +80,12 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 log_file=log_file,
                 publisher_log=publisher_log,
                 bridge_status_file=bridge_status_file,
+                interval=4.5,
+                timeout=11.25,
                 tail_lines=2,
                 max_log_bytes=1024,
+                max_consecutive_failures=5,
+                max_consecutive_stale_statuses=6,
                 status_stale_after_seconds=120,
                 bridge_status_stale_after_seconds=120,
             )
@@ -153,6 +157,19 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 "reasons": ["source_loop_not_running", "source_cockpit_attention"],
                 "primary_reason": "source_loop_not_running",
                 "label": "Source loop is not running",
+            },
+        )
+        self.assertEqual(
+            payload["publisher"]["runtime_config"],
+            {
+                "interval": 4.5,
+                "timeout": 11.25,
+                "tail_lines": 2,
+                "max_log_bytes": 1024,
+                "status_stale_after_seconds": 120,
+                "bridge_status_stale_after_seconds": 120,
+                "max_consecutive_failures": 5,
+                "max_consecutive_stale_statuses": 6,
             },
         )
 

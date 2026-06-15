@@ -314,6 +314,47 @@ def publisher_identity(state: dict[str, Any]) -> dict[str, Any]:
     return identity
 
 
+def publisher_runtime_config(state: dict[str, Any]) -> dict[str, Any]:
+    publisher = state.get("publisher")
+    if not isinstance(publisher, dict):
+        return {"available": False}
+    runtime_config = publisher.get("runtime_config")
+    if not isinstance(runtime_config, dict) or not runtime_config:
+        return {"available": False}
+
+    summary: dict[str, Any] = {"available": False}
+    float_fields = {
+        "interval": runtime_config.get("interval"),
+        "timeout": runtime_config.get("timeout"),
+    }
+    for key, value in float_fields.items():
+        compact_value = compact_float(value)
+        if compact_value is not None:
+            summary[key] = compact_value
+
+    int_fields = {
+        "tail_lines": runtime_config.get("tail_lines"),
+        "max_log_bytes": runtime_config.get("max_log_bytes"),
+        "status_stale_after_seconds": runtime_config.get(
+            "status_stale_after_seconds"
+        ),
+        "bridge_status_stale_after_seconds": runtime_config.get(
+            "bridge_status_stale_after_seconds"
+        ),
+        "max_consecutive_failures": runtime_config.get("max_consecutive_failures"),
+        "max_consecutive_stale_statuses": runtime_config.get(
+            "max_consecutive_stale_statuses"
+        ),
+    }
+    for key, value in int_fields.items():
+        compact_value = compact_int(value)
+        if compact_value is not None:
+            summary[key] = compact_value
+
+    summary["available"] = any(key != "available" for key in summary)
+    return summary
+
+
 def source_status_diagnostics(status: dict[str, Any]) -> dict[str, Any]:
     diagnostics: dict[str, Any] = {}
     text_fields = {
@@ -640,6 +681,7 @@ def cockpit_health(
         "source_readiness": source_readiness,
         "source_health": source_health,
         "publisher_identity": publisher_identity(state),
+        "publisher_runtime_config": publisher_runtime_config(state),
     }
 
 
@@ -793,6 +835,7 @@ def relay_status_payload() -> dict[str, Any]:
     status["cockpit_health_primary_reason"] = health["primary_reason"]
     status["cockpit_health_label"] = health["label"]
     status["publisher_identity"] = health["publisher_identity"]
+    status["publisher_runtime_config"] = health["publisher_runtime_config"]
     status["relay"] = {
         "status": state.get("relay_status", "waiting"),
         "received_at": state.get("received_at"),
@@ -800,6 +843,7 @@ def relay_status_payload() -> dict[str, Any]:
         **freshness,
         "startup": state.get("relay_startup", {}),
         "publisher_identity": health["publisher_identity"],
+        "publisher_runtime_config": health["publisher_runtime_config"],
         "publisher": state.get("publisher", {}),
     }
     return status
@@ -821,6 +865,7 @@ def health_payload() -> dict[str, Any]:
         "cockpit_health_label": health["label"],
         "cockpit_health": health,
         "publisher_identity": health["publisher_identity"],
+        "publisher_runtime_config": health["publisher_runtime_config"],
         "relay_status": state.get("relay_status", "waiting"),
         "relay_startup": state.get("relay_startup", {}),
         "has_snapshot": bool(state.get("received_at")),

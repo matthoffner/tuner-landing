@@ -739,6 +739,27 @@ def publisher_source_health(status: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def publisher_runtime_config(args: argparse.Namespace) -> dict[str, Any]:
+    return {
+        "interval": float(args.interval),
+        "timeout": float(args.timeout),
+        "tail_lines": int(args.tail_lines),
+        "max_log_bytes": int(args.max_log_bytes),
+        "status_stale_after_seconds": int(args.status_stale_after_seconds),
+        "bridge_status_stale_after_seconds": int(
+            getattr(
+                args,
+                "bridge_status_stale_after_seconds",
+                DEFAULT_BRIDGE_STATUS_STALE_AFTER_SECONDS,
+            )
+        ),
+        "max_consecutive_failures": int(args.max_consecutive_failures),
+        "max_consecutive_stale_statuses": int(
+            args.max_consecutive_stale_statuses
+        ),
+    }
+
+
 def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     status = read_status(
         args.status_file,
@@ -768,6 +789,7 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
                 getattr(args, "bridge_status_file", BRIDGE_STATUS_FILE)
             ),
             "source_health": publisher_source_health(status),
+            "runtime_config": publisher_runtime_config(args),
             "git": git_snapshot(),
         },
     }
