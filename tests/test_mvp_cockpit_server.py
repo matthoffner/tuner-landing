@@ -199,13 +199,29 @@ class MvpCockpitServerTest(unittest.TestCase):
                 {
                     "name": "autonomy policy check",
                     "exit_status": 1,
-                    "failure_reason": "raw_dallas_csv_without_productive_work",
+                    "failure_reason": (
+                        "raw_dallas_csv_without_productive_work "
+                        "token=secret\nsecond line"
+                    ),
                     "raw_dallas_csv_changed_paths": [
                         "generated/raw/dallas-electrician-import-sample-v2/permits.csv",
                         "generated/raw/dallas-electrician-import-sample-v2/inspections.csv",
+                        "https://user:pass@example.local/dallas/path?token=secret#debug",
+                        "generated/raw/dallas-electrician-import-sample-v2/contractors.csv",
+                        "generated/raw/dallas-electrician-import-sample-v2/rule_documents.csv",
+                        "generated/raw/dallas-electrician-import-sample-v1/permits.csv",
+                        "generated/raw/dallas-electrician-import-sample-v1/inspections.csv",
+                        "generated/raw/dallas-electrician-import-sample-v1/contractors.csv",
+                        "generated/raw/dallas-electrician-import-sample-v1/rule_documents.csv",
                     ],
+                    "synthetic_row_count": 6,
                     "synthetic_row_samples": [
-                        "ELZ-2026-9999,100 Example Ave,https://example.local/dallas/9999",
+                        "ELZ-2026-9999,100 Example Ave,https://user:pass@example.local/dallas/9999?token=secret#debug",
+                        "ELZ-2026-9998,200 Example Ave,api_key=secret",
+                        "ELZ-2026-9997,300 Example Ave,authorization: bearer secret-token",
+                        "ELZ-2026-9996,400 Example Ave",
+                        "ELZ-2026-9995,500 Example Ave",
+                        "ELZ-2026-9994,600 Example Ave",
                     ],
                 },
             ],
@@ -227,21 +243,37 @@ class MvpCockpitServerTest(unittest.TestCase):
         self.assertEqual(summary["operator_attention_label"], "Autonomy policy failed")
         self.assertEqual(
             summary["policy_failure_reason"],
-            "raw_dallas_csv_without_productive_work",
+            "raw_dallas_csv_without_productive_work token=[redacted] second line",
         )
         self.assertEqual(
             summary["policy_raw_dallas_csv_changed_paths"],
             [
                 "generated/raw/dallas-electrician-import-sample-v2/permits.csv",
                 "generated/raw/dallas-electrician-import-sample-v2/inspections.csv",
+                "https://example.local/dallas/path?[redacted]#[redacted]",
+                "generated/raw/dallas-electrician-import-sample-v2/contractors.csv",
+                "generated/raw/dallas-electrician-import-sample-v2/rule_documents.csv",
+                "generated/raw/dallas-electrician-import-sample-v1/permits.csv",
+                "generated/raw/dallas-electrician-import-sample-v1/inspections.csv",
+                "generated/raw/dallas-electrician-import-sample-v1/contractors.csv",
             ],
         )
+        self.assertEqual(summary["policy_raw_dallas_csv_changed_path_count"], 9)
         self.assertEqual(
             summary["policy_synthetic_row_samples"],
             [
-                "ELZ-2026-9999,100 Example Ave,https://example.local/dallas/9999",
+                "ELZ-2026-9999,100 Example Ave,https://example.local/dallas/9999?[redacted]#[redacted]",
+                "ELZ-2026-9998,200 Example Ave,api_key=[redacted]",
+                "ELZ-2026-9997,300 Example Ave,authorization: bearer [redacted]",
+                "ELZ-2026-9996,400 Example Ave",
+                "ELZ-2026-9995,500 Example Ave",
             ],
         )
+        self.assertEqual(summary["policy_synthetic_row_count"], 6)
+        self.assertNotIn("user:pass", json.dumps(summary))
+        self.assertNotIn("token=secret", json.dumps(summary))
+        self.assertNotIn("api_key=secret", json.dumps(summary))
+        self.assertNotIn("secret-token", json.dumps(summary))
 
     def test_read_bridge_summary_compacts_loaded_status(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -447,7 +479,9 @@ class MvpCockpitServerTest(unittest.TestCase):
         self.assertIn("operator_attention", markup)
         self.assertIn("policy_failure_reason", markup)
         self.assertIn("policy_raw_dallas_csv_changed_paths", markup)
+        self.assertIn("policy_raw_dallas_csv_changed_path_count", markup)
         self.assertIn("policy_synthetic_row_samples", markup)
+        self.assertIn("policy_synthetic_row_count", markup)
         self.assertIn("artifact_statuses", markup)
         self.assertIn("artifact_problem_artifacts", markup)
         self.assertIn("artifactProblems.join", markup)

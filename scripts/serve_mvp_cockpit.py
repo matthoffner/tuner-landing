@@ -8,6 +8,7 @@ import html
 import json
 import mimetypes
 import os
+import re
 import subprocess
 import sys
 import threading
@@ -28,6 +29,17 @@ PID_FILE = ROOT / ".automoat" / "state" / "mvp-loop.pid"
 BRIDGE_STATUS_FILE = ROOT / ".automoat" / "state" / "mvp-bridge-status.json"
 MAX_CORRECTION_BYTES = 8192
 STATUS_STALE_AFTER_SECONDS = 120
+POLICY_RAW_PATH_SAMPLE_LIMIT = 8
+POLICY_ROW_SAMPLE_LIMIT = 5
+URL_TEXT_PATTERN = re.compile(r"https?://[^\s'\"<>]+")
+BEARER_SECRET_PATTERN = re.compile(
+    r"\b(authorization\s*[:=]\s*bearer)\s+[^\s,;]+",
+    re.IGNORECASE,
+)
+SECRET_ASSIGNMENT_PATTERN = re.compile(
+    r"\b(token|access_token|api_key|x-automoat-relay-token)\s*[:=]\s*[^\s,;]+",
+    re.IGNORECASE,
+)
 OPERATOR_ATTENTION_LABELS = {
     "loop_not_running": "Loop is not running",
     "status_failing": "Loop status is failing",
@@ -139,6 +151,37 @@ def compact_url(value: object, *, max_length: int = 180) -> str | None:
     if text is None:
         return None
     return sanitize_url_value(text)
+
+
+def compact_policy_detail(value: object, *, max_length: int = 240) -> str | None:
+    text = compact_text(value, max_length=max_length * 2)
+    if text is None:
+        return None
+    text = URL_TEXT_PATTERN.sub(lambda match: sanitize_url_value(match.group(0)), text)
+    text = BEARER_SECRET_PATTERN.sub(r"\1 [redacted]", text)
+    text = SECRET_ASSIGNMENT_PATTERN.sub(
+        lambda match: f"{match.group(1)}=[redacted]",
+        text,
+    )
+    return text[:max_length] if text else None
+
+
+def compact_policy_detail_list(
+    value: object,
+    *,
+    max_items: int,
+    max_length: int = 160,
+) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    compacted: list[str] = []
+    for item in value:
+        compacted_item = compact_policy_detail(item, max_length=max_length)
+        if compacted_item is not None:
+            compacted.append(compacted_item)
+        if len(compacted) >= max_items:
+            break
+    return compacted
 
 
 def compact_int(value: object) -> int | None:
@@ -337,20 +380,37 @@ def cockpit_summary(status: dict[str, object]) -> dict[str, object]:
     readiness_blockers = as_string_list(readiness.get("blockers"))
     policy_failure = failed_autonomy_policy_step(status)
     policy_failure_reason = (
-        str(policy_failure.get("failure_reason"))
+        compact_policy_detail(policy_failure.get("failure_reason"))
         if policy_failure and policy_failure.get("failure_reason")
         else None
     )
     policy_raw_csv_paths = (
-        as_string_list(policy_failure.get("raw_dallas_csv_changed_paths"))
+        compact_policy_detail_list(
+            policy_failure.get("raw_dallas_csv_changed_paths"),
+            max_items=POLICY_RAW_PATH_SAMPLE_LIMIT,
+        )
         if policy_failure
         else []
+    )
+    policy_raw_csv_path_count = (
+        len(as_string_list(policy_failure.get("raw_dallas_csv_changed_paths")))
+        if policy_failure
+        else 0
     )
     policy_synthetic_row_samples = (
-        as_string_list(policy_failure.get("synthetic_row_samples"))[:5]
+        compact_policy_detail_list(
+            policy_failure.get("synthetic_row_samples"),
+            max_items=POLICY_ROW_SAMPLE_LIMIT,
+            max_length=240,
+        )
         if policy_failure
         else []
     )
+    policy_synthetic_row_count = (
+        compact_int(policy_failure.get("synthetic_row_count")) if policy_failure else None
+    )
+    if policy_synthetic_row_count is None:
+        policy_synthetic_row_count = len(policy_synthetic_row_samples)
     thin_group_categories = as_string_list(autonomy_policy.get("thin_group_categories"))
     thin_group_count = autonomy_policy.get("thin_group_count")
     if not isinstance(thin_group_count, int):
@@ -400,7 +460,9 @@ def cockpit_summary(status: dict[str, object]) -> dict[str, object]:
         "policy_reason": autonomy_policy.get("decision_reason"),
         "policy_failure_reason": policy_failure_reason,
         "policy_raw_dallas_csv_changed_paths": policy_raw_csv_paths,
+        "policy_raw_dallas_csv_changed_path_count": policy_raw_csv_path_count,
         "policy_synthetic_row_samples": policy_synthetic_row_samples,
+        "policy_synthetic_row_count": policy_synthetic_row_count,
         "dallas_pipeline_ready": autonomy_policy.get("dallas_pipeline_ready"),
         "thin_group_count": thin_group_count,
         "thin_group_categories": thin_group_categories,
@@ -842,11 +904,17 @@ def cockpit_html() -> str:
         const policyRawPaths = Array.isArray(cockpit.policy_raw_dallas_csv_changed_paths)
           ? cockpit.policy_raw_dallas_csv_changed_paths
           : [];
+        const policyRawPathCount = typeof cockpit.policy_raw_dallas_csv_changed_path_count === "number"
+          ? cockpit.policy_raw_dallas_csv_changed_path_count
+          : policyRawPaths.length;
+        const policySyntheticRowCount = typeof cockpit.policy_synthetic_row_count === "number"
+          ? cockpit.policy_synthetic_row_count
+          : policySamples.length;
         attention.title = [
           reasons.join(", "),
           cockpit.policy_failure_reason ? `policy: ${{cockpit.policy_failure_reason}}` : "",
-          policyRawPaths.length ? `raw csv: ${{policyRawPaths.join(", ")}}` : "",
-          policySamples.length ? `synthetic rows: ${{policySamples.join(" | ")}}` : "",
+          policyRawPaths.length ? `raw csv (${{policyRawPathCount}}): ${{policyRawPaths.join(", ")}}` : "",
+          policySamples.length ? `synthetic rows (${{policySyntheticRowCount}}): ${{policySamples.join(" | ")}}` : "",
         ].filter(Boolean).join(" | ");
         bridgeHealth.textContent = bridge.available
           ? bridgeCompact.label || bridgeCompact.status || bridge.status || "Live"
