@@ -285,6 +285,27 @@ class MvpCockpitServerTest(unittest.TestCase):
                         "Dockerfile",
                     ],
                     "synthetic_row_count": 6,
+                    "preview_json_changed": True,
+                    "policy_allows_synthetic_append": False,
+                    "policy_override": True,
+                    "policy_diagnostics": {
+                        "status": "failed",
+                        "failure_reason": (
+                            "raw_dallas_csv_without_productive_work "
+                            "token=diagnostic-secret"
+                        ),
+                        "route_hint": "dallas_raw_fixture_without_productive_companion",
+                        "decision_reason": (
+                            "dallas_ready_no_thin_groups token=diagnostic-secret"
+                        ),
+                        "current_focus": "autonomy_visibility_or_real_ingest",
+                        "preview_json_changed": False,
+                        "synthetic_row_count": 6,
+                        "raw_dallas_csv_changed_path_count": 9,
+                        "productive_changed_path_count": 9,
+                        "policy_allows_synthetic_append": False,
+                        "policy_override": False,
+                    },
                     "synthetic_row_samples": [
                         "ELZ-2026-9999,100 Example Ave,https://user:pass@example.local/dallas/9999?token=secret#debug",
                         "ELZ-2026-9998,200 Example Ave,api_key=secret",
@@ -313,8 +334,24 @@ class MvpCockpitServerTest(unittest.TestCase):
         self.assertEqual(summary["operator_attention_label"], "Autonomy policy failed")
         self.assertEqual(
             summary["policy_failure_reason"],
-            "raw_dallas_csv_without_productive_work token=[redacted] second line",
+            "raw_dallas_csv_without_productive_work token=[redacted]",
         )
+        self.assertEqual(summary["policy_diagnostics_status"], "failed")
+        self.assertEqual(
+            summary["policy_route_hint"],
+            "dallas_raw_fixture_without_productive_companion",
+        )
+        self.assertEqual(
+            summary["policy_diagnostics_decision_reason"],
+            "dallas_ready_no_thin_groups token=[redacted]",
+        )
+        self.assertEqual(
+            summary["policy_diagnostics_current_focus"],
+            "autonomy_visibility_or_real_ingest",
+        )
+        self.assertFalse(summary["policy_preview_json_changed"])
+        self.assertFalse(summary["policy_allows_synthetic_append"])
+        self.assertFalse(summary["policy_override"])
         self.assertEqual(
             summary["policy_raw_dallas_csv_changed_paths"],
             [
@@ -356,6 +393,7 @@ class MvpCockpitServerTest(unittest.TestCase):
         self.assertEqual(summary["policy_synthetic_row_count"], 6)
         self.assertNotIn("user:pass", json.dumps(summary))
         self.assertNotIn("token=secret", json.dumps(summary))
+        self.assertNotIn("diagnostic-secret", json.dumps(summary))
         self.assertNotIn("api_key=secret", json.dumps(summary))
         self.assertNotIn("secret-token", json.dumps(summary))
 
@@ -655,6 +693,11 @@ class MvpCockpitServerTest(unittest.TestCase):
         self.assertIn("operator_attention_label", markup)
         self.assertIn("operator_attention", markup)
         self.assertIn("policy_failure_reason", markup)
+        self.assertIn("policy_diagnostics_status", markup)
+        self.assertIn("policy_route_hint", markup)
+        self.assertIn("policy_preview_json_changed", markup)
+        self.assertIn("policy_allows_synthetic_append", markup)
+        self.assertIn("policy_override", markup)
         self.assertIn("policy_raw_dallas_csv_changed_paths", markup)
         self.assertIn("policy_raw_dallas_csv_changed_path_count", markup)
         self.assertIn("policy_productive_changed_paths", markup)

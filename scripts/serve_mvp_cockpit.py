@@ -195,6 +195,21 @@ def compact_int(value: object) -> int | None:
     return parsed if parsed >= 0 else None
 
 
+def first_compact_int(*values: object) -> int | None:
+    for value in values:
+        parsed = compact_int(value)
+        if parsed is not None:
+            return parsed
+    return None
+
+
+def first_bool(*values: object) -> bool | None:
+    for value in values:
+        if isinstance(value, bool):
+            return value
+    return None
+
+
 def compact_float(value: object) -> float | None:
     if isinstance(value, bool):
         return None
@@ -448,10 +463,30 @@ def cockpit_summary(status: dict[str, object]) -> dict[str, object]:
     import_readiness = readiness.get("status") or "unknown"
     readiness_blockers = as_string_list(readiness.get("blockers"))
     policy_failure = failed_autonomy_policy_step(status)
+    policy_diagnostics = (
+        as_dict(policy_failure.get("policy_diagnostics")) if policy_failure else {}
+    )
     policy_failure_reason = (
-        compact_policy_detail(policy_failure.get("failure_reason"))
-        if policy_failure and policy_failure.get("failure_reason")
+        compact_policy_detail(
+            policy_diagnostics.get("failure_reason")
+            or policy_failure.get("failure_reason")
+        )
+        if policy_failure
         else None
+    )
+    policy_diagnostics_status = compact_policy_detail(
+        policy_diagnostics.get("status"),
+        max_length=80,
+    )
+    policy_route_hint = compact_policy_detail(
+        policy_diagnostics.get("route_hint"),
+        max_length=120,
+    )
+    policy_diagnostics_decision_reason = compact_policy_detail(
+        policy_diagnostics.get("decision_reason")
+    )
+    policy_diagnostics_current_focus = compact_policy_detail(
+        policy_diagnostics.get("current_focus")
     )
     policy_raw_csv_paths = (
         compact_policy_detail_list(
@@ -475,10 +510,15 @@ def cockpit_summary(status: dict[str, object]) -> dict[str, object]:
         else []
     )
     policy_productive_path_count = (
-        len(as_string_list(policy_failure.get("productive_changed_paths")))
+        first_compact_int(
+            policy_diagnostics.get("productive_changed_path_count"),
+            len(as_string_list(policy_failure.get("productive_changed_paths"))),
+        )
         if policy_failure
-        else 0
+        else None
     )
+    if policy_productive_path_count is None:
+        policy_productive_path_count = 0
     policy_synthetic_row_samples = (
         compact_policy_detail_list(
             policy_failure.get("synthetic_row_samples"),
@@ -489,10 +529,47 @@ def cockpit_summary(status: dict[str, object]) -> dict[str, object]:
         else []
     )
     policy_synthetic_row_count = (
-        compact_int(policy_failure.get("synthetic_row_count")) if policy_failure else None
+        first_compact_int(
+            policy_diagnostics.get("synthetic_row_count"),
+            policy_failure.get("synthetic_row_count"),
+        )
+        if policy_failure
+        else None
     )
     if policy_synthetic_row_count is None:
         policy_synthetic_row_count = len(policy_synthetic_row_samples)
+    policy_raw_csv_path_count = (
+        first_compact_int(
+            policy_diagnostics.get("raw_dallas_csv_changed_path_count"),
+            policy_raw_csv_path_count,
+        )
+        if policy_failure
+        else 0
+    )
+    policy_preview_changed = (
+        first_bool(
+            policy_diagnostics.get("preview_json_changed"),
+            policy_failure.get("preview_json_changed"),
+        )
+        if policy_failure
+        else None
+    )
+    policy_allows_synthetic_append = (
+        first_bool(
+            policy_diagnostics.get("policy_allows_synthetic_append"),
+            policy_failure.get("policy_allows_synthetic_append"),
+        )
+        if policy_failure
+        else None
+    )
+    policy_override = (
+        first_bool(
+            policy_diagnostics.get("policy_override"),
+            policy_failure.get("policy_override"),
+        )
+        if policy_failure
+        else None
+    )
     thin_group_categories = as_string_list(autonomy_policy.get("thin_group_categories"))
     thin_group_count = autonomy_policy.get("thin_group_count")
     if not isinstance(thin_group_count, int):
@@ -542,12 +619,19 @@ def cockpit_summary(status: dict[str, object]) -> dict[str, object]:
         "current_focus": autonomy_policy.get("current_focus") or "mvp_loop",
         "policy_reason": autonomy_policy.get("decision_reason"),
         "policy_failure_reason": policy_failure_reason,
+        "policy_diagnostics_status": policy_diagnostics_status,
+        "policy_route_hint": policy_route_hint,
+        "policy_diagnostics_decision_reason": policy_diagnostics_decision_reason,
+        "policy_diagnostics_current_focus": policy_diagnostics_current_focus,
+        "policy_preview_json_changed": policy_preview_changed,
         "policy_raw_dallas_csv_changed_paths": policy_raw_csv_paths,
         "policy_raw_dallas_csv_changed_path_count": policy_raw_csv_path_count,
         "policy_productive_changed_paths": policy_productive_paths,
         "policy_productive_changed_path_count": policy_productive_path_count,
         "policy_synthetic_row_samples": policy_synthetic_row_samples,
         "policy_synthetic_row_count": policy_synthetic_row_count,
+        "policy_allows_synthetic_append": policy_allows_synthetic_append,
+        "policy_override": policy_override,
         "dallas_pipeline_ready": autonomy_policy.get("dallas_pipeline_ready"),
         "thin_group_count": thin_group_count,
         "thin_group_categories": thin_group_categories,
@@ -1046,6 +1130,11 @@ def cockpit_html() -> str:
         attention.title = [
           reasons.join(", "),
           cockpit.policy_failure_reason ? `policy: ${{cockpit.policy_failure_reason}}` : "",
+          cockpit.policy_route_hint ? `route: ${{cockpit.policy_route_hint}}` : "",
+          cockpit.policy_diagnostics_status ? `policy status: ${{cockpit.policy_diagnostics_status}}` : "",
+          typeof cockpit.policy_preview_json_changed === "boolean" ? `preview changed: ${{cockpit.policy_preview_json_changed}}` : "",
+          typeof cockpit.policy_allows_synthetic_append === "boolean" ? `synthetic allowed: ${{cockpit.policy_allows_synthetic_append}}` : "",
+          typeof cockpit.policy_override === "boolean" ? `override: ${{cockpit.policy_override}}` : "",
           policyRawPaths.length ? `raw csv (${{policyRawPathCount}}): ${{policyRawPaths.join(", ")}}` : "",
           policyProductivePaths.length ? `productive (${{policyProductivePathCount}}): ${{policyProductivePaths.join(", ")}}` : "",
           policySamples.length ? `synthetic rows (${{policySyntheticRowCount}}): ${{policySamples.join(" | ")}}` : "",
