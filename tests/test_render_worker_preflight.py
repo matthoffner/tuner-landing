@@ -3173,6 +3173,53 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertIn("<stdout omitted:", log_output)
         self.assertNotIn("relay-secret", log_output)
 
+    def test_run_sanitizes_secret_bearing_command_output(self) -> None:
+        output = io.StringIO()
+        stdout = "\n".join(
+            [
+                "authorization: Bearer bearer-secret",
+                "token=token-secret relay_token=relay-assignment-secret",
+                "https://user:url-secret@relay.example/status?token=url-secret#debug",
+                "plain copied relay-secret and github-secret",
+            ]
+        )
+
+        with patch.dict(
+            self.worker.os.environ,
+            {
+                "AUTOMOAT_RELAY_TOKEN": "relay-secret",
+                "GITHUB_TOKEN": "github-secret",
+                "CODEX_ACCESS_TOKEN": "codex-secret",
+            },
+            clear=True,
+        ), patch.object(
+            self.worker.subprocess,
+            "run",
+            return_value=self.worker.subprocess.CompletedProcess(
+                args=["deploy"],
+                returncode=0,
+                stdout=stdout,
+            ),
+        ), redirect_stdout(output):
+            returned_stdout = self.worker.run(
+                ["deploy", "--token", "relay-secret"],
+            )
+
+        self.assertEqual(returned_stdout, stdout)
+        log_output = output.getvalue()
+        self.assertIn("$ deploy --token [redacted]", log_output)
+        self.assertIn("authorization: Bearer [redacted]", log_output)
+        self.assertIn("token=[redacted]", log_output)
+        self.assertIn("relay_token=[redacted]", log_output)
+        self.assertIn("https://relay.example/status?[redacted]#[redacted]", log_output)
+        self.assertIn("plain copied [redacted] and [redacted]", log_output)
+        self.assertNotIn("bearer-secret", log_output)
+        self.assertNotIn("token-secret", log_output)
+        self.assertNotIn("relay-assignment-secret", log_output)
+        self.assertNotIn("url-secret", log_output)
+        self.assertNotIn("github-secret", log_output)
+        self.assertNotIn("relay-secret", log_output)
+
     def test_check_relay_publisher_preflight_rejects_non_json_success(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             workdir = Path(temp_dir) / "runtime-repo"

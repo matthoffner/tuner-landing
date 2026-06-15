@@ -9,6 +9,7 @@ import ipaddress
 import json
 import math
 import os
+import re
 import shlex
 import shutil
 import signal
@@ -18,7 +19,7 @@ import time
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlunparse
 
 
 DEFAULT_REPO = "https://github.com/matthoffner/tuner-landing.git"
@@ -37,6 +38,15 @@ PUBLISHER_PREFLIGHT_DIAGNOSTIC_TOKEN_LIMIT = 12
 CODEX_AUTH_ENV_NAMES = ("CODEX_AUTH_JSON_B64", "CODEX_ACCESS_TOKEN", "OPENAI_API_KEY")
 GIT_AUTH_ENV_NAMES = ("GITHUB_TOKEN", "GH_TOKEN")
 SECRET_ENV_NAMES = ("AUTOMOAT_RELAY_TOKEN", *GIT_AUTH_ENV_NAMES, *CODEX_AUTH_ENV_NAMES)
+URL_TEXT_PATTERN = re.compile(r"https?://[^\s'\"<>]+")
+BEARER_SECRET_PATTERN = re.compile(
+    r"\b(authorization\s*[:=]\s*bearer)\s+[^\s,;]+",
+    re.IGNORECASE,
+)
+SECRET_ASSIGNMENT_PATTERN = re.compile(
+    r"\b(token|relay_token|access_token|api_key|x-automoat-relay-token)\s*[:=]\s*[^\s,;]+",
+    re.IGNORECASE,
+)
 REQUIRED_COMMANDS = ("git", "codex")
 CODEX_CONFIG_ENV_DEFAULTS = {
     "AUTOMOAT_CODEX_MODEL": "gpt-5.5",
@@ -90,6 +100,60 @@ MAX_WORKER_PATH_CHARS = 500
 
 def emit(message: str) -> None:
     print(f"[render-worker] {message}", flush=True)
+
+
+def sanitize_url_for_worker_log(value: str) -> str:
+    parsed = urlparse(value)
+    if not parsed.scheme or not parsed.netloc:
+        return value
+    hostname = parsed.hostname or ""
+    netloc = hostname
+    try:
+        port = parsed.port
+    except ValueError:
+        port = None
+    if port is not None:
+        netloc = f"{netloc}:{port}"
+    path = parsed.path or ""
+    if parsed.params:
+        path = f"{path};{parsed.params}"
+    query = "[redacted]" if parsed.query else ""
+    fragment = "[redacted]" if parsed.fragment else ""
+    return urlunparse((parsed.scheme, netloc, path, "", query, fragment))
+
+
+def sanitize_worker_log_text(
+    text: str,
+    env: os._Environ[str] | dict[str, str] | None = None,
+) -> str:
+    """Redact copied secrets from Render-visible worker command output."""
+    env = env if env is not None else os.environ
+    sanitized = "".join(
+        " " if character in "\r\n" or ord(character) < 32 or ord(character) == 127
+        else character
+        for character in text
+    )
+    sanitized = URL_TEXT_PATTERN.sub(
+        lambda match: sanitize_url_for_worker_log(match.group(0)),
+        sanitized,
+    )
+    sanitized = BEARER_SECRET_PATTERN.sub(r"\1 [redacted]", sanitized)
+    sanitized = SECRET_ASSIGNMENT_PATTERN.sub(
+        lambda match: f"{match.group(1)}=[redacted]",
+        sanitized,
+    )
+    secret_values = sorted(
+        {
+            value.strip()
+            for name in SECRET_ENV_NAMES
+            if len(value := env.get(name, "")) >= 4 and value.strip()
+        },
+        key=len,
+        reverse=True,
+    )
+    for secret_value in secret_values:
+        sanitized = sanitized.replace(secret_value, "[redacted]")
+    return sanitized
 
 
 def require_env(name: str) -> str:
@@ -1176,7 +1240,7 @@ def run(
     timeout_seconds: float | None = None,
     max_output_bytes: int | None = None,
 ) -> str:
-    printable = " ".join(command)
+    printable = sanitize_worker_log_text(" ".join(command))
     emit(f"$ {printable}")
     try:
         result = subprocess.run(
@@ -1208,7 +1272,7 @@ def run(
                 f"exceeding limit {max_output_bytes}"
             )
         for line in result.stdout.rstrip().splitlines():
-            emit(f"  {line}")
+            emit(f"  {sanitize_worker_log_text(line)}")
     if result.returncode != 0:
         raise RuntimeError(f"{printable} failed with status {result.returncode}")
     return result.stdout
