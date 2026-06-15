@@ -573,6 +573,77 @@ class MvpCockpitServerTest(unittest.TestCase):
         )
         self.assertNotIn("debug_path", summary)
 
+    def test_read_bridge_summary_sanitizes_bridge_health_text(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            self.cockpit.BRIDGE_STATUS_FILE = tmp_path / "mvp-bridge-status.json"
+            self.cockpit.BRIDGE_STATUS_FILE.write_text(
+                json.dumps(
+                    {
+                        "status": "running token=bridge-secret\nsecond line",
+                        "mode": "read-only api_key=mode-secret",
+                        "bridge_health": {
+                            "status": (
+                                "degraded "
+                                "https://user:pass@bridge.example/health?token=secret#frag"
+                            ),
+                            "ok": False,
+                            "reasons": [
+                                "bridge_status_stale token=reason-secret",
+                                "authorization: bearer reason-bearer",
+                                "https://user:pass@reason.example/path?api_key=secret#frag",
+                                "line\nbreak",
+                                "plain_reason",
+                                "extra_reason_not_sampled",
+                            ],
+                            "primary_reason": "authorization: bearer primary-secret",
+                            "label": (
+                                "Bridge "
+                                "https://user:pass@label.example/path?api_key=secret#frag"
+                            ),
+                        },
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            summary = self.cockpit.read_bridge_summary()
+
+        summary_text = json.dumps(summary, sort_keys=True)
+        self.assertEqual(summary["status"], "running token=[redacted] second line")
+        self.assertEqual(summary["mode"], "read-only api_key=[redacted]")
+        self.assertEqual(
+            summary["bridge_health"]["status"],
+            "degraded https://bridge.example/health?[redacted]#[redacted]",
+        )
+        self.assertEqual(
+            summary["bridge_health"]["reasons"],
+            [
+                "bridge_status_stale token=[redacted]",
+                "authorization: bearer [redacted]",
+                "https://reason.example/path?[redacted]#[redacted]",
+                "line break",
+                "plain_reason",
+            ],
+        )
+        self.assertEqual(summary["bridge_health"]["reasons_count"], 6)
+        self.assertEqual(
+            summary["bridge_health"]["primary_reason"],
+            "authorization: bearer [redacted]",
+        )
+        self.assertEqual(
+            summary["bridge_health"]["label"],
+            "Bridge https://label.example/path?[redacted]#[redacted]",
+        )
+        self.assertNotIn("bridge-secret", summary_text)
+        self.assertNotIn("mode-secret", summary_text)
+        self.assertNotIn("reason-secret", summary_text)
+        self.assertNotIn("reason-bearer", summary_text)
+        self.assertNotIn("primary-secret", summary_text)
+        self.assertNotIn("user:pass", summary_text)
+        self.assertNotIn("extra_reason_not_sampled", summary_text)
+
     def test_read_bridge_summary_omits_non_finite_interval(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)

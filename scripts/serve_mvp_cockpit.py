@@ -32,6 +32,7 @@ MAX_CORRECTION_BYTES = 8192
 STATUS_STALE_AFTER_SECONDS = 120
 POLICY_RAW_PATH_SAMPLE_LIMIT = 8
 POLICY_ROW_SAMPLE_LIMIT = 5
+BRIDGE_HEALTH_REASON_SAMPLE_LIMIT = 5
 URL_TEXT_PATTERN = re.compile(r"https?://[^\s'\"<>]+")
 BEARER_SECRET_PATTERN = re.compile(
     r"\b(authorization\s*[:=]\s*bearer)\s+[^\s,;]+",
@@ -273,24 +274,34 @@ def utc_timestamp_age_seconds(value: object, now: datetime | None = None) -> int
 
 def bridge_health_summary(value: object) -> dict[str, object]:
     health = value if isinstance(value, dict) else {}
-    reasons = as_string_list(health.get("reasons"))
-    primary_reason = compact_text(health.get("primary_reason"))
+    reason_values = as_string_list(health.get("reasons"))
+    reasons = compact_policy_detail_list(
+        reason_values,
+        max_items=BRIDGE_HEALTH_REASON_SAMPLE_LIMIT,
+        max_length=160,
+    )
+    primary_reason = compact_policy_detail(health.get("primary_reason"), max_length=160)
     if primary_reason is None and reasons:
         primary_reason = reasons[0]
-    status = compact_text(health.get("status")) or ("degraded" if reasons else "unknown")
+    status = compact_policy_detail(health.get("status"), max_length=80) or (
+        "degraded" if reasons else "unknown"
+    )
     ok = health.get("ok")
     if not isinstance(ok, bool):
         ok = status == "live"
-    label = compact_text(health.get("label")) or (
+    label = compact_policy_detail(health.get("label"), max_length=160) or (
         "Live" if primary_reason is None else primary_reason.replace("_", " ")
     )
-    return {
+    summary: dict[str, object] = {
         "status": status,
         "ok": ok,
         "reasons": reasons,
         "primary_reason": primary_reason,
         "label": label,
     }
+    if len(reason_values) > len(reasons):
+        summary["reasons_count"] = len(reason_values)
+    return summary
 
 
 def artifact_status_summary(value: object) -> dict[str, str]:
@@ -369,7 +380,7 @@ def read_bridge_summary() -> dict[str, object]:
         "mode": payload.get("mode"),
     }
     for key, value in text_fields.items():
-        compact_value = compact_text(value)
+        compact_value = compact_policy_detail(value)
         if compact_value is not None:
             summary[key] = compact_value
 
