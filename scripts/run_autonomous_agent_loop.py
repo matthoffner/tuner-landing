@@ -384,16 +384,46 @@ def changed_dallas_raw_csv_paths(paths: list[str]) -> list[str]:
     )
 
 
+def synthetic_dallas_csv_row(row: str) -> bool:
+    """Return whether a raw CSV row is hidden Dallas example.local fixture growth."""
+    return "example.local/dallas/" in row and (
+        "ELZ-2026-" in row or ",ELZ-2026-" not in row
+    )
+
+
+def untracked_dallas_raw_csv_paths() -> list[str]:
+    """Return untracked raw Dallas CSV fixture paths that policy checks must scan."""
+    result = shell(
+        [
+            "git",
+            "ls-files",
+            "--others",
+            "--exclude-standard",
+            "--",
+            DALLAS_RAW_CSV_DIFF_PATHSPEC,
+        ]
+    )
+    return sorted(path for path in result.stdout.splitlines() if path.strip())
+
+
 def added_synthetic_dallas_rows() -> list[str]:
     result = shell(["git", "diff", "--", DALLAS_RAW_CSV_DIFF_PATHSPEC])
     rows: list[str] = []
     for line in result.stdout.splitlines():
         if not line.startswith("+") or line.startswith("+++"):
             continue
-        if "example.local/dallas/" in line and ",ELZ-2026-" not in line:
-            rows.append(line[1:])
-        elif line.startswith("+ELZ-2026-") and "example.local/dallas/" in line:
-            rows.append(line[1:])
+        row = line[1:]
+        if synthetic_dallas_csv_row(row):
+            rows.append(row)
+    for relative_path in untracked_dallas_raw_csv_paths():
+        path = ROOT / relative_path
+        try:
+            file_rows = path.read_text(encoding="utf-8").splitlines()
+        except OSError:
+            continue
+        for line_number, row in enumerate(file_rows, start=1):
+            if synthetic_dallas_csv_row(row):
+                rows.append(f"{relative_path}:{line_number}: {row}")
     return rows
 
 

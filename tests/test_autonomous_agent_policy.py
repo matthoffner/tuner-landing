@@ -201,6 +201,8 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
 
         def fake_shell(command):
             commands.append(command)
+            if command[1] == "ls-files":
+                return SimpleNamespace(stdout="")
             return SimpleNamespace(
                 stdout="\n".join(
                     [
@@ -229,7 +231,73 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
                     "diff",
                     "--",
                     ":(glob)generated/raw/dallas-electrician-import-sample-*/*.csv",
+                ],
+                [
+                    "git",
+                    "ls-files",
+                    "--others",
+                    "--exclude-standard",
+                    "--",
+                    ":(glob)generated/raw/dallas-electrician-import-sample-*/*.csv",
                 ]
+            ],
+        )
+
+    def test_synthetic_row_detector_scans_untracked_raw_dallas_csv_fixtures(self) -> None:
+        fixture_path = (
+            "generated/raw/dallas-electrician-import-sample-v3/permits.csv"
+        )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            csv_path = root / fixture_path
+            csv_path.parent.mkdir(parents=True)
+            csv_path.write_text(
+                "\n".join(
+                    [
+                        "permit_number,address,source_url",
+                        (
+                            "ELZ-2026-9997,100 Example Ave,"
+                            "https://example.local/dallas/permits/ELZ-2026-9997"
+                        ),
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            commands = []
+
+            def fake_shell(command):
+                commands.append(command)
+                if command[1] == "diff":
+                    return SimpleNamespace(stdout="")
+                return SimpleNamespace(stdout=fixture_path + "\n")
+
+            self.loop.ROOT = root
+            self.loop.shell = fake_shell
+
+            rows = self.loop.added_synthetic_dallas_rows()
+
+        self.assertEqual(len(rows), 1)
+        self.assertIn(fixture_path + ":2:", rows[0])
+        self.assertIn("ELZ-2026-9997", rows[0])
+        self.assertEqual(
+            commands,
+            [
+                [
+                    "git",
+                    "diff",
+                    "--",
+                    ":(glob)generated/raw/dallas-electrician-import-sample-*/*.csv",
+                ],
+                [
+                    "git",
+                    "ls-files",
+                    "--others",
+                    "--exclude-standard",
+                    "--",
+                    ":(glob)generated/raw/dallas-electrician-import-sample-*/*.csv",
+                ],
             ],
         )
 
