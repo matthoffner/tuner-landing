@@ -51,6 +51,8 @@ SECRET_ASSIGNMENT_PATTERN = re.compile(
     re.IGNORECASE,
 )
 SOURCE_HEALTH_LABELS = {
+    "source_autonomy_policy_failed": "Autonomy policy failed",
+    "source_cockpit_attention": "Source cockpit needs attention",
     "source_status_unavailable": "Source status is unavailable",
     "source_status_stale": "Source status is stale",
     "source_loop_not_running": "Source loop is not running",
@@ -697,6 +699,10 @@ def source_health_label(reason: str | None) -> str:
 
 def publisher_source_health(status: dict[str, Any]) -> dict[str, Any]:
     reasons: list[str] = []
+    cockpit_summary = as_dict(status.get("cockpit_summary"))
+    cockpit_attention_reasons = as_string_list(
+        cockpit_summary.get("operator_attention_reasons")
+    )
     if status.get("source_status_file_status") in {
         "missing",
         "read_failed",
@@ -708,17 +714,28 @@ def publisher_source_health(status: dict[str, Any]) -> dict[str, Any]:
         reasons.append("source_status_stale")
     if status.get("loop_running") is False:
         reasons.append("source_loop_not_running")
+    if "autonomy_policy_failed" in cockpit_attention_reasons:
+        reasons.append("source_autonomy_policy_failed")
     if status.get("status") in {"error", "failing"}:
         reasons.append("source_status_failing")
+    if (
+        cockpit_summary.get("operator_attention") is True
+        and "source_autonomy_policy_failed" not in reasons
+    ):
+        reasons.append("source_cockpit_attention")
 
     primary_reason = reasons[0] if reasons else None
     health_status = "degraded" if reasons else "live"
+    label = source_health_label(primary_reason)
+    cockpit_attention_label = compact_text(cockpit_summary.get("operator_attention_label"))
+    if primary_reason == "source_cockpit_attention" and cockpit_attention_label is not None:
+        label = cockpit_attention_label
     return {
         "status": health_status,
         "ok": health_status == "live",
         "reasons": reasons,
         "primary_reason": primary_reason,
-        "label": source_health_label(primary_reason),
+        "label": label,
     }
 
 

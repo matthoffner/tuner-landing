@@ -150,7 +150,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             {
                 "status": "degraded",
                 "ok": False,
-                "reasons": ["source_loop_not_running"],
+                "reasons": ["source_loop_not_running", "source_cockpit_attention"],
                 "primary_reason": "source_loop_not_running",
                 "label": "Source loop is not running",
             },
@@ -691,6 +691,63 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         )
         self.assertEqual(health["primary_reason"], "source_status_unavailable")
         self.assertEqual(health["label"], "Source status is unavailable")
+
+    def test_publisher_source_health_reports_cockpit_attention(self) -> None:
+        status = {
+            "status": "passing",
+            "loop_running": True,
+            "source_status_stale": False,
+            "source_status_file_status": "loaded",
+            "cockpit_summary": {
+                "operator_attention": True,
+                "operator_attention_reasons": ["import_readiness_not_ready"],
+                "operator_attention_primary_reason": "import_readiness_not_ready",
+                "operator_attention_label": "Import readiness is not ready",
+            },
+        }
+
+        health = self.publisher.publisher_source_health(status)
+
+        self.assertEqual(
+            health,
+            {
+                "status": "degraded",
+                "ok": False,
+                "reasons": ["source_cockpit_attention"],
+                "primary_reason": "source_cockpit_attention",
+                "label": "Import readiness is not ready",
+            },
+        )
+
+    def test_publisher_source_health_promotes_autonomy_policy_attention(self) -> None:
+        status = {
+            "status": "passing",
+            "loop_running": True,
+            "source_status_stale": False,
+            "source_status_file_status": "loaded",
+            "cockpit_summary": {
+                "operator_attention": True,
+                "operator_attention_reasons": [
+                    "autonomy_policy_failed",
+                    "policy_raw_dallas_csv_changed",
+                ],
+                "operator_attention_primary_reason": "autonomy_policy_failed",
+                "operator_attention_label": "Autonomy policy failed",
+            },
+        }
+
+        health = self.publisher.publisher_source_health(status)
+
+        self.assertEqual(
+            health,
+            {
+                "status": "degraded",
+                "ok": False,
+                "reasons": ["source_autonomy_policy_failed"],
+                "primary_reason": "source_autonomy_policy_failed",
+                "label": "Autonomy policy failed",
+            },
+        )
 
     def test_read_status_marks_malformed_status_file_unavailable(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
