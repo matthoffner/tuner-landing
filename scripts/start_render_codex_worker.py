@@ -79,6 +79,7 @@ PUBLISHER_RUNTIME_ENV_ARGS = (
         "660",
     ),
 )
+MAX_WORKER_URL_CHARS = 500
 
 
 def emit(message: str) -> None:
@@ -380,6 +381,7 @@ def validate_worker_environment(
         errors,
         required=True,
         require_no_path=True,
+        max_chars=MAX_WORKER_URL_CHARS,
     )
     git_repo = env.get("AUTOMOAT_GIT_REPO", DEFAULT_REPO)
     validate_secret_safe_http_url(
@@ -388,6 +390,7 @@ def validate_worker_environment(
         errors,
         required=True,
         require_path=True,
+        max_chars=MAX_WORKER_URL_CHARS,
     )
     validate_git_branch_name(env.get("AUTOMOAT_GIT_BRANCH", "main"), errors)
     workdir, codex_home = configured_worker_paths(env)
@@ -516,6 +519,7 @@ def validate_secret_safe_http_url(
     required: bool,
     require_path: bool = False,
     require_no_path: bool = False,
+    max_chars: int | None = None,
 ) -> None:
     if not value:
         if required:
@@ -532,6 +536,9 @@ def validate_secret_safe_http_url(
         return
     if any(character.isspace() for character in value):
         errors.append(f"{name} must not contain whitespace")
+        return
+    if max_chars is not None and len(value) > max_chars:
+        errors.append(f"{name} must be {max_chars} characters or fewer")
         return
     value = value.strip()
     if not value.startswith(("http://", "https://")):

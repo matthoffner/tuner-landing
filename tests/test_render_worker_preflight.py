@@ -653,6 +653,37 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             ],
         )
 
+    def test_rejects_oversized_worker_urls_before_startup(self) -> None:
+        long_relay_url = "https://automoat-cockpit-relay.example/" + (
+            "relay-segment-" * 40
+        )
+        long_git_repo = "https://github.com/example/" + ("private-automoat-" * 40) + ".git"
+
+        errors = self.worker.validate_worker_environment(
+            {
+                "AUTOMOAT_RELAY_URL": long_relay_url,
+                "AUTOMOAT_RELAY_TOKEN": "relay-token",
+                "AUTOMOAT_GIT_REPO": long_git_repo,
+                "GITHUB_TOKEN": "github-token",
+                "CODEX_ACCESS_TOKEN": "codex-token",
+            },
+            found_command,
+        )
+
+        self.assertEqual(
+            errors,
+            [
+                (
+                    "AUTOMOAT_RELAY_URL must be "
+                    f"{self.worker.MAX_WORKER_URL_CHARS} characters or fewer"
+                ),
+                (
+                    "AUTOMOAT_GIT_REPO must be "
+                    f"{self.worker.MAX_WORKER_URL_CHARS} characters or fewer"
+                ),
+            ],
+        )
+
     def test_rejects_urls_without_real_host_or_valid_url_syntax(self) -> None:
         errors = self.worker.validate_worker_environment(
             {
@@ -697,6 +728,50 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertEqual(payload["status"], "failed")
         self.assertEqual(payload["diagnostics"]["error_categories"], ["invalid_url"])
         self.assertNotIn("automoat-cockpit-relay.example:abc", output.getvalue())
+
+    def test_check_env_json_routes_oversized_urls_without_echoing_values(self) -> None:
+        long_relay_url = "https://automoat-cockpit-relay.example/" + (
+            "secret-relay-path-" * 32
+        )
+        long_git_repo = "https://github.com/example/" + ("secret-repo-" * 44) + ".git"
+        output = io.StringIO()
+
+        with redirect_stdout(output):
+            errors = self.worker.emit_environment_preflight(
+                {
+                    "AUTOMOAT_RELAY_URL": long_relay_url,
+                    "AUTOMOAT_RELAY_TOKEN": "relay-token",
+                    "AUTOMOAT_GIT_REPO": long_git_repo,
+                    "GITHUB_TOKEN": "github-token",
+                    "CODEX_ACCESS_TOKEN": "codex-token",
+                },
+                found_command,
+                output_format="json",
+            )
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(
+            errors,
+            [
+                (
+                    "AUTOMOAT_RELAY_URL must be "
+                    f"{self.worker.MAX_WORKER_URL_CHARS} characters or fewer"
+                ),
+                (
+                    "AUTOMOAT_GIT_REPO must be "
+                    f"{self.worker.MAX_WORKER_URL_CHARS} characters or fewer"
+                ),
+            ],
+        )
+        self.assertEqual(payload["status"], "failed")
+        self.assertEqual(payload["diagnostics"]["error_categories"], ["invalid_url"])
+        self.assertEqual(
+            payload["diagnostics"]["failed_configuration_keys"],
+            ["AUTOMOAT_GIT_REPO", "AUTOMOAT_RELAY_URL"],
+        )
+        self.assertNotIn("secret-relay-path", output.getvalue())
+        self.assertNotIn("secret-repo", output.getvalue())
+        self.assertNotIn("relay-token", output.getvalue())
 
     def test_check_env_json_categorizes_relay_url_endpoint_path(self) -> None:
         env = {
