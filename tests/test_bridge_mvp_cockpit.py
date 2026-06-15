@@ -80,6 +80,44 @@ class BridgeMvpCockpitTest(unittest.TestCase):
         self.assertIsInstance(payload["bridge_pid"], int)
         self.assertTrue(payload["bridge_started_at"].endswith("Z"))
 
+    def test_write_status_sanitizes_public_url_to_origin(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            self.isolate_state(Path(tmp))
+
+            self.bridge.write_status(
+                {
+                    "status": "running",
+                    "public_url": "https://user:secret@AUTOMOAT-Test.ngrok.app/path?token=secret#debug",
+                }
+            )
+
+            payload = json.loads(self.bridge.BRIDGE_STATUS.read_text(encoding="utf-8"))
+
+        self.assertEqual(payload["public_url"], "https://automoat-test.ngrok.app")
+        self.assertEqual(payload["bridge_health"]["status"], "live")
+        self.assertNotIn("secret", json.dumps(payload))
+        self.assertNotIn("token=", json.dumps(payload))
+        self.assertNotIn("debug", json.dumps(payload))
+
+    def test_write_status_marks_running_without_valid_public_url_degraded(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            self.isolate_state(Path(tmp))
+
+            self.bridge.write_status(
+                {
+                    "status": "running",
+                    "public_url": "http://user:secret@localhost:4175/?token=secret",
+                }
+            )
+
+            payload = json.loads(self.bridge.BRIDGE_STATUS.read_text(encoding="utf-8"))
+
+        self.assertNotIn("public_url", payload)
+        self.assertEqual(payload["status"], "running")
+        self.assertEqual(payload["bridge_health"]["status"], "degraded")
+        self.assertEqual(payload["bridge_health"]["primary_reason"], "tunnel_url_unavailable")
+        self.assertNotIn("secret", json.dumps(payload))
+
     def test_write_status_summarizes_bridge_failures(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             self.isolate_state(Path(tmp))
@@ -260,6 +298,24 @@ class BridgeMvpCockpitTest(unittest.TestCase):
             ["--interval"],
         )
         self.assertTrue(payload["diagnostics"]["ngrok_available"])
+
+    def test_wait_for_ngrok_url_returns_sanitized_https_origin(self) -> None:
+        payload = {
+            "tunnels": [
+                {"public_url": "http://localhost:4175/?token=secret"},
+                {
+                    "public_url": (
+                        "https://user:secret@AUTOMOAT-Test.ngrok.app"
+                        "/bridge?token=secret#debug"
+                    )
+                },
+            ]
+        }
+
+        with patch.object(self.bridge, "http_json", return_value=payload):
+            public_url = self.bridge.wait_for_ngrok_url(4041, timeout=0.1)
+
+        self.assertEqual(public_url, "https://automoat-test.ngrok.app")
 
     def test_main_passes_configured_web_addr_to_ngrok(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

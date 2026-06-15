@@ -14,6 +14,7 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse, urlunparse
 from urllib.request import urlopen
 
 
@@ -47,12 +48,47 @@ def bridge_health_label(reason: str | None) -> str:
     return BRIDGE_HEALTH_LABELS.get(reason, reason.replace("_", " "))
 
 
+def compact_bridge_text(value: Any) -> str | None:
+    if not isinstance(value, (str, int, float)):
+        return None
+    text = str(value).strip()
+    if not text:
+        return None
+    text = "".join(
+        " " if character in "\r\n" or ord(character) < 32 or ord(character) == 127 else character
+        for character in text
+    )
+    text = " ".join(text.split())
+    return text if text else None
+
+
+def bridge_public_url_origin(value: Any) -> str | None:
+    text = compact_bridge_text(value)
+    if text is None:
+        return None
+    parsed = urlparse(text)
+    if parsed.scheme != "https" or not parsed.hostname:
+        return None
+    try:
+        port = parsed.port
+    except ValueError:
+        return None
+
+    hostname = parsed.hostname.lower()
+    netloc = f"[{hostname}]" if ":" in hostname and not hostname.startswith("[") else hostname
+    if port is not None:
+        netloc = f"{netloc}:{port}"
+    return urlunparse(("https", netloc, "", "", "", ""))
+
+
 def bridge_health(payload: dict[str, object]) -> dict[str, object]:
     status = payload.get("status")
     error = payload.get("error")
     reasons: list[str] = []
-    if status == "running":
+    if status == "running" and bridge_public_url_origin(payload.get("public_url")):
         pass
+    elif status == "running":
+        reasons.append("tunnel_url_unavailable")
     elif status == "viewer-exited":
         reasons.append("viewer_exited")
     elif status == "tunnel-exited":
@@ -106,6 +142,12 @@ def write_status(
     status_payload["bridge_started_at"] = str(
         status_payload.get("bridge_started_at") or BRIDGE_STARTED_AT
     )
+    if "public_url" in status_payload:
+        public_url = bridge_public_url_origin(status_payload.get("public_url"))
+        if public_url:
+            status_payload["public_url"] = public_url
+        else:
+            status_payload.pop("public_url", None)
     status_payload["bridge_status_sequence"] = next_bridge_status_sequence()
     status_payload["bridge_health"] = bridge_health(status_payload)
     status_payload["updated_at"] = utc_now()
@@ -150,8 +192,9 @@ def wait_for_ngrok_url(web_port: int, timeout: float = 20.0) -> str | None:
         if payload:
             for tunnel in payload.get("tunnels", []):
                 public_url = tunnel.get("public_url")
-                if isinstance(public_url, str) and public_url.startswith("https://"):
-                    return public_url
+                safe_public_url = bridge_public_url_origin(public_url)
+                if safe_public_url:
+                    return safe_public_url
         time.sleep(0.5)
     return None
 
@@ -345,7 +388,7 @@ def main() -> int:
         stderr=subprocess.STDOUT,
         text=True,
     )
-    public_url = wait_for_ngrok_url(args.ngrok_web_port)
+    public_url = bridge_public_url_origin(wait_for_ngrok_url(args.ngrok_web_port))
     if not public_url:
         output = ""
         if tunnel.stdout:
