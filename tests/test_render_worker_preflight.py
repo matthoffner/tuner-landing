@@ -2009,6 +2009,8 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             "OPENAI_API_KEY": "api-key",
             "AUTOMOAT_GIT_BRANCH": "release/2026.06",
             "AUTOMOAT_AGENT_ITERATIONS": "12",
+            "AUTOMOAT_CODEX_MODEL": "gpt-5.5-codex",
+            "AUTOMOAT_CODEX_REASONING_EFFORT": "medium",
             "GIT_AUTHOR_NAME": "automoat-render-bot",
             "GIT_AUTHOR_EMAIL": "automoat-render-bot@example.com",
         }
@@ -2029,6 +2031,10 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertIn("codex_auth_selected=CODEX_ACCESS_TOKEN", output.getvalue())
         self.assertIn('runtime_configured_keys=["AUTOMOAT_AGENT_ITERATIONS"]', output.getvalue())
         self.assertIn("path_configured_keys=[]", output.getvalue())
+        self.assertIn(
+            'codex_configured_keys=["AUTOMOAT_CODEX_MODEL", "AUTOMOAT_CODEX_REASONING_EFFORT"]',
+            output.getvalue(),
+        )
         self.assertIn(
             'git_identity_configured_keys=["GIT_AUTHOR_EMAIL", "GIT_AUTHOR_NAME"]',
             output.getvalue(),
@@ -2053,6 +2059,8 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             "OPENAI_API_KEY": "api-key",
             "AUTOMOAT_GIT_BRANCH": "release/2026.06",
             "AUTOMOAT_AGENT_ITERATIONS": "12",
+            "AUTOMOAT_CODEX_MODEL": "gpt-5.5-codex",
+            "AUTOMOAT_CODEX_REASONING_EFFORT": "medium",
             "GIT_AUTHOR_NAME": "automoat-render-bot",
             "GIT_AUTHOR_EMAIL": "automoat-render-bot@example.com",
         }
@@ -2086,6 +2094,10 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             ["AUTOMOAT_AGENT_ITERATIONS"],
         )
         self.assertEqual(payload["config"]["path_configured_keys"], [])
+        self.assertEqual(
+            payload["config"]["codex_configured_keys"],
+            ["AUTOMOAT_CODEX_MODEL", "AUTOMOAT_CODEX_REASONING_EFFORT"],
+        )
         self.assertEqual(
             payload["config"]["git_identity_configured_keys"],
             ["GIT_AUTHOR_EMAIL", "GIT_AUTHOR_NAME"],
@@ -3028,6 +3040,10 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         )
         self.assertEqual(
             payload["diagnostics"]["failed_configuration_keys"],
+            ["AUTOMOAT_CODEX_MODEL"],
+        )
+        self.assertEqual(
+            payload["diagnostics"]["codex_configured_keys"],
             ["AUTOMOAT_CODEX_MODEL"],
         )
         self.assertNotIn("secret-model", output.getvalue())
