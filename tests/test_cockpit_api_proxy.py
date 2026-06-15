@@ -824,6 +824,182 @@ class CockpitApiProxyTest(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_handlers_reject_oversized_upstream_bodies_and_fall_back(self) -> None:
+        result = run_node(
+            """
+            const assert = require("assert");
+            const statusHandler = require("./api/cockpit-status");
+            const { MAX_STATUS_BODY_CHARS } = require("./api/cockpit-status");
+            const logHandler = require("./api/cockpit-log");
+            const { MAX_LOG_BODY_CHARS } = require("./api/cockpit-log");
+
+            function response() {
+              return {
+                statusCode: null,
+                body: "",
+                headers: {},
+                setHeader(name, value) {
+                  this.headers[name] = value;
+                },
+                status(code) {
+                  this.statusCode = code;
+                  return this;
+                },
+                send(body) {
+                  this.body = String(body);
+                  return this;
+                },
+                end(body = "") {
+                  this.body = String(body);
+                  return this;
+                },
+              };
+            }
+
+            process.env.AUTOMOAT_RELAY_URL = "https://automoat-cockpit-relay.example";
+            process.env.AUTOMOAT_BRIDGE_URL = "https://legacy-bridge.example";
+            process.env.AUTOMOAT_COCKPIT_UPSTREAM_TIMEOUT_MS = "";
+            global.fetch = async (url) => {
+              if (url.includes("automoat-cockpit-relay.example")) {
+                const limit = url.endsWith("/api/status")
+                  ? MAX_STATUS_BODY_CHARS
+                  : MAX_LOG_BODY_CHARS;
+                return {
+                  ok: true,
+                  status: 200,
+                  headers: {
+                    get(name) {
+                      return name.toLowerCase() === "content-length"
+                        ? String(limit + 1)
+                        : null;
+                    },
+                  },
+                  text: async () => {
+                    throw new Error("oversized relay body should not be buffered");
+                  },
+                };
+              }
+              if (url.endsWith("/api/status")) {
+                return {
+                  ok: true,
+                  status: 200,
+                  headers: { get() { return null; } },
+                  text: async () => JSON.stringify({ status: "bridge-live", cockpit_ok: true }),
+                };
+              }
+              return {
+                ok: true,
+                status: 200,
+                headers: { get() { return null; } },
+                text: async () => "bridge log\\n",
+              };
+            };
+
+            (async () => {
+              const statusResponse = response();
+              await statusHandler({ method: "GET" }, statusResponse);
+              assert.strictEqual(statusResponse.statusCode, 200);
+              assert.deepStrictEqual(JSON.parse(statusResponse.body), {
+                status: "bridge-live",
+                cockpit_ok: true,
+              });
+              assert.strictEqual(
+                statusResponse.headers["X-Automoat-Upstream-Attempts"],
+                "relay:200:upstream_body_too_large,legacy_bridge:200",
+              );
+
+              const logResponse = response();
+              await logHandler({ method: "GET" }, logResponse);
+              assert.strictEqual(logResponse.statusCode, 200);
+              assert.strictEqual(logResponse.body, "bridge log\\n");
+              assert.strictEqual(
+                logResponse.headers["X-Automoat-Upstream-Attempts"],
+                "relay:200:upstream_body_too_large,legacy_bridge:200",
+              );
+            })().catch((error) => {
+              console.error(error.stack || error);
+              process.exit(1);
+            });
+            """
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_handlers_report_oversized_upstreams_without_body_leak(self) -> None:
+        result = run_node(
+            """
+            const assert = require("assert");
+            const statusHandler = require("./api/cockpit-status");
+            const logHandler = require("./api/cockpit-log");
+
+            function response() {
+              return {
+                statusCode: null,
+                body: "",
+                headers: {},
+                setHeader(name, value) {
+                  this.headers[name] = value;
+                },
+                status(code) {
+                  this.statusCode = code;
+                  return this;
+                },
+                send(body) {
+                  this.body = String(body);
+                  return this;
+                },
+                end(body = "") {
+                  this.body = String(body);
+                  return this;
+                },
+              };
+            }
+
+            process.env.AUTOMOAT_RELAY_URL = "https://automoat-cockpit-relay.example";
+            process.env.AUTOMOAT_BRIDGE_URL = "https://legacy-bridge.example";
+            process.env.AUTOMOAT_COCKPIT_UPSTREAM_TIMEOUT_MS = "";
+            global.fetch = async (url) => {
+              const secret = url.includes("automoat-cockpit-relay.example")
+                ? "relay-oversized-secret"
+                : "bridge-oversized-secret";
+              return {
+                ok: true,
+                status: 200,
+                headers: { get() { return null; } },
+                text: async () => secret.repeat(200000),
+              };
+            };
+
+            (async () => {
+              const statusResponse = response();
+              await statusHandler({ method: "GET" }, statusResponse);
+              assert.strictEqual(statusResponse.statusCode, 502);
+              const statusPayload = JSON.parse(statusResponse.body);
+              assert.strictEqual(statusPayload.error, "cockpit_relay_unreachable");
+              assert.deepStrictEqual(statusPayload.attempts, [
+                { kind: "relay", status: 200, error: "upstream_body_too_large" },
+                { kind: "legacy_bridge", status: 200, error: "upstream_body_too_large" },
+              ]);
+              assert(!statusResponse.body.includes("relay-oversized-secret"));
+              assert(!statusResponse.body.includes("bridge-oversized-secret"));
+
+              const logResponse = response();
+              await logHandler({ method: "GET" }, logResponse);
+              assert.strictEqual(logResponse.statusCode, 502);
+              assert(logResponse.body.includes("cockpit_relay_unreachable"));
+              assert(logResponse.body.includes("relay:200:upstream_body_too_large"));
+              assert(logResponse.body.includes("legacy_bridge:200:upstream_body_too_large"));
+              assert(!logResponse.body.includes("relay-oversized-secret"));
+              assert(!logResponse.body.includes("bridge-oversized-secret"));
+            })().catch((error) => {
+              console.error(error.stack || error);
+              process.exit(1);
+            });
+            """
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_handlers_reject_invalid_timeout_without_fetching(self) -> None:
         result = run_node(
             """

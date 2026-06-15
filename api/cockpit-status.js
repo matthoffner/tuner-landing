@@ -9,6 +9,8 @@ const {
   upstreams,
 } = require("./cockpit-upstreams");
 
+const MAX_STATUS_BODY_CHARS = 512 * 1024;
+
 function parseStatusPayload(body) {
   const normalized = body.trimStart().toLowerCase();
   if (normalized.startsWith("<!doctype html") || normalized.startsWith("<html")) {
@@ -69,7 +71,12 @@ module.exports = async function handler(request, response) {
   const attempts = [];
   for (const upstreamConfig of configured) {
     try {
-      const upstream = await fetchUpstreamText(upstreamConfig, timeoutMs, request.method);
+      const upstream = await fetchUpstreamText(
+        upstreamConfig,
+        timeoutMs,
+        request.method,
+        MAX_STATUS_BODY_CHARS,
+      );
       if (!upstream.ok) {
         attempts.push({
           kind: upstreamConfig.kind,
@@ -118,3 +125,4 @@ module.exports = async function handler(request, response) {
 };
 
 module.exports.parseStatusPayload = parseStatusPayload;
+module.exports.MAX_STATUS_BODY_CHARS = MAX_STATUS_BODY_CHARS;

@@ -69,7 +69,12 @@ module.exports = async function handler(request, response) {
   const attempts = [];
   for (const upstreamConfig of configured) {
     try {
-      const upstream = await fetchUpstreamText(upstreamConfig, timeoutMs, request.method);
+      const upstream = await fetchUpstreamText(
+        upstreamConfig,
+        timeoutMs,
+        request.method,
+        MAX_LOG_BODY_CHARS,
+      );
       if (!upstream.ok) {
         attempts.push({
           kind: upstreamConfig.kind,

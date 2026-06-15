@@ -145,7 +145,7 @@ function sendProxyResponse(request, response, statusCode, body) {
   response.send(body);
 }
 
-async function fetchUpstreamText(upstreamConfig, timeoutMs, method = "GET") {
+async function fetchUpstreamText(upstreamConfig, timeoutMs, method = "GET", maxBodyChars = null) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -163,7 +163,31 @@ async function fetchUpstreamText(upstreamConfig, timeoutMs, method = "GET") {
         error: "redirect_blocked",
       };
     }
+    if (method !== "HEAD" && Number.isInteger(maxBodyChars) && maxBodyChars > 0) {
+      const contentLength = Number(upstream.headers && upstream.headers.get("content-length"));
+      if (Number.isInteger(contentLength) && contentLength > maxBodyChars) {
+        return {
+          ok: false,
+          status: upstream.status,
+          body: "",
+          error: "upstream_body_too_large",
+        };
+      }
+    }
     const body = method === "HEAD" ? "" : await upstream.text();
+    if (
+      method !== "HEAD"
+      && Number.isInteger(maxBodyChars)
+      && maxBodyChars > 0
+      && body.length > maxBodyChars
+    ) {
+      return {
+        ok: false,
+        status: upstream.status,
+        body: "",
+        error: "upstream_body_too_large",
+      };
+    }
     return {
       ok: upstream.ok,
       status: upstream.status,
