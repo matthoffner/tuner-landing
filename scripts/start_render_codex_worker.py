@@ -919,7 +919,7 @@ def validate_publisher_file_path_env_value(
         errors.append(f"{name} must be a single-line path without control characters")
         return
 
-    path = Path(value)
+    path = publisher_file_path(env, value)
     try:
         resolved_path = path.expanduser().resolve(strict=False)
     except OSError as exc:
@@ -929,11 +929,19 @@ def validate_publisher_file_path_env_value(
     if conflicting_runtime_file is not None:
         errors.append(f"{name} must not be equal to or inside a reserved runtime file")
         return
-    if path.exists() and path.is_dir():
+    if resolved_path.exists() and resolved_path.is_dir():
         errors.append(f"{name} must be a file path, not a directory")
         return
-    if blocking_parent_path_component(path) is not None:
+    if blocking_parent_path_component(resolved_path) is not None:
         errors.append(f"{name} parent path must be a directory")
+
+
+def publisher_file_path(env: os._Environ[str] | dict[str, str], value: str) -> Path:
+    path = Path(value).expanduser()
+    if path.is_absolute():
+        return path
+    workdir, _codex_home = configured_worker_paths(env)
+    return workdir / path
 
 
 def reserved_runtime_file_conflict(path: Path) -> Path | None:

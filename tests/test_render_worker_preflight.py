@@ -2022,6 +2022,73 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertNotIn("github-token", output.getvalue())
         self.assertNotIn("codex-token", output.getvalue())
 
+    def test_rejects_relative_bridge_status_file_blocked_under_workdir(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            workdir = temp_path / "repo"
+            workdir.mkdir()
+            blocked_parent = workdir / "blocked-parent"
+            blocked_parent.write_text("not a directory", encoding="utf-8")
+
+            errors = self.worker.validate_worker_environment(
+                {
+                    "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+                    "AUTOMOAT_RELAY_TOKEN": "relay-token",
+                    "GITHUB_TOKEN": "github-token",
+                    "CODEX_ACCESS_TOKEN": "codex-token",
+                    "AUTOMOAT_WORKDIR": str(workdir),
+                    "CODEX_HOME": str(temp_path / "codex-home"),
+                    "AUTOMOAT_BRIDGE_STATUS_FILE": "blocked-parent/status.json",
+                },
+                found_command,
+            )
+
+        self.assertEqual(
+            errors,
+            ["AUTOMOAT_BRIDGE_STATUS_FILE parent path must be a directory"],
+        )
+
+    def test_check_env_json_routes_relative_bridge_status_file_blocker(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            workdir = temp_path / "repo"
+            workdir.mkdir()
+            blocked_parent = workdir / "blocked-parent"
+            blocked_parent.write_text("not a directory", encoding="utf-8")
+            output = io.StringIO()
+
+            with redirect_stdout(output):
+                errors = self.worker.emit_environment_preflight(
+                    {
+                        "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+                        "AUTOMOAT_RELAY_TOKEN": "relay-token",
+                        "GITHUB_TOKEN": "github-token",
+                        "CODEX_ACCESS_TOKEN": "codex-token",
+                        "AUTOMOAT_WORKDIR": str(workdir),
+                        "CODEX_HOME": str(temp_path / "codex-home"),
+                        "AUTOMOAT_BRIDGE_STATUS_FILE": "blocked-parent/status.json",
+                    },
+                    found_command,
+                    output_format="json",
+                )
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(
+            errors,
+            ["AUTOMOAT_BRIDGE_STATUS_FILE parent path must be a directory"],
+        )
+        self.assertEqual(payload["status"], "failed")
+        self.assertEqual(payload["diagnostics"]["error_categories"], ["invalid_file_path"])
+        self.assertEqual(
+            payload["diagnostics"]["failed_configuration_keys"],
+            ["AUTOMOAT_BRIDGE_STATUS_FILE"],
+        )
+        self.assertNotIn(str(workdir), output.getvalue())
+        self.assertNotIn(str(blocked_parent), output.getvalue())
+        self.assertNotIn("relay-token", output.getvalue())
+        self.assertNotIn("github-token", output.getvalue())
+        self.assertNotIn("codex-token", output.getvalue())
+
     def test_rejects_bridge_status_file_on_reserved_runtime_file(self) -> None:
         base_env = {
             "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
