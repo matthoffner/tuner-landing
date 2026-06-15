@@ -183,6 +183,36 @@ class RenderCockpitRelayTest(unittest.TestCase):
         self.assertNotIn("relay_url", health["publisher_runtime_config"])
         self.assertNotIn("repo", health["publisher_identity"])
         self.assertNotIn("dirty_paths", health["publisher_identity"])
+        self.assertEqual(
+            status["relay"]["publisher"],
+            {
+                "host": "worker-1",
+                "pid": 4321,
+                "publisher_started_at": "2026-06-14T19:58:00Z",
+                "pushed_at": "2026-06-14T19:59:30Z",
+                "snapshot_sequence": 7,
+                "repo": ".",
+                "git": {
+                    "head": "abc1234",
+                    "branch": "main",
+                    "dirty_path_count": 2,
+                },
+                "runtime_config": {
+                    "interval": 4.5,
+                    "timeout": 11.25,
+                    "tail_lines": 77,
+                    "max_log_bytes": 4096,
+                    "status_stale_after_seconds": 900,
+                    "bridge_status_stale_after_seconds": 240,
+                    "max_consecutive_failures": 5,
+                    "max_consecutive_stale_statuses": 6,
+                },
+            },
+        )
+        status_text = json.dumps(status, sort_keys=True)
+        self.assertNotIn("relay.example", status_text)
+        self.assertNotIn("token=secret", status_text)
+        self.assertNotIn("secret-local-note.txt", status_text)
         self.assertEqual(status["relay"]["snapshot_age_seconds"], 30)
         self.assertFalse(status["relay"]["snapshot_stale"])
 

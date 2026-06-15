@@ -379,6 +379,61 @@ def publisher_runtime_config(state: dict[str, Any]) -> dict[str, Any]:
     return summary
 
 
+def publisher_for_relay_response(state: dict[str, Any]) -> dict[str, Any]:
+    publisher = state.get("publisher")
+    if not isinstance(publisher, dict) or not publisher:
+        return {}
+
+    identity = publisher_identity(state)
+    summary: dict[str, Any] = {}
+    for key in (
+        "host",
+        "pid",
+        "publisher_started_at",
+        "pushed_at",
+        "snapshot_sequence",
+    ):
+        if key in identity:
+            summary[key] = identity[key]
+
+    path_fields = {
+        "repo": publisher.get("repo"),
+        "status_file": publisher.get("status_file"),
+        "pid_file": publisher.get("pid_file"),
+        "log_file": publisher.get("log_file"),
+        "bridge_status_file": publisher.get("bridge_status_file"),
+    }
+    for key, value in path_fields.items():
+        compact_value = compact_path_label(value, max_length=240)
+        if compact_value is not None:
+            summary[key] = compact_value
+
+    git: dict[str, Any] = {}
+    if "git_head" in identity:
+        git["head"] = identity["git_head"]
+    if "git_branch" in identity:
+        git["branch"] = identity["git_branch"]
+    if "git_dirty_path_count" in identity:
+        git["dirty_path_count"] = identity["git_dirty_path_count"]
+    if git:
+        summary["git"] = git
+
+    runtime_config = publisher_runtime_config(state)
+    compact_runtime_config = {
+        key: value
+        for key, value in runtime_config.items()
+        if key != "available"
+    }
+    if compact_runtime_config:
+        summary["runtime_config"] = compact_runtime_config
+
+    source_health = publisher_source_health(state)
+    if source_health:
+        summary["source_health"] = source_health
+
+    return summary
+
+
 def source_status_diagnostics(status: dict[str, Any]) -> dict[str, Any]:
     diagnostics: dict[str, Any] = {}
     text_fields = {
@@ -999,7 +1054,7 @@ def relay_status_payload() -> dict[str, Any]:
         "startup": state.get("relay_startup", {}),
         "publisher_identity": health["publisher_identity"],
         "publisher_runtime_config": health["publisher_runtime_config"],
-        "publisher": state.get("publisher", {}),
+        "publisher": publisher_for_relay_response(state),
     }
     return status
 
