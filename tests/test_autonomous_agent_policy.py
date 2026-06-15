@@ -136,6 +136,44 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
             ],
         )
 
+    def test_dirty_paths_excluding_preview_filters_pixelbox_preview(self) -> None:
+        self.loop.git_status_lines = lambda: [
+            " M scripts/run_autonomous_agent_loop.py",
+            " M .pxcode/preview.json",
+        ]
+
+        self.assertEqual(
+            self.loop.dirty_paths(),
+            ["scripts/run_autonomous_agent_loop.py", ".pxcode/preview.json"],
+        )
+        self.assertEqual(
+            self.loop.dirty_paths_excluding_preview(),
+            ["scripts/run_autonomous_agent_loop.py"],
+        )
+        self.assertTrue(self.loop.preview_json_changed())
+
+    def test_policy_check_rejects_preview_json_change(self) -> None:
+        self.loop.dirty_paths = lambda: [
+            ".pxcode/preview.json",
+            "scripts/run_autonomous_agent_loop.py",
+        ]
+        self.loop.added_synthetic_dallas_rows = lambda: []
+
+        with tempfile.TemporaryDirectory() as tmp:
+            result = self.loop.run_autonomy_policy_check(Path(tmp) / "policy.log")
+
+        self.assertEqual(result["exit_status"], 1)
+        self.assertEqual(result["failure_reason"], "preview_json_changed")
+        self.assertTrue(result["preview_json_changed"])
+        self.assertEqual(
+            result["dirty_paths"],
+            [".pxcode/preview.json", "scripts/run_autonomous_agent_loop.py"],
+        )
+        self.assertEqual(
+            result["dirty_paths_excluding_preview"],
+            ["scripts/run_autonomous_agent_loop.py"],
+        )
+
     def test_policy_check_rejects_docs_only_synthetic_row_append(self) -> None:
         self.loop.dirty_paths_excluding_preview = lambda: [
             "README.md",
@@ -295,6 +333,18 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
 
         self.assertIn("2 synthetic Dallas example.local row append", message)
         self.assertIn("supervisor snapshot disallows hidden fixture growth", message)
+
+    def test_policy_error_message_names_preview_json_block(self) -> None:
+        message = self.loop.autonomy_policy_error_message(
+            {
+                "failure_reason": "preview_json_changed",
+                "synthetic_row_count": 0,
+                "raw_dallas_csv_changed_paths": [],
+            }
+        )
+
+        self.assertIn(".pxcode/preview.json", message)
+        self.assertIn("must stay untouched", message)
 
 
 if __name__ == "__main__":

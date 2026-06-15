@@ -336,7 +336,7 @@ def git_status_lines() -> list[str]:
     return shell(["git", "status", "--porcelain=v1"]).stdout.splitlines()
 
 
-def dirty_paths_excluding_preview() -> list[str]:
+def dirty_paths() -> list[str]:
     paths: list[str] = []
     for line in git_status_lines():
         if len(line) < 4:
@@ -344,9 +344,18 @@ def dirty_paths_excluding_preview() -> list[str]:
         path = line[3:].strip()
         if " -> " in path:
             path = path.split(" -> ", 1)[1]
-        if path and path != PREVIEW_PATH:
+        if path:
             paths.append(path)
     return paths
+
+
+def dirty_paths_excluding_preview() -> list[str]:
+    return [path for path in dirty_paths() if path != PREVIEW_PATH]
+
+
+def preview_json_changed(paths: list[str] | None = None) -> bool:
+    """Return whether the Pixelbox preview file is dirty in the current diff."""
+    return PREVIEW_PATH in (dirty_paths() if paths is None else paths)
 
 
 def changed_paths_include_productive_work(paths: list[str]) -> bool:
@@ -590,7 +599,9 @@ def run_autonomy_policy_check(log_file: Path) -> dict[str, Any]:
     started = time.monotonic()
     name = "autonomy policy check"
     emit(log_file, f"step start: {name}")
+    all_paths = dirty_paths()
     paths = dirty_paths_excluding_preview()
+    preview_changed = preview_json_changed(all_paths)
     raw_csv_paths = changed_dallas_raw_csv_paths(paths)
     synthetic_rows = added_synthetic_dallas_rows()
     productive_paths = productive_changed_paths(paths)
@@ -602,7 +613,15 @@ def run_autonomy_policy_check(log_file: Path) -> dict[str, Any]:
     allow_override = os.environ.get("AUTOMOAT_ALLOW_SYNTHETIC_DALLAS_APPEND") == "1"
     exit_status = 0
     failure_reason = None
-    if synthetic_rows and not policy_allows_synthetic_append and not allow_override:
+    if preview_changed and not allow_override:
+        exit_status = 1
+        failure_reason = "preview_json_changed"
+        emit(
+            log_file,
+            "policy violation: .pxcode/preview.json is dirty; autonomous "
+            "iterations must not edit Pixelbox preview metadata",
+        )
+    elif synthetic_rows and not policy_allows_synthetic_append and not allow_override:
         exit_status = 1
         failure_reason = "synthetic_append_disallowed_by_snapshot"
         emit(
@@ -651,7 +670,9 @@ def run_autonomy_policy_check(log_file: Path) -> dict[str, Any]:
         "command": ["internal", "autonomy_policy_check"],
         "exit_status": exit_status,
         "seconds": elapsed,
+        "dirty_paths": all_paths,
         "dirty_paths_excluding_preview": paths,
+        "preview_json_changed": preview_changed,
         "synthetic_row_count": len(synthetic_rows),
         "raw_dallas_csv_changed_paths": raw_csv_paths,
         "productive_change": productive_change,
@@ -690,6 +711,11 @@ def autonomy_policy_error_message(policy_step: dict[str, Any]) -> str:
         return (
             "Autonomy policy rejected a synthetic Dallas example.local row append "
             "without code, ingest, infra, test, or durable spec companion work."
+        )
+    if reason == "preview_json_changed":
+        return (
+            "Autonomy policy rejected changes to .pxcode/preview.json; Pixelbox "
+            "preview metadata must stay untouched by autonomous iterations."
         )
     return "Autonomy policy rejected the current diff."
 
