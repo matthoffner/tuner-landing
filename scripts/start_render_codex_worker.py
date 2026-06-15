@@ -691,6 +691,16 @@ def configured_git_config_keys(env: os._Environ[str] | dict[str, str]) -> list[s
     return sorted(name for name in GIT_CONFIG_ENV_NAMES if name in env)
 
 
+def ambiguous_auth_groups(env: os._Environ[str] | dict[str, str]) -> list[str]:
+    """Return auth groups with multiple configured candidates and no secret values."""
+    groups: list[str] = []
+    if len(configured_names(env, GIT_AUTH_ENV_NAMES)) > 1:
+        groups.append("git_auth")
+    if len(configured_names(env, CODEX_AUTH_ENV_NAMES)) > 1:
+        groups.append("codex_auth")
+    return groups
+
+
 def validate_secret_safe_http_url(
     name: str,
     value: str,
@@ -1192,6 +1202,7 @@ def environment_preflight_summary(
             "git_auth_selected": selected_name(env, GIT_AUTH_ENV_NAMES),
             "codex_auth": configured_names(env, CODEX_AUTH_ENV_NAMES),
             "codex_auth_selected": selected_name(env, CODEX_AUTH_ENV_NAMES),
+            "auth_ambiguous_groups": ambiguous_auth_groups(env),
             "commands": list(REQUIRED_COMMANDS),
             "command_paths": command_path_labels,
             "missing_commands": missing_required_commands(command_paths),
@@ -1214,6 +1225,7 @@ def environment_preflight_summary(
         "git_auth_selected": selected_name(env, GIT_AUTH_ENV_NAMES),
         "codex_auth": configured_names(env, CODEX_AUTH_ENV_NAMES),
         "codex_auth_selected": selected_name(env, CODEX_AUTH_ENV_NAMES),
+        "auth_ambiguous_groups": ambiguous_auth_groups(env),
         "runtime_configured_keys": configured_runtime_keys(env),
         "path_configured_keys": configured_worker_path_keys(env),
         "codex_configured_keys": configured_codex_config_keys(env),
@@ -1301,6 +1313,7 @@ def emit_environment_preflight(
         f"git_auth_selected={selected_name(env, GIT_AUTH_ENV_NAMES)} "
         f"codex_auth={','.join(configured_names(env, CODEX_AUTH_ENV_NAMES))} "
         f"codex_auth_selected={selected_name(env, CODEX_AUTH_ENV_NAMES)} "
+        f"auth_ambiguous_groups={json.dumps(ambiguous_auth_groups(env), sort_keys=True)} "
         f"runtime_configured_keys="
         f"{json.dumps(configured_runtime_keys(env), sort_keys=True)} "
         f"path_configured_keys="

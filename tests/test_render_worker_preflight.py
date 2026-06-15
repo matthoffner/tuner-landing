@@ -2065,6 +2065,10 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertIn("git_auth_selected=GITHUB_TOKEN", output.getvalue())
         self.assertIn("codex_auth=CODEX_ACCESS_TOKEN,OPENAI_API_KEY", output.getvalue())
         self.assertIn("codex_auth_selected=CODEX_ACCESS_TOKEN", output.getvalue())
+        self.assertIn(
+            'auth_ambiguous_groups=["git_auth", "codex_auth"]',
+            output.getvalue(),
+        )
         self.assertIn('runtime_configured_keys=["AUTOMOAT_AGENT_ITERATIONS"]', output.getvalue())
         self.assertIn("path_configured_keys=[]", output.getvalue())
         self.assertIn(
@@ -2126,6 +2130,10 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             ["CODEX_ACCESS_TOKEN", "OPENAI_API_KEY"],
         )
         self.assertEqual(payload["config"]["codex_auth_selected"], "CODEX_ACCESS_TOKEN")
+        self.assertEqual(
+            payload["config"]["auth_ambiguous_groups"],
+            ["git_auth", "codex_auth"],
+        )
         self.assertEqual(
             payload["config"]["runtime_configured_keys"],
             ["AUTOMOAT_AGENT_ITERATIONS"],
@@ -2340,7 +2348,9 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             "AUTOMOAT_RELAY_TOKEN": "relay-token",
             "AUTOMOAT_GIT_REPO": "https://git-user:git-secret@github.com/example/private.git",
             "GITHUB_TOKEN": "github-token",
+            "GH_TOKEN": "alternate-github-token",
             "CODEX_ACCESS_TOKEN": "codex-token",
+            "OPENAI_API_KEY": "api-key",
         }
         output = io.StringIO()
 
@@ -2361,12 +2371,19 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             payload["diagnostics"]["failed_configuration_keys"],
             ["AUTOMOAT_GIT_REPO", "AUTOMOAT_RELAY_URL"],
         )
-        self.assertEqual(payload["diagnostics"]["git_auth"], ["GITHUB_TOKEN"])
+        self.assertEqual(payload["diagnostics"]["git_auth"], ["GITHUB_TOKEN", "GH_TOKEN"])
         self.assertEqual(payload["diagnostics"]["git_auth_selected"], "GITHUB_TOKEN")
-        self.assertEqual(payload["diagnostics"]["codex_auth"], ["CODEX_ACCESS_TOKEN"])
+        self.assertEqual(
+            payload["diagnostics"]["codex_auth"],
+            ["CODEX_ACCESS_TOKEN", "OPENAI_API_KEY"],
+        )
         self.assertEqual(
             payload["diagnostics"]["codex_auth_selected"],
             "CODEX_ACCESS_TOKEN",
+        )
+        self.assertEqual(
+            payload["diagnostics"]["auth_ambiguous_groups"],
+            ["git_auth", "codex_auth"],
         )
         self.assertEqual(payload["diagnostics"]["commands"], ["git", "codex"])
         self.assertEqual(
@@ -2385,7 +2402,9 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertNotIn("relay-secret", output.getvalue())
         self.assertNotIn("git-secret", output.getvalue())
         self.assertNotIn("github-token", output.getvalue())
+        self.assertNotIn("alternate-github-token", output.getvalue())
         self.assertNotIn("codex-token", output.getvalue())
+        self.assertNotIn("api-key", output.getvalue())
 
     def test_check_env_json_failure_groups_errors_without_printing_secret_values(self) -> None:
         env = {
@@ -2431,6 +2450,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         )
         self.assertEqual(payload["diagnostics"]["git_auth"], ["GH_TOKEN"])
         self.assertEqual(payload["diagnostics"]["codex_auth"], ["CODEX_AUTH_JSON_B64"])
+        self.assertEqual(payload["diagnostics"]["auth_ambiguous_groups"], [])
         self.assertEqual(
             payload["diagnostics"]["command_paths"],
             {"git": "<found>", "codex": "<found>"},
@@ -3483,6 +3503,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertEqual(payload["diagnostics"]["runtime_configured_keys"], [])
         self.assertEqual(payload["diagnostics"]["git_configured_keys"], [])
         self.assertEqual(payload["diagnostics"]["git_auth_selected"], "GH_TOKEN")
+        self.assertEqual(payload["diagnostics"]["auth_ambiguous_groups"], [])
         self.assertEqual(
             payload["diagnostics"]["codex_auth_selected"],
             "CODEX_ACCESS_TOKEN",
