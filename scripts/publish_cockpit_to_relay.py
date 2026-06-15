@@ -1497,6 +1497,10 @@ def emit_publisher_preflight(
         f"bridge_status_stale_after_seconds={getattr(args, 'bridge_status_stale_after_seconds', DEFAULT_BRIDGE_STATUS_STALE_AFTER_SECONDS)} "
         f"max_consecutive_failures={args.max_consecutive_failures} "
         f"max_consecutive_stale_statuses={args.max_consecutive_stale_statuses} "
+        f"status_file={repo_relative(args.status_file)} "
+        f"pid_file={repo_relative(args.pid_file)} "
+        f"log_file={repo_relative(args.log_file)} "
+        f"publisher_log={repo_relative(args.publisher_log)} "
         f"bridge_status_file={repo_relative(getattr(args, 'bridge_status_file', BRIDGE_STATUS_FILE))} "
         f"runtime_limits={json.dumps(PUBLISHER_CONFIG_LIMITS, sort_keys=True)}"
     )
