@@ -82,6 +82,8 @@ class MvpCockpitServerTest(unittest.TestCase):
                 "current_focus": "autonomy_visibility_or_real_ingest",
                 "decision_reason": "dallas_ready_no_thin_groups",
                 "dallas_pipeline_ready": True,
+                "readiness_blocker_count": 0,
+                "thin_group_category_count": 0,
             },
             "artifacts": {
                 "artifact_health": {"status": "loaded"},
@@ -92,6 +94,16 @@ class MvpCockpitServerTest(unittest.TestCase):
                         "status": "ready",
                         "ready_for_next_import_records": True,
                         "blockers": [],
+                    },
+                    "coverage": {
+                        "latest_thin_counts": {
+                            "failure_reasons": "0",
+                            "ignored_bool": True,
+                            "ignored_negative": -1,
+                            "next_action_groups": 0,
+                            "pattern_slices token=thin-secret": 0,
+                            "result_states": 0,
+                        },
                     },
                     "next_import_record_handoff": {
                         "raw_dir": "generated/raw/dallas-electrician-import-sample-v2",
@@ -175,6 +187,7 @@ class MvpCockpitServerTest(unittest.TestCase):
         self.assertEqual(summary["artifact_problem_artifacts"], [])
         self.assertEqual(summary["import_readiness"], "ready")
         self.assertEqual(summary["readiness_blockers"], [])
+        self.assertEqual(summary["readiness_blocker_count"], 0)
         self.assertTrue(summary["ready_for_next_import_records"])
         self.assertEqual(
             summary["import_handoff"],
@@ -238,7 +251,18 @@ class MvpCockpitServerTest(unittest.TestCase):
         self.assertEqual(summary["policy_reason"], "dallas_ready_no_thin_groups")
         self.assertTrue(summary["dallas_pipeline_ready"])
         self.assertEqual(summary["thin_group_count"], 0)
+        self.assertEqual(summary["thin_group_category_count"], 0)
         self.assertEqual(summary["thin_group_categories"], [])
+        self.assertEqual(
+            summary["coverage_latest_thin_counts"],
+            {
+                "failure_reasons": 0,
+                "next_action_groups": 0,
+                "pattern_slices token=[redacted]": 0,
+                "result_states": 0,
+            },
+        )
+        self.assertNotIn("thin-secret", json.dumps(summary))
         self.assertEqual(summary["contract_checks"], "13/13")
         self.assertEqual(summary["queue_items"], 535)
 
@@ -300,7 +324,9 @@ class MvpCockpitServerTest(unittest.TestCase):
             ["coverage", "workflow"],
         )
         self.assertEqual(summary["readiness_blockers"], ["correction_ledger_incomplete"])
+        self.assertEqual(summary["readiness_blocker_count"], 1)
         self.assertEqual(summary["thin_group_count"], 2)
+        self.assertEqual(summary["thin_group_category_count"], 2)
         self.assertEqual(
             summary["thin_group_categories"], ["failure_reasons", "result_states"]
         )
@@ -1050,6 +1076,10 @@ class MvpCockpitServerTest(unittest.TestCase):
         self.assertIn("policy_productive_changed_path_count", markup)
         self.assertIn("policy_synthetic_row_samples", markup)
         self.assertIn("policy_synthetic_row_count", markup)
+        self.assertIn("readiness_blocker_count", markup)
+        self.assertIn("thin_group_category_count", markup)
+        self.assertIn("coverage_latest_thin_counts", markup)
+        self.assertIn("latestThinCounts", markup)
         self.assertIn("import_handoff", markup)
         self.assertIn("next_append_rows", markup)
         self.assertIn("append_preflight_checks", markup)

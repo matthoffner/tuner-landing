@@ -379,6 +379,21 @@ def first_bool(*values: Any) -> bool | None:
     return None
 
 
+def compact_count_map(value: Any, *, max_items: int = 8) -> dict[str, int]:
+    if not isinstance(value, dict):
+        return {}
+    compacted: dict[str, int] = {}
+    for raw_key, raw_value in sorted(value.items(), key=lambda item: str(item[0])):
+        key = compact_policy_detail(raw_key, max_length=80)
+        count = compact_int(raw_value)
+        if key is None or count is None:
+            continue
+        compacted[key] = count
+        if len(compacted) >= max_items:
+            break
+    return compacted
+
+
 def compact_float(value: Any) -> float | None:
     if isinstance(value, bool):
         return None
@@ -606,6 +621,7 @@ def publisher_cockpit_summary(status: dict[str, Any]) -> dict[str, Any]:
     workflow = as_dict(artifacts.get("workflow"))
     import_pipeline = as_dict(artifacts.get("import_pipeline"))
     readiness = as_dict(import_pipeline.get("execution_readiness"))
+    pipeline_coverage = as_dict(import_pipeline.get("coverage"))
     autonomy_policy = as_dict(status.get("autonomy_policy"))
 
     passed_checks = contract.get("passed_checks")
@@ -619,6 +635,12 @@ def publisher_cockpit_summary(status: dict[str, Any]) -> dict[str, Any]:
     artifact_health_status = artifact_health.get("status") or "unknown"
     import_readiness = readiness.get("status") or "unknown"
     readiness_blockers = as_string_list(readiness.get("blockers"))
+    readiness_blocker_count = first_compact_int(
+        autonomy_policy.get("readiness_blocker_count"),
+        len(readiness_blockers),
+    )
+    if readiness_blocker_count is None:
+        readiness_blocker_count = len(readiness_blockers)
     policy_step = latest_autonomy_policy_step(status)
     policy_failure = (
         policy_step
@@ -747,6 +769,15 @@ def publisher_cockpit_summary(status: dict[str, Any]) -> dict[str, Any]:
     thin_group_count = autonomy_policy.get("thin_group_count")
     if not isinstance(thin_group_count, int):
         thin_group_count = len(thin_group_categories)
+    thin_group_category_count = first_compact_int(
+        autonomy_policy.get("thin_group_category_count"),
+        len(thin_group_categories),
+    )
+    if thin_group_category_count is None:
+        thin_group_category_count = len(thin_group_categories)
+    coverage_latest_thin_counts = compact_count_map(
+        pipeline_coverage.get("latest_thin_counts")
+    )
 
     attention_reasons: list[str] = []
     if not loop_running:
@@ -789,6 +820,7 @@ def publisher_cockpit_summary(status: dict[str, Any]) -> dict[str, Any]:
         "artifact_health": artifact_health_status,
         "import_readiness": import_readiness,
         "readiness_blockers": readiness_blockers,
+        "readiness_blocker_count": readiness_blocker_count,
         "ready_for_next_import_records": readiness.get("ready_for_next_import_records"),
         "import_handoff": import_handoff_summary(import_pipeline),
         "current_focus": autonomy_policy.get("current_focus") or "mvp_loop",
@@ -810,7 +842,9 @@ def publisher_cockpit_summary(status: dict[str, Any]) -> dict[str, Any]:
         "policy_override": policy_override,
         "dallas_pipeline_ready": autonomy_policy.get("dallas_pipeline_ready"),
         "thin_group_count": thin_group_count,
+        "thin_group_category_count": thin_group_category_count,
         "thin_group_categories": thin_group_categories,
+        "coverage_latest_thin_counts": coverage_latest_thin_counts,
         "contract_checks": contract_checks,
         "queue_items": workflow.get("queue_items"),
     }

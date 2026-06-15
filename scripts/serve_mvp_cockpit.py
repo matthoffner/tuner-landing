@@ -222,6 +222,21 @@ def first_bool(*values: object) -> bool | None:
     return None
 
 
+def compact_count_map(value: object, *, max_items: int = 8) -> dict[str, int]:
+    if not isinstance(value, dict):
+        return {}
+    compacted: dict[str, int] = {}
+    for raw_key, raw_value in sorted(value.items(), key=lambda item: str(item[0])):
+        key = compact_policy_detail(raw_key, max_length=80)
+        count = compact_int(raw_value)
+        if key is None or count is None:
+            continue
+        compacted[key] = count
+        if len(compacted) >= max_items:
+            break
+    return compacted
+
+
 def compact_float(value: object) -> float | None:
     if isinstance(value, bool):
         return None
@@ -489,6 +504,7 @@ def cockpit_summary(status: dict[str, object]) -> dict[str, object]:
     workflow = as_dict(artifacts.get("workflow"))
     import_pipeline = as_dict(artifacts.get("import_pipeline"))
     readiness = as_dict(import_pipeline.get("execution_readiness"))
+    pipeline_coverage = as_dict(import_pipeline.get("coverage"))
     autonomy_policy = as_dict(status.get("autonomy_policy"))
 
     passed_checks = contract.get("passed_checks")
@@ -514,6 +530,12 @@ def cockpit_summary(status: dict[str, object]) -> dict[str, object]:
     )
     import_readiness = readiness.get("status") or "unknown"
     readiness_blockers = as_string_list(readiness.get("blockers"))
+    readiness_blocker_count = first_compact_int(
+        autonomy_policy.get("readiness_blocker_count"),
+        len(readiness_blockers),
+    )
+    if readiness_blocker_count is None:
+        readiness_blocker_count = len(readiness_blockers)
     policy_step = latest_autonomy_policy_step(status)
     policy_failure = (
         policy_step
@@ -645,6 +667,15 @@ def cockpit_summary(status: dict[str, object]) -> dict[str, object]:
     thin_group_count = autonomy_policy.get("thin_group_count")
     if not isinstance(thin_group_count, int):
         thin_group_count = len(thin_group_categories)
+    thin_group_category_count = first_compact_int(
+        autonomy_policy.get("thin_group_category_count"),
+        len(thin_group_categories),
+    )
+    if thin_group_category_count is None:
+        thin_group_category_count = len(thin_group_categories)
+    coverage_latest_thin_counts = compact_count_map(
+        pipeline_coverage.get("latest_thin_counts")
+    )
 
     attention_reasons: list[str] = []
     if not loop_running:
@@ -688,6 +719,7 @@ def cockpit_summary(status: dict[str, object]) -> dict[str, object]:
         "artifact_problem_artifacts": artifact_problem_artifacts,
         "import_readiness": import_readiness,
         "readiness_blockers": readiness_blockers,
+        "readiness_blocker_count": readiness_blocker_count,
         "ready_for_next_import_records": readiness.get("ready_for_next_import_records"),
         "import_handoff": import_handoff_summary(import_pipeline),
         "current_focus": autonomy_policy.get("current_focus") or "mvp_loop",
@@ -709,7 +741,9 @@ def cockpit_summary(status: dict[str, object]) -> dict[str, object]:
         "policy_override": policy_override,
         "dallas_pipeline_ready": autonomy_policy.get("dallas_pipeline_ready"),
         "thin_group_count": thin_group_count,
+        "thin_group_category_count": thin_group_category_count,
         "thin_group_categories": thin_group_categories,
+        "coverage_latest_thin_counts": coverage_latest_thin_counts,
         "contract_checks": contract_checks,
         "queue_items": workflow.get("queue_items"),
     }
@@ -1181,6 +1215,10 @@ def cockpit_html() -> str:
           freshness.textContent = "unknown";
         }}
         const reasons = Array.isArray(cockpit.operator_attention_reasons) ? cockpit.operator_attention_reasons : [];
+        const latestThinCounts = cockpit.coverage_latest_thin_counts || {{}};
+        const latestThinCountText = Object.entries(latestThinCounts)
+          .map(([name, count]) => `${{name}}=${{count}}`)
+          .join(", ");
         attention.textContent = cockpit.operator_attention
           ? cockpit.operator_attention_label || reasons.join(", ") || "Required"
           : cockpit.operator_attention_label || "Clear";
@@ -1210,6 +1248,9 @@ def cockpit_html() -> str:
           typeof cockpit.policy_preview_json_changed === "boolean" ? `preview changed: ${{cockpit.policy_preview_json_changed}}` : "",
           typeof cockpit.policy_allows_synthetic_append === "boolean" ? `synthetic allowed: ${{cockpit.policy_allows_synthetic_append}}` : "",
           typeof cockpit.policy_override === "boolean" ? `override: ${{cockpit.policy_override}}` : "",
+          typeof cockpit.readiness_blocker_count === "number" ? `readiness blockers: ${{cockpit.readiness_blocker_count}}` : "",
+          typeof cockpit.thin_group_category_count === "number" ? `thin categories: ${{cockpit.thin_group_category_count}}` : "",
+          latestThinCountText ? `latest thin counts: ${{latestThinCountText}}` : "",
           policyRawPaths.length ? `raw csv (${{policyRawPathCount}}): ${{policyRawPaths.join(", ")}}` : "",
           policyProductivePaths.length ? `productive (${{policyProductivePathCount}}): ${{policyProductivePaths.join(", ")}}` : "",
           policySamples.length ? `synthetic rows (${{policySyntheticRowCount}}): ${{policySamples.join(" | ")}}` : "",

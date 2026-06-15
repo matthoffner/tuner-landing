@@ -676,6 +676,16 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                                     "ready_for_next_import_records": True,
                                     "blockers": [],
                                 },
+                                "coverage": {
+                                    "latest_thin_counts": {
+                                        "failure_reasons": "0",
+                                        "ignored_bool": True,
+                                        "ignored_negative": -1,
+                                        "next_action_groups": 0,
+                                        "pattern_slices token=thin-secret": 0,
+                                        "result_states": 0,
+                                    },
+                                },
                                 "next_import_record_handoff": {
                                     "raw_dir": (
                                         "generated/raw/"
@@ -744,7 +754,9 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                             "current_focus": "autonomy_visibility_or_real_ingest",
                             "decision_reason": "dallas_ready_no_thin_groups",
                             "dallas_pipeline_ready": True,
+                            "readiness_blocker_count": 0,
                             "thin_group_count": 0,
+                            "thin_group_category_count": 0,
                             "thin_group_categories": [],
                         },
                     }
@@ -772,6 +784,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertFalse(summary["status_stale"])
         self.assertEqual(summary["artifact_health"], "loaded")
         self.assertEqual(summary["import_readiness"], "ready")
+        self.assertEqual(summary["readiness_blocker_count"], 0)
         self.assertTrue(summary["ready_for_next_import_records"])
         self.assertEqual(
             summary["import_handoff"],
@@ -834,6 +847,17 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertEqual(summary["current_focus"], "autonomy_visibility_or_real_ingest")
         self.assertEqual(summary["policy_reason"], "dallas_ready_no_thin_groups")
         self.assertTrue(summary["dallas_pipeline_ready"])
+        self.assertEqual(summary["thin_group_category_count"], 0)
+        self.assertEqual(
+            summary["coverage_latest_thin_counts"],
+            {
+                "failure_reasons": 0,
+                "next_action_groups": 0,
+                "pattern_slices token=[redacted]": 0,
+                "result_states": 0,
+            },
+        )
+        self.assertNotIn("thin-secret", json.dumps(summary))
         self.assertEqual(summary["contract_checks"], "13/13")
         self.assertEqual(summary["queue_items"], 535)
         self.assertTrue(summary["operator_attention"])
