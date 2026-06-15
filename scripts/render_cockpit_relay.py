@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import ipaddress
 import json
 import math
 import os
@@ -29,6 +30,7 @@ DEFAULT_MAX_PUBLISHER_BYTES = 64 * 1024
 DEFAULT_STALE_AFTER_SECONDS = 120
 IMPORT_APPEND_SEQUENCE_SAMPLE_LIMIT = 4
 MAX_RELAY_TOKEN_CHARS = 8192
+MAX_RELAY_HOST_CHARS = 253
 MAX_RUNTIME_CONFIG_VALUE_CHARS = 64
 RELAY_CONFIG_LIMITS = {
     "max_ingest_bytes": 4 * 1024 * 1024,
@@ -1358,6 +1360,35 @@ def blocking_parent_path_component(path: Path) -> Path | None:
         current_path = current_path.parent
 
 
+def is_valid_relay_bind_host(host: str) -> bool:
+    normalized = host.strip().rstrip(".").lower()
+    if not normalized:
+        return False
+    if normalized == "localhost":
+        return True
+    try:
+        parsed_ip = ipaddress.ip_address(normalized)
+    except ValueError:
+        pass
+    else:
+        return parsed_ip.version == 4
+
+    if len(normalized) > MAX_RELAY_HOST_CHARS:
+        return False
+    labels = normalized.split(".")
+    for label in labels:
+        if not label or len(label) > 63:
+            return False
+        if label.startswith("-") or label.endswith("-"):
+            return False
+        if not all(
+            character.isascii() and (character.isalnum() or character == "-")
+            for character in label
+        ):
+            return False
+    return True
+
+
 def validate_relay_configuration(
     args: argparse.Namespace,
     env: os._Environ[str] | dict[str, str] | None = None,
@@ -1396,6 +1427,14 @@ def validate_relay_configuration(
         errors.append("--host must not include leading or trailing whitespace")
     elif any(character.isspace() for character in host_value):
         errors.append("--host must not contain whitespace")
+    elif len(host_value) > MAX_RELAY_HOST_CHARS:
+        errors.append(f"--host must be {MAX_RELAY_HOST_CHARS} characters or fewer")
+    elif "://" in host_value or "/" in host_value or ":" in host_value:
+        errors.append(
+            "--host must be a hostname or IPv4 bind address without scheme, path, or port"
+        )
+    elif not is_valid_relay_bind_host(host):
+        errors.append("--host must be a valid hostname or IPv4 bind address")
 
     state_file_value = str(args.state_file)
     state_file = state_file_value.strip()

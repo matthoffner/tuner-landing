@@ -1904,6 +1904,59 @@ class RenderCockpitRelayTest(unittest.TestCase):
 
                 self.assertEqual(errors, [expected_error])
 
+    def test_relay_preflight_accepts_valid_bind_hosts(self) -> None:
+        for host in ("127.0.0.1", "0.0.0.0", "localhost", "relay.internal"):
+            with self.subTest(host=host):
+                with patch.dict(
+                    os.environ,
+                    {"AUTOMOAT_RELAY_TOKEN": "relay-token", "HOST": host, "PORT": "4180"},
+                    clear=True,
+                ), patch.object(
+                    sys,
+                    "argv",
+                    ["render_cockpit_relay.py", "--check-env"],
+                ):
+                    args = self.relay.parse_args()
+                    errors = self.relay.validate_relay_configuration(args)
+
+                self.assertEqual(errors, [])
+
+    def test_relay_preflight_rejects_unbindable_host_shapes(self) -> None:
+        cases = {
+            "http://127.0.0.1": (
+                "--host must be a hostname or IPv4 bind address without scheme, path, or port"
+            ),
+            "127.0.0.1:4180": (
+                "--host must be a hostname or IPv4 bind address without scheme, path, or port"
+            ),
+            "::1": (
+                "--host must be a hostname or IPv4 bind address without scheme, path, or port"
+            ),
+            "relay_host.example": "--host must be a valid hostname or IPv4 bind address",
+            "relay-.example": "--host must be a valid hostname or IPv4 bind address",
+            ("a" * 64) + ".example": (
+                "--host must be a valid hostname or IPv4 bind address"
+            ),
+            ("a" * (self.relay.MAX_RELAY_HOST_CHARS + 1)): (
+                f"--host must be {self.relay.MAX_RELAY_HOST_CHARS} characters or fewer"
+            ),
+        }
+        for host, expected_error in cases.items():
+            with self.subTest(host=repr(host)):
+                with patch.dict(
+                    os.environ,
+                    {"AUTOMOAT_RELAY_TOKEN": "relay-token", "HOST": host, "PORT": "4180"},
+                    clear=True,
+                ), patch.object(
+                    sys,
+                    "argv",
+                    ["render_cockpit_relay.py", "--check-env"],
+                ):
+                    args = self.relay.parse_args()
+                    errors = self.relay.validate_relay_configuration(args)
+
+                self.assertEqual(errors, [expected_error])
+
     def test_relay_preflight_accepts_documented_runtime_limits(self) -> None:
         limits = self.relay.RELAY_CONFIG_LIMITS
         env = {
