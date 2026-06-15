@@ -215,6 +215,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                 "AUTOMOAT_RELAY_TAIL_LINES": "0",
                 "AUTOMOAT_RELAY_MAX_LOG_BYTES": "-1",
                 "AUTOMOAT_STATUS_STALE_AFTER_SECONDS": "0",
+                "AUTOMOAT_BRIDGE_STATUS_STALE_AFTER_SECONDS": "0",
             },
             found_command,
         )
@@ -233,6 +234,10 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertIn("AUTOMOAT_RELAY_TAIL_LINES must be greater than 0", errors)
         self.assertIn("AUTOMOAT_RELAY_MAX_LOG_BYTES must be greater than 0", errors)
         self.assertIn("AUTOMOAT_STATUS_STALE_AFTER_SECONDS must be greater than 0", errors)
+        self.assertIn(
+            "AUTOMOAT_BRIDGE_STATUS_STALE_AFTER_SECONDS must be greater than 0",
+            errors,
+        )
 
     def test_rejects_non_finite_runtime_float_knobs(self) -> None:
         errors = self.worker.validate_worker_environment(
@@ -342,6 +347,9 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                 "AUTOMOAT_STATUS_STALE_AFTER_SECONDS": str(
                     limits["AUTOMOAT_STATUS_STALE_AFTER_SECONDS"]
                 ),
+                "AUTOMOAT_BRIDGE_STATUS_STALE_AFTER_SECONDS": str(
+                    limits["AUTOMOAT_BRIDGE_STATUS_STALE_AFTER_SECONDS"]
+                ),
             },
             found_command,
         )
@@ -374,6 +382,9 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                 "AUTOMOAT_STATUS_STALE_AFTER_SECONDS": str(
                     limits["AUTOMOAT_STATUS_STALE_AFTER_SECONDS"] + 1
                 ),
+                "AUTOMOAT_BRIDGE_STATUS_STALE_AFTER_SECONDS": str(
+                    limits["AUTOMOAT_BRIDGE_STATUS_STALE_AFTER_SECONDS"] + 1
+                ),
             },
             found_command,
         )
@@ -396,6 +407,10 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                 (
                     "AUTOMOAT_STATUS_STALE_AFTER_SECONDS must be less than or equal "
                     "to 3600"
+                ),
+                (
+                    "AUTOMOAT_BRIDGE_STATUS_STALE_AFTER_SECONDS must be less than "
+                    "or equal to 3600"
                 ),
                 "AUTOMOAT_AGENT_INTERVAL must be less than or equal to 3600",
                 "AUTOMOAT_AGENT_ITERATIONS must be less than or equal to 1000",
@@ -1421,6 +1436,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             "GH_TOKEN": "github-token",
             "CODEX_AUTH_JSON_B64": "not-base64",
             "AUTOMOAT_AGENT_INTERVAL": "4000",
+            "AUTOMOAT_BRIDGE_STATUS_STALE_AFTER_SECONDS": "4000",
             "AUTOMOAT_GIT_BRANCH": "feature with space",
         }
         output = io.StringIO()
@@ -1455,6 +1471,73 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertNotIn("relay-token", output.getvalue())
         self.assertNotIn("github-token", output.getvalue())
         self.assertNotIn("not-base64", output.getvalue())
+
+    def test_relay_publisher_command_includes_bridge_status_stale_threshold(self) -> None:
+        command = self.worker.relay_publisher_command(
+            {
+                "AUTOMOAT_RELAY_INTERVAL": "4",
+                "AUTOMOAT_RELAY_TIMEOUT": "9",
+                "AUTOMOAT_BRIDGE_STATUS_STALE_AFTER_SECONDS": "240",
+            }
+        )
+
+        self.assertIn("--bridge-status-stale-after-seconds", command)
+        threshold_index = command.index("--bridge-status-stale-after-seconds")
+        self.assertEqual(command[threshold_index + 1], "240")
+
+    def test_check_env_json_reports_bridge_status_stale_threshold(self) -> None:
+        env = {
+            "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            "GITHUB_TOKEN": "github-token",
+            "CODEX_ACCESS_TOKEN": "codex-token",
+            "AUTOMOAT_BRIDGE_STATUS_STALE_AFTER_SECONDS": "240",
+        }
+        output = io.StringIO()
+
+        with redirect_stdout(output):
+            errors = self.worker.emit_environment_preflight(
+                env,
+                found_command,
+                output_format="json",
+            )
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(errors, [])
+        self.assertEqual(
+            payload["config"]["bridge_status_stale_after_seconds"],
+            "240",
+        )
+
+    def test_check_env_json_categorizes_bad_bridge_stale_threshold(self) -> None:
+        env = {
+            "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            "GITHUB_TOKEN": "github-token",
+            "CODEX_ACCESS_TOKEN": "codex-token",
+            "AUTOMOAT_BRIDGE_STATUS_STALE_AFTER_SECONDS": "0",
+        }
+        output = io.StringIO()
+
+        with redirect_stdout(output):
+            errors = self.worker.emit_environment_preflight(
+                env,
+                found_command,
+                output_format="json",
+            )
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(
+            errors,
+            ["AUTOMOAT_BRIDGE_STATUS_STALE_AFTER_SECONDS must be greater than 0"],
+        )
+        self.assertEqual(payload["status"], "failed")
+        self.assertEqual(
+            payload["diagnostics"]["error_categories"],
+            ["invalid_runtime_config"],
+        )
+        self.assertNotIn("github-token", output.getvalue())
+        self.assertNotIn("codex-token", output.getvalue())
 
     def test_json_format_is_only_for_check_env(self) -> None:
         with patch.object(self.worker, "parse_args") as parse_args:
@@ -1843,6 +1926,8 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                 "5",
                 "--max-consecutive-stale-statuses",
                 "6",
+                "--bridge-status-stale-after-seconds",
+                "660",
             ],
         )
         self.assertNotIn("relay-token", command)
@@ -1880,6 +1965,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertIn("started relay publisher pid=303", log_line)
         self.assertIn("publisher_timeout=11.25", log_line)
         self.assertIn("publisher_max_consecutive_stale_statuses=6", log_line)
+        self.assertIn("publisher_bridge_status_stale_after_seconds=660", log_line)
         self.assertNotIn("relay-token", log_line)
         self.assertNotIn("https://automoat-cockpit-relay.example", log_line)
 

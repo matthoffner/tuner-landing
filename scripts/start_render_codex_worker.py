@@ -46,6 +46,7 @@ RUNTIME_CONFIG_LIMITS = {
     "AUTOMOAT_RELAY_TAIL_LINES": 2000,
     "AUTOMOAT_RELAY_MAX_LOG_BYTES": 1024 * 1024,
     "AUTOMOAT_STATUS_STALE_AFTER_SECONDS": 3600,
+    "AUTOMOAT_BRIDGE_STATUS_STALE_AFTER_SECONDS": 3600,
 }
 GIT_IDENTITY_ENV_DEFAULTS = {
     "GIT_AUTHOR_NAME": "automoat-render-agent",
@@ -64,6 +65,11 @@ PUBLISHER_RUNTIME_ENV_ARGS = (
         "AUTOMOAT_RELAY_MAX_CONSECUTIVE_STALE_STATUSES",
         "--max-consecutive-stale-statuses",
         "0",
+    ),
+    (
+        "AUTOMOAT_BRIDGE_STATUS_STALE_AFTER_SECONDS",
+        "--bridge-status-stale-after-seconds",
+        "660",
     ),
 )
 
@@ -433,6 +439,12 @@ def validate_worker_environment(
         "AUTOMOAT_STATUS_STALE_AFTER_SECONDS",
         errors,
         maximum=RUNTIME_CONFIG_LIMITS["AUTOMOAT_STATUS_STALE_AFTER_SECONDS"],
+    )
+    validate_positive_int(
+        env,
+        "AUTOMOAT_BRIDGE_STATUS_STALE_AFTER_SECONDS",
+        errors,
+        maximum=RUNTIME_CONFIG_LIMITS["AUTOMOAT_BRIDGE_STATUS_STALE_AFTER_SECONDS"],
     )
     validate_nonnegative_float(
         env,
@@ -817,6 +829,10 @@ def environment_preflight_summary(
             "AUTOMOAT_STATUS_STALE_AFTER_SECONDS",
             "660",
         ),
+        "bridge_status_stale_after_seconds": env.get(
+            "AUTOMOAT_BRIDGE_STATUS_STALE_AFTER_SECONDS",
+            "660",
+        ),
         "codex_model": codex_config_value(env, "AUTOMOAT_CODEX_MODEL"),
         "codex_reasoning_effort": codex_config_value(
             env,
@@ -877,6 +893,8 @@ def emit_environment_preflight(
         f"relay_tail_lines={env.get('AUTOMOAT_RELAY_TAIL_LINES', '180')} "
         f"relay_max_log_bytes={env.get('AUTOMOAT_RELAY_MAX_LOG_BYTES', str(256 * 1024))} "
         f"status_stale_after_seconds={env.get('AUTOMOAT_STATUS_STALE_AFTER_SECONDS', '660')} "
+        f"bridge_status_stale_after_seconds="
+        f"{env.get('AUTOMOAT_BRIDGE_STATUS_STALE_AFTER_SECONDS', '660')} "
         f"codex_model={codex_config_value(env, 'AUTOMOAT_CODEX_MODEL')} "
         f"codex_reasoning_effort="
         f"{codex_config_value(env, 'AUTOMOAT_CODEX_REASONING_EFFORT')} "
