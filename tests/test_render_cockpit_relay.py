@@ -374,6 +374,143 @@ class RenderCockpitRelayTest(unittest.TestCase):
             expected_source_health,
         )
 
+    def test_status_and_health_sanitize_nested_health_diagnostics(self) -> None:
+        self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
+        self.relay.update_state(
+            {
+                "pushed_at": "2026-06-14T19:59:30Z",
+                "status": {
+                    "status": "running",
+                    "loop_running": True,
+                    "bridge_summary": {
+                        "available": True,
+                        "status_file_status": "loaded",
+                        "status": "running",
+                        "bridge_health": {
+                            "status": "degraded",
+                            "ok": False,
+                            "reasons": [
+                                "viewer_exited",
+                                (
+                                    "inspect https://user:bridge-secret@example.local"
+                                    "/viewer?token=bridge-token#debug"
+                                ),
+                                "relay_token=bridge-assignment-secret",
+                                "extra_bridge_reason_one",
+                                "extra_bridge_reason_two",
+                                "extra_bridge_reason_three",
+                            ],
+                            "primary_reason": (
+                                "bridge token=bridge-primary-secret\nneeds review"
+                            ),
+                            "label": (
+                                "Bridge https://user:bridge-label-secret@example.local"
+                                "/viewer?token=bridge-label-token#debug"
+                            ),
+                        },
+                    },
+                },
+                "log_tail": "bridge health needs review\n",
+                "publisher": {
+                    "host": "worker-1",
+                    "source_health": {
+                        "status": "degraded",
+                        "ok": False,
+                        "reasons": [
+                            "source_status_stale",
+                            (
+                                "source https://user:source-secret@example.local"
+                                "/status?token=source-token#debug"
+                            ),
+                            "relay_token=source-assignment-secret",
+                            "queue\tneeds review",
+                            "extra_source_reason_one",
+                            "extra_source_reason_two",
+                        ],
+                        "primary_reason": (
+                            "source token=source-primary-secret\nneeds review"
+                        ),
+                        "label": (
+                            "Source https://user:source-label-secret@example.local"
+                            "/status?token=source-label-token#debug"
+                        ),
+                    },
+                },
+            }
+        )
+        self.relay.utc_now = lambda: "2026-06-14T20:00:00Z"
+
+        health = self.relay.health_payload()
+        status = self.relay.relay_status_payload()
+
+        expected_bridge_health = {
+            "status": "degraded",
+            "ok": False,
+            "reasons": [
+                "viewer_exited",
+                "inspect https://example.local/viewer?[redacted]#[redacted]",
+                "relay_token=[redacted]",
+                "extra_bridge_reason_one",
+                "extra_bridge_reason_two",
+            ],
+            "primary_reason": "bridge token=[redacted] needs review",
+            "label": "Bridge https://example.local/viewer?[redacted]#[redacted]",
+        }
+        expected_source_health = {
+            "status": "degraded",
+            "ok": False,
+            "reasons": [
+                "source_status_stale",
+                "source https://example.local/status?[redacted]#[redacted]",
+                "relay_token=[redacted]",
+                "queue needs review",
+                "extra_source_reason_one",
+            ],
+            "primary_reason": "source token=[redacted] needs review",
+            "label": "Source https://example.local/status?[redacted]#[redacted]",
+        }
+        self.assertEqual(
+            health["cockpit_health"]["source_bridge"]["bridge_health"],
+            expected_bridge_health,
+        )
+        self.assertEqual(
+            status["bridge_summary"]["bridge_health"],
+            expected_bridge_health,
+        )
+        self.assertEqual(
+            status["cockpit_health"]["source_bridge"]["bridge_health"],
+            expected_bridge_health,
+        )
+        self.assertEqual(
+            health["cockpit_health"]["source_health"],
+            expected_source_health,
+        )
+        self.assertEqual(
+            status["relay"]["publisher"]["source_health"],
+            expected_source_health,
+        )
+        response_text = json.dumps(
+            {"health": health, "status": status},
+            sort_keys=True,
+        )
+        for unsafe_text in (
+            "bridge-secret",
+            "bridge-token",
+            "bridge-assignment-secret",
+            "bridge-primary-secret",
+            "bridge-label-secret",
+            "bridge-label-token",
+            "extra_bridge_reason_three",
+            "source-secret",
+            "source-token",
+            "source-assignment-secret",
+            "source-primary-secret",
+            "source-label-secret",
+            "source-label-token",
+            "extra_source_reason_two",
+        ):
+            self.assertNotIn(unsafe_text, response_text)
+
     def test_status_and_health_include_sanitized_source_bridge_summary(self) -> None:
         self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
         self.relay.update_state(

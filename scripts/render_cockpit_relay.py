@@ -149,12 +149,12 @@ def publisher_source_health(state: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(source_health, dict):
         return {}
 
-    reasons = source_health.get("reasons")
-    if not isinstance(reasons, list):
-        reasons = []
-    normalized_reasons = [str(reason) for reason in reasons if reason]
-    primary_reason = source_health.get("primary_reason")
-    if not isinstance(primary_reason, str) or not primary_reason:
+    normalized_reasons = compact_health_reasons(source_health.get("reasons"))
+    primary_reason = compact_policy_detail(
+        source_health.get("primary_reason"),
+        max_length=160,
+    )
+    if primary_reason is None:
         primary_reason = normalized_reasons[0] if normalized_reasons else None
 
     status = source_health.get("status")
@@ -163,8 +163,8 @@ def publisher_source_health(state: dict[str, Any]) -> dict[str, Any]:
     ok = source_health.get("ok")
     if not isinstance(ok, bool):
         ok = status == "live"
-    label = source_health.get("label")
-    if not isinstance(label, str) or not label.strip():
+    label = compact_policy_detail(source_health.get("label"), max_length=160)
+    if label is None:
         label = cockpit_health_label(primary_reason)
 
     return {
@@ -245,6 +245,19 @@ def compact_policy_detail(value: Any, *, max_length: int = 240) -> str | None:
         text,
     )
     return text[:max_length] if text else None
+
+
+def compact_health_reasons(value: Any, *, max_items: int = 5) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    compact_reasons: list[str] = []
+    for item in value:
+        compact_reason = compact_policy_detail(item, max_length=160)
+        if compact_reason is not None:
+            compact_reasons.append(compact_reason)
+        if len(compact_reasons) >= max_items:
+            break
+    return compact_reasons
 
 
 def sanitize_url_value(value: str) -> str:
@@ -476,6 +489,31 @@ def source_status_diagnostics(status: dict[str, Any]) -> dict[str, Any]:
     return diagnostics
 
 
+def compact_bridge_health(value: Any) -> dict[str, Any] | None:
+    if not isinstance(value, dict):
+        return None
+    normalized_reasons = compact_health_reasons(value.get("reasons"))
+    primary_reason = compact_policy_detail(value.get("primary_reason"), max_length=160)
+    if primary_reason is None:
+        primary_reason = normalized_reasons[0] if normalized_reasons else None
+    health_status = compact_policy_detail(value.get("status"), max_length=80) or (
+        "degraded" if normalized_reasons else "unknown"
+    )
+    ok = value.get("ok")
+    if not isinstance(ok, bool):
+        ok = health_status == "live"
+    label = compact_policy_detail(value.get("label"), max_length=160) or (
+        "Live" if primary_reason is None else primary_reason.replace("_", " ")
+    )
+    return {
+        "status": health_status,
+        "ok": ok,
+        "reasons": normalized_reasons,
+        "primary_reason": primary_reason,
+        "label": label,
+    }
+
+
 def source_bridge_summary(status: dict[str, Any]) -> dict[str, Any]:
     bridge = status.get("bridge_summary")
     if not isinstance(bridge, dict) or not bridge:
@@ -541,31 +579,9 @@ def source_bridge_summary(status: dict[str, Any]) -> dict[str, Any]:
     if isinstance(bridge_status_stale, bool):
         summary["bridge_status_stale"] = bridge_status_stale
 
-    bridge_health = bridge.get("bridge_health")
-    if isinstance(bridge_health, dict):
-        reasons = bridge_health.get("reasons")
-        if not isinstance(reasons, list):
-            reasons = []
-        normalized_reasons = [str(reason) for reason in reasons if reason]
-        primary_reason = bridge_health.get("primary_reason")
-        if not isinstance(primary_reason, str) or not primary_reason:
-            primary_reason = normalized_reasons[0] if normalized_reasons else None
-        health_status = compact_text(bridge_health.get("status")) or (
-            "degraded" if normalized_reasons else "unknown"
-        )
-        ok = bridge_health.get("ok")
-        if not isinstance(ok, bool):
-            ok = health_status == "live"
-        label = compact_text(bridge_health.get("label")) or (
-            "Live" if primary_reason is None else primary_reason.replace("_", " ")
-        )
-        summary["bridge_health"] = {
-            "status": health_status,
-            "ok": ok,
-            "reasons": normalized_reasons,
-            "primary_reason": primary_reason,
-            "label": label,
-        }
+    bridge_health = compact_bridge_health(bridge.get("bridge_health"))
+    if bridge_health is not None:
+        summary["bridge_health"] = bridge_health
     return summary
 
 
@@ -929,6 +945,9 @@ def sanitize_status_for_relay_response(status: dict[str, Any]) -> dict[str, Any]
             compact_value = compact_url(sanitized_bridge.get(key), max_length=240)
             if compact_value is not None:
                 sanitized_bridge[key] = compact_value
+        bridge_health = compact_bridge_health(sanitized_bridge.get("bridge_health"))
+        if bridge_health is not None:
+            sanitized_bridge["bridge_health"] = bridge_health
         response_status["bridge_summary"] = sanitized_bridge
 
     cockpit_summary = sanitize_cockpit_summary_for_relay_response(
