@@ -235,6 +235,69 @@ class RenderCockpitRelayTest(unittest.TestCase):
         )
         self.assertEqual(status["cockpit_health_label"], "Artifact health is not loaded")
 
+    def test_status_and_health_promote_autonomy_policy_attention(self) -> None:
+        self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
+        self.relay.update_state(
+            {
+                "pushed_at": "2026-06-14T19:59:30Z",
+                "status": {
+                    "status": "failing",
+                    "loop_running": True,
+                    "cockpit_summary": {
+                        "operator_attention": True,
+                        "operator_attention_primary_reason": "autonomy_policy_failed",
+                        "operator_attention_label": "Autonomy policy failed",
+                        "operator_attention_reasons": [
+                            "autonomy_policy_failed",
+                            "policy_raw_dallas_csv_changed",
+                        ],
+                        "policy_failure_reason": "synthetic_example_local_dallas_append_disallowed",
+                        "policy_raw_dallas_csv_changed_paths": [
+                            "generated/raw/dallas-electrician-import-sample-v2/permits.csv",
+                        ],
+                    },
+                },
+                "log_tail": "autonomy policy check failed\n",
+            }
+        )
+        self.relay.utc_now = lambda: "2026-06-14T20:00:00Z"
+
+        health = self.relay.health_payload()
+        status = self.relay.relay_status_payload()
+
+        self.assertTrue(health["ok"])
+        self.assertFalse(health["cockpit_ok"])
+        self.assertEqual(health["cockpit_status"], "degraded")
+        self.assertEqual(
+            health["cockpit_health"]["reasons"],
+            [
+                "source_autonomy_policy_failed",
+                "source_status_failing",
+                "source_cockpit_attention",
+            ],
+        )
+        self.assertEqual(
+            health["cockpit_health_primary_reason"],
+            "source_autonomy_policy_failed",
+        )
+        self.assertEqual(health["cockpit_health_label"], "Autonomy policy failed")
+        self.assertEqual(
+            health["cockpit_health"]["source_cockpit_attention_primary_reason"],
+            "autonomy_policy_failed",
+        )
+        self.assertEqual(
+            health["cockpit_health"]["source_cockpit_attention_reasons"],
+            ["autonomy_policy_failed", "policy_raw_dallas_csv_changed"],
+        )
+        self.assertEqual(
+            status["cockpit_health"]["reasons"],
+            health["cockpit_health"]["reasons"],
+        )
+        self.assertIn(
+            "source_autonomy_policy_failed",
+            status["cockpit_health"]["reasons"],
+        )
+
     def test_status_and_health_report_unavailable_source_status_file(self) -> None:
         self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
         self.relay.update_state(

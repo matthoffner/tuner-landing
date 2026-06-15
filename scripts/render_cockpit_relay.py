@@ -46,6 +46,7 @@ COCKPIT_HEALTH_LABELS = {
     "source_status_unavailable": "Source status is unavailable",
     "source_loop_not_running": "Source loop is not running",
     "source_status_failing": "Source status is failing",
+    "source_autonomy_policy_failed": "Autonomy policy failed",
     "source_cockpit_attention": "Source cockpit needs attention",
 }
 
@@ -162,6 +163,8 @@ def cockpit_health(
         reasons.append("source_status_unavailable")
     if status.get("loop_running") is False:
         reasons.append("source_loop_not_running")
+    if "autonomy_policy_failed" in source_attention_reasons:
+        reasons.append("source_autonomy_policy_failed")
     if status.get("status") in {"error", "failing"}:
         reasons.append("source_status_failing")
     if source_summary.get("operator_attention") is True:
