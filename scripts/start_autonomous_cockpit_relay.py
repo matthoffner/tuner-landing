@@ -138,7 +138,10 @@ def parse_args() -> argparse.Namespace:
 
 def normalized_relay_url(value: str) -> str:
     stripped = value.strip()
-    parsed = urlparse(stripped)
+    try:
+        parsed = urlparse(stripped)
+    except ValueError:
+        return stripped
     if parsed.scheme in {"http", "https"} and parsed.netloc:
         return stripped.rstrip("/")
     return stripped
@@ -146,22 +149,56 @@ def normalized_relay_url(value: str) -> str:
 
 def validate_startup_configuration(args: argparse.Namespace) -> list[str]:
     errors: list[str] = []
-    relay_url = normalized_relay_url(str(args.relay_url))
-    if not relay_url:
+    raw_relay_url = str(args.relay_url)
+    relay_url = normalized_relay_url(raw_relay_url)
+    if not raw_relay_url.strip():
         errors.append("AUTOMOAT_RELAY_URL or --relay-url is required")
+    elif raw_relay_url != raw_relay_url.strip():
+        errors.append("--relay-url must not include leading or trailing whitespace")
+    elif any(
+        character in "\r\n" or ord(character) < 32 or ord(character) == 127
+        for character in raw_relay_url
+    ):
+        errors.append("--relay-url must be a single-line URL without control characters")
+    elif any(character.isspace() for character in raw_relay_url):
+        errors.append("--relay-url must not contain whitespace")
     elif not relay_url.startswith(("http://", "https://")):
         errors.append("--relay-url must start with http:// or https://")
     else:
-        parsed_relay_url = urlparse(relay_url)
-        if not parsed_relay_url.netloc:
+        try:
+            parsed_relay_url = urlparse(relay_url)
+        except ValueError:
+            errors.append("--relay-url must be a valid URL")
+            parsed_relay_url = None
+        if parsed_relay_url is None:
+            pass
+        else:
+            try:
+                parsed_relay_url.port
+            except ValueError:
+                errors.append("--relay-url must include a valid port when a port is specified")
+                parsed_relay_url = None
+        if parsed_relay_url is None:
+            pass
+        elif not parsed_relay_url.netloc:
             errors.append("--relay-url must include a host")
         elif parsed_relay_url.username or parsed_relay_url.password:
             errors.append("--relay-url must not include embedded credentials")
         elif parsed_relay_url.query or parsed_relay_url.fragment:
             errors.append("--relay-url must not include query strings or fragments")
+        elif parsed_relay_url.netloc.endswith(":") or parsed_relay_url.port == 0:
+            errors.append("--relay-url must include a valid port when a port is specified")
 
-    if not str(args.token).strip():
+    token = str(args.token)
+    if not token.strip():
         errors.append("AUTOMOAT_RELAY_TOKEN or --token is required")
+    elif token != token.strip():
+        errors.append("--token must not include leading or trailing whitespace")
+    elif any(
+        character in "\r\n" or ord(character) < 32 or ord(character) == 127
+        for character in token
+    ):
+        errors.append("--token must be a single-line value without control characters")
     if args.interval <= 0:
         errors.append("--interval must be greater than 0")
     if args.publish_interval <= 0:
@@ -178,6 +215,8 @@ def startup_preflight_error_category(error: str) -> str:
         return "missing_required"
     if error.startswith("--relay-url"):
         return "invalid_relay_url"
+    if error.startswith("--token"):
+        return "invalid_secret"
     if error.startswith("--interval") or error.startswith("--publish-interval") or error.startswith("--port"):
         return "invalid_runtime_config"
     return "invalid_configuration"

@@ -89,6 +89,65 @@ class StartAutonomousCockpitRelayTest(unittest.TestCase):
 
         self.assertEqual(errors, ["--relay-url must include a host"])
 
+    def test_validate_startup_configuration_rejects_malformed_relay_url_values(self) -> None:
+        cases = {
+            " https://automoat-cockpit-relay.example": (
+                "--relay-url must not include leading or trailing whitespace"
+            ),
+            "https://automoat-cockpit-relay.example\n/api": (
+                "--relay-url must be a single-line URL without control characters"
+            ),
+            "https://automoat-cockpit-relay.example/debug path": (
+                "--relay-url must not contain whitespace"
+            ),
+            "https://automoat-cockpit-relay.example:abc": (
+                "--relay-url must include a valid port when a port is specified"
+            ),
+            "https://automoat-cockpit-relay.example:": (
+                "--relay-url must include a valid port when a port is specified"
+            ),
+            "https://automoat-cockpit-relay.example:0": (
+                "--relay-url must include a valid port when a port is specified"
+            ),
+            "https://[::1": "--relay-url must be a valid URL",
+        }
+
+        for relay_url, expected_error in cases.items():
+            with self.subTest(relay_url=relay_url):
+                errors = self.launcher.validate_startup_configuration(
+                    Namespace(
+                        relay_url=relay_url,
+                        token="relay-token",
+                        interval=300,
+                        publish_interval=3,
+                        port=4174,
+                    )
+                )
+
+                self.assertEqual(errors, [expected_error])
+
+    def test_validate_startup_configuration_rejects_malformed_tokens(self) -> None:
+        cases = {
+            " relay-token": "--token must not include leading or trailing whitespace",
+            "relay-token\nsecond-line": (
+                "--token must be a single-line value without control characters"
+            ),
+        }
+
+        for token, expected_error in cases.items():
+            with self.subTest(token=token):
+                errors = self.launcher.validate_startup_configuration(
+                    Namespace(
+                        relay_url="https://automoat-cockpit-relay.example",
+                        token=token,
+                        interval=300,
+                        publish_interval=3,
+                        port=4174,
+                    )
+                )
+
+                self.assertEqual(errors, [expected_error])
+
     def test_validate_startup_configuration_rejects_bad_runtime_settings(self) -> None:
         errors = self.launcher.validate_startup_configuration(
             Namespace(
@@ -249,6 +308,44 @@ class StartAutonomousCockpitRelayTest(unittest.TestCase):
         self.assertNotIn("relay-token", output.getvalue())
         self.assertNotIn("relay-user", output.getvalue())
         self.assertNotIn("relay-pass", output.getvalue())
+
+    def test_check_env_json_categorizes_token_and_url_shape_without_printing_values(self) -> None:
+        output = io.StringIO()
+        env = {
+            "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example:abc",
+            "AUTOMOAT_RELAY_TOKEN": " relay-token",
+        }
+        self.launcher.start_detached = lambda *args, **kwargs: self.fail("start_detached should not run")
+        self.launcher.publish_once = lambda *args, **kwargs: self.fail("publish_once should not run")
+
+        with patch.dict(os.environ, env, clear=True), patch.object(
+            sys,
+            "argv",
+            [
+                "start_autonomous_cockpit_relay.py",
+                "--check-env",
+                "--format",
+                "json",
+            ],
+        ), redirect_stdout(output):
+            status = self.launcher.main()
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(status, 2)
+        self.assertEqual(payload["status"], "failed")
+        self.assertEqual(
+            payload["errors"],
+            [
+                "--relay-url must include a valid port when a port is specified",
+                "--token must not include leading or trailing whitespace",
+            ],
+        )
+        self.assertEqual(
+            payload["diagnostics"]["error_categories"],
+            ["invalid_relay_url", "invalid_secret"],
+        )
+        self.assertNotIn("relay-token", output.getvalue())
+        self.assertNotIn("automoat-cockpit-relay.example:abc", output.getvalue())
 
     def test_json_format_is_only_supported_for_check_env(self) -> None:
         stderr = io.StringIO()
