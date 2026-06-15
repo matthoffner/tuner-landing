@@ -1129,6 +1129,32 @@ def relay_preflight_error_categories(errors: list[str]) -> list[str]:
     return sorted({relay_preflight_error_category(error) for error in errors})
 
 
+def relay_preflight_error_key(error: str) -> str:
+    error_key_prefixes = {
+        "AUTOMOAT_RELAY_TOKEN": "AUTOMOAT_RELAY_TOKEN",
+        "--host": "HOST|--host",
+        "--port": "PORT|--port",
+        "--state-file": "AUTOMOAT_RELAY_STATE_FILE|--state-file",
+        "--max-ingest-bytes": "AUTOMOAT_RELAY_MAX_BYTES|--max-ingest-bytes",
+        "--max-log-chars": "AUTOMOAT_RELAY_MAX_LOG_CHARS|--max-log-chars",
+        "--max-status-bytes": "AUTOMOAT_RELAY_MAX_STATUS_BYTES|--max-status-bytes",
+        "--max-publisher-bytes": (
+            "AUTOMOAT_RELAY_MAX_PUBLISHER_BYTES|--max-publisher-bytes"
+        ),
+        "--stale-after-seconds": (
+            "AUTOMOAT_RELAY_STALE_AFTER_SECONDS|--stale-after-seconds"
+        ),
+    }
+    for prefix, key in error_key_prefixes.items():
+        if error.startswith(prefix):
+            return key
+    return "relay_configuration"
+
+
+def relay_preflight_error_keys(errors: list[str]) -> list[str]:
+    return sorted({relay_preflight_error_key(error) for error in errors})
+
+
 def relay_preflight_summary(
     args: argparse.Namespace,
     errors: list[str],
@@ -1143,6 +1169,7 @@ def relay_preflight_summary(
         payload["diagnostics"] = {
             "error_count": len(errors),
             "error_categories": relay_preflight_error_categories(errors),
+            "failed_configuration_keys": relay_preflight_error_keys(errors),
             "relay_token_configured": bool(
                 str(env.get("AUTOMOAT_RELAY_TOKEN", "")).strip()
             ),

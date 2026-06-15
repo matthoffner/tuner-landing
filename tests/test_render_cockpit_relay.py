@@ -1527,6 +1527,15 @@ class RenderCockpitRelayTest(unittest.TestCase):
             payload["diagnostics"]["error_categories"],
             ["invalid_port", "invalid_runtime_config", "invalid_secret"],
         )
+        self.assertEqual(
+            payload["diagnostics"]["failed_configuration_keys"],
+            [
+                "AUTOMOAT_RELAY_MAX_BYTES|--max-ingest-bytes",
+                "AUTOMOAT_RELAY_MAX_STATUS_BYTES|--max-status-bytes",
+                "AUTOMOAT_RELAY_TOKEN",
+                "PORT|--port",
+            ],
+        )
         self.assertTrue(payload["diagnostics"]["relay_token_configured"])
         self.assertEqual(
             payload["diagnostics"]["runtime_limits"],
@@ -1559,6 +1568,10 @@ class RenderCockpitRelayTest(unittest.TestCase):
             payload["diagnostics"]["error_categories"],
             ["invalid_host"],
         )
+        self.assertEqual(
+            payload["diagnostics"]["failed_configuration_keys"],
+            ["HOST|--host"],
+        )
         self.assertNotIn("127.0.0.1", stdout.getvalue())
         self.assertNotIn("backup", stdout.getvalue())
         self.assertNotIn("relay-token", stdout.getvalue())
@@ -1588,6 +1601,10 @@ class RenderCockpitRelayTest(unittest.TestCase):
         self.assertEqual(
             payload["diagnostics"]["error_categories"],
             ["invalid_state_file"],
+        )
+        self.assertEqual(
+            payload["diagnostics"]["failed_configuration_keys"],
+            ["AUTOMOAT_RELAY_STATE_FILE|--state-file"],
         )
         self.assertNotIn("/tmp/automoat-relay-state.json", stdout.getvalue())
         self.assertNotIn("backup", stdout.getvalue())
