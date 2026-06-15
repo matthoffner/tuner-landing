@@ -111,6 +111,12 @@ def selected_name(env: os._Environ[str] | dict[str, str], names: tuple[str, ...]
     return None
 
 
+def configured_worker_paths(env: os._Environ[str] | dict[str, str]) -> tuple[Path, Path]:
+    workdir = Path(env["AUTOMOAT_WORKDIR"]) if "AUTOMOAT_WORKDIR" in env else WORKDIR
+    codex_home = Path(env["CODEX_HOME"]) if "CODEX_HOME" in env else CODEX_HOME
+    return workdir, codex_home
+
+
 def decode_codex_auth_json_b64(value: str) -> bytes:
     decoded = base64.b64decode(value, validate=True)
     parsed = json.loads(decoded.decode("utf-8"))
@@ -354,8 +360,9 @@ def validate_worker_environment(
         require_path=True,
     )
     validate_git_branch_name(env.get("AUTOMOAT_GIT_BRANCH", "main"), errors)
-    validate_workdir_path(WORKDIR, errors)
-    validate_codex_home_path(CODEX_HOME, WORKDIR, errors)
+    workdir, codex_home = configured_worker_paths(env)
+    validate_workdir_path(workdir, errors, codex_home=codex_home)
+    validate_codex_home_path(codex_home, workdir, errors)
     validate_reserved_runtime_file_paths(errors)
 
     if not env.get("AUTOMOAT_RELAY_TOKEN", "").strip():
@@ -585,7 +592,7 @@ def validate_git_branch_name(value: str, errors: list[str]) -> None:
         errors.append("AUTOMOAT_GIT_BRANCH must be a valid git branch name")
 
 
-def validate_workdir_path(path: Path, errors: list[str]) -> None:
+def validate_workdir_path(path: Path, errors: list[str], *, codex_home: Path | None = None) -> None:
     path_text = str(path)
     if path_text != path_text.strip():
         errors.append("AUTOMOAT_WORKDIR must not include leading or trailing whitespace")
@@ -603,7 +610,8 @@ def validate_workdir_path(path: Path, errors: list[str]) -> None:
 
     try:
         resolved_path = expanded_path.resolve(strict=False)
-        resolved_codex_home = CODEX_HOME.expanduser().resolve(strict=False)
+        codex_home_path = codex_home if codex_home is not None else CODEX_HOME
+        resolved_codex_home = codex_home_path.expanduser().resolve(strict=False)
     except OSError as exc:
         errors.append(f"AUTOMOAT_WORKDIR could not be resolved: {exc}")
         return
@@ -739,6 +747,7 @@ def environment_preflight_summary(
     command_paths: dict[str, str | None] | None = None,
 ) -> dict[str, Any]:
     command_paths = command_paths or resolved_required_command_paths(env)
+    workdir, codex_home = configured_worker_paths(env)
     payload: dict[str, Any] = {
         "status": "failed" if errors else "passed",
         "errors": errors,
@@ -761,8 +770,8 @@ def environment_preflight_summary(
         "relay_url": env.get("AUTOMOAT_RELAY_URL", "").strip(),
         "git_repo": env.get("AUTOMOAT_GIT_REPO", DEFAULT_REPO).strip(),
         "git_branch": env.get("AUTOMOAT_GIT_BRANCH", "main").strip() or "main",
-        "workdir": str(WORKDIR),
-        "codex_home": str(CODEX_HOME),
+        "workdir": str(workdir),
+        "codex_home": str(codex_home),
         "git_auth": configured_names(env, GIT_AUTH_ENV_NAMES),
         "git_auth_selected": selected_name(env, GIT_AUTH_ENV_NAMES),
         "codex_auth": configured_names(env, CODEX_AUTH_ENV_NAMES),
@@ -822,13 +831,14 @@ def emit_environment_preflight(
             emit(f"  - {error}")
         return errors
 
+    workdir, codex_home = configured_worker_paths(env)
     emit(
         "environment preflight passed: "
         f"relay_url={env.get('AUTOMOAT_RELAY_URL', '').strip()} "
         f"git_repo={env.get('AUTOMOAT_GIT_REPO', DEFAULT_REPO).strip()} "
         f"git_branch={env.get('AUTOMOAT_GIT_BRANCH', 'main').strip() or 'main'} "
-        f"workdir={WORKDIR} "
-        f"codex_home={CODEX_HOME} "
+        f"workdir={workdir} "
+        f"codex_home={codex_home} "
         f"git_auth={','.join(configured_names(env, GIT_AUTH_ENV_NAMES))} "
         f"git_auth_selected={selected_name(env, GIT_AUTH_ENV_NAMES)} "
         f"codex_auth={','.join(configured_names(env, CODEX_AUTH_ENV_NAMES))} "

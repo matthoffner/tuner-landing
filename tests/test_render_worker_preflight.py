@@ -834,6 +834,29 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             ["AUTOMOAT_WORKDIR must not include leading or trailing whitespace"],
         )
 
+    def test_validate_worker_environment_uses_supplied_path_env_values(self) -> None:
+        base_env = {
+            "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            "GITHUB_TOKEN": "github-token",
+            "CODEX_ACCESS_TOKEN": "codex-token",
+        }
+        self.worker.WORKDIR = Path("/work/automoat")
+        self.worker.CODEX_HOME = Path("/tmp/codex-home")
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workdir = Path(temp_dir) / "repo"
+            errors = self.worker.validate_worker_environment(
+                {
+                    **base_env,
+                    "AUTOMOAT_WORKDIR": str(workdir),
+                    "CODEX_HOME": str(workdir / ".codex-home"),
+                },
+                found_command,
+            )
+
+        self.assertEqual(errors, ["CODEX_HOME must not be inside AUTOMOAT_WORKDIR"])
+
     def test_rejects_unsafe_codex_home_before_auth_setup(self) -> None:
         base_env = {
             "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
@@ -1074,6 +1097,32 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertNotIn("alternate-github-token", output.getvalue())
         self.assertNotIn("codex-token", output.getvalue())
         self.assertNotIn("api-key", output.getvalue())
+
+    def test_check_env_json_reports_supplied_path_env_values(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            env = {
+                "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+                "AUTOMOAT_RELAY_TOKEN": "relay-token",
+                "GITHUB_TOKEN": "github-token",
+                "CODEX_ACCESS_TOKEN": "codex-token",
+                "AUTOMOAT_WORKDIR": str(Path(temp_dir) / "repo"),
+                "CODEX_HOME": str(Path(temp_dir) / "codex-home"),
+            }
+            self.worker.WORKDIR = Path("/work/automoat")
+            self.worker.CODEX_HOME = Path("/tmp/codex-home")
+            output = io.StringIO()
+
+            with redirect_stdout(output):
+                errors = self.worker.emit_environment_preflight(
+                    env,
+                    found_command,
+                    output_format="json",
+                )
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(errors, [])
+        self.assertEqual(payload["config"]["workdir"], env["AUTOMOAT_WORKDIR"])
+        self.assertEqual(payload["config"]["codex_home"], env["CODEX_HOME"])
 
     def test_check_env_json_failure_does_not_print_invalid_url_values(self) -> None:
         env = {
