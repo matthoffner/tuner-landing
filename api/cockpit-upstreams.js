@@ -214,6 +214,61 @@ function sendProxyResponse(request, response, statusCode, body) {
   response.send(body);
 }
 
+async function readBoundedUpstreamText(upstream, maxBodyChars) {
+  if (
+    !Number.isInteger(maxBodyChars)
+    || maxBodyChars <= 0
+    || !upstream.body
+    || typeof upstream.body.getReader !== "function"
+  ) {
+    const body = await upstream.text();
+    if (Number.isInteger(maxBodyChars) && maxBodyChars > 0 && body.length > maxBodyChars) {
+      return { ok: false, body: "" };
+    }
+    return { ok: true, body };
+  }
+
+  const reader = upstream.body.getReader();
+  const decoder = new TextDecoder();
+  let body = "";
+  let oversized = false;
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) {
+        break;
+      }
+      body += typeof value === "string" ? value : decoder.decode(value, { stream: true });
+      if (body.length > maxBodyChars) {
+        oversized = true;
+        if (typeof reader.cancel === "function") {
+          try {
+            await reader.cancel();
+          } catch (_error) {
+            // The body is already over the limit; preserve the routeable size error.
+          }
+        }
+        break;
+      }
+    }
+
+    if (!oversized) {
+      body += decoder.decode();
+      oversized = body.length > maxBodyChars;
+    }
+  } finally {
+    if (typeof reader.releaseLock === "function") {
+      reader.releaseLock();
+    }
+  }
+
+  if (oversized) {
+    return { ok: false, body: "" };
+  }
+  return { ok: true, body };
+}
+
 async function fetchUpstreamText(upstreamConfig, timeoutMs, method = "GET", maxBodyChars = null) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
@@ -243,13 +298,10 @@ async function fetchUpstreamText(upstreamConfig, timeoutMs, method = "GET", maxB
         };
       }
     }
-    const body = method === "HEAD" ? "" : await upstream.text();
-    if (
-      method !== "HEAD"
-      && Number.isInteger(maxBodyChars)
-      && maxBodyChars > 0
-      && body.length > maxBodyChars
-    ) {
+    const bodyResult = method === "HEAD"
+      ? { ok: true, body: "" }
+      : await readBoundedUpstreamText(upstream, maxBodyChars);
+    if (!bodyResult.ok) {
       return {
         ok: false,
         status: upstream.status,
@@ -260,7 +312,7 @@ async function fetchUpstreamText(upstreamConfig, timeoutMs, method = "GET", maxB
     return {
       ok: upstream.ok,
       status: upstream.status,
-      body,
+      body: bodyResult.body,
     };
   } catch (error) {
     if (controller.signal.aborted) {
@@ -326,6 +378,7 @@ module.exports = {
   isLocalHttpHost,
   normalizeBaseUrl,
   normalizeUpstreamTimeoutMs,
+  readBoundedUpstreamText,
   relayHeaderConfig,
   relayHeaders,
   sendProxyResponse,

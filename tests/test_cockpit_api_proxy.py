@@ -1456,6 +1456,118 @@ class CockpitApiProxyTest(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_handlers_cancel_oversized_chunked_upstreams_and_fall_back(self) -> None:
+        result = run_node(
+            """
+            const assert = require("assert");
+            const statusHandler = require("./api/cockpit-status");
+            const { MAX_STATUS_BODY_CHARS } = require("./api/cockpit-status");
+            const logHandler = require("./api/cockpit-log");
+            const { MAX_LOG_BODY_CHARS } = require("./api/cockpit-log");
+
+            function response() {
+              return {
+                statusCode: null,
+                body: "",
+                headers: {},
+                setHeader(name, value) {
+                  this.headers[name] = value;
+                },
+                status(code) {
+                  this.statusCode = code;
+                  return this;
+                },
+                send(body) {
+                  this.body = String(body);
+                  return this;
+                },
+                end(body = "") {
+                  this.body = String(body);
+                  return this;
+                },
+              };
+            }
+
+            process.env.AUTOMOAT_RELAY_URL = "https://automoat-cockpit-relay.example";
+            process.env.AUTOMOAT_BRIDGE_URL = "https://legacy-bridge.example";
+            process.env.AUTOMOAT_COCKPIT_UPSTREAM_TIMEOUT_MS = "";
+            const relayReads = [];
+            let relayCancels = 0;
+            let relayTextCalls = 0;
+            global.fetch = async (url) => {
+              if (url.includes("automoat-cockpit-relay.example")) {
+                const limit = url.endsWith("/api/status")
+                  ? MAX_STATUS_BODY_CHARS
+                  : MAX_LOG_BODY_CHARS;
+                const body = new ReadableStream({
+                  pull(controller) {
+                    relayReads.push(url);
+                    controller.enqueue(new TextEncoder().encode("x".repeat(limit + 1)));
+                  },
+                  cancel() {
+                    relayCancels += 1;
+                  },
+                });
+                return {
+                  ok: true,
+                  status: 200,
+                  headers: { get() { return null; } },
+                  body,
+                  text: async () => {
+                    relayTextCalls += 1;
+                    return "oversized relay body should not be buffered";
+                  },
+                };
+              }
+              if (url.endsWith("/api/status")) {
+                return {
+                  ok: true,
+                  status: 200,
+                  headers: { get() { return null; } },
+                  text: async () => JSON.stringify({ status: "bridge-live", cockpit_ok: true }),
+                };
+              }
+              return {
+                ok: true,
+                status: 200,
+                headers: { get() { return null; } },
+                text: async () => "bridge log\\n",
+              };
+            };
+
+            (async () => {
+              const statusResponse = response();
+              await statusHandler({ method: "GET" }, statusResponse);
+              assert.strictEqual(statusResponse.statusCode, 200);
+              assert.deepStrictEqual(JSON.parse(statusResponse.body), {
+                status: "bridge-live",
+                cockpit_ok: true,
+              });
+              assert.strictEqual(
+                statusResponse.headers["X-Automoat-Upstream-Attempts"],
+                "relay:200:upstream_body_too_large,legacy_bridge:200",
+              );
+
+              const logResponse = response();
+              await logHandler({ method: "GET" }, logResponse);
+              assert.strictEqual(logResponse.statusCode, 200);
+              assert.strictEqual(logResponse.body, "bridge log\\n");
+              assert.strictEqual(
+                logResponse.headers["X-Automoat-Upstream-Attempts"],
+                "relay:200:upstream_body_too_large,legacy_bridge:200",
+              );
+              assert(relayReads.length >= 2);
+              assert.strictEqual(relayCancels, 2);
+              assert.strictEqual(relayTextCalls, 0);
+            })().catch((error) => {
+              console.error(error.stack || error);
+              process.exit(1);
+            });
+            """
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_handlers_reject_invalid_timeout_without_fetching(self) -> None:
         result = run_node(
             """
