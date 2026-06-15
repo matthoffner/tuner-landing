@@ -704,7 +704,7 @@ def run_autonomy_policy_check(log_file: Path) -> dict[str, Any]:
     allow_override = os.environ.get("AUTOMOAT_ALLOW_SYNTHETIC_DALLAS_APPEND") == "1"
     exit_status = 0
     failure_reason = None
-    if preview_changed and not allow_override:
+    if preview_changed:
         exit_status = 1
         failure_reason = "preview_json_changed"
         emit(
@@ -722,7 +722,9 @@ def run_autonomy_policy_check(log_file: Path) -> dict[str, Any]:
         )
         for row in synthetic_row_samples:
             emit(log_file, "  synthetic row: " + row)
-    elif raw_csv_paths and not productive_change and not allow_override:
+    elif raw_csv_paths and not productive_change and not (
+        synthetic_rows and allow_override
+    ):
         exit_status = 1
         failure_reason = "raw_dallas_csv_without_productive_work"
         emit(
@@ -770,6 +772,7 @@ def run_autonomy_policy_check(log_file: Path) -> dict[str, Any]:
         "productive_change": productive_change,
         "productive_changed_paths": productive_paths,
         "policy_allows_synthetic_append": policy_allows_synthetic_append,
+        "policy_override": allow_override,
         "policy_snapshot": policy_snapshot,
         "failure_reason": failure_reason,
     }

@@ -219,6 +219,29 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
             result["dirty_paths_excluding_preview"],
             ["scripts/run_autonomous_agent_loop.py"],
         )
+        self.assertFalse(result["policy_override"])
+
+    def test_synthetic_append_override_does_not_allow_preview_json_change(self) -> None:
+        os.environ["AUTOMOAT_ALLOW_SYNTHETIC_DALLAS_APPEND"] = "1"
+        self.loop.dirty_paths = lambda: [
+            ".pxcode/preview.json",
+            "generated/raw/dallas-electrician-import-sample-v2/permits.csv",
+        ]
+        self.loop.dirty_paths_excluding_preview = lambda: [
+            "generated/raw/dallas-electrician-import-sample-v2/permits.csv",
+        ]
+        self.loop.added_synthetic_dallas_rows = lambda: [
+            "ELZ-2026-9999,100 Example Ave,Dallas,electrical,"
+            "residential,Electrical repair,Finaled,example.local/dallas/9999"
+        ]
+
+        with tempfile.TemporaryDirectory() as tmp:
+            result = self.loop.run_autonomy_policy_check(Path(tmp) / "policy.log")
+
+        self.assertEqual(result["exit_status"], 1)
+        self.assertEqual(result["failure_reason"], "preview_json_changed")
+        self.assertTrue(result["preview_json_changed"])
+        self.assertTrue(result["policy_override"])
 
     def test_synthetic_row_detector_scans_all_raw_dallas_csv_fixtures(self) -> None:
         commands = []
@@ -444,6 +467,25 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
         )
         self.assertFalse(result["productive_change"])
 
+    def test_synthetic_append_override_does_not_allow_unrelated_raw_csv_edit(self) -> None:
+        os.environ["AUTOMOAT_ALLOW_SYNTHETIC_DALLAS_APPEND"] = "1"
+        self.loop.dirty_paths_excluding_preview = lambda: [
+            ".automoat/logs/agent-journal.md",
+            ".pixelbox/handoff.md",
+            "generated/raw/dallas-electrician-import-sample-v2/contractors.csv",
+        ]
+        self.loop.added_synthetic_dallas_rows = lambda: []
+
+        with tempfile.TemporaryDirectory() as tmp:
+            result = self.loop.run_autonomy_policy_check(Path(tmp) / "policy.log")
+
+        self.assertEqual(result["exit_status"], 1)
+        self.assertEqual(
+            result["failure_reason"],
+            "raw_dallas_csv_without_productive_work",
+        )
+        self.assertTrue(result["policy_override"])
+
     def test_policy_check_allows_raw_dallas_csv_edit_with_productive_work(self) -> None:
         self.loop.dirty_paths_excluding_preview = lambda: [
             "scripts/import_dallas_permit_extracts.py",
@@ -520,6 +562,25 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
                 "decision_reason": "test_override",
             },
         )
+
+    def test_synthetic_append_override_allows_only_synthetic_append_policy(self) -> None:
+        os.environ["AUTOMOAT_ALLOW_SYNTHETIC_DALLAS_APPEND"] = "1"
+        self.loop.dirty_paths_excluding_preview = lambda: [
+            "generated/raw/dallas-electrician-import-sample-v2/permits.csv",
+        ]
+        self.loop.added_synthetic_dallas_rows = lambda: [
+            "ELZ-2026-9999,100 Example Ave,Dallas,electrical,"
+            "residential,Electrical repair,Finaled,example.local/dallas/9999"
+        ]
+
+        with tempfile.TemporaryDirectory() as tmp:
+            result = self.loop.run_autonomy_policy_check(Path(tmp) / "policy.log")
+
+        self.assertEqual(result["exit_status"], 0)
+        self.assertEqual(result["failure_reason"], None)
+        self.assertTrue(result["policy_override"])
+        self.assertFalse(result["productive_change"])
+        self.assertFalse(result["policy_allows_synthetic_append"])
 
     def test_policy_error_message_names_raw_csv_companion_gap(self) -> None:
         message = self.loop.autonomy_policy_error_message(
