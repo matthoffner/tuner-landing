@@ -454,6 +454,104 @@ class RenderCockpitRelayTest(unittest.TestCase):
         )
         self.assertEqual(status["cockpit_health_label"], "Artifact health is not loaded")
 
+    def test_status_and_health_include_source_readiness_summary(self) -> None:
+        self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
+        self.relay.update_state(
+            {
+                "pushed_at": "2026-06-14T19:59:30Z",
+                "status": {
+                    "status": "running",
+                    "loop_running": True,
+                    "cockpit_summary": {
+                        "operator_attention": True,
+                        "operator_attention_primary_reason": "import_readiness_not_ready",
+                        "operator_attention_label": "Import readiness is not ready",
+                        "operator_attention_reasons": [
+                            "import_readiness_not_ready",
+                            "coverage_thin_groups_present",
+                        ],
+                        "artifact_health": "loaded",
+                        "artifact_statuses": {
+                            "contract": "loaded",
+                            "pipeline": "invalid token=artifact-secret",
+                        },
+                        "artifact_problem_artifacts": [
+                            "pipeline token=problem-secret",
+                        ],
+                        "import_readiness": "blocked",
+                        "readiness_blockers": [
+                            "coverage has thin group token=blocker-secret",
+                        ],
+                        "ready_for_next_import_records": False,
+                        "current_focus": "autonomy_visibility_or_real_ingest",
+                        "policy_reason": "dallas_ready_no_thin_groups",
+                        "dallas_pipeline_ready": False,
+                        "thin_group_count": "2",
+                        "thin_group_categories": [
+                            "inspection_status:pending?token=thin-secret",
+                            "workflow_stage:escalation",
+                        ],
+                        "contract_checks": "12/13",
+                        "queue_items": "535",
+                    },
+                },
+                "log_tail": "import readiness blocked\n",
+            }
+        )
+        self.relay.utc_now = lambda: "2026-06-14T20:00:00Z"
+
+        health = self.relay.health_payload()
+        status = self.relay.relay_status_payload()
+
+        expected_readiness = {
+            "available": True,
+            "artifact_health": "loaded",
+            "import_readiness": "blocked",
+            "current_focus": "autonomy_visibility_or_real_ingest",
+            "policy_reason": "dallas_ready_no_thin_groups",
+            "contract_checks": "12/13",
+            "ready_for_next_import_records": False,
+            "dallas_pipeline_ready": False,
+            "thin_group_count": 2,
+            "queue_items": 535,
+            "readiness_blockers": [
+                "coverage has thin group token=[redacted]",
+            ],
+            "readiness_blockers_count": 1,
+            "thin_group_categories": [
+                "inspection_status:pending?token=[redacted]",
+                "workflow_stage:escalation",
+            ],
+            "thin_group_categories_count": 2,
+            "artifact_problem_artifacts": [
+                "pipeline token=[redacted]",
+            ],
+            "artifact_problem_artifacts_count": 1,
+            "artifact_statuses": {
+                "contract": "loaded",
+                "pipeline": "invalid token=[redacted]",
+            },
+        }
+        self.assertTrue(health["ok"])
+        self.assertFalse(health["cockpit_ok"])
+        self.assertEqual(health["cockpit_status"], "degraded")
+        self.assertEqual(
+            health["cockpit_health"]["reasons"], ["source_cockpit_attention"]
+        )
+        self.assertEqual(
+            health["cockpit_health"]["source_readiness"],
+            expected_readiness,
+        )
+        self.assertEqual(
+            status["cockpit_health"]["source_readiness"],
+            expected_readiness,
+        )
+        health_text = json.dumps(health, sort_keys=True)
+        self.assertNotIn("artifact-secret", health_text)
+        self.assertNotIn("problem-secret", health_text)
+        self.assertNotIn("blocker-secret", health_text)
+        self.assertNotIn("thin-secret", health_text)
+
     def test_status_and_health_promote_autonomy_policy_attention(self) -> None:
         self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
         self.relay.update_state(

@@ -448,6 +448,78 @@ def source_policy_summary(status: dict[str, Any]) -> dict[str, Any]:
     return summary
 
 
+def source_readiness_summary(status: dict[str, Any]) -> dict[str, Any]:
+    source_summary = status.get("cockpit_summary")
+    if not isinstance(source_summary, dict):
+        return {"available": False}
+
+    summary: dict[str, Any] = {"available": False}
+    text_fields = {
+        "artifact_health": source_summary.get("artifact_health"),
+        "import_readiness": source_summary.get("import_readiness"),
+        "current_focus": source_summary.get("current_focus"),
+        "policy_reason": source_summary.get("policy_reason"),
+        "contract_checks": source_summary.get("contract_checks"),
+    }
+    for key, value in text_fields.items():
+        compact_value = compact_policy_detail(value, max_length=160)
+        if compact_value is not None:
+            summary[key] = compact_value
+
+    bool_fields = {
+        "ready_for_next_import_records": source_summary.get(
+            "ready_for_next_import_records"
+        ),
+        "dallas_pipeline_ready": source_summary.get("dallas_pipeline_ready"),
+    }
+    for key, value in bool_fields.items():
+        if isinstance(value, bool):
+            summary[key] = value
+
+    int_fields = {
+        "thin_group_count": source_summary.get("thin_group_count"),
+        "queue_items": source_summary.get("queue_items"),
+    }
+    for key, value in int_fields.items():
+        compact_value = compact_int(value)
+        if compact_value is not None:
+            summary[key] = compact_value
+
+    list_fields = {
+        "readiness_blockers": source_summary.get("readiness_blockers"),
+        "thin_group_categories": source_summary.get("thin_group_categories"),
+        "artifact_problem_artifacts": source_summary.get("artifact_problem_artifacts"),
+    }
+    for key, value in list_fields.items():
+        if not isinstance(value, list):
+            continue
+        compact_values = [
+            compact_value
+            for compact_value in (
+                compact_policy_detail(item, max_length=200)
+                for item in value[:5]
+            )
+            if compact_value is not None
+        ]
+        if compact_values:
+            summary[key] = compact_values
+            summary[f"{key}_count"] = len(value)
+
+    artifact_statuses = source_summary.get("artifact_statuses")
+    if isinstance(artifact_statuses, dict):
+        compact_statuses: dict[str, str] = {}
+        for key, value in sorted(artifact_statuses.items()):
+            compact_key = compact_policy_detail(key, max_length=80)
+            compact_value = compact_policy_detail(value, max_length=80)
+            if compact_key is not None and compact_value is not None:
+                compact_statuses[compact_key] = compact_value
+        if compact_statuses:
+            summary["artifact_statuses"] = compact_statuses
+
+    summary["available"] = any(key != "available" for key in summary)
+    return summary
+
+
 def cockpit_health(
     state: dict[str, Any],
     status: dict[str, Any],
@@ -457,6 +529,7 @@ def cockpit_health(
     source_health = publisher_source_health(state)
     source_bridge = source_bridge_summary(status)
     source_policy = source_policy_summary(status)
+    source_readiness = source_readiness_summary(status)
     source_health_reasons = source_health.get("reasons")
     if not isinstance(source_health_reasons, list):
         source_health_reasons = []
@@ -530,6 +603,7 @@ def cockpit_health(
         "source_status_diagnostics": source_status_diagnostics(status),
         "source_bridge": source_bridge,
         "source_policy": source_policy,
+        "source_readiness": source_readiness,
         "source_health": source_health,
         "publisher_identity": publisher_identity(state),
     }
