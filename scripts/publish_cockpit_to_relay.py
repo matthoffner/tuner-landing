@@ -63,6 +63,7 @@ OPERATOR_ATTENTION_LABELS = {
     "import_readiness_blocked": "Import readiness is blocked",
     "coverage_thin_groups_present": "Coverage has thin groups",
 }
+POLICY_RAW_PATH_SAMPLE_LIMIT = 8
 
 
 def utc_now() -> str:
@@ -222,6 +223,37 @@ def compact_url(value: Any, *, max_length: int = 180) -> str | None:
     if text is None:
         return None
     return sanitize_url_value(text)
+
+
+def compact_policy_detail(value: Any, *, max_length: int = 240) -> str | None:
+    text = compact_text(value, max_length=max_length * 2)
+    if text is None:
+        return None
+    text = URL_TEXT_PATTERN.sub(lambda match: sanitize_url_value(match.group(0)), text)
+    text = BEARER_SECRET_PATTERN.sub(r"\1 [redacted]", text)
+    text = SECRET_ASSIGNMENT_PATTERN.sub(
+        lambda match: f"{match.group(1)}=[redacted]",
+        text,
+    )
+    return text[:max_length] if text else None
+
+
+def compact_policy_detail_list(
+    value: Any,
+    *,
+    max_items: int = POLICY_RAW_PATH_SAMPLE_LIMIT,
+    max_length: int = 160,
+) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    compacted: list[str] = []
+    for item in value:
+        compacted_item = compact_policy_detail(item, max_length=max_length)
+        if compacted_item is not None:
+            compacted.append(compacted_item)
+        if len(compacted) >= max_items:
+            break
+    return compacted
 
 
 def compact_int(value: Any) -> int | None:
@@ -384,15 +416,18 @@ def publisher_cockpit_summary(status: dict[str, Any]) -> dict[str, Any]:
     readiness_blockers = as_string_list(readiness.get("blockers"))
     policy_failure = failed_autonomy_policy_step(status)
     policy_failure_reason = (
-        str(policy_failure.get("failure_reason"))
+        compact_policy_detail(policy_failure.get("failure_reason"))
         if policy_failure and policy_failure.get("failure_reason")
         else None
     )
     policy_raw_csv_paths = (
-        as_string_list(policy_failure.get("raw_dallas_csv_changed_paths"))
+        compact_policy_detail_list(policy_failure.get("raw_dallas_csv_changed_paths"))
         if policy_failure
         else []
     )
+    policy_raw_csv_path_count = len(
+        as_string_list(policy_failure.get("raw_dallas_csv_changed_paths"))
+    ) if policy_failure else 0
     thin_group_categories = as_string_list(autonomy_policy.get("thin_group_categories"))
     thin_group_count = autonomy_policy.get("thin_group_count")
     if not isinstance(thin_group_count, int):
@@ -440,6 +475,7 @@ def publisher_cockpit_summary(status: dict[str, Any]) -> dict[str, Any]:
         "policy_reason": autonomy_policy.get("decision_reason"),
         "policy_failure_reason": policy_failure_reason,
         "policy_raw_dallas_csv_changed_paths": policy_raw_csv_paths,
+        "policy_raw_dallas_csv_changed_path_count": policy_raw_csv_path_count,
         "dallas_pipeline_ready": autonomy_policy.get("dallas_pipeline_ready"),
         "thin_group_count": thin_group_count,
         "thin_group_categories": thin_group_categories,

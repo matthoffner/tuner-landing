@@ -361,6 +361,90 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             summary["policy_raw_dallas_csv_changed_paths"],
             ["generated/raw/dallas-electrician-import-sample-v2/permits.csv"],
         )
+        self.assertEqual(summary["policy_raw_dallas_csv_changed_path_count"], 1)
+
+    def test_read_status_sanitizes_remote_policy_failure_details(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            raw_paths = [
+                "generated/raw/dallas-electrician-import-sample-v2/permits.csv",
+                "generated/raw/dallas-electrician-import-sample-v2/inspections.csv",
+                "generated/raw/dallas-electrician-import-sample-v2/contractors.csv",
+                "generated/raw/dallas-electrician-import-sample-v2/rule_documents.csv",
+                "https://source.example/export.csv?token=raw-secret#debug",
+                "token=csv-secret generated/raw/private.csv",
+                "/tmp/operator/local/path/permits.csv",
+                "generated/raw/dallas-electrician-import-sample-v2/extra.csv",
+                "generated/raw/dallas-electrician-import-sample-v2/overflow.csv",
+            ]
+            status_file = tmp_path / "status.json"
+            status_file.write_text(
+                json.dumps(
+                    {
+                        "status": "passing",
+                        "updated_at": "2026-06-14T19:30:00Z",
+                        "steps": [
+                            {
+                                "name": "autonomy policy check",
+                                "exit_status": 1,
+                                "failure_reason": (
+                                    "synthetic append rejected\n"
+                                    "authorization: Bearer policy-secret "
+                                    "token=reason-secret "
+                                    "https://relay.example/debug?token=url-secret#trace"
+                                ),
+                                "raw_dallas_csv_changed_paths": raw_paths,
+                            }
+                        ],
+                        "artifacts": {
+                            "artifact_health": {"status": "loaded"},
+                            "import_pipeline": {
+                                "execution_readiness": {"status": "ready", "blockers": []}
+                            },
+                        },
+                        "autonomy_policy": {
+                            "thin_group_count": 0,
+                            "thin_group_categories": [],
+                        },
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            self.publisher.utc_now = lambda: "2026-06-14T19:31:00Z"
+            self.publisher.local_loop_pid = lambda _pid_file: 4242
+
+            status = self.publisher.read_status(
+                status_file,
+                tmp_path / "loop.pid",
+                status_stale_after_seconds=120,
+            )
+
+        summary = status["cockpit_summary"]
+        summary_text = json.dumps(summary, sort_keys=True)
+        self.assertEqual(summary["operator_attention_reasons"], ["autonomy_policy_failed"])
+        self.assertIn("synthetic append rejected", summary["policy_failure_reason"])
+        self.assertIn(
+            "https://relay.example/debug?[redacted]#[redacted]",
+            summary["policy_failure_reason"],
+        )
+        self.assertEqual(len(summary["policy_raw_dallas_csv_changed_paths"]), 8)
+        self.assertEqual(summary["policy_raw_dallas_csv_changed_path_count"], 9)
+        self.assertIn(
+            "https://source.example/export.csv?[redacted]#[redacted]",
+            summary["policy_raw_dallas_csv_changed_paths"],
+        )
+        self.assertIn(
+            "token=[redacted] generated/raw/private.csv",
+            summary["policy_raw_dallas_csv_changed_paths"],
+        )
+        self.assertNotIn("policy-secret", summary_text)
+        self.assertNotIn("reason-secret", summary_text)
+        self.assertNotIn("url-secret", summary_text)
+        self.assertNotIn("raw-secret", summary_text)
+        self.assertNotIn("csv-secret", summary_text)
+        self.assertNotIn("overflow.csv", summary_text)
+        self.assertNotIn("\n", summary["policy_failure_reason"])
 
     def test_publisher_source_health_reports_live_source_status(self) -> None:
         status = {
