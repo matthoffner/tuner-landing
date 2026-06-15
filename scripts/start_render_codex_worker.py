@@ -486,6 +486,10 @@ def resolved_required_command_paths(
     }
 
 
+def missing_required_commands(command_paths: dict[str, str | None]) -> list[str]:
+    return [command for command in REQUIRED_COMMANDS if not command_paths.get(command)]
+
+
 def validate_secret_safe_http_url(
     name: str,
     value: str,
@@ -803,6 +807,7 @@ def environment_preflight_summary(
             "codex_auth_selected": selected_name(env, CODEX_AUTH_ENV_NAMES),
             "commands": list(REQUIRED_COMMANDS),
             "command_paths": command_paths,
+            "missing_commands": missing_required_commands(command_paths),
             "runtime_limits": RUNTIME_CONFIG_LIMITS,
         }
         return payload

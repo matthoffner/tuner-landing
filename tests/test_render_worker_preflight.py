@@ -1960,6 +1960,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             payload["diagnostics"]["command_paths"],
             {"git": "/usr/bin/git", "codex": None},
         )
+        self.assertEqual(payload["diagnostics"]["missing_commands"], ["codex"])
         self.assertEqual(payload["diagnostics"]["git_auth_selected"], "GH_TOKEN")
         self.assertEqual(
             payload["diagnostics"]["codex_auth_selected"],
