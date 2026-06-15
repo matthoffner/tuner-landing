@@ -818,7 +818,10 @@ def validate_workdir_path(path: Path, errors: list[str], *, codex_home: Path | N
 
     blocking_path = blocking_directory_path_component(resolved_path)
     if blocking_path is not None:
-        errors.append(f"AUTOMOAT_WORKDIR path component {blocking_path} must be a directory")
+        blocking_label = worker_config_path_label(blocking_path)
+        errors.append(
+            f"AUTOMOAT_WORKDIR path component {blocking_label} must be a directory"
+        )
         return
 
 
@@ -868,7 +871,8 @@ def validate_codex_home_path(path: Path, workdir: Path, errors: list[str]) -> No
 
     blocking_path = blocking_directory_path_component(resolved_path)
     if blocking_path is not None:
-        errors.append(f"CODEX_HOME path component {blocking_path} must be a directory")
+        blocking_label = worker_config_path_label(blocking_path)
+        errors.append(f"CODEX_HOME path component {blocking_label} must be a directory")
         return
 
     expanded_workdir = workdir.expanduser()

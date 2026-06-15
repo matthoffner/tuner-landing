@@ -1274,8 +1274,57 @@ class RenderWorkerPreflightTest(unittest.TestCase):
 
         self.assertEqual(
             errors,
-            [f"AUTOMOAT_WORKDIR path component {blocker} must be a directory"],
+            [
+                (
+                    "AUTOMOAT_WORKDIR path component <external>/blocked-parent "
+                    "must be a directory"
+                ),
+            ],
         )
+
+    def test_check_env_json_masks_workdir_blocking_path_component(self) -> None:
+        base_env = {
+            "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            "GITHUB_TOKEN": "github-token",
+            "CODEX_ACCESS_TOKEN": "codex-token",
+        }
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            blocker = Path(temp_dir) / "secret-blocked-parent"
+            blocker.write_text("not a directory", encoding="utf-8")
+            self.worker.WORKDIR = blocker / "repo"
+            output = io.StringIO()
+
+            with redirect_stdout(output):
+                errors = self.worker.emit_environment_preflight(
+                    base_env,
+                    found_command,
+                    output_format="json",
+                )
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(
+            errors,
+            [
+                (
+                    "AUTOMOAT_WORKDIR path component <external>/secret-blocked-parent "
+                    "must be a directory"
+                ),
+            ],
+        )
+        self.assertEqual(payload["status"], "failed")
+        self.assertEqual(payload["diagnostics"]["error_categories"], ["invalid_path"])
+        self.assertEqual(
+            payload["diagnostics"]["failed_configuration_keys"],
+            ["AUTOMOAT_WORKDIR"],
+        )
+        self.assertIn("<external>/secret-blocked-parent", output.getvalue())
+        self.assertNotIn(str(blocker), output.getvalue())
+        self.assertNotIn(temp_dir, output.getvalue())
+        self.assertNotIn("relay-token", output.getvalue())
+        self.assertNotIn("github-token", output.getvalue())
+        self.assertNotIn("codex-token", output.getvalue())
 
     def test_rejects_workdir_with_surrounding_whitespace_before_clone_cleanup(self) -> None:
         base_env = {
@@ -1450,7 +1499,12 @@ class RenderWorkerPreflightTest(unittest.TestCase):
 
         self.assertEqual(
             errors,
-            [f"CODEX_HOME path component {blocker} must be a directory"],
+            [
+                (
+                    "CODEX_HOME path component <external>/blocked-codex-parent "
+                    "must be a directory"
+                ),
+            ],
         )
 
     def test_rejects_codex_home_with_surrounding_whitespace_before_auth_setup(self) -> None:
