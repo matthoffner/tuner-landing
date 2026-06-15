@@ -351,12 +351,18 @@ def dirty_paths_excluding_preview() -> list[str]:
 
 def changed_paths_include_productive_work(paths: list[str]) -> bool:
     """Return whether a synthetic row append is paired with durable product work."""
+    return bool(productive_changed_paths(paths))
+
+
+def productive_changed_paths(paths: list[str]) -> list[str]:
+    """Return changed paths that count as durable product companion work."""
+    productive_paths: list[str] = []
     for path in paths:
         if path in PRODUCTIVE_CHANGE_FILES:
-            return True
-        if path.startswith(PRODUCTIVE_CHANGE_PREFIXES):
-            return True
-    return False
+            productive_paths.append(path)
+        elif path.startswith(PRODUCTIVE_CHANGE_PREFIXES):
+            productive_paths.append(path)
+    return sorted(set(productive_paths))
 
 
 def changed_dallas_raw_csv_paths(paths: list[str]) -> list[str]:
@@ -587,8 +593,12 @@ def run_autonomy_policy_check(log_file: Path) -> dict[str, Any]:
     paths = dirty_paths_excluding_preview()
     raw_csv_paths = changed_dallas_raw_csv_paths(paths)
     synthetic_rows = added_synthetic_dallas_rows()
-    productive_change = changed_paths_include_productive_work(paths)
-    policy_allows_synthetic_append = synthetic_dallas_appends_allowed_by_policy()
+    productive_paths = productive_changed_paths(paths)
+    productive_change = bool(productive_paths)
+    policy_snapshot = autonomy_policy_snapshot()
+    policy_allows_synthetic_append = (
+        policy_snapshot.get("synthetic_example_local_dallas_appends_allowed") is True
+    )
     allow_override = os.environ.get("AUTOMOAT_ALLOW_SYNTHETIC_DALLAS_APPEND") == "1"
     exit_status = 0
     failure_reason = None
@@ -630,6 +640,7 @@ def run_autonomy_policy_check(log_file: Path) -> dict[str, Any]:
             f"synthetic_rows={len(synthetic_rows)} "
             f"raw_dallas_csv_paths={len(raw_csv_paths)} "
             f"productive_change={productive_change} "
+            f"productive_paths={len(productive_paths)} "
             f"policy_allows_synthetic_append={policy_allows_synthetic_append} "
             f"override={allow_override}",
         )
@@ -640,10 +651,13 @@ def run_autonomy_policy_check(log_file: Path) -> dict[str, Any]:
         "command": ["internal", "autonomy_policy_check"],
         "exit_status": exit_status,
         "seconds": elapsed,
+        "dirty_paths_excluding_preview": paths,
         "synthetic_row_count": len(synthetic_rows),
         "raw_dallas_csv_changed_paths": raw_csv_paths,
         "productive_change": productive_change,
+        "productive_changed_paths": productive_paths,
         "policy_allows_synthetic_append": policy_allows_synthetic_append,
+        "policy_snapshot": policy_snapshot,
         "failure_reason": failure_reason,
     }
 

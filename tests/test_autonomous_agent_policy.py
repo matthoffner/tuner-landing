@@ -115,6 +115,26 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
         ]
 
         self.assertFalse(self.loop.changed_paths_include_productive_work(paths))
+        self.assertEqual(self.loop.productive_changed_paths(paths), [])
+
+    def test_productive_changed_paths_reports_companion_work_paths(self) -> None:
+        paths = [
+            "README.md",
+            "scripts/run_autonomous_agent_loop.py",
+            "tests/test_autonomous_agent_policy.py",
+            "implementation-spec.md",
+            ".pixelbox/handoff.md",
+        ]
+
+        self.assertTrue(self.loop.changed_paths_include_productive_work(paths))
+        self.assertEqual(
+            self.loop.productive_changed_paths(paths),
+            [
+                "implementation-spec.md",
+                "scripts/run_autonomous_agent_loop.py",
+                "tests/test_autonomous_agent_policy.py",
+            ],
+        )
 
     def test_policy_check_rejects_docs_only_synthetic_row_append(self) -> None:
         self.loop.dirty_paths_excluding_preview = lambda: [
@@ -138,6 +158,16 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
         )
         self.assertFalse(result["productive_change"])
         self.assertFalse(result["policy_allows_synthetic_append"])
+        self.assertEqual(
+            result["dirty_paths_excluding_preview"],
+            [
+                "README.md",
+                "NEXT_TASK.md",
+                "generated/raw/dallas-electrician-import-sample-v2/permits.csv",
+            ],
+        )
+        self.assertEqual(result["productive_changed_paths"], [])
+        self.assertIn("policy_snapshot", result)
 
     def test_policy_check_rejects_docs_only_raw_dallas_csv_edit(self) -> None:
         self.loop.dirty_paths_excluding_preview = lambda: [
@@ -180,6 +210,10 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
         )
         self.assertIsNone(result["failure_reason"])
         self.assertTrue(result["productive_change"])
+        self.assertEqual(
+            result["productive_changed_paths"],
+            ["scripts/import_dallas_permit_extracts.py"],
+        )
 
     def test_policy_check_rejects_synthetic_row_when_snapshot_disallows_it(self) -> None:
         self.loop.dirty_paths_excluding_preview = lambda: [
@@ -201,6 +235,10 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
             result["failure_reason"],
             "synthetic_append_disallowed_by_snapshot",
         )
+        self.assertEqual(
+            result["productive_changed_paths"],
+            ["tests/test_autonomous_agent_policy.py"],
+        )
 
     def test_policy_check_accepts_synthetic_row_when_snapshot_allows_companion_work(self) -> None:
         self.loop.dirty_paths_excluding_preview = lambda: [
@@ -213,6 +251,7 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
         ]
         self.loop.autonomy_policy_snapshot = lambda: {
             "synthetic_example_local_dallas_appends_allowed": True,
+            "decision_reason": "test_override",
         }
 
         with tempfile.TemporaryDirectory() as tmp:
@@ -222,6 +261,13 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
         self.assertTrue(result["productive_change"])
         self.assertTrue(result["policy_allows_synthetic_append"])
         self.assertIsNone(result["failure_reason"])
+        self.assertEqual(
+            result["policy_snapshot"],
+            {
+                "synthetic_example_local_dallas_appends_allowed": True,
+                "decision_reason": "test_override",
+            },
+        )
 
     def test_policy_error_message_names_raw_csv_companion_gap(self) -> None:
         message = self.loop.autonomy_policy_error_message(
