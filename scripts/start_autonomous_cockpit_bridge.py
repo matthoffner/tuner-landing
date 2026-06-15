@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import signal
 import shutil
@@ -142,15 +143,21 @@ def validate_port(name: str, value: int) -> list[str]:
     return []
 
 
+def validate_positive_float(name: str, value: float) -> list[str]:
+    if not math.isfinite(value):
+        return [f"{name} must be a finite number of seconds"]
+    if value <= 0:
+        return [f"{name} must be greater than 0"]
+    return []
+
+
 def validate_startup_configuration(args: argparse.Namespace) -> list[str]:
     errors: list[str] = []
     errors.extend(validate_port("--port", int(args.port)))
     errors.extend(validate_port("--bridge-port", int(args.bridge_port)))
     errors.extend(validate_port("--ngrok-web-port", int(args.ngrok_web_port)))
-    if args.interval <= 0:
-        errors.append("--interval must be greater than 0")
-    if args.bridge_interval <= 0:
-        errors.append("--bridge-interval must be greater than 0")
+    errors.extend(validate_positive_float("--interval", float(args.interval)))
+    errors.extend(validate_positive_float("--bridge-interval", float(args.bridge_interval)))
     if args.port == args.bridge_port:
         errors.append("--port must not equal --bridge-port")
     if not args.keep_bridge and shutil.which("ngrok") is None:

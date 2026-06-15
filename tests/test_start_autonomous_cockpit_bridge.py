@@ -56,6 +56,27 @@ class StartAutonomousCockpitBridgeTest(unittest.TestCase):
             ],
         )
 
+    def test_validate_startup_configuration_rejects_non_finite_intervals(self) -> None:
+        args = Namespace(
+            interval=float("nan"),
+            port=4174,
+            bridge_port=4175,
+            ngrok_web_port=4040,
+            bridge_interval=float("inf"),
+            keep_bridge=True,
+            no_stop_existing=False,
+        )
+
+        errors = self.launcher.validate_startup_configuration(args)
+
+        self.assertEqual(
+            errors,
+            [
+                "--interval must be a finite number of seconds",
+                "--bridge-interval must be a finite number of seconds",
+            ],
+        )
+
     def test_check_env_keep_bridge_validates_without_starting_processes(self) -> None:
         output = io.StringIO()
         self.launcher.start_detached = lambda *args, **kwargs: self.fail("start_detached should not run")
@@ -169,6 +190,44 @@ class StartAutonomousCockpitBridgeTest(unittest.TestCase):
         )
         self.assertTrue(payload["diagnostics"]["ngrok_required"])
         self.assertFalse(payload["diagnostics"]["ngrok_available"])
+
+    def test_check_env_json_rejects_non_finite_intervals(self) -> None:
+        output = io.StringIO()
+        self.launcher.start_detached = lambda *args, **kwargs: self.fail("start_detached should not run")
+        self.launcher.wait_http = lambda *args, **kwargs: self.fail("wait_http should not run")
+        self.launcher.wait_bridge = lambda *args, **kwargs: self.fail("wait_bridge should not run")
+
+        with patch.object(self.launcher.shutil, "which", return_value=None), patch.object(
+            sys,
+            "argv",
+            [
+                "start_autonomous_cockpit_bridge.py",
+                "--check-env",
+                "--format",
+                "json",
+                "--keep-bridge",
+                "--interval",
+                "nan",
+                "--bridge-interval",
+                "inf",
+            ],
+        ), redirect_stdout(output):
+            status = self.launcher.main()
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(status, 2)
+        self.assertEqual(payload["status"], "failed")
+        self.assertEqual(
+            payload["errors"],
+            [
+                "--interval must be a finite number of seconds",
+                "--bridge-interval must be a finite number of seconds",
+            ],
+        )
+        self.assertEqual(
+            payload["diagnostics"]["error_categories"],
+            ["invalid_runtime_config"],
+        )
 
     def test_json_format_is_only_supported_for_check_env(self) -> None:
         stderr = io.StringIO()
