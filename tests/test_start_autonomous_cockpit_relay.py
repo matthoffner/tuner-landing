@@ -169,6 +169,25 @@ class StartAutonomousCockpitRelayTest(unittest.TestCase):
             ],
         )
 
+    def test_validate_startup_configuration_rejects_non_finite_intervals(self) -> None:
+        errors = self.launcher.validate_startup_configuration(
+            Namespace(
+                relay_url="https://automoat-cockpit-relay.example",
+                token="relay-token",
+                interval=float("nan"),
+                publish_interval=float("inf"),
+                port=4174,
+            )
+        )
+
+        self.assertEqual(
+            errors,
+            [
+                "--interval must be a finite number of seconds",
+                "--publish-interval must be a finite number of seconds",
+            ],
+        )
+
     def test_check_env_validates_without_starting_processes(self) -> None:
         output = io.StringIO()
         env = {
@@ -308,6 +327,47 @@ class StartAutonomousCockpitRelayTest(unittest.TestCase):
         self.assertNotIn("relay-token", output.getvalue())
         self.assertNotIn("relay-user", output.getvalue())
         self.assertNotIn("relay-pass", output.getvalue())
+
+    def test_check_env_json_rejects_non_finite_intervals(self) -> None:
+        output = io.StringIO()
+        env = {
+            "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+        }
+        self.launcher.start_detached = lambda *args, **kwargs: self.fail("start_detached should not run")
+        self.launcher.publish_once = lambda *args, **kwargs: self.fail("publish_once should not run")
+
+        with patch.dict(os.environ, env, clear=True), patch.object(
+            sys,
+            "argv",
+            [
+                "start_autonomous_cockpit_relay.py",
+                "--check-env",
+                "--format",
+                "json",
+                "--interval",
+                "nan",
+                "--publish-interval",
+                "inf",
+            ],
+        ), redirect_stdout(output):
+            status = self.launcher.main()
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(status, 2)
+        self.assertEqual(payload["status"], "failed")
+        self.assertEqual(
+            payload["errors"],
+            [
+                "--interval must be a finite number of seconds",
+                "--publish-interval must be a finite number of seconds",
+            ],
+        )
+        self.assertEqual(
+            payload["diagnostics"]["error_categories"],
+            ["invalid_runtime_config"],
+        )
+        self.assertNotIn("relay-token", output.getvalue())
 
     def test_check_env_json_categorizes_token_and_url_shape_without_printing_values(self) -> None:
         output = io.StringIO()

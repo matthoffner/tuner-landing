@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import signal
 import subprocess
@@ -199,9 +200,13 @@ def validate_startup_configuration(args: argparse.Namespace) -> list[str]:
         for character in token
     ):
         errors.append("--token must be a single-line value without control characters")
-    if args.interval <= 0:
+    if not math.isfinite(float(args.interval)):
+        errors.append("--interval must be a finite number of seconds")
+    elif args.interval <= 0:
         errors.append("--interval must be greater than 0")
-    if args.publish_interval <= 0:
+    if not math.isfinite(float(args.publish_interval)):
+        errors.append("--publish-interval must be a finite number of seconds")
+    elif args.publish_interval <= 0:
         errors.append("--publish-interval must be greater than 0")
     if args.port <= 0:
         errors.append("--port must be greater than 0")
