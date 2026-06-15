@@ -1770,6 +1770,50 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertNotIn("payload-secret", log_text)
         self.assertNotIn("published relay snapshot ok=False", log_text)
 
+    def test_publish_once_rejects_nonstandard_relay_response_json_constants(self) -> None:
+        class FakeResponse:
+            def __enter__(self) -> "FakeResponse":
+                return self
+
+            def __exit__(self, *_args: object) -> None:
+                return None
+
+            def read(self) -> bytes:
+                return b'{"ok":true,"received_at":NaN}\n'
+
+        with tempfile.TemporaryDirectory() as tmp:
+            publisher_log = Path(tmp) / "publisher.log"
+            args = Namespace(
+                relay_url="https://automoat-cockpit-relay.example",
+                token="relay-token",
+                timeout=8,
+                publisher_log=publisher_log,
+            )
+            payload = {
+                "status": {
+                    "status": "running",
+                    "loop_running": True,
+                    "source_status_stale": False,
+                    "source_status_age_seconds": 10,
+                    "source_status_file_status": "loaded",
+                },
+                "log_tail": "loop log\n",
+            }
+            self.publisher.build_payload = lambda _args: payload
+            self.publisher.urlopen = lambda _request, timeout: FakeResponse()
+
+            result = self.publisher.publish_once_result(args)
+            log_text = publisher_log.read_text(encoding="utf-8")
+
+        self.assertEqual(
+            result,
+            {"published": False, "source_status_stale": False},
+        )
+        self.assertIn("publish failed error=invalid JSON constant NaN", log_text)
+        self.assertIn("source_status=running", log_text)
+        self.assertIn("source_status_file_status=loaded", log_text)
+        self.assertNotIn("published relay snapshot ok=True", log_text)
+
     def test_publish_once_logs_http_error_without_response_body(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             publisher_log = Path(tmp) / "publisher.log"

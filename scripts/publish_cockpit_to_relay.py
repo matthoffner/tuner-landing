@@ -811,7 +811,7 @@ def post_payload(args: argparse.Namespace, payload: dict[str, Any]) -> dict[str,
     )
     with urlopen(request, timeout=args.timeout) as response:
         body = response.read().decode("utf-8", errors="replace")
-    parsed = json.loads(body)
+    parsed = json.loads(body, parse_constant=reject_json_constant)
     return parsed if isinstance(parsed, dict) else {"ok": False, "body": body}
 
 
