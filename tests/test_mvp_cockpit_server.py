@@ -100,6 +100,33 @@ class MvpCockpitServerTest(unittest.TestCase):
                             "inspections.csv": "1085",
                             "bad.csv": -1,
                         },
+                        "raw_file_append_sequence": [
+                            {
+                                "file_name": "permits.csv",
+                                "status": "ready",
+                                "file_path": (
+                                    "generated/raw/dallas-electrician-import-sample-v2/"
+                                    "permits.csv"
+                                ),
+                                "csv_row_number": 538,
+                                "template_line": (
+                                    "<required>,<required>,<required>,,,"
+                                    "<required>,<required>,,,,,,,,,,"
+                                ),
+                            },
+                            {
+                                "file_name": "inspections.csv",
+                                "status": "ready",
+                                "file_path": (
+                                    "https://user:secret@example.local/inspections.csv"
+                                    "?token=raw-secret#debug"
+                                ),
+                                "csv_row_number": "1085",
+                                "template_line": (
+                                    "<required>,<required>,<required>,<required>,,,,"
+                                ),
+                            },
+                        ],
                         "raw_file_append_preflight": {
                             "status": "passed",
                             "ready_for_append": True,
@@ -163,6 +190,33 @@ class MvpCockpitServerTest(unittest.TestCase):
                     "relationships_resolve": True,
                 },
                 "append_preflight_blockers": [],
+                "append_sequence": [
+                    {
+                        "file_name": "permits.csv",
+                        "status": "ready",
+                        "file_path": (
+                            "generated/raw/dallas-electrician-import-sample-v2/"
+                            "permits.csv"
+                        ),
+                        "template_line": (
+                            "<required>,<required>,<required>,,,"
+                            "<required>,<required>,,,,,,,,,,"
+                        ),
+                        "csv_row_number": 538,
+                    },
+                    {
+                        "file_name": "inspections.csv",
+                        "status": "ready",
+                        "file_path": (
+                            "https://example.local/inspections.csv?[redacted]#[redacted]"
+                        ),
+                        "template_line": (
+                            "<required>,<required>,<required>,<required>,,,,"
+                        ),
+                        "csv_row_number": 1085,
+                    },
+                ],
+                "append_sequence_count": 2,
                 "ready_for_append": True,
                 "raw_dir": "generated/raw/dallas-electrician-import-sample-v2",
                 "after_edit_command": (
@@ -178,6 +232,8 @@ class MvpCockpitServerTest(unittest.TestCase):
                 ),
             },
         )
+        self.assertNotIn("raw-secret", json.dumps(summary["import_handoff"]))
+        self.assertNotIn("user:secret", json.dumps(summary["import_handoff"]))
         self.assertEqual(summary["current_focus"], "autonomy_visibility_or_real_ingest")
         self.assertEqual(summary["policy_reason"], "dallas_ready_no_thin_groups")
         self.assertTrue(summary["dallas_pipeline_ready"])
@@ -909,6 +965,14 @@ class MvpCockpitServerTest(unittest.TestCase):
                     "append_preflight_status": "passed",
                     "append_preflight_checks": {"raw_files_present": True},
                     "append_preflight_blockers": [],
+                    "append_sequence": [
+                        {
+                            "file_name": "permits.csv",
+                            "status": "ready",
+                            "csv_row_number": 538,
+                        }
+                    ],
+                    "append_sequence_count": 1,
                     "readiness_check_command": (
                         "python3 scripts/run_dallas_import_pipeline.py "
                         "--summary-only --require-ready --format json"
@@ -959,6 +1023,9 @@ class MvpCockpitServerTest(unittest.TestCase):
         self.assertIn("import_handoff", markup)
         self.assertIn("next_append_rows", markup)
         self.assertIn("append_preflight_checks", markup)
+        self.assertIn("append_sequence", markup)
+        self.assertIn("append_sequence_count", markup)
+        self.assertIn("appendSequenceText", markup)
         self.assertIn("artifact_statuses", markup)
         self.assertIn("artifact_problem_artifacts", markup)
         self.assertIn("artifactProblems.join", markup)

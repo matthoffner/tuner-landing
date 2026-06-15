@@ -32,6 +32,7 @@ MAX_CORRECTION_BYTES = 8192
 STATUS_STALE_AFTER_SECONDS = 120
 POLICY_RAW_PATH_SAMPLE_LIMIT = 8
 POLICY_ROW_SAMPLE_LIMIT = 5
+IMPORT_APPEND_SEQUENCE_SAMPLE_LIMIT = 4
 BRIDGE_HEALTH_REASON_SAMPLE_LIMIT = 5
 URL_TEXT_PATTERN = re.compile(r"https?://[^\s'\"<>]+")
 BEARER_SECRET_PATTERN = re.compile(
@@ -431,13 +432,36 @@ def import_handoff_summary(import_pipeline: dict[str, object]) -> dict[str, obje
         for name, value in as_dict(handoff.get("raw_file_next_append_rows")).items()
         if (row_number := compact_int(value)) is not None
     }
+    append_sequence_source = handoff.get("raw_file_append_sequence")
+    append_sequence: list[dict[str, object]] = []
+    if isinstance(append_sequence_source, list):
+        for item in append_sequence_source:
+            if not isinstance(item, dict):
+                continue
+            sequence_item: dict[str, object] = {}
+            for key in ("file_name", "status", "file_path", "template_line"):
+                compact_value = compact_policy_detail(item.get(key), max_length=240)
+                if compact_value is not None:
+                    sequence_item[key] = compact_value
+            row_number = compact_int(item.get("csv_row_number"))
+            if row_number is not None:
+                sequence_item["csv_row_number"] = row_number
+            if sequence_item:
+                append_sequence.append(sequence_item)
+            if len(append_sequence) >= IMPORT_APPEND_SEQUENCE_SAMPLE_LIMIT:
+                break
     summary: dict[str, object] = {
         "available": True,
         "next_append_rows": next_append_rows,
         "append_preflight_status": compact_text(preflight.get("status")) or "unknown",
         "append_preflight_checks": preflight_checks,
         "append_preflight_blockers": as_string_list(preflight.get("blockers")),
+        "append_sequence": append_sequence,
     }
+    if isinstance(append_sequence_source, list):
+        summary["append_sequence_count"] = len(
+            [item for item in append_sequence_source if isinstance(item, dict)]
+        )
 
     ready_for_append = preflight.get("ready_for_append")
     if isinstance(ready_for_append, bool):
@@ -1197,9 +1221,17 @@ def cockpit_html() -> str:
           ? visibleNextRows.join(", ") || handoff.append_preflight_status || "available"
           : "unavailable";
         const preflightChecks = handoff.append_preflight_checks || {{}};
+        const appendSequence = Array.isArray(handoff.append_sequence) ? handoff.append_sequence : [];
+        const appendSequenceCount = typeof handoff.append_sequence_count === "number"
+          ? handoff.append_sequence_count
+          : appendSequence.length;
+        const appendSequenceText = appendSequence
+          .map((item) => `${{item.file_name || "file"}}@${{item.csv_row_number || "?"}}:${{item.status || "unknown"}}`)
+          .join(", ");
         importHandoff.title = [
           handoff.raw_dir,
           handoff.append_preflight_status ? `preflight: ${{handoff.append_preflight_status}}` : "",
+          appendSequenceText ? `append sequence (${{appendSequenceCount}}): ${{appendSequenceText}}` : "",
           Array.isArray(handoff.append_preflight_blockers) && handoff.append_preflight_blockers.length
             ? `blockers: ${{handoff.append_preflight_blockers.join(", ")}}`
             : "",

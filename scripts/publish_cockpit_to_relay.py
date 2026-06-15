@@ -70,6 +70,7 @@ OPERATOR_ATTENTION_LABELS = {
 }
 POLICY_RAW_PATH_SAMPLE_LIMIT = 8
 POLICY_ROW_SAMPLE_LIMIT = 5
+IMPORT_APPEND_SEQUENCE_SAMPLE_LIMIT = 4
 
 
 def utc_now() -> str:
@@ -494,13 +495,36 @@ def import_handoff_summary(import_pipeline: dict[str, Any]) -> dict[str, Any]:
         for name, value in as_dict(handoff.get("raw_file_next_append_rows")).items()
         if (row_number := compact_int(value)) is not None
     }
+    append_sequence_source = handoff.get("raw_file_append_sequence")
+    append_sequence: list[dict[str, Any]] = []
+    if isinstance(append_sequence_source, list):
+        for item in append_sequence_source:
+            if not isinstance(item, dict):
+                continue
+            sequence_item: dict[str, Any] = {}
+            for key in ("file_name", "status", "file_path", "template_line"):
+                compact_value = compact_policy_detail(item.get(key), max_length=240)
+                if compact_value is not None:
+                    sequence_item[key] = compact_value
+            row_number = compact_int(item.get("csv_row_number"))
+            if row_number is not None:
+                sequence_item["csv_row_number"] = row_number
+            if sequence_item:
+                append_sequence.append(sequence_item)
+            if len(append_sequence) >= IMPORT_APPEND_SEQUENCE_SAMPLE_LIMIT:
+                break
     summary: dict[str, Any] = {
         "available": True,
         "next_append_rows": next_append_rows,
         "append_preflight_status": compact_text(preflight.get("status")) or "unknown",
         "append_preflight_checks": preflight_checks,
         "append_preflight_blockers": as_string_list(preflight.get("blockers")),
+        "append_sequence": append_sequence,
     }
+    if isinstance(append_sequence_source, list):
+        summary["append_sequence_count"] = len(
+            [item for item in append_sequence_source if isinstance(item, dict)]
+        )
 
     ready_for_append = preflight.get("ready_for_append")
     if isinstance(ready_for_append, bool):

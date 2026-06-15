@@ -685,6 +685,35 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                                         "inspections.csv": "1085",
                                         "bad.csv": -1,
                                     },
+                                    "raw_file_append_sequence": [
+                                        {
+                                            "file_name": "permits.csv",
+                                            "status": "ready",
+                                            "file_path": (
+                                                "generated/raw/"
+                                                "dallas-electrician-import-sample-v2/"
+                                                "permits.csv"
+                                            ),
+                                            "csv_row_number": 538,
+                                            "template_line": (
+                                                "<required>,<required>,<required>,,,"
+                                                "<required>,<required>,,,,,,,,,,"
+                                            ),
+                                        },
+                                        {
+                                            "file_name": "inspections.csv",
+                                            "status": "ready",
+                                            "file_path": (
+                                                "https://user:secret@example.local/"
+                                                "inspections.csv?token=raw-secret#debug"
+                                            ),
+                                            "csv_row_number": "1085",
+                                            "template_line": (
+                                                "<required>,<required>,<required>,"
+                                                "<required>,,,,"
+                                            ),
+                                        },
+                                    ],
                                     "raw_file_append_preflight": {
                                         "status": "passed",
                                         "ready_for_append": True,
@@ -757,6 +786,33 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                     "relationships_resolve": True,
                 },
                 "append_preflight_blockers": [],
+                "append_sequence": [
+                    {
+                        "file_name": "permits.csv",
+                        "status": "ready",
+                        "file_path": (
+                            "generated/raw/dallas-electrician-import-sample-v2/"
+                            "permits.csv"
+                        ),
+                        "template_line": (
+                            "<required>,<required>,<required>,,,"
+                            "<required>,<required>,,,,,,,,,,"
+                        ),
+                        "csv_row_number": 538,
+                    },
+                    {
+                        "file_name": "inspections.csv",
+                        "status": "ready",
+                        "file_path": (
+                            "https://example.local/inspections.csv?[redacted]#[redacted]"
+                        ),
+                        "template_line": (
+                            "<required>,<required>,<required>,<required>,,,,"
+                        ),
+                        "csv_row_number": 1085,
+                    },
+                ],
+                "append_sequence_count": 2,
                 "ready_for_append": True,
                 "raw_dir": "generated/raw/dallas-electrician-import-sample-v2",
                 "after_edit_command": (
@@ -772,6 +828,8 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 ),
             },
         )
+        self.assertNotIn("raw-secret", json.dumps(summary["import_handoff"]))
+        self.assertNotIn("user:secret", json.dumps(summary["import_handoff"]))
         self.assertEqual(summary["current_focus"], "autonomy_visibility_or_real_ingest")
         self.assertEqual(summary["policy_reason"], "dallas_ready_no_thin_groups")
         self.assertTrue(summary["dallas_pipeline_ready"])
