@@ -988,20 +988,34 @@ def source_status_log_fields(payload: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(git, dict):
         git = {}
     return {
-        "source_status": status.get("status", "unknown"),
-        "source_loop_running": status.get("loop_running"),
-        "source_status_stale": status.get("source_status_stale"),
-        "source_status_age_seconds": status.get("source_status_age_seconds"),
-        "source_status_file_status": status.get("source_status_file_status"),
-        "source_health_status": source_health.get("status"),
-        "source_health_primary_reason": source_health.get("primary_reason"),
-        "source_health_label": source_health.get("label"),
-        "publisher_host": publisher.get("host"),
-        "publisher_pid": publisher.get("pid"),
-        "publisher_started_at": publisher.get("publisher_started_at"),
-        "publisher_snapshot_sequence": publisher.get("snapshot_sequence"),
-        "publisher_git_head": git.get("head"),
-        "publisher_git_dirty_path_count": git.get("dirty_path_count"),
+        "source_status": compact_policy_detail(status.get("status"), max_length=80)
+        or "unknown",
+        "source_loop_running": status.get("loop_running")
+        if isinstance(status.get("loop_running"), bool)
+        else None,
+        "source_status_stale": status.get("source_status_stale")
+        if isinstance(status.get("source_status_stale"), bool)
+        else None,
+        "source_status_age_seconds": compact_int(status.get("source_status_age_seconds")),
+        "source_status_file_status": compact_policy_detail(
+            status.get("source_status_file_status"),
+            max_length=80,
+        ),
+        "source_health_status": compact_policy_detail(source_health.get("status"), max_length=80),
+        "source_health_primary_reason": compact_policy_detail(
+            source_health.get("primary_reason"),
+            max_length=120,
+        ),
+        "source_health_label": compact_policy_detail(source_health.get("label"), max_length=160),
+        "publisher_host": compact_policy_detail(publisher.get("host"), max_length=120),
+        "publisher_pid": compact_int(publisher.get("pid")),
+        "publisher_started_at": compact_policy_detail(
+            publisher.get("publisher_started_at"),
+            max_length=80,
+        ),
+        "publisher_snapshot_sequence": compact_int(publisher.get("snapshot_sequence")),
+        "publisher_git_head": compact_policy_detail(git.get("head"), max_length=80),
+        "publisher_git_dirty_path_count": compact_int(git.get("dirty_path_count")),
     }
 
 

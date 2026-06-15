@@ -2262,6 +2262,71 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertIn("publisher_git_head=abc1234", log_text)
         self.assertIn("publisher_git_dirty_path_count=2", log_text)
 
+    def test_publish_once_sanitizes_payload_fields_before_logging(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            publisher_log = Path(tmp) / "publisher.log"
+            args = Namespace(publisher_log=publisher_log)
+            payload = {
+                "status": {
+                    "status": "running\naccess_token=status-secret",
+                    "loop_running": "true",
+                    "source_status_stale": "false",
+                    "source_status_age_seconds": "700",
+                    "source_status_file_status": (
+                        "loaded token=file-secret "
+                        "https://relay-user:relay-pass@relay.example/status?token=url-secret#debug"
+                    ),
+                },
+                "publisher": {
+                    "host": "worker-1\nx-automoat-relay-token=host-secret",
+                    "pid": "4321",
+                    "publisher_started_at": "2026-06-14T20:10:00Z",
+                    "snapshot_sequence": "7",
+                    "source_health": {
+                        "status": "degraded",
+                        "primary_reason": "source_status_stale",
+                        "label": "Source token=label-secret status",
+                    },
+                    "git": {
+                        "head": "abc1234 token=head-secret",
+                        "dirty_path_count": "2",
+                    },
+                },
+            }
+            self.publisher.build_payload = lambda _args: payload
+            self.publisher.post_payload = lambda _args, _body: {
+                "ok": True,
+                "received_at": "2026-06-14T20:20:00Z",
+            }
+
+            status = self.publisher.publish_once(args)
+            log_text = publisher_log.read_text(encoding="utf-8")
+
+        self.assertTrue(status)
+        self.assertIn("source_status=running access_token=[redacted]", log_text)
+        self.assertIn("source_loop_running=None", log_text)
+        self.assertIn("source_status_stale=None", log_text)
+        self.assertIn("source_status_age_seconds=700", log_text)
+        self.assertIn(
+            "source_status_file_status=loaded token=[redacted] "
+            "https://relay.example/status?[redacted]#[redacted]",
+            log_text,
+        )
+        self.assertIn(
+            "publisher_host=worker-1 x-automoat-relay-token=[redacted]",
+            log_text,
+        )
+        self.assertIn("source_health_label=Source token=[redacted] status", log_text)
+        self.assertIn("publisher_git_head=abc1234 token=[redacted]", log_text)
+        self.assertNotIn("status-secret", log_text)
+        self.assertNotIn("file-secret", log_text)
+        self.assertNotIn("relay-user", log_text)
+        self.assertNotIn("relay-pass", log_text)
+        self.assertNotIn("url-secret", log_text)
+        self.assertNotIn("host-secret", log_text)
+        self.assertNotIn("label-secret", log_text)
+        self.assertNotIn("head-secret", log_text)
+
     def test_publish_once_logs_relay_ok_false_as_failure(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             publisher_log = Path(tmp) / "publisher.log"
