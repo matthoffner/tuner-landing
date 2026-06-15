@@ -72,12 +72,24 @@ function isLocalHttpHost(hostname) {
 }
 
 function normalizeUpstreamTimeoutMs(value) {
-  const raw = (value || "").trim();
-  if (!raw) {
+  const rawValue = String(value || "");
+  if (!rawValue) {
     return { timeoutMs: DEFAULT_UPSTREAM_TIMEOUT_MS, error: null };
   }
+  if (rawValue !== rawValue.trim()) {
+    return {
+      timeoutMs: DEFAULT_UPSTREAM_TIMEOUT_MS,
+      error: "AUTOMOAT_COCKPIT_UPSTREAM_TIMEOUT_MS must not include leading or trailing whitespace",
+    };
+  }
+  if (/[\r\n\x00-\x1f\x7f]/.test(rawValue)) {
+    return {
+      timeoutMs: DEFAULT_UPSTREAM_TIMEOUT_MS,
+      error: "AUTOMOAT_COCKPIT_UPSTREAM_TIMEOUT_MS must be a single-line value without control characters",
+    };
+  }
 
-  const parsed = Number(raw);
+  const parsed = Number(rawValue);
   if (!Number.isInteger(parsed) || parsed <= 0) {
     return {
       timeoutMs: DEFAULT_UPSTREAM_TIMEOUT_MS,

@@ -250,6 +250,34 @@ class CockpitApiProxyTest(unittest.TestCase):
               kind: "timeout",
               error: `AUTOMOAT_COCKPIT_UPSTREAM_TIMEOUT_MS must be less than or equal to ${MAX_UPSTREAM_TIMEOUT_MS}`,
             }]);
+
+            const surrounded = upstreams({
+              relayPath: "/api/status",
+              bridgePath: "/api/status",
+              env: {
+                AUTOMOAT_RELAY_URL: "https://automoat-cockpit-relay.example",
+                AUTOMOAT_COCKPIT_UPSTREAM_TIMEOUT_MS: " 1250",
+              },
+            });
+            assert.strictEqual(surrounded.timeoutMs, 8000);
+            assert.deepStrictEqual(surrounded.invalid, [{
+              kind: "timeout",
+              error: "AUTOMOAT_COCKPIT_UPSTREAM_TIMEOUT_MS must not include leading or trailing whitespace",
+            }]);
+
+            const embeddedControl = upstreams({
+              relayPath: "/api/status",
+              bridgePath: "/api/status",
+              env: {
+                AUTOMOAT_RELAY_URL: "https://automoat-cockpit-relay.example",
+                AUTOMOAT_COCKPIT_UPSTREAM_TIMEOUT_MS: "12\\t50",
+              },
+            });
+            assert.strictEqual(embeddedControl.timeoutMs, 8000);
+            assert.deepStrictEqual(embeddedControl.invalid, [{
+              kind: "timeout",
+              error: "AUTOMOAT_COCKPIT_UPSTREAM_TIMEOUT_MS must be a single-line value without control characters",
+            }]);
             """
         )
 
@@ -1241,9 +1269,9 @@ class CockpitApiProxyTest(unittest.TestCase):
 
             process.env.AUTOMOAT_RELAY_URL = "https://automoat-cockpit-relay.example";
             process.env.AUTOMOAT_BRIDGE_URL = "";
-            process.env.AUTOMOAT_COCKPIT_UPSTREAM_TIMEOUT_MS = "soon";
+            process.env.AUTOMOAT_COCKPIT_UPSTREAM_TIMEOUT_MS = " 5";
             global.fetch = async () => {
-              throw new Error("fetch should not be called with an invalid timeout");
+                throw new Error("fetch should not be called with an invalid timeout");
             };
 
             (async () => {
@@ -1252,6 +1280,11 @@ class CockpitApiProxyTest(unittest.TestCase):
               assert.strictEqual(statusResponse.statusCode, 503);
               assert(statusResponse.body.includes("cockpit_relay_invalid_configuration"));
               assert(statusResponse.body.includes("AUTOMOAT_COCKPIT_UPSTREAM_TIMEOUT_MS"));
+              assert(statusResponse.body.includes("leading or trailing whitespace"));
+              assert.strictEqual(
+                statusResponse.headers["X-Automoat-Upstream-Invalid-Config"],
+                "timeout:AUTOMOAT_COCKPIT_UPSTREAM_TIMEOUT_MS must not include leading or trailing whitespace",
+              );
               assert.strictEqual(
                 statusResponse.headers["X-Automoat-Upstream"],
                 "invalid_configuration",
@@ -1267,6 +1300,11 @@ class CockpitApiProxyTest(unittest.TestCase):
               assert.strictEqual(logResponse.statusCode, 503);
               assert(logResponse.body.includes("cockpit_relay_invalid_configuration"));
               assert(logResponse.body.includes("AUTOMOAT_COCKPIT_UPSTREAM_TIMEOUT_MS"));
+              assert(logResponse.body.includes("leading or trailing whitespace"));
+              assert.strictEqual(
+                logResponse.headers["X-Automoat-Upstream-Invalid-Config"],
+                "timeout:AUTOMOAT_COCKPIT_UPSTREAM_TIMEOUT_MS must not include leading or trailing whitespace",
+              );
               assert.strictEqual(
                 logResponse.headers["X-Automoat-Upstream"],
                 "invalid_configuration",
