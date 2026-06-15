@@ -58,6 +58,12 @@ def as_dict(value: object) -> dict[str, object]:
     return value if isinstance(value, dict) else {}
 
 
+def as_string_list(value: object) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [str(item) for item in value if isinstance(item, (str, int, float))]
+
+
 def utc_timestamp_age_seconds(value: object, now: datetime | None = None) -> int | None:
     if not isinstance(value, str) or not value.strip():
         return None
@@ -96,23 +102,54 @@ def cockpit_summary(status: dict[str, object]) -> dict[str, object]:
     if status_age_seconds is not None:
         status_stale = status_age_seconds > STATUS_STALE_AFTER_SECONDS
 
+    status_value = status.get("status") or "waiting"
+    loop_running = bool(status.get("loop_running"))
+    artifact_health_status = artifact_health.get("status") or "unknown"
+    import_readiness = readiness.get("status") or "unknown"
+    readiness_blockers = as_string_list(readiness.get("blockers"))
+    thin_group_categories = as_string_list(autonomy_policy.get("thin_group_categories"))
+    thin_group_count = autonomy_policy.get("thin_group_count")
+    if not isinstance(thin_group_count, int):
+        thin_group_count = len(thin_group_categories)
+
+    attention_reasons: list[str] = []
+    if not loop_running:
+        attention_reasons.append("loop_not_running")
+    if status_value in {"error", "failing", "invalid-status-json"}:
+        attention_reasons.append("status_failing")
+    if status_stale is True:
+        attention_reasons.append("status_stale")
+    if artifact_health_status != "loaded":
+        attention_reasons.append("artifact_health_not_loaded")
+    if import_readiness != "ready":
+        attention_reasons.append("import_readiness_not_ready")
+    if readiness_blockers:
+        attention_reasons.append("import_readiness_blocked")
+    if thin_group_count > 0:
+        attention_reasons.append("coverage_thin_groups_present")
+
     return {
-        "status": status.get("status") or "waiting",
+        "status": status_value,
         "phase": status.get("phase"),
         "mode": status.get("mode") or SERVER_CONFIG.get("loop_mode", "mvp"),
-        "loop_running": bool(status.get("loop_running")),
+        "loop_running": loop_running,
         "loop_pid": status.get("loop_pid"),
         "iteration": status.get("iteration") or 0,
         "updated_at": updated_at,
         "status_age_seconds": status_age_seconds,
         "status_stale_after_seconds": STATUS_STALE_AFTER_SECONDS,
         "status_stale": status_stale,
-        "artifact_health": artifact_health.get("status") or "unknown",
-        "import_readiness": readiness.get("status") or "unknown",
+        "operator_attention": bool(attention_reasons),
+        "operator_attention_reasons": attention_reasons,
+        "artifact_health": artifact_health_status,
+        "import_readiness": import_readiness,
+        "readiness_blockers": readiness_blockers,
         "ready_for_next_import_records": readiness.get("ready_for_next_import_records"),
         "current_focus": autonomy_policy.get("current_focus") or "mvp_loop",
         "policy_reason": autonomy_policy.get("decision_reason"),
         "dallas_pipeline_ready": autonomy_policy.get("dallas_pipeline_ready"),
+        "thin_group_count": thin_group_count,
+        "thin_group_categories": thin_group_categories,
         "contract_checks": contract_checks,
         "queue_items": workflow.get("queue_items"),
     }
@@ -470,6 +507,7 @@ def cockpit_html() -> str:
               <div class="detail"><span>phase</span><strong id="phase">...</strong></div>
               <div class="detail"><span>artifact health</span><strong id="artifactHealth">...</strong></div>
               <div class="detail"><span>status freshness</span><strong id="freshness">...</strong></div>
+              <div class="detail"><span>operator attention</span><strong id="attention">...</strong></div>
             </div>
             <div class="links">
               <a href="/.automoat/logs/mvp-loop.log">raw loop log</a>
@@ -496,6 +534,7 @@ def cockpit_html() -> str:
       const phase = document.getElementById("phase");
       const artifactHealth = document.getElementById("artifactHealth");
       const freshness = document.getElementById("freshness");
+      const attention = document.getElementById("attention");
 
       async function post(path) {{
         const response = await fetch(path, {{ method: "POST" }});
@@ -523,6 +562,8 @@ def cockpit_html() -> str:
         }} else {{
           freshness.textContent = "unknown";
         }}
+        const reasons = Array.isArray(cockpit.operator_attention_reasons) ? cockpit.operator_attention_reasons : [];
+        attention.textContent = cockpit.operator_attention ? reasons.join(", ") || "required" : "clear";
       }}
 
       const startButton = document.getElementById("start");

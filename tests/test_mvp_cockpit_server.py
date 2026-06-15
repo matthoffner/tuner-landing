@@ -76,6 +76,7 @@ class MvpCockpitServerTest(unittest.TestCase):
                     "execution_readiness": {
                         "status": "ready",
                         "ready_for_next_import_records": True,
+                        "blockers": [],
                     }
                 },
             },
@@ -93,14 +94,60 @@ class MvpCockpitServerTest(unittest.TestCase):
         self.assertIsInstance(summary["status_age_seconds"], int)
         self.assertEqual(summary["status_stale_after_seconds"], 120)
         self.assertTrue(summary["status_stale"])
+        self.assertTrue(summary["operator_attention"])
+        self.assertEqual(summary["operator_attention_reasons"], ["status_stale"])
         self.assertEqual(summary["artifact_health"], "loaded")
         self.assertEqual(summary["import_readiness"], "ready")
+        self.assertEqual(summary["readiness_blockers"], [])
         self.assertTrue(summary["ready_for_next_import_records"])
         self.assertEqual(summary["current_focus"], "autonomy_visibility_or_real_ingest")
         self.assertEqual(summary["policy_reason"], "dallas_ready_no_thin_groups")
         self.assertTrue(summary["dallas_pipeline_ready"])
+        self.assertEqual(summary["thin_group_count"], 0)
+        self.assertEqual(summary["thin_group_categories"], [])
         self.assertEqual(summary["contract_checks"], "13/13")
         self.assertEqual(summary["queue_items"], 535)
+
+    def test_cockpit_summary_reports_attention_reasons(self) -> None:
+        status = {
+            "status": "failing",
+            "updated_at": "2026-06-15T00:00:00Z",
+            "loop_running": False,
+            "artifacts": {
+                "artifact_health": {"status": "degraded"},
+                "import_pipeline": {
+                    "execution_readiness": {
+                        "status": "blocked",
+                        "blockers": ["correction_ledger_incomplete"],
+                    }
+                },
+            },
+            "autonomy_policy": {
+                "thin_group_count": 2,
+                "thin_group_categories": ["failure_reasons", "result_states"],
+            },
+        }
+
+        summary = self.cockpit.cockpit_summary(status)
+
+        self.assertTrue(summary["operator_attention"])
+        self.assertEqual(
+            summary["operator_attention_reasons"],
+            [
+                "loop_not_running",
+                "status_failing",
+                "status_stale",
+                "artifact_health_not_loaded",
+                "import_readiness_not_ready",
+                "import_readiness_blocked",
+                "coverage_thin_groups_present",
+            ],
+        )
+        self.assertEqual(summary["readiness_blockers"], ["correction_ledger_incomplete"])
+        self.assertEqual(summary["thin_group_count"], 2)
+        self.assertEqual(
+            summary["thin_group_categories"], ["failure_reasons", "result_states"]
+        )
 
     def test_read_status_adds_cockpit_summary(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -136,6 +183,11 @@ class MvpCockpitServerTest(unittest.TestCase):
         self.assertEqual(status["cockpit_summary"]["import_readiness"], "ready")
         self.assertIsNone(status["cockpit_summary"]["status_age_seconds"])
         self.assertIsNone(status["cockpit_summary"]["status_stale"])
+        self.assertTrue(status["cockpit_summary"]["operator_attention"])
+        self.assertEqual(
+            status["cockpit_summary"]["operator_attention_reasons"],
+            ["loop_not_running"],
+        )
         self.assertFalse(status["cockpit_summary"]["loop_running"])
 
     def test_cockpit_html_includes_operator_diagnostic_targets(self) -> None:
@@ -147,6 +199,8 @@ class MvpCockpitServerTest(unittest.TestCase):
                 "current_focus": "autonomy_visibility_or_real_ingest",
                 "status_age_seconds": 14,
                 "status_stale": False,
+                "operator_attention": True,
+                "operator_attention_reasons": ["status_stale"],
             },
         }
 
@@ -157,8 +211,10 @@ class MvpCockpitServerTest(unittest.TestCase):
         self.assertIn('id="phase"', markup)
         self.assertIn('id="artifactHealth"', markup)
         self.assertIn('id="freshness"', markup)
+        self.assertIn('id="attention"', markup)
         self.assertIn("status.cockpit_summary", markup)
         self.assertIn("status_age_seconds", markup)
+        self.assertIn("operator_attention_reasons", markup)
 
     def test_access_log_redacts_query_strings_from_request_lines(self) -> None:
         request_line = "GET /api/status?token=secret&relay=abc HTTP/1.1"

@@ -112,6 +112,12 @@ def cockpit_health(
     freshness: dict[str, Any],
 ) -> dict[str, Any]:
     reasons: list[str] = []
+    source_summary = status.get("cockpit_summary")
+    if not isinstance(source_summary, dict):
+        source_summary = {}
+    source_attention_reasons = source_summary.get("operator_attention_reasons")
+    if not isinstance(source_attention_reasons, list):
+        source_attention_reasons = []
     startup = state.get("relay_startup")
     if isinstance(startup, dict) and startup.get("state_load_status") == "failed":
         reasons.append("relay_state_load_failed")
@@ -132,6 +138,8 @@ def cockpit_health(
         reasons.append("source_loop_not_running")
     if status.get("status") in {"error", "failing"}:
         reasons.append("source_status_failing")
+    if source_summary.get("operator_attention") is True:
+        reasons.append("source_cockpit_attention")
 
     if not state.get("received_at"):
         health_status = "waiting"
@@ -143,6 +151,9 @@ def cockpit_health(
         "status": health_status,
         "ok": health_status == "live",
         "reasons": reasons,
+        "source_cockpit_attention_reasons": [
+            str(reason) for reason in source_attention_reasons if reason
+        ],
     }
 
 

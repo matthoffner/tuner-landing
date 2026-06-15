@@ -146,6 +146,46 @@ class RenderCockpitRelayTest(unittest.TestCase):
         self.assertEqual(status["cockpit_status"], "degraded")
         self.assertEqual(status["cockpit_health"]["reasons"], ["source_status_stale"])
 
+    def test_status_and_health_report_source_cockpit_attention(self) -> None:
+        self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
+        self.relay.update_state(
+            {
+                "pushed_at": "2026-06-14T19:59:30Z",
+                "status": {
+                    "status": "running",
+                    "loop_running": True,
+                    "cockpit_summary": {
+                        "operator_attention": True,
+                        "operator_attention_reasons": [
+                            "artifact_health_not_loaded",
+                            "import_readiness_not_ready",
+                        ],
+                    },
+                },
+                "log_tail": "loop is working\n",
+            }
+        )
+        self.relay.utc_now = lambda: "2026-06-14T20:00:00Z"
+
+        health = self.relay.health_payload()
+        status = self.relay.relay_status_payload()
+
+        self.assertTrue(health["ok"])
+        self.assertFalse(health["cockpit_ok"])
+        self.assertEqual(health["cockpit_status"], "degraded")
+        self.assertEqual(
+            health["cockpit_health"]["reasons"], ["source_cockpit_attention"]
+        )
+        self.assertEqual(
+            health["cockpit_health"]["source_cockpit_attention_reasons"],
+            ["artifact_health_not_loaded", "import_readiness_not_ready"],
+        )
+        self.assertFalse(status["cockpit_ok"])
+        self.assertEqual(status["cockpit_status"], "degraded")
+        self.assertEqual(
+            status["cockpit_health"]["reasons"], ["source_cockpit_attention"]
+        )
+
     def test_status_and_health_report_unavailable_source_status_file(self) -> None:
         self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
         self.relay.update_state(
