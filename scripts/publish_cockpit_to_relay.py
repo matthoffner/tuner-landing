@@ -827,6 +827,21 @@ def git_snapshot() -> dict[str, Any]:
     }
 
 
+def publisher_git_summary(snapshot: dict[str, Any]) -> dict[str, Any]:
+    summary: dict[str, Any] = {}
+    for key in ("head", "branch"):
+        compact_value = compact_policy_detail(snapshot.get(key), max_length=160)
+        if compact_value is not None:
+            summary[key] = compact_value
+
+    dirty_path_count = compact_int(snapshot.get("dirty_path_count"))
+    if dirty_path_count is None and isinstance(snapshot.get("dirty_paths"), list):
+        dirty_path_count = len(snapshot["dirty_paths"])
+    if dirty_path_count is not None:
+        summary["dirty_path_count"] = dirty_path_count
+    return summary
+
+
 def next_publisher_snapshot_sequence() -> int:
     global PUBLISHER_SNAPSHOT_SEQUENCE
     PUBLISHER_SNAPSHOT_SEQUENCE += 1
@@ -934,7 +949,7 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
             ),
             "source_health": publisher_source_health(status),
             "runtime_config": publisher_runtime_config(args),
-            "git": git_snapshot(),
+            "git": publisher_git_summary(git_snapshot()),
         },
     }
 

@@ -145,7 +145,6 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             {
                 "head": "testhead",
                 "branch": "testbranch",
-                "dirty_paths": [],
                 "dirty_path_count": 0,
             },
         )
@@ -172,6 +171,66 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 "max_consecutive_stale_statuses": 6,
             },
         )
+
+    def test_build_payload_omits_dirty_path_names_before_relay_publish(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            status_file = tmp_path / "status.json"
+            pid_file = tmp_path / "custom.pid"
+            log_file = tmp_path / "custom.log"
+            publisher_log = tmp_path / "publisher.log"
+            bridge_status_file = tmp_path / "custom-bridge-status.json"
+            status_file.write_text(
+                json.dumps(
+                    {
+                        "status": "passing",
+                        "updated_at": "2026-06-14T19:30:00Z",
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            log_file.write_text("ready\n", encoding="utf-8")
+            args = Namespace(
+                status_file=status_file,
+                pid_file=pid_file,
+                log_file=log_file,
+                publisher_log=publisher_log,
+                bridge_status_file=bridge_status_file,
+                interval=4.5,
+                timeout=11.25,
+                tail_lines=2,
+                max_log_bytes=1024,
+                max_consecutive_failures=5,
+                max_consecutive_stale_statuses=6,
+                status_stale_after_seconds=120,
+                bridge_status_stale_after_seconds=120,
+            )
+            self.publisher.utc_now = lambda: "2026-06-14T19:31:00Z"
+            self.publisher.git_snapshot = lambda: {
+                "head": "testhead",
+                "branch": "feature/token=branch-secret",
+                "dirty_paths": [
+                    "notes/secret-customer-path.txt",
+                    "/tmp/relay-token-local-file",
+                ],
+            }
+
+            payload = self.publisher.build_payload(args)
+            payload_text = json.dumps(payload, sort_keys=True)
+
+        self.assertEqual(
+            payload["publisher"]["git"],
+            {
+                "head": "testhead",
+                "branch": "feature/token=[redacted]",
+                "dirty_path_count": 2,
+            },
+        )
+        self.assertNotIn("dirty_paths", payload["publisher"]["git"])
+        self.assertNotIn("secret-customer-path", payload_text)
+        self.assertNotIn("relay-token-local-file", payload_text)
+        self.assertNotIn("branch-secret", payload_text)
 
     def test_build_payload_sanitizes_log_tail_before_relay_publish(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
