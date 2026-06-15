@@ -843,6 +843,11 @@ def validate_git_branch_name(value: str, errors: list[str]) -> None:
     ):
         errors.append("AUTOMOAT_GIT_BRANCH must not contain whitespace or control characters")
         return
+    if branch.startswith("origin/") or branch.startswith("refs/"):
+        errors.append(
+            "AUTOMOAT_GIT_BRANCH must be a short branch name without origin/ or refs/ prefixes"
+        )
+        return
 
     branch_components = branch.split("/")
     invalid_fragments = ("..", "//", "@{", "\\")
