@@ -42,6 +42,9 @@ function normalizeBaseUrl(value, options = {}) {
   if (parsed.username || parsed.password) {
     return { url: "", error: "must not include embedded credentials" };
   }
+  if (parsed.pathname.includes(";")) {
+    return { url: "", error: "must not include path parameters" };
+  }
   if (parsed.search || parsed.hash) {
     return { url: "", error: "must not include query strings or fragments" };
   }

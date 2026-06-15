@@ -85,6 +85,35 @@ class CockpitApiProxyTest(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_upstreams_reject_path_parameters_before_fetching(self) -> None:
+        result = run_node(
+            """
+            const assert = require("assert");
+            const { upstreams } = require("./api/cockpit-upstreams");
+            const result = upstreams({
+              relayPath: "/api/status",
+              bridgePath: "/api/status",
+              env: {
+                AUTOMOAT_RELAY_URL: "https://automoat-cockpit-relay.example/;debug",
+                AUTOMOAT_BRIDGE_URL: "https://legacy-bridge.example/base;debug",
+              },
+            });
+            assert.deepStrictEqual(result.configured, []);
+            assert.deepStrictEqual(result.invalid, [
+              {
+                kind: "relay",
+                error: "must not include path parameters",
+              },
+              {
+                kind: "legacy_bridge",
+                error: "must not include path parameters",
+              },
+            ]);
+            """
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_upstreams_reject_plain_http_remote_relay_but_allow_local(self) -> None:
         result = run_node(
             """
