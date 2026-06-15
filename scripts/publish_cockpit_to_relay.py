@@ -414,7 +414,7 @@ def read_bridge_summary(
         "mode": payload.get("mode"),
     }
     for key, value in text_fields.items():
-        compact_value = compact_text(value)
+        compact_value = compact_policy_detail(value)
         if compact_value is not None:
             summary[key] = compact_value
 

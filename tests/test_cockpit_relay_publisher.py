@@ -424,6 +424,50 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertNotIn("local-secret", summary_text)
         self.assertNotIn("api-secret", summary_text)
 
+    def test_read_bridge_summary_sanitizes_text_fields_for_remote_snapshots(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            bridge_status_file = Path(tmp) / "mvp-bridge-status.json"
+            bridge_status_file.write_text(
+                json.dumps(
+                    {
+                        "status": (
+                            "running https://user:status-secret@example.local"
+                            "/viewer?token=status-token#debug"
+                        ),
+                        "updated_at": "2026-06-15T03:20:00Z\nrelay_token=time-secret",
+                        "bridge_started_at": (
+                            "2026-06-15T03:19:00Z authorization: Bearer start-secret"
+                        ),
+                        "mode": "read-only token=mode-secret",
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            summary = self.publisher.read_bridge_summary(bridge_status_file)
+            summary_text = json.dumps(summary, sort_keys=True)
+
+        self.assertEqual(
+            summary["status"],
+            "running https://example.local/viewer?[redacted]#[redacted]",
+        )
+        self.assertEqual(
+            summary["updated_at"],
+            "2026-06-15T03:20:00Z relay_token=[redacted]",
+        )
+        self.assertEqual(
+            summary["bridge_started_at"],
+            "2026-06-15T03:19:00Z authorization: Bearer [redacted]",
+        )
+        self.assertEqual(summary["mode"], "read-only token=[redacted]")
+        self.assertNotIn("status-secret", summary_text)
+        self.assertNotIn("status-token", summary_text)
+        self.assertNotIn("time-secret", summary_text)
+        self.assertNotIn("start-secret", summary_text)
+        self.assertNotIn("mode-secret", summary_text)
+        self.assertNotIn("\n", summary_text)
+
     def test_read_bridge_summary_sanitizes_bridge_health_for_remote_snapshots(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             bridge_status_file = Path(tmp) / "mvp-bridge-status.json"
