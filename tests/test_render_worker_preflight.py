@@ -1219,6 +1219,137 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertEqual(status, 1)
         self.assertTrue(loop.terminated)
 
+    def test_startup_publisher_exit_prevents_loop_launch(self) -> None:
+        publisher = FakeProcess(pid=202, initial_status=4)
+        output = io.StringIO()
+
+        with patch.object(self.worker, "parse_args") as parse_args, patch.object(
+            self.worker,
+            "emit_environment_preflight",
+            return_value=[],
+        ), patch.object(self.worker, "configure_git_auth"), patch.object(
+            self.worker,
+            "configure_codex_auth",
+        ), patch.object(
+            self.worker,
+            "sync_repo",
+        ), patch.object(
+            self.worker,
+            "start_publisher",
+            return_value=publisher,
+        ), patch.object(
+            self.worker,
+            "start_loop",
+        ) as start_loop, patch.object(
+            self.worker.time,
+            "sleep",
+        ), redirect_stdout(
+            output
+        ):
+            parse_args.return_value = type(
+                "Args",
+                (),
+                {"check_env": False, "format": "text"},
+            )()
+            self.worker.CHILDREN.append(publisher)
+
+            status = self.worker.main()
+
+        self.assertEqual(status, 4)
+        start_loop.assert_not_called()
+        self.assertIn(
+            "relay publisher exited during startup status=4; worker_exit_status=4",
+            output.getvalue(),
+        )
+
+    def test_startup_clean_publisher_exit_is_worker_failure(self) -> None:
+        publisher = FakeProcess(pid=202, initial_status=0)
+        output = io.StringIO()
+
+        with patch.object(self.worker, "parse_args") as parse_args, patch.object(
+            self.worker,
+            "emit_environment_preflight",
+            return_value=[],
+        ), patch.object(self.worker, "configure_git_auth"), patch.object(
+            self.worker,
+            "configure_codex_auth",
+        ), patch.object(
+            self.worker,
+            "sync_repo",
+        ), patch.object(
+            self.worker,
+            "start_publisher",
+            return_value=publisher,
+        ), patch.object(
+            self.worker,
+            "start_loop",
+        ) as start_loop, patch.object(
+            self.worker.time,
+            "sleep",
+        ), redirect_stdout(
+            output
+        ):
+            parse_args.return_value = type(
+                "Args",
+                (),
+                {"check_env": False, "format": "text"},
+            )()
+            self.worker.CHILDREN.append(publisher)
+
+            status = self.worker.main()
+
+        self.assertEqual(status, 1)
+        start_loop.assert_not_called()
+        self.assertIn(
+            "relay publisher exited during startup status=0; worker_exit_status=1",
+            output.getvalue(),
+        )
+
+    def test_startup_loop_exit_stops_publisher(self) -> None:
+        publisher = FakeProcess(pid=202)
+        loop = FakeProcess(pid=101, initial_status=6)
+        output = io.StringIO()
+
+        with patch.object(self.worker, "parse_args") as parse_args, patch.object(
+            self.worker,
+            "emit_environment_preflight",
+            return_value=[],
+        ), patch.object(self.worker, "configure_git_auth"), patch.object(
+            self.worker,
+            "configure_codex_auth",
+        ), patch.object(
+            self.worker,
+            "sync_repo",
+        ), patch.object(
+            self.worker,
+            "start_publisher",
+            return_value=publisher,
+        ), patch.object(
+            self.worker,
+            "start_loop",
+            return_value=loop,
+        ), patch.object(
+            self.worker.time,
+            "sleep",
+        ), redirect_stdout(
+            output
+        ):
+            parse_args.return_value = type(
+                "Args",
+                (),
+                {"check_env": False, "format": "text"},
+            )()
+            self.worker.CHILDREN.extend([publisher, loop])
+
+            status = self.worker.main()
+
+        self.assertEqual(status, 6)
+        self.assertTrue(publisher.terminated)
+        self.assertIn(
+            "autonomous loop exited during startup status=6; worker_exit_status=6",
+            output.getvalue(),
+        )
+
 
 class FakeProcess:
     def __init__(self, *, pid: int, initial_status: int | None = None) -> None:

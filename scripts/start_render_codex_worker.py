@@ -27,6 +27,7 @@ RESERVED_RUNTIME_FILE_PATHS = (GIT_ASKPASS, GITHUB_TOKEN_FILE)
 
 CHILDREN: list[subprocess.Popen[object]] = []
 STOP_REQUESTED = False
+STARTUP_CHILD_GRACE_SECONDS = 0.5
 CODEX_AUTH_ENV_NAMES = ("CODEX_AUTH_JSON_B64", "CODEX_ACCESS_TOKEN", "OPENAI_API_KEY")
 GIT_AUTH_ENV_NAMES = ("GITHUB_TOKEN", "GH_TOKEN")
 REQUIRED_COMMANDS = ("git", "codex")
@@ -909,6 +910,28 @@ def start_loop() -> subprocess.Popen[object]:
     return process
 
 
+def child_startup_exit_status(
+    process: subprocess.Popen[object],
+    label: str,
+    *,
+    clean_exit_status: int | None = None,
+    grace_seconds: float = STARTUP_CHILD_GRACE_SECONDS,
+) -> int | None:
+    """Return a child exit status if it dies during startup, otherwise None."""
+    if grace_seconds > 0:
+        time.sleep(grace_seconds)
+    status = process.poll()
+    if status is None:
+        return None
+
+    worker_status = clean_exit_status if status == 0 and clean_exit_status is not None else status
+    emit(
+        f"{label} exited during startup status={status}; "
+        f"worker_exit_status={worker_status}"
+    )
+    return worker_status
+
+
 def monitor_worker_children(
     loop_process: subprocess.Popen[object],
     publisher_process: subprocess.Popen[object],
@@ -993,7 +1016,21 @@ def main() -> int:
     configure_codex_auth()
     sync_repo()
     publisher = start_publisher()
+    publisher_startup_status = child_startup_exit_status(
+        publisher,
+        "relay publisher",
+        clean_exit_status=1,
+    )
+    if publisher_startup_status is not None:
+        stop_children()
+        return publisher_startup_status
+
     loop = start_loop()
+    loop_startup_status = child_startup_exit_status(loop, "autonomous loop")
+    if loop_startup_status is not None:
+        stop_children()
+        return loop_startup_status
+
     return monitor_worker_children(loop, publisher)
 
 
