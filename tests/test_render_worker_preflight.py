@@ -2071,6 +2071,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             'codex_configured_keys=["AUTOMOAT_CODEX_MODEL", "AUTOMOAT_CODEX_REASONING_EFFORT"]',
             output.getvalue(),
         )
+        self.assertIn('git_configured_keys=["AUTOMOAT_GIT_BRANCH"]', output.getvalue())
         self.assertIn(
             'git_identity_configured_keys=["GIT_AUTHOR_EMAIL", "GIT_AUTHOR_NAME"]',
             output.getvalue(),
@@ -2134,6 +2135,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             payload["config"]["codex_configured_keys"],
             ["AUTOMOAT_CODEX_MODEL", "AUTOMOAT_CODEX_REASONING_EFFORT"],
         )
+        self.assertEqual(payload["config"]["git_configured_keys"], ["AUTOMOAT_GIT_BRANCH"])
         self.assertEqual(
             payload["config"]["git_identity_configured_keys"],
             ["GIT_AUTHOR_EMAIL", "GIT_AUTHOR_NAME"],
@@ -2373,6 +2375,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         )
         self.assertEqual(payload["diagnostics"]["runtime_configured_keys"], [])
         self.assertEqual(payload["diagnostics"]["path_configured_keys"], [])
+        self.assertEqual(payload["diagnostics"]["git_configured_keys"], ["AUTOMOAT_GIT_REPO"])
         self.assertEqual(
             payload["diagnostics"]["runtime_limits"],
             self.worker.RUNTIME_CONFIG_LIMITS,
@@ -2440,6 +2443,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             ],
         )
         self.assertEqual(payload["diagnostics"]["path_configured_keys"], [])
+        self.assertEqual(payload["diagnostics"]["git_configured_keys"], ["AUTOMOAT_GIT_BRANCH"])
         self.assertNotIn("config", payload)
         self.assertNotIn("relay-token", output.getvalue())
         self.assertNotIn("github-token", output.getvalue())
@@ -3477,6 +3481,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         )
         self.assertEqual(payload["diagnostics"]["missing_commands"], ["codex"])
         self.assertEqual(payload["diagnostics"]["runtime_configured_keys"], [])
+        self.assertEqual(payload["diagnostics"]["git_configured_keys"], [])
         self.assertEqual(payload["diagnostics"]["git_auth_selected"], "GH_TOKEN")
         self.assertEqual(
             payload["diagnostics"]["codex_auth_selected"],

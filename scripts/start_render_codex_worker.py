@@ -38,6 +38,7 @@ PUBLISHER_PREFLIGHT_DIAGNOSTIC_TOKEN_LIMIT = 12
 CODEX_AUTH_ENV_NAMES = ("CODEX_AUTH_JSON_B64", "CODEX_ACCESS_TOKEN", "OPENAI_API_KEY")
 GIT_AUTH_ENV_NAMES = ("GITHUB_TOKEN", "GH_TOKEN")
 SECRET_ENV_NAMES = ("AUTOMOAT_RELAY_TOKEN", *GIT_AUTH_ENV_NAMES, *CODEX_AUTH_ENV_NAMES)
+GIT_CONFIG_ENV_NAMES = ("AUTOMOAT_GIT_REPO", "AUTOMOAT_GIT_BRANCH")
 URL_TEXT_PATTERN = re.compile(r"https?://[^\s'\"<>]+")
 BEARER_SECRET_PATTERN = re.compile(
     r"\b(authorization\s*[:=]\s*bearer)\s+[^\s,;]+",
@@ -685,6 +686,11 @@ def configured_git_identity_keys(env: os._Environ[str] | dict[str, str]) -> list
     return sorted(name for name in GIT_IDENTITY_ENV_DEFAULTS if name in env)
 
 
+def configured_git_config_keys(env: os._Environ[str] | dict[str, str]) -> list[str]:
+    """Return configured Git repo/branch keys without exposing their values."""
+    return sorted(name for name in GIT_CONFIG_ENV_NAMES if name in env)
+
+
 def validate_secret_safe_http_url(
     name: str,
     value: str,
@@ -1192,6 +1198,7 @@ def environment_preflight_summary(
             "runtime_configured_keys": configured_runtime_keys(env),
             "path_configured_keys": configured_worker_path_keys(env),
             "codex_configured_keys": configured_codex_config_keys(env),
+            "git_configured_keys": configured_git_config_keys(env),
             "git_identity_configured_keys": configured_git_identity_keys(env),
             "runtime_limits": RUNTIME_CONFIG_LIMITS,
         }
@@ -1210,6 +1217,7 @@ def environment_preflight_summary(
         "runtime_configured_keys": configured_runtime_keys(env),
         "path_configured_keys": configured_worker_path_keys(env),
         "codex_configured_keys": configured_codex_config_keys(env),
+        "git_configured_keys": configured_git_config_keys(env),
         "git_identity_configured_keys": configured_git_identity_keys(env),
         "agent_interval": env.get("AUTOMOAT_AGENT_INTERVAL", "300"),
         "agent_iterations": env.get("AUTOMOAT_AGENT_ITERATIONS", "0"),
@@ -1299,6 +1307,8 @@ def emit_environment_preflight(
         f"{json.dumps(configured_worker_path_keys(env), sort_keys=True)} "
         f"codex_configured_keys="
         f"{json.dumps(configured_codex_config_keys(env), sort_keys=True)} "
+        f"git_configured_keys="
+        f"{json.dumps(configured_git_config_keys(env), sort_keys=True)} "
         f"git_identity_configured_keys="
         f"{json.dumps(configured_git_identity_keys(env), sort_keys=True)} "
         f"agent_interval={env.get('AUTOMOAT_AGENT_INTERVAL', '300')} "
