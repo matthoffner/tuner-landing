@@ -4,6 +4,12 @@ Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
 - lane: editor
+- status: made the Vercel cockpit status proxy reject HTML-like upstream success bodies with the stable `status_payload_must_not_be_html` diagnostic before JSON parsing, so fallback headers and unreachable JSON distinguish offline/misrouted HTML from generic invalid JSON; no Dallas raw CSV rows were edited
+- files: api/cockpit-status.js, tests/test_cockpit_api_proxy.py, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- checks: `python3 -m unittest tests.test_cockpit_api_proxy -v`; `node --check api/cockpit-status.js`; `node --check api/cockpit-log.js`; `node --check api/cockpit-upstreams.js`; `python3 -m unittest discover -s tests -v`; `python3 -m py_compile tests/test_cockpit_api_proxy.py`; `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json > /tmp/automoat-status-proxy-html-ready.json`; JSON assertion for readiness `ready`, `535/535` corrections, `535` permits, `1082` inspections, `1093` tasks, `541` label reviews, `1625` source records, and zero thin groups; `cmp -s generated/landing.html index.html`; `git diff --exit-code -- .pxcode/preview.json`; raw Dallas CSV diff check returned no changes; `git diff --check`
+- next: keep cockpit proxy diagnostics stable across `/api/cockpit-status` and `/api/cockpit-log`; if a deployed relay serves HTML, inspect `X-Automoat-Upstream-Attempts` for `status_payload_must_not_be_html`
+
+- lane: editor
 - status: made the autonomous-loop supervisor policy snapshot cockpit-visible with `decision_reason`, readiness status/blockers, ready-for-next-import flag, thin-group count, and thin-group categories so operators can see why the loop is prioritizing autonomy work versus readiness blockers; no Dallas raw CSV rows were edited
 - files: scripts/run_autonomous_agent_loop.py, tests/test_autonomous_agent_policy.py, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
 - checks: `python3 -m unittest tests.test_autonomous_agent_policy`; `python3 -m py_compile scripts/run_autonomous_agent_loop.py tests/test_autonomous_agent_policy.py`; `python3 -m unittest discover -s tests`; `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json`; readiness remains `ready` with `535/535` corrections, `535` permits, `1082` inspections, `1093` tasks, `541` label reviews, `1625` source records, and zero thin groups; `cmp -s generated/landing.html index.html`; `git diff --check`

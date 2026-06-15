@@ -577,6 +577,10 @@ class CockpitApiProxyTest(unittest.TestCase):
                 status: "bridge-live",
                 cockpit_ok: true,
               });
+              assert.strictEqual(
+                statusResponse.headers["X-Automoat-Upstream-Attempts"],
+                "relay:200:status_payload_must_not_be_html,legacy_bridge:200",
+              );
               assert.deepStrictEqual(fetched, [
                 "https://automoat-cockpit-relay.example/api/status",
                 "https://legacy-bridge.example/api/status",
@@ -644,12 +648,12 @@ class CockpitApiProxyTest(unittest.TestCase):
               const payload = JSON.parse(statusResponse.body);
               assert.strictEqual(payload.error, "cockpit_relay_unreachable");
               assert.deepStrictEqual(payload.attempts, [
-                { kind: "relay", status: 200, error: "invalid_json" },
+                { kind: "relay", status: 200, error: "status_payload_must_not_be_html" },
                 { kind: "legacy_bridge", status: 200, error: "status_payload_must_be_object" },
               ]);
               assert.strictEqual(
                 statusResponse.headers["X-Automoat-Upstream-Attempts"],
-                "relay:200:invalid_json,legacy_bridge:200:status_payload_must_be_object",
+                "relay:200:status_payload_must_not_be_html,legacy_bridge:200:status_payload_must_be_object",
               );
               assert.strictEqual(statusResponse.headers["X-Automoat-Upstream"], "unreachable");
               assert.strictEqual(

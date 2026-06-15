@@ -10,6 +10,11 @@ const {
 } = require("./cockpit-upstreams");
 
 function parseStatusPayload(body) {
+  const normalized = body.trimStart().toLowerCase();
+  if (normalized.startsWith("<!doctype html") || normalized.startsWith("<html")) {
+    return { ok: false, error: "status_payload_must_not_be_html" };
+  }
+
   let payload;
   try {
     payload = JSON.parse(body);
