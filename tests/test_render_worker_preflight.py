@@ -1313,6 +1313,69 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             ],
         )
 
+    def test_rejects_oversized_worker_paths_before_startup(self) -> None:
+        oversized_workdir = "/work/" + ("secret-workdir-segment/" * 30)
+        oversized_codex_home = "/tmp/" + ("secret-codex-segment/" * 30)
+
+        errors = self.worker.validate_worker_environment(
+            {
+                "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+                "AUTOMOAT_RELAY_TOKEN": "relay-token",
+                "GITHUB_TOKEN": "github-token",
+                "CODEX_ACCESS_TOKEN": "codex-token",
+                "AUTOMOAT_WORKDIR": oversized_workdir,
+                "CODEX_HOME": oversized_codex_home,
+            },
+            found_command,
+        )
+
+        self.assertEqual(
+            errors,
+            [
+                (
+                    "AUTOMOAT_WORKDIR must be "
+                    f"{self.worker.MAX_WORKER_PATH_CHARS} characters or fewer"
+                ),
+                (
+                    "CODEX_HOME must be "
+                    f"{self.worker.MAX_WORKER_PATH_CHARS} characters or fewer"
+                ),
+            ],
+        )
+
+    def test_check_env_json_routes_oversized_worker_paths_without_echoing_values(self) -> None:
+        oversized_workdir = "/work/" + ("secret-workdir-segment/" * 30)
+        oversized_codex_home = "/tmp/" + ("secret-codex-segment/" * 30)
+        output = io.StringIO()
+
+        with redirect_stdout(output):
+            errors = self.worker.emit_environment_preflight(
+                {
+                    "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+                    "AUTOMOAT_RELAY_TOKEN": "relay-token",
+                    "GITHUB_TOKEN": "github-token",
+                    "CODEX_ACCESS_TOKEN": "codex-token",
+                    "AUTOMOAT_WORKDIR": oversized_workdir,
+                    "CODEX_HOME": oversized_codex_home,
+                },
+                found_command,
+                output_format="json",
+            )
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(payload["status"], "failed")
+        self.assertEqual(payload["errors"], errors)
+        self.assertEqual(payload["diagnostics"]["error_categories"], ["invalid_path"])
+        self.assertEqual(
+            payload["diagnostics"]["failed_configuration_keys"],
+            ["AUTOMOAT_WORKDIR", "CODEX_HOME"],
+        )
+        self.assertNotIn("secret-workdir-segment", output.getvalue())
+        self.assertNotIn("secret-codex-segment", output.getvalue())
+        self.assertNotIn("relay-token", output.getvalue())
+        self.assertNotIn("github-token", output.getvalue())
+        self.assertNotIn("codex-token", output.getvalue())
+
     def test_validate_worker_environment_uses_supplied_path_env_values(self) -> None:
         base_env = {
             "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
@@ -2092,6 +2155,66 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         )
         self.assertNotIn(str(workdir), output.getvalue())
         self.assertNotIn(str(blocked_parent), output.getvalue())
+        self.assertNotIn("relay-token", output.getvalue())
+        self.assertNotIn("github-token", output.getvalue())
+        self.assertNotIn("codex-token", output.getvalue())
+
+    def test_rejects_oversized_bridge_status_file_before_publisher_preflight(self) -> None:
+        oversized_bridge_status_file = (
+            ".automoat/state/" + ("secret-bridge-status-segment-" * 20) + ".json"
+        )
+
+        errors = self.worker.validate_worker_environment(
+            {
+                "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+                "AUTOMOAT_RELAY_TOKEN": "relay-token",
+                "GITHUB_TOKEN": "github-token",
+                "CODEX_ACCESS_TOKEN": "codex-token",
+                "AUTOMOAT_BRIDGE_STATUS_FILE": oversized_bridge_status_file,
+            },
+            found_command,
+        )
+
+        self.assertEqual(
+            errors,
+            [
+                (
+                    "AUTOMOAT_BRIDGE_STATUS_FILE must be "
+                    f"{self.worker.MAX_WORKER_PATH_CHARS} characters or fewer"
+                ),
+            ],
+        )
+
+    def test_check_env_json_routes_oversized_bridge_status_file_without_echoing_value(
+        self,
+    ) -> None:
+        oversized_bridge_status_file = (
+            ".automoat/state/" + ("secret-bridge-status-segment-" * 20) + ".json"
+        )
+        output = io.StringIO()
+
+        with redirect_stdout(output):
+            errors = self.worker.emit_environment_preflight(
+                {
+                    "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+                    "AUTOMOAT_RELAY_TOKEN": "relay-token",
+                    "GITHUB_TOKEN": "github-token",
+                    "CODEX_ACCESS_TOKEN": "codex-token",
+                    "AUTOMOAT_BRIDGE_STATUS_FILE": oversized_bridge_status_file,
+                },
+                found_command,
+                output_format="json",
+            )
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(payload["status"], "failed")
+        self.assertEqual(payload["errors"], errors)
+        self.assertEqual(payload["diagnostics"]["error_categories"], ["invalid_file_path"])
+        self.assertEqual(
+            payload["diagnostics"]["failed_configuration_keys"],
+            ["AUTOMOAT_BRIDGE_STATUS_FILE"],
+        )
+        self.assertNotIn("secret-bridge-status-segment", output.getvalue())
         self.assertNotIn("relay-token", output.getvalue())
         self.assertNotIn("github-token", output.getvalue())
         self.assertNotIn("codex-token", output.getvalue())

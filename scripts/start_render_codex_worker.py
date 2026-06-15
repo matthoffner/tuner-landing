@@ -84,6 +84,7 @@ PUBLISHER_RUNTIME_ENV_ARGS = (
     ),
 )
 MAX_WORKER_URL_CHARS = 500
+MAX_WORKER_PATH_CHARS = 500
 
 
 def emit(message: str) -> None:
@@ -781,6 +782,9 @@ def validate_workdir_path(path: Path, errors: list[str], *, codex_home: Path | N
     if not raw_path:
         errors.append("AUTOMOAT_WORKDIR must not be empty")
         return
+    if len(path_text) > MAX_WORKER_PATH_CHARS:
+        errors.append(f"AUTOMOAT_WORKDIR must be {MAX_WORKER_PATH_CHARS} characters or fewer")
+        return
 
     expanded_path = path.expanduser()
     if not expanded_path.is_absolute():
@@ -833,6 +837,9 @@ def validate_codex_home_path(path: Path, workdir: Path, errors: list[str]) -> No
     raw_path = path_text.strip()
     if not raw_path:
         errors.append("CODEX_HOME must not be empty")
+        return
+    if len(path_text) > MAX_WORKER_PATH_CHARS:
+        errors.append(f"CODEX_HOME must be {MAX_WORKER_PATH_CHARS} characters or fewer")
         return
 
     expanded_path = path.expanduser()
@@ -924,6 +931,9 @@ def validate_publisher_file_path_env_value(
         for character in value
     ):
         errors.append(f"{name} must be a single-line path without control characters")
+        return
+    if len(value) > MAX_WORKER_PATH_CHARS:
+        errors.append(f"{name} must be {MAX_WORKER_PATH_CHARS} characters or fewer")
         return
 
     path = publisher_file_path(env, value)
