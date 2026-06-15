@@ -614,6 +614,46 @@ def import_handoff_summary(import_pipeline: dict[str, Any]) -> dict[str, Any]:
     return summary
 
 
+def artifact_status_summary(value: object) -> dict[str, str]:
+    statuses = value if isinstance(value, dict) else {}
+    summary: dict[str, str] = {}
+    for key, status in sorted(statuses.items()):
+        artifact_name = compact_text(key, max_length=80)
+        artifact_status = compact_text(status, max_length=80)
+        if artifact_name is not None and artifact_status is not None:
+            summary[artifact_name] = artifact_status
+    return summary
+
+
+def artifact_problem_summary(value: object, statuses: dict[str, str]) -> list[str]:
+    explicit = as_string_list(value)
+    derived = [
+        name for name, artifact_status in statuses.items() if artifact_status != "loaded"
+    ]
+    if not explicit:
+        return derived
+    return explicit + [name for name in derived if name not in explicit]
+
+
+def artifact_health_counts(
+    health: dict[str, Any],
+    statuses: dict[str, str],
+) -> dict[str, int]:
+    artifact_count = first_compact_int(health.get("artifact_count"), len(statuses))
+    if artifact_count is None:
+        artifact_count = len(statuses)
+    loaded_count = first_compact_int(
+        health.get("loaded_artifact_count"),
+        sum(1 for status in statuses.values() if status == "loaded"),
+    )
+    if loaded_count is None:
+        loaded_count = 0
+    return {
+        "artifact_count": artifact_count,
+        "loaded_artifact_count": min(loaded_count, artifact_count),
+    }
+
+
 def publisher_cockpit_summary(status: dict[str, Any]) -> dict[str, Any]:
     artifacts = as_dict(status.get("artifacts"))
     artifact_health = as_dict(artifacts.get("artifact_health"))
@@ -633,6 +673,16 @@ def publisher_cockpit_summary(status: dict[str, Any]) -> dict[str, Any]:
     status_value = status.get("status") or "waiting"
     loop_running = bool(status.get("loop_running"))
     artifact_health_status = artifact_health.get("status") or "unknown"
+    artifact_statuses = artifact_status_summary(artifact_health.get("statuses"))
+    artifact_problem_artifacts = artifact_problem_summary(
+        artifact_health.get("degraded_artifacts"),
+        artifact_statuses,
+    )
+    artifact_counts = artifact_health_counts(artifact_health, artifact_statuses)
+    artifact_health_text = compact_policy_detail(
+        artifact_health.get("summary"),
+        max_length=240,
+    )
     import_readiness = readiness.get("status") or "unknown"
     readiness_blockers = as_string_list(readiness.get("blockers"))
     readiness_blocker_count = first_compact_int(
@@ -818,6 +868,11 @@ def publisher_cockpit_summary(status: dict[str, Any]) -> dict[str, Any]:
         "operator_attention_primary_reason": primary_attention_reason,
         "operator_attention_label": operator_attention_label(primary_attention_reason),
         "artifact_health": artifact_health_status,
+        "artifact_health_summary": artifact_health_text,
+        "artifact_count": artifact_counts["artifact_count"],
+        "loaded_artifact_count": artifact_counts["loaded_artifact_count"],
+        "artifact_statuses": artifact_statuses,
+        "artifact_problem_artifacts": artifact_problem_artifacts,
         "import_readiness": import_readiness,
         "readiness_blockers": readiness_blockers,
         "readiness_blocker_count": readiness_blocker_count,

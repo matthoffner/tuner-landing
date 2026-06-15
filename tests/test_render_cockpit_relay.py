@@ -1163,6 +1163,12 @@ class RenderCockpitRelayTest(unittest.TestCase):
                             "coverage_thin_groups_present",
                         ],
                         "artifact_health": "loaded",
+                        "artifact_health_summary": (
+                            "status=loaded loaded=1/2 degraded=1 "
+                            "token=artifact-summary-secret"
+                        ),
+                        "artifact_count": "2",
+                        "loaded_artifact_count": 1,
                         "artifact_statuses": {
                             "contract": "loaded",
                             "pipeline": "invalid token=artifact-secret",
@@ -1281,6 +1287,11 @@ class RenderCockpitRelayTest(unittest.TestCase):
         expected_readiness = {
             "available": True,
             "artifact_health": "loaded",
+            "artifact_health_summary": (
+                "status=loaded loaded=1/2 degraded=1 token=[redacted]"
+            ),
+            "artifact_count": 2,
+            "loaded_artifact_count": 1,
             "import_readiness": "blocked",
             "current_focus": "autonomy_visibility_or_real_ingest",
             "policy_reason": "dallas_ready_no_thin_groups",

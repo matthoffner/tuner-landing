@@ -667,7 +667,21 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                             }
                         ],
                         "artifacts": {
-                            "artifact_health": {"status": "loaded"},
+                            "artifact_health": {
+                                "status": "loaded",
+                                "statuses": {
+                                    "contract": "loaded",
+                                    "coverage": "loaded",
+                                    "workflow": "loaded",
+                                    "import_pipeline": "loaded",
+                                },
+                                "artifact_count": 4,
+                                "loaded_artifact_count": 4,
+                                "summary": (
+                                    "status=loaded loaded=4/4 degraded=0 "
+                                    "token=artifact-secret"
+                                ),
+                            },
                             "contract": {"passed_checks": 13, "total_checks": 13},
                             "workflow": {"queue_items": 535},
                             "import_pipeline": {
@@ -783,6 +797,22 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertEqual(summary["status_age_seconds"], 60)
         self.assertFalse(summary["status_stale"])
         self.assertEqual(summary["artifact_health"], "loaded")
+        self.assertEqual(
+            summary["artifact_health_summary"],
+            "status=loaded loaded=4/4 degraded=0 token=[redacted]",
+        )
+        self.assertEqual(summary["artifact_count"], 4)
+        self.assertEqual(summary["loaded_artifact_count"], 4)
+        self.assertEqual(
+            summary["artifact_statuses"],
+            {
+                "contract": "loaded",
+                "coverage": "loaded",
+                "workflow": "loaded",
+                "import_pipeline": "loaded",
+            },
+        )
+        self.assertEqual(summary["artifact_problem_artifacts"], [])
         self.assertEqual(summary["import_readiness"], "ready")
         self.assertEqual(summary["readiness_blocker_count"], 0)
         self.assertTrue(summary["ready_for_next_import_records"])

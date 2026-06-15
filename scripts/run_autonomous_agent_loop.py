@@ -216,6 +216,24 @@ def artifact_degradation_details(
     return details[:MAX_ARTIFACT_HEALTH_DETAILS]
 
 
+def artifact_health_summary(
+    health_status: str,
+    artifact_statuses: dict[str, Any],
+    degraded_artifacts: list[str],
+) -> str:
+    loaded_count = sum(1 for status in artifact_statuses.values() if status == "loaded")
+    artifact_count = len(artifact_statuses)
+    parts = [
+        f"status={bounded_artifact_health_detail(health_status)}",
+        f"loaded={loaded_count}/{artifact_count}",
+        f"degraded={len(degraded_artifacts)}",
+    ]
+    if degraded_artifacts:
+        problem_names = ",".join(degraded_artifacts[:MAX_ARTIFACT_HEALTH_DETAILS])
+        parts.append(f"problems={bounded_artifact_health_detail(problem_names)}")
+    return bounded_artifact_health_detail(" ".join(parts))
+
+
 def shell(command: list[str], timeout: float | None = None) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         command,
@@ -402,17 +420,28 @@ def inspect_artifacts() -> dict[str, Any]:
         artifact_statuses,
         artifact_details,
     )
+    health_status = (
+        "loaded"
+        if all(status == "loaded" for status in artifact_statuses.values())
+        else "degraded"
+    )
+    loaded_artifact_count = sum(
+        1 for status in artifact_statuses.values() if status == "loaded"
+    )
     return {
         "artifact_health": {
-            "status": (
-                "loaded"
-                if all(status == "loaded" for status in artifact_statuses.values())
-                else "degraded"
-            ),
+            "status": health_status,
             "statuses": artifact_statuses,
+            "artifact_count": len(artifact_statuses),
+            "loaded_artifact_count": loaded_artifact_count,
             "degraded_artifacts": degraded_artifacts,
             "degraded_artifact_count": len(degraded_artifacts),
             "degradation_details": degradation_details,
+            "summary": artifact_health_summary(
+                health_status,
+                artifact_statuses,
+                degraded_artifacts,
+            ),
         },
         "contract": {
             **contract_artifact,
@@ -1097,11 +1126,13 @@ def run_artifact_health_check(log_file: Path) -> dict[str, Any]:
     degradation_details = artifact_health.get("degradation_details", [])
     if not isinstance(degradation_details, list):
         degradation_details = []
+    health_summary = sanitized_policy_scalar(artifact_health.get("summary"))
     exit_status = 0 if artifact_health_loaded(artifacts) else 1
     emit(
         log_file,
         "artifact health: "
         f"status={health_status} "
+        f"summary={health_summary} "
         f"statuses={json.dumps(statuses, sort_keys=True)} "
         f"degraded_artifacts={json.dumps(degraded_artifacts)} "
         f"degradation_details={json.dumps(degradation_details, sort_keys=True)}",
@@ -1114,6 +1145,7 @@ def run_artifact_health_check(log_file: Path) -> dict[str, Any]:
         "exit_status": exit_status,
         "seconds": elapsed,
         "artifact_health_status": health_status,
+        "artifact_health_summary": health_summary,
         "artifact_statuses": statuses,
         "degraded_artifacts": degraded_artifacts,
         "degradation_details": degradation_details,

@@ -86,7 +86,18 @@ class MvpCockpitServerTest(unittest.TestCase):
                 "thin_group_category_count": 0,
             },
             "artifacts": {
-                "artifact_health": {"status": "loaded"},
+                "artifact_health": {
+                    "status": "loaded",
+                    "statuses": {
+                        "contract": "loaded",
+                        "coverage": "loaded",
+                        "workflow": "loaded",
+                        "import_pipeline": "loaded",
+                    },
+                    "artifact_count": 4,
+                    "loaded_artifact_count": 4,
+                    "summary": "status=loaded loaded=4/4 degraded=0 token=secret",
+                },
                 "contract": {"passed_checks": 13, "total_checks": 13},
                 "workflow": {"queue_items": 535},
                 "import_pipeline": {
@@ -183,7 +194,21 @@ class MvpCockpitServerTest(unittest.TestCase):
         self.assertEqual(summary["operator_attention_primary_reason"], "status_stale")
         self.assertEqual(summary["operator_attention_label"], "Status is stale")
         self.assertEqual(summary["artifact_health"], "loaded")
-        self.assertEqual(summary["artifact_statuses"], {})
+        self.assertEqual(
+            summary["artifact_health_summary"],
+            "status=loaded loaded=4/4 degraded=0 token=[redacted]",
+        )
+        self.assertEqual(summary["artifact_count"], 4)
+        self.assertEqual(summary["loaded_artifact_count"], 4)
+        self.assertEqual(
+            summary["artifact_statuses"],
+            {
+                "contract": "loaded",
+                "coverage": "loaded",
+                "workflow": "loaded",
+                "import_pipeline": "loaded",
+            },
+        )
         self.assertEqual(summary["artifact_problem_artifacts"], [])
         self.assertEqual(summary["import_readiness"], "ready")
         self.assertEqual(summary["readiness_blockers"], [])
@@ -323,6 +348,9 @@ class MvpCockpitServerTest(unittest.TestCase):
             summary["artifact_problem_artifacts"],
             ["coverage", "workflow"],
         )
+        self.assertEqual(summary["artifact_count"], 3)
+        self.assertEqual(summary["loaded_artifact_count"], 1)
+        self.assertIsNone(summary["artifact_health_summary"])
         self.assertEqual(summary["readiness_blockers"], ["correction_ledger_incomplete"])
         self.assertEqual(summary["readiness_blocker_count"], 1)
         self.assertEqual(summary["thin_group_count"], 2)

@@ -101,9 +101,15 @@ class LoopArtifactVisibilityTest(unittest.TestCase):
                 self.assertEqual(artifacts["contract"]["artifact_status"], "loaded")
                 self.assertEqual(artifacts["coverage"]["artifact_status"], "loaded")
                 self.assertEqual(artifacts["workflow"]["artifact_status"], "loaded")
+                self.assertEqual(artifacts["artifact_health"]["artifact_count"], 4)
+                self.assertEqual(artifacts["artifact_health"]["loaded_artifact_count"], 4)
                 self.assertEqual(artifacts["artifact_health"]["degraded_artifacts"], [])
                 self.assertEqual(artifacts["artifact_health"]["degraded_artifact_count"], 0)
                 self.assertEqual(artifacts["artifact_health"]["degradation_details"], [])
+                self.assertEqual(
+                    artifacts["artifact_health"]["summary"],
+                    "status=loaded loaded=4/4 degraded=0",
+                )
                 self.assertEqual(artifacts["contract"]["passed_checks"], 1)
                 self.assertEqual(artifacts["contract"]["total_checks"], 2)
                 self.assertEqual(artifacts["workflow"]["queue_items"], 2)
@@ -124,11 +130,20 @@ class LoopArtifactVisibilityTest(unittest.TestCase):
                 self.assertEqual(artifacts["coverage"]["artifact_status"], "missing")
                 self.assertEqual(artifacts["workflow"]["artifact_status"], "invalid")
                 self.assertEqual(artifacts["import_pipeline"]["status"], "missing")
+                self.assertEqual(artifacts["artifact_health"]["artifact_count"], 4)
+                self.assertEqual(artifacts["artifact_health"]["loaded_artifact_count"], 0)
                 self.assertEqual(
                     artifacts["artifact_health"]["degraded_artifacts"],
                     ["contract", "coverage", "workflow", "import_pipeline"],
                 )
                 self.assertEqual(artifacts["artifact_health"]["degraded_artifact_count"], 4)
+                self.assertEqual(
+                    artifacts["artifact_health"]["summary"],
+                    (
+                        "status=degraded loaded=0/4 degraded=4 "
+                        "problems=contract,coverage,workflow,import_pipeline"
+                    ),
+                )
                 self.assertEqual(
                     [detail["name"] for detail in artifacts["artifact_health"]["degradation_details"]],
                     ["contract", "coverage", "workflow", "import_pipeline"],
@@ -357,6 +372,7 @@ class LoopArtifactVisibilityTest(unittest.TestCase):
                         "workflow": "loaded",
                         "import_pipeline": "loaded",
                     },
+                    "summary": "status=degraded loaded=3/4 degraded=1 problems=coverage",
                     "degradation_details": [
                         {
                             "name": "coverage",
@@ -371,6 +387,10 @@ class LoopArtifactVisibilityTest(unittest.TestCase):
 
             self.assertEqual(step["exit_status"], 1)
             self.assertEqual(step["artifact_health_status"], "degraded")
+            self.assertEqual(
+                step["artifact_health_summary"],
+                "status=degraded loaded=3/4 degraded=1 problems=coverage",
+            )
             self.assertEqual(step["artifact_statuses"]["coverage"], "invalid")
             self.assertEqual(step["degraded_artifacts"], ["coverage"])
             self.assertEqual(

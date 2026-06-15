@@ -125,6 +125,24 @@ def artifact_degradation_details(
     return details[:MAX_ARTIFACT_HEALTH_DETAILS]
 
 
+def artifact_health_summary(
+    health_status: str,
+    artifact_statuses: dict[str, Any],
+    degraded_artifacts: list[str],
+) -> str:
+    loaded_count = sum(1 for status in artifact_statuses.values() if status == "loaded")
+    artifact_count = len(artifact_statuses)
+    parts = [
+        f"status={bounded_artifact_health_detail(health_status)}",
+        f"loaded={loaded_count}/{artifact_count}",
+        f"degraded={len(degraded_artifacts)}",
+    ]
+    if degraded_artifacts:
+        problem_names = ",".join(degraded_artifacts[:MAX_ARTIFACT_HEALTH_DETAILS])
+        parts.append(f"problems={bounded_artifact_health_detail(problem_names)}")
+    return bounded_artifact_health_detail(" ".join(parts))
+
+
 def emit(log_file: Path, message: str) -> None:
     line = f"[{utc_now()}] {message}"
     print(line, flush=True)
@@ -343,17 +361,28 @@ def inspect_artifacts() -> dict[str, Any]:
         artifact_statuses,
         artifact_details,
     )
+    health_status = (
+        "loaded"
+        if all(status == "loaded" for status in artifact_statuses.values())
+        else "degraded"
+    )
+    loaded_artifact_count = sum(
+        1 for status in artifact_statuses.values() if status == "loaded"
+    )
     return {
         "artifact_health": {
-            "status": (
-                "loaded"
-                if all(status == "loaded" for status in artifact_statuses.values())
-                else "degraded"
-            ),
+            "status": health_status,
             "statuses": artifact_statuses,
+            "artifact_count": len(artifact_statuses),
+            "loaded_artifact_count": loaded_artifact_count,
             "degraded_artifacts": degraded_artifacts,
             "degraded_artifact_count": len(degraded_artifacts),
             "degradation_details": degradation_details,
+            "summary": artifact_health_summary(
+                health_status,
+                artifact_statuses,
+                degraded_artifacts,
+            ),
         },
         "contract": {
             **contract_artifact,

@@ -347,6 +347,25 @@ def artifact_problem_summary(value: object, statuses: dict[str, str]) -> list[st
     return explicit + [name for name in derived if name not in explicit]
 
 
+def artifact_health_counts(
+    health: dict[str, object],
+    statuses: dict[str, str],
+) -> dict[str, int]:
+    artifact_count = first_compact_int(health.get("artifact_count"), len(statuses))
+    if artifact_count is None:
+        artifact_count = len(statuses)
+    loaded_count = first_compact_int(
+        health.get("loaded_artifact_count"),
+        sum(1 for status in statuses.values() if status == "loaded"),
+    )
+    if loaded_count is None:
+        loaded_count = 0
+    return {
+        "artifact_count": artifact_count,
+        "loaded_artifact_count": min(loaded_count, artifact_count),
+    }
+
+
 def read_bridge_summary() -> dict[str, object]:
     status_file = repo_relative(BRIDGE_STATUS_FILE)
     if not BRIDGE_STATUS_FILE.exists():
@@ -527,6 +546,11 @@ def cockpit_summary(status: dict[str, object]) -> dict[str, object]:
     artifact_problem_artifacts = artifact_problem_summary(
         artifact_health.get("degraded_artifacts"),
         artifact_statuses,
+    )
+    artifact_counts = artifact_health_counts(artifact_health, artifact_statuses)
+    artifact_health_text = compact_policy_detail(
+        artifact_health.get("summary"),
+        max_length=240,
     )
     import_readiness = readiness.get("status") or "unknown"
     readiness_blockers = as_string_list(readiness.get("blockers"))
@@ -715,6 +739,9 @@ def cockpit_summary(status: dict[str, object]) -> dict[str, object]:
         "operator_attention_primary_reason": primary_attention_reason,
         "operator_attention_label": operator_attention_label(primary_attention_reason),
         "artifact_health": artifact_health_status,
+        "artifact_health_summary": artifact_health_text,
+        "artifact_count": artifact_counts["artifact_count"],
+        "loaded_artifact_count": artifact_counts["loaded_artifact_count"],
         "artifact_statuses": artifact_statuses,
         "artifact_problem_artifacts": artifact_problem_artifacts,
         "import_readiness": import_readiness,

@@ -777,6 +777,7 @@ def source_readiness_summary(status: dict[str, Any]) -> dict[str, Any]:
     summary: dict[str, Any] = {"available": False}
     text_fields = {
         "artifact_health": source_summary.get("artifact_health"),
+        "artifact_health_summary": source_summary.get("artifact_health_summary"),
         "import_readiness": source_summary.get("import_readiness"),
         "current_focus": source_summary.get("current_focus"),
         "policy_reason": source_summary.get("policy_reason"),
@@ -798,6 +799,8 @@ def source_readiness_summary(status: dict[str, Any]) -> dict[str, Any]:
             summary[key] = value
 
     int_fields = {
+        "artifact_count": source_summary.get("artifact_count"),
+        "loaded_artifact_count": source_summary.get("loaded_artifact_count"),
         "thin_group_count": source_summary.get("thin_group_count"),
         "queue_items": source_summary.get("queue_items"),
     }
@@ -854,6 +857,7 @@ def sanitize_cockpit_summary_for_relay_response(summary: Any) -> dict[str, Any] 
         "status": summary.get("status"),
         "phase": summary.get("phase"),
         "artifact_health": summary.get("artifact_health"),
+        "artifact_health_summary": summary.get("artifact_health_summary"),
         "import_readiness": summary.get("import_readiness"),
         "current_focus": summary.get("current_focus"),
         "policy_reason": summary.get("policy_reason"),
@@ -897,6 +901,8 @@ def sanitize_cockpit_summary_for_relay_response(summary: Any) -> dict[str, Any] 
     int_fields = {
         "iteration": summary.get("iteration"),
         "status_age_seconds": summary.get("status_age_seconds"),
+        "artifact_count": summary.get("artifact_count"),
+        "loaded_artifact_count": summary.get("loaded_artifact_count"),
         "thin_group_count": summary.get("thin_group_count"),
         "queue_items": summary.get("queue_items"),
         "policy_raw_dallas_csv_changed_path_count": summary.get(
