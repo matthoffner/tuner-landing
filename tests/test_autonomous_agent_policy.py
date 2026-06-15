@@ -302,6 +302,13 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
                 ],
                 [
                     "git",
+                    "diff",
+                    "--cached",
+                    "--",
+                    ":(glob)generated/raw/dallas-electrician-import-sample-*/*.csv",
+                ],
+                [
+                    "git",
                     "ls-files",
                     "--others",
                     "--exclude-standard",
@@ -355,6 +362,13 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
                 [
                     "git",
                     "diff",
+                    "--",
+                    ":(glob)generated/raw/dallas-electrician-import-sample-*/*.csv",
+                ],
+                [
+                    "git",
+                    "diff",
+                    "--cached",
                     "--",
                     ":(glob)generated/raw/dallas-electrician-import-sample-*/*.csv",
                 ],
@@ -443,6 +457,91 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
             self.assertNotIn("\n", sample)
         self.assertIn("https://example.local/dallas/permits/ELZ-2026-9999", samples[0])
         self.assertNotIn("ELZ-2026-9994", "\n".join(samples))
+
+    def test_synthetic_row_detector_scans_staged_raw_dallas_csv_diff(self) -> None:
+        commands = []
+        staged_diff = "\n".join(
+            [
+                (
+                    "diff --git "
+                    "a/generated/raw/dallas-electrician-import-sample-v2/permits.csv "
+                    "b/generated/raw/dallas-electrician-import-sample-v2/permits.csv"
+                ),
+                "+++ b/generated/raw/dallas-electrician-import-sample-v2/permits.csv",
+                (
+                    "+ELZ-2026-9996,100 Example Ave,Dallas,TX,75208,electrical,"
+                    "residential,single_family,Residential electrical repair,Active,"
+                    "2026-06-01,2026-06-02,,12000,Example repair,Test Electric,"
+                    "https://example.local/dallas/permits/ELZ-2026-9996"
+                ),
+            ]
+        )
+
+        def fake_shell(command):
+            commands.append(command)
+            if command[1] == "ls-files":
+                return SimpleNamespace(stdout="")
+            if "--cached" in command:
+                return SimpleNamespace(stdout=staged_diff)
+            return SimpleNamespace(stdout="")
+
+        self.loop.shell = fake_shell
+
+        rows = self.loop.added_synthetic_dallas_rows()
+
+        self.assertEqual(len(rows), 1)
+        self.assertIn("ELZ-2026-9996", rows[0])
+        self.assertEqual(
+            commands,
+            [
+                [
+                    "git",
+                    "diff",
+                    "--",
+                    ":(glob)generated/raw/dallas-electrician-import-sample-*/*.csv",
+                ],
+                [
+                    "git",
+                    "diff",
+                    "--cached",
+                    "--",
+                    ":(glob)generated/raw/dallas-electrician-import-sample-*/*.csv",
+                ],
+                [
+                    "git",
+                    "ls-files",
+                    "--others",
+                    "--exclude-standard",
+                    "--",
+                    ":(glob)generated/raw/dallas-electrician-import-sample-*/*.csv",
+                ],
+            ],
+        )
+
+    def test_policy_check_rejects_staged_synthetic_row_with_productive_work(self) -> None:
+        self.loop.dirty_paths_excluding_preview = lambda: [
+            "scripts/run_autonomous_agent_loop.py",
+            "generated/raw/dallas-electrician-import-sample-v2/permits.csv",
+        ]
+        self.loop.added_synthetic_dallas_rows = lambda: [
+            "ELZ-2026-9996,100 Example Ave,Dallas,electrical,"
+            "residential,Electrical repair,Finaled,example.local/dallas/9996"
+        ]
+
+        with tempfile.TemporaryDirectory() as tmp:
+            result = self.loop.run_autonomy_policy_check(Path(tmp) / "policy.log")
+
+        self.assertEqual(result["exit_status"], 1)
+        self.assertTrue(result["productive_change"])
+        self.assertEqual(
+            result["failure_reason"],
+            "synthetic_append_disallowed_by_snapshot",
+        )
+        self.assertEqual(result["synthetic_row_count"], 1)
+        self.assertEqual(
+            result["productive_changed_paths"],
+            ["scripts/run_autonomous_agent_loop.py"],
+        )
 
     def test_policy_check_rejects_docs_only_raw_dallas_csv_edit(self) -> None:
         self.loop.dirty_paths_excluding_preview = lambda: [

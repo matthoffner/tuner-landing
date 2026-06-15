@@ -466,15 +466,34 @@ def untracked_dallas_raw_csv_paths() -> list[str]:
     return sorted(path for path in result.stdout.splitlines() if path.strip())
 
 
-def added_synthetic_dallas_rows() -> list[str]:
-    result = shell(["git", "diff", "--", DALLAS_RAW_CSV_DIFF_PATHSPEC])
+def added_synthetic_rows_from_diff(diff_output: str) -> list[str]:
     rows: list[str] = []
-    for line in result.stdout.splitlines():
+    for line in diff_output.splitlines():
         if not line.startswith("+") or line.startswith("+++"):
             continue
         row = line[1:]
         if synthetic_dallas_csv_row(row):
             rows.append(row)
+    return rows
+
+
+def added_synthetic_dallas_rows() -> list[str]:
+    rows: list[str] = []
+    seen: set[str] = set()
+
+    def append_row(row: str) -> None:
+        if row not in seen:
+            rows.append(row)
+            seen.add(row)
+
+    for command in (
+        ["git", "diff", "--", DALLAS_RAW_CSV_DIFF_PATHSPEC],
+        ["git", "diff", "--cached", "--", DALLAS_RAW_CSV_DIFF_PATHSPEC],
+    ):
+        result = shell(command)
+        for row in added_synthetic_rows_from_diff(result.stdout):
+            append_row(row)
+
     for relative_path in untracked_dallas_raw_csv_paths():
         path = ROOT / relative_path
         try:
@@ -483,7 +502,7 @@ def added_synthetic_dallas_rows() -> list[str]:
             continue
         for line_number, row in enumerate(file_rows, start=1):
             if synthetic_dallas_csv_row(row):
-                rows.append(f"{relative_path}:{line_number}: {row}")
+                append_row(f"{relative_path}:{line_number}: {row}")
     return rows
 
 
