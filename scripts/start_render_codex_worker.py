@@ -868,6 +868,15 @@ def validate_publisher_file_path_env_value(
         return
 
     path = Path(value)
+    try:
+        resolved_path = path.expanduser().resolve(strict=False)
+    except OSError as exc:
+        errors.append(f"{name} could not be resolved: {exc}")
+        return
+    conflicting_runtime_file = reserved_runtime_file_conflict(resolved_path)
+    if conflicting_runtime_file is not None:
+        errors.append(f"{name} must not be equal to or inside a reserved runtime file")
+        return
     if path.exists() and path.is_dir():
         errors.append(f"{name} must be a file path, not a directory")
         return

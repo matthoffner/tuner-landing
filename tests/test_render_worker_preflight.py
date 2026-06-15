@@ -1908,6 +1908,76 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertNotIn("github-token", output.getvalue())
         self.assertNotIn("codex-token", output.getvalue())
 
+    def test_rejects_bridge_status_file_on_reserved_runtime_file(self) -> None:
+        base_env = {
+            "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            "GITHUB_TOKEN": "github-token",
+            "CODEX_ACCESS_TOKEN": "codex-token",
+        }
+        cases = {
+            self.worker.GITHUB_TOKEN_FILE: (
+                "AUTOMOAT_BRIDGE_STATUS_FILE must not be equal to or inside a "
+                "reserved runtime file"
+            ),
+            self.worker.GIT_ASKPASS / "status.json": (
+                "AUTOMOAT_BRIDGE_STATUS_FILE must not be equal to or inside a "
+                "reserved runtime file"
+            ),
+        }
+
+        for bridge_status_file, expected_error in cases.items():
+            with self.subTest(bridge_status_file=bridge_status_file):
+                errors = self.worker.validate_worker_environment(
+                    {
+                        **base_env,
+                        "AUTOMOAT_BRIDGE_STATUS_FILE": str(bridge_status_file),
+                    },
+                    found_command,
+                )
+
+                self.assertEqual(errors, [expected_error])
+
+    def test_check_env_json_routes_reserved_bridge_status_file_without_secret_values(self) -> None:
+        env = {
+            "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            "GITHUB_TOKEN": "github-token",
+            "CODEX_ACCESS_TOKEN": "codex-token",
+            "AUTOMOAT_BRIDGE_STATUS_FILE": str(self.worker.GITHUB_TOKEN_FILE),
+        }
+        output = io.StringIO()
+
+        with redirect_stdout(output):
+            errors = self.worker.emit_environment_preflight(
+                env,
+                found_command,
+                output_format="json",
+            )
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(
+            errors,
+            [
+                (
+                    "AUTOMOAT_BRIDGE_STATUS_FILE must not be equal to or inside a "
+                    "reserved runtime file"
+                ),
+            ],
+        )
+        self.assertEqual(payload["status"], "failed")
+        self.assertEqual(
+            payload["diagnostics"]["error_categories"],
+            ["invalid_file_path"],
+        )
+        self.assertEqual(
+            payload["diagnostics"]["failed_configuration_keys"],
+            ["AUTOMOAT_BRIDGE_STATUS_FILE"],
+        )
+        self.assertNotIn("relay-token", output.getvalue())
+        self.assertNotIn("github-token", output.getvalue())
+        self.assertNotIn("codex-token", output.getvalue())
+
     def test_json_format_is_only_for_check_env(self) -> None:
         with patch.object(self.worker, "parse_args") as parse_args:
             parse_args.return_value = type(
