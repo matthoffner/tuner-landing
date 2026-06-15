@@ -424,6 +424,85 @@ class RenderCockpitRelayTest(unittest.TestCase):
         self.assertNotIn("local-secret", health_text)
         self.assertNotIn("api-secret", health_text)
 
+    def test_status_and_health_sanitize_publisher_file_path_diagnostics(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            source_status_file = Path(tmp) / "mvp-loop-status.json"
+            bridge_status_file = Path(tmp) / "mvp-bridge-status.json"
+            self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
+            self.relay.update_state(
+                {
+                    "pushed_at": "2026-06-14T19:59:30Z",
+                    "status": {
+                        "status": "waiting",
+                        "loop_running": False,
+                        "source_status_file": str(source_status_file),
+                        "source_status_file_status": "read_failed",
+                        "source_status_file_error": (
+                            f"failed to read {source_status_file}: permission denied"
+                        ),
+                        "bridge_summary": {
+                            "available": False,
+                            "status_file": str(bridge_status_file),
+                            "status_file_status": "read_failed",
+                            "status_file_error": (
+                                f"failed to read {bridge_status_file}: permission denied"
+                            ),
+                            "public_url": (
+                                "https://viewer:secret@automoat-test.ngrok.app"
+                                "/viewer?token=public-secret#debug"
+                            ),
+                        },
+                    },
+                    "log_tail": "publisher sent unsafe path diagnostics\n",
+                }
+            )
+
+            self.relay.utc_now = lambda: "2026-06-14T20:00:00Z"
+
+            health = self.relay.health_payload()
+            status = self.relay.relay_status_payload()
+
+            expected_source_file = "<external>/mvp-loop-status.json"
+            expected_bridge_file = "<external>/mvp-bridge-status.json"
+            self.assertEqual(status["source_status_file"], expected_source_file)
+            self.assertIn(expected_source_file, status["source_status_file_error"])
+            self.assertEqual(status["bridge_summary"]["status_file"], expected_bridge_file)
+            self.assertIn(
+                expected_bridge_file,
+                status["bridge_summary"]["status_file_error"],
+            )
+            self.assertEqual(
+                status["bridge_summary"]["public_url"],
+                "https://automoat-test.ngrok.app/viewer?[redacted]#[redacted]",
+            )
+            self.assertEqual(
+                health["cockpit_health"]["source_status_diagnostics"][
+                    "source_status_file"
+                ],
+                expected_source_file,
+            )
+            self.assertIn(
+                expected_source_file,
+                health["cockpit_health"]["source_status_diagnostics"][
+                    "source_status_file_error"
+                ],
+            )
+            self.assertEqual(
+                health["cockpit_health"]["source_bridge"]["status_file"],
+                expected_bridge_file,
+            )
+            self.assertIn(
+                expected_bridge_file,
+                health["cockpit_health"]["source_bridge"]["status_file_error"],
+            )
+
+            response_text = json.dumps(
+                {"health": health, "status": status},
+                sort_keys=True,
+            )
+            self.assertNotIn(tmp, response_text)
+            self.assertNotIn("secret", response_text)
+
     def test_status_and_health_report_stale_source_bridge_snapshot(self) -> None:
         self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
         self.relay.update_state(

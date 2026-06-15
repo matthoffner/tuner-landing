@@ -58,6 +58,7 @@ COCKPIT_HEALTH_LABELS = {
     "source_bridge_status_stale": "Source bridge status is stale",
 }
 EMBEDDED_URL_RE = re.compile(r"https?://[^\s,;|]+")
+PATH_TOKEN_RE = re.compile(r"(?<![\w:/])(?:~|/)[^\s,;|'\"\])}]+")
 SENSITIVE_ASSIGNMENT_RE = re.compile(
     r"(?i)\b("
     r"access_token|api_key|codex_access_token|gh_token|github_token|password|"
@@ -213,6 +214,27 @@ def compact_path_error(exc: BaseException, path: Path, *, max_length: int = 180)
     return compact_text(message, max_length=max_length) or type(exc).__name__
 
 
+def compact_path_label(value: Any, *, max_length: int = 240) -> str | None:
+    text = compact_text(value, max_length=max_length)
+    if text is None:
+        return None
+    if text.startswith(("/", "~")):
+        return repo_relative(Path(text))[:max_length]
+    return text
+
+
+def compact_path_diagnostic(value: Any, *, max_length: int = 240) -> str | None:
+    text = compact_text(value, max_length=max_length * 2)
+    if text is None:
+        return None
+
+    text = PATH_TOKEN_RE.sub(
+        lambda match: repo_relative(Path(match.group(0))),
+        text,
+    )
+    return compact_text(text, max_length=max_length)
+
+
 def compact_policy_detail(value: Any, *, max_length: int = 240) -> str | None:
     text = compact_text(value, max_length=max_length * 2)
     if text is None:
@@ -361,12 +383,24 @@ def source_status_diagnostics(status: dict[str, Any]) -> dict[str, Any]:
     diagnostics: dict[str, Any] = {}
     text_fields = {
         "source_status": status.get("status"),
-        "source_status_file": status.get("source_status_file"),
         "source_status_file_status": status.get("source_status_file_status"),
-        "source_status_file_error": status.get("source_status_file_error"),
     }
     for key, value in text_fields.items():
         compact_value = compact_text(value, max_length=240)
+        if compact_value is not None:
+            diagnostics[key] = compact_value
+    path_fields = {
+        "source_status_file": status.get("source_status_file"),
+    }
+    for key, value in path_fields.items():
+        compact_value = compact_path_label(value, max_length=240)
+        if compact_value is not None:
+            diagnostics[key] = compact_value
+    path_error_fields = {
+        "source_status_file_error": status.get("source_status_file_error"),
+    }
+    for key, value in path_error_fields.items():
+        compact_value = compact_path_diagnostic(value, max_length=240)
         if compact_value is not None:
             diagnostics[key] = compact_value
 
@@ -394,9 +428,7 @@ def source_bridge_summary(status: dict[str, Any]) -> dict[str, Any]:
 
     summary: dict[str, Any] = {"available": bridge.get("available") is True}
     text_fields = {
-        "status_file": bridge.get("status_file"),
         "status_file_status": bridge.get("status_file_status"),
-        "status_file_error": bridge.get("status_file_error"),
         "status": bridge.get("status"),
         "updated_at": bridge.get("updated_at"),
         "bridge_started_at": bridge.get("bridge_started_at"),
@@ -404,6 +436,22 @@ def source_bridge_summary(status: dict[str, Any]) -> dict[str, Any]:
     }
     for key, value in text_fields.items():
         compact_value = compact_text(value, max_length=240)
+        if compact_value is not None:
+            summary[key] = compact_value
+
+    path_fields = {
+        "status_file": bridge.get("status_file"),
+    }
+    for key, value in path_fields.items():
+        compact_value = compact_path_label(value, max_length=240)
+        if compact_value is not None:
+            summary[key] = compact_value
+
+    path_error_fields = {
+        "status_file_error": bridge.get("status_file_error"),
+    }
+    for key, value in path_error_fields.items():
+        compact_value = compact_path_diagnostic(value, max_length=240)
         if compact_value is not None:
             summary[key] = compact_value
 
@@ -650,6 +698,38 @@ def source_readiness_summary(status: dict[str, Any]) -> dict[str, Any]:
 
     summary["available"] = any(key != "available" for key in summary)
     return summary
+
+
+def sanitize_status_for_relay_response(status: dict[str, Any]) -> dict[str, Any]:
+    response_status = dict(status)
+
+    source_status_file = compact_path_label(response_status.get("source_status_file"))
+    if source_status_file is not None:
+        response_status["source_status_file"] = source_status_file
+    source_status_file_error = compact_path_diagnostic(
+        response_status.get("source_status_file_error")
+    )
+    if source_status_file_error is not None:
+        response_status["source_status_file_error"] = source_status_file_error
+
+    bridge_summary = response_status.get("bridge_summary")
+    if isinstance(bridge_summary, dict):
+        sanitized_bridge = dict(bridge_summary)
+        status_file = compact_path_label(sanitized_bridge.get("status_file"))
+        if status_file is not None:
+            sanitized_bridge["status_file"] = status_file
+        status_file_error = compact_path_diagnostic(
+            sanitized_bridge.get("status_file_error")
+        )
+        if status_file_error is not None:
+            sanitized_bridge["status_file_error"] = status_file_error
+        for key in ("public_url", "local_read_only_url", "ngrok_api_url"):
+            compact_value = compact_url(sanitized_bridge.get(key), max_length=240)
+            if compact_value is not None:
+                sanitized_bridge[key] = compact_value
+        response_status["bridge_summary"] = sanitized_bridge
+
+    return response_status
 
 
 def cockpit_health(
@@ -901,7 +981,7 @@ def relay_status_payload() -> dict[str, Any]:
     status = state.get("status")
     if not isinstance(status, dict):
         status = {"status": "relay_waiting", "loop_running": False}
-    status = dict(status)
+    status = sanitize_status_for_relay_response(status)
     freshness = snapshot_freshness(state)
     health = cockpit_health(state, status, freshness)
     status["cockpit_health"] = health
