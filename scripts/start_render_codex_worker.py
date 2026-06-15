@@ -1017,6 +1017,45 @@ def validate_publisher_preflight_output(output: str) -> None:
     raise RuntimeError(f"relay publisher preflight reported status={status or 'missing'}")
 
 
+def run_relay_publisher_preflight_command(command: list[str], *, cwd: Path) -> str:
+    printable = " ".join(command)
+    emit(f"$ {printable}")
+    try:
+        result = subprocess.run(
+            command,
+            cwd=cwd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            check=False,
+            env=os.environ.copy(),
+            timeout=PUBLISHER_PREFLIGHT_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise RuntimeError(
+            f"{printable} timed out after {format_number(PUBLISHER_PREFLIGHT_TIMEOUT_SECONDS)}s"
+        ) from exc
+
+    output = result.stdout or ""
+    output_size = len(output.encode("utf-8", errors="replace"))
+    if output_size > PUBLISHER_PREFLIGHT_MAX_OUTPUT_BYTES:
+        emit(
+            "  <stdout omitted: "
+            f"{output_size} bytes exceeds {PUBLISHER_PREFLIGHT_MAX_OUTPUT_BYTES} byte limit>"
+        )
+        raise RuntimeError(
+            f"{printable} produced {output_size} bytes of output, "
+            f"exceeding limit {PUBLISHER_PREFLIGHT_MAX_OUTPUT_BYTES}"
+        )
+    if output:
+        emit(f"  <stdout captured: {output_size} bytes>")
+
+    validate_publisher_preflight_output(output)
+    if result.returncode != 0:
+        raise RuntimeError(f"{printable} failed with status {result.returncode}")
+    return output
+
+
 def write_codex_config() -> None:
     workdir, codex_home = configured_worker_paths(os.environ)
     codex_home.mkdir(parents=True, exist_ok=True)
@@ -1109,13 +1148,10 @@ def sync_repo() -> None:
 def check_relay_publisher_preflight() -> None:
     workdir, _codex_home = configured_worker_paths(os.environ)
     emit("checking checked-out relay publisher preflight")
-    output = run(
+    run_relay_publisher_preflight_command(
         relay_publisher_preflight_command(os.environ),
         cwd=workdir,
-        timeout_seconds=PUBLISHER_PREFLIGHT_TIMEOUT_SECONDS,
-        max_output_bytes=PUBLISHER_PREFLIGHT_MAX_OUTPUT_BYTES,
     )
-    validate_publisher_preflight_output(output)
     emit("checked-out relay publisher preflight passed")
 
 

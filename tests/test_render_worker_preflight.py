@@ -2147,29 +2147,41 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                 "AUTOMOAT_RELAY_INTERVAL": "4",
                 "AUTOMOAT_RELAY_TIMEOUT": "9",
             }
+            preflight_payload = json.dumps(
+                {
+                    "errors": [],
+                    "status": "passed",
+                    "config": {
+                        "relay_url": "https://automoat-cockpit-relay.example",
+                        "relay_token_configured": True,
+                    },
+                }
+            )
             output = io.StringIO()
 
             with patch.dict(self.worker.os.environ, env, clear=True), patch.object(
-                self.worker,
+                self.worker.subprocess,
                 "run",
-                return_value='{"errors": [], "status": "passed"}',
-            ) as run, redirect_stdout(output):
+                return_value=self.worker.subprocess.CompletedProcess(
+                    args=self.worker.relay_publisher_preflight_command(env),
+                    returncode=0,
+                    stdout=preflight_payload,
+                ),
+            ) as subprocess_run, redirect_stdout(output):
                 self.worker.check_relay_publisher_preflight()
 
         self.assertEqual(
-            run.call_args.args[0],
+            subprocess_run.call_args.args[0],
             self.worker.relay_publisher_preflight_command(env),
         )
-        self.assertEqual(run.call_args.kwargs["cwd"], workdir)
+        self.assertEqual(subprocess_run.call_args.kwargs["cwd"], workdir)
         self.assertEqual(
-            run.call_args.kwargs["timeout_seconds"],
+            subprocess_run.call_args.kwargs["timeout"],
             self.worker.PUBLISHER_PREFLIGHT_TIMEOUT_SECONDS,
         )
-        self.assertEqual(
-            run.call_args.kwargs["max_output_bytes"],
-            self.worker.PUBLISHER_PREFLIGHT_MAX_OUTPUT_BYTES,
-        )
+        self.assertFalse(subprocess_run.call_args.kwargs["check"])
         self.assertIn("checking checked-out relay publisher preflight", output.getvalue())
+        self.assertIn("<stdout captured:", output.getvalue())
         self.assertIn("checked-out relay publisher preflight passed", output.getvalue())
         self.assertNotIn("relay-token", output.getvalue())
         self.assertNotIn("https://automoat-cockpit-relay.example", output.getvalue())
@@ -2220,9 +2232,13 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             }
 
             with patch.dict(self.worker.os.environ, env, clear=True), patch.object(
-                self.worker,
+                self.worker.subprocess,
                 "run",
-                return_value="publisher environment preflight passed",
+                return_value=self.worker.subprocess.CompletedProcess(
+                    args=self.worker.relay_publisher_preflight_command(env),
+                    returncode=0,
+                    stdout="publisher environment preflight passed",
+                ),
             ):
                 with self.assertRaisesRegex(RuntimeError, "did not return valid JSON"):
                     self.worker.check_relay_publisher_preflight()
@@ -2249,9 +2265,13 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             }
 
             with patch.dict(self.worker.os.environ, env, clear=True), patch.object(
-                self.worker,
+                self.worker.subprocess,
                 "run",
-                return_value=failed_payload,
+                return_value=self.worker.subprocess.CompletedProcess(
+                    args=self.worker.relay_publisher_preflight_command(env),
+                    returncode=2,
+                    stdout=failed_payload,
+                ),
             ):
                 with self.assertRaisesRegex(
                     RuntimeError,
