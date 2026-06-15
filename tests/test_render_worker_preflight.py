@@ -3544,12 +3544,18 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                 with self.assertRaisesRegex(
                     RuntimeError,
                     (
+                        "failed with status 2; "
+                        "relay publisher preflight reported "
                         "status=failed error_count=1 "
                         "error_categories=invalid_relay_url "
                         "failed_configuration_keys=AUTOMOAT_RELAY_URL\\|--relay-url"
                     ),
-                ):
+                ) as context:
                     self.worker.check_relay_publisher_preflight()
+
+        self.assertNotIn("relay-token", str(context.exception))
+        self.assertNotIn("automoat-cockpit-relay.example", str(context.exception))
+        self.assertNotIn(str(workdir), str(context.exception))
 
     def test_validate_publisher_preflight_output_omits_suspicious_diagnostics(self) -> None:
         failed_payload = json.dumps(
