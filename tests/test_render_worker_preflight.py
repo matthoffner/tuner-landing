@@ -298,7 +298,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
 
         self.assertIn("AUTOMOAT_RELAY_URL must start with http:// or https://", errors)
         self.assertIn("CODEX_AUTH_JSON_B64 must decode to a JSON object", errors)
-        self.assertIn("AUTOMOAT_AGENT_INTERVAL must be greater than or equal to 0", errors)
+        self.assertIn("AUTOMOAT_AGENT_INTERVAL must be greater than 0", errors)
         self.assertIn("AUTOMOAT_AGENT_ITERATIONS must be greater than or equal to 0", errors)
         self.assertIn("AUTOMOAT_RELAY_INTERVAL must be greater than 0", errors)
         self.assertIn("AUTOMOAT_RELAY_TIMEOUT must be a positive number of seconds", errors)
@@ -337,6 +337,41 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                 "AUTOMOAT_AGENT_INTERVAL must be a finite number of seconds",
             ],
         )
+
+    def test_rejects_zero_agent_interval_before_render_loop_start(self) -> None:
+        output = io.StringIO()
+
+        with redirect_stdout(output):
+            errors = self.worker.emit_environment_preflight(
+                {
+                    "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+                    "AUTOMOAT_RELAY_TOKEN": "relay-token",
+                    "GITHUB_TOKEN": "github-token",
+                    "CODEX_ACCESS_TOKEN": "codex-token",
+                    "AUTOMOAT_AGENT_INTERVAL": "0",
+                },
+                found_command,
+                output_format="json",
+            )
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(errors, ["AUTOMOAT_AGENT_INTERVAL must be greater than 0"])
+        self.assertEqual(payload["status"], "failed")
+        self.assertEqual(
+            payload["diagnostics"]["error_categories"],
+            ["invalid_runtime_config"],
+        )
+        self.assertEqual(
+            payload["diagnostics"]["failed_configuration_keys"],
+            ["AUTOMOAT_AGENT_INTERVAL"],
+        )
+        self.assertEqual(
+            payload["diagnostics"]["runtime_configured_keys"],
+            ["AUTOMOAT_AGENT_INTERVAL"],
+        )
+        self.assertNotIn("relay-token", output.getvalue())
+        self.assertNotIn("github-token", output.getvalue())
+        self.assertNotIn("codex-token", output.getvalue())
 
     def test_rejects_runtime_knobs_with_empty_or_surrounding_whitespace(self) -> None:
         errors = self.worker.validate_worker_environment(

@@ -639,7 +639,7 @@ def validate_worker_environment(
         errors,
         maximum=RUNTIME_CONFIG_LIMITS["AUTOMOAT_BRIDGE_STATUS_STALE_AFTER_SECONDS"],
     )
-    validate_nonnegative_float(
+    validate_positive_float(
         env,
         "AUTOMOAT_AGENT_INTERVAL",
         errors,
