@@ -86,6 +86,16 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertEqual(payload["publisher"]["status_file"], str(status_file))
         self.assertEqual(payload["publisher"]["pid_file"], str(pid_file))
         self.assertEqual(payload["publisher"]["log_file"], str(log_file))
+        self.assertEqual(
+            payload["publisher"]["source_health"],
+            {
+                "status": "degraded",
+                "ok": False,
+                "reasons": ["source_loop_not_running"],
+                "primary_reason": "source_loop_not_running",
+                "label": "Source loop is not running",
+            },
+        )
 
     def test_read_status_returns_waiting_for_missing_configured_file(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -107,6 +117,51 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertFalse(status["loop_running"])
         self.assertIsNone(status["loop_pid"])
         self.assertIn("publisher_updated_at", status)
+
+    def test_publisher_source_health_reports_live_source_status(self) -> None:
+        status = {
+            "status": "passing",
+            "loop_running": True,
+            "source_status_stale": False,
+            "source_status_file_status": "loaded",
+        }
+
+        health = self.publisher.publisher_source_health(status)
+
+        self.assertEqual(
+            health,
+            {
+                "status": "live",
+                "ok": True,
+                "reasons": [],
+                "primary_reason": None,
+                "label": "Live",
+            },
+        )
+
+    def test_publisher_source_health_summarizes_degraded_source_status(self) -> None:
+        status = {
+            "status": "failing",
+            "loop_running": False,
+            "source_status_stale": True,
+            "source_status_file_status": "invalid_json",
+        }
+
+        health = self.publisher.publisher_source_health(status)
+
+        self.assertEqual(health["status"], "degraded")
+        self.assertFalse(health["ok"])
+        self.assertEqual(
+            health["reasons"],
+            [
+                "source_status_unavailable",
+                "source_status_stale",
+                "source_loop_not_running",
+                "source_status_failing",
+            ],
+        )
+        self.assertEqual(health["primary_reason"], "source_status_unavailable")
+        self.assertEqual(health["label"], "Source status is unavailable")
 
     def test_read_status_marks_malformed_status_file_unavailable(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

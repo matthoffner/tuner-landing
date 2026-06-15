@@ -46,6 +46,12 @@ SECRET_ASSIGNMENT_PATTERN = re.compile(
     r"\b(token|access_token|api_key|x-automoat-relay-token)\s*[:=]\s*[^\s,;]+",
     re.IGNORECASE,
 )
+SOURCE_HEALTH_LABELS = {
+    "source_status_unavailable": "Source status is unavailable",
+    "source_status_stale": "Source status is stale",
+    "source_loop_not_running": "Source loop is not running",
+    "source_status_failing": "Source status is failing",
+}
 
 
 def utc_now() -> str:
@@ -218,14 +224,48 @@ def git_snapshot() -> dict[str, Any]:
     }
 
 
+def source_health_label(reason: str | None) -> str:
+    if reason is None:
+        return "Live"
+    return SOURCE_HEALTH_LABELS.get(reason, reason.replace("_", " "))
+
+
+def publisher_source_health(status: dict[str, Any]) -> dict[str, Any]:
+    reasons: list[str] = []
+    if status.get("source_status_file_status") in {
+        "missing",
+        "read_failed",
+        "invalid_json",
+        "not_object",
+    }:
+        reasons.append("source_status_unavailable")
+    if status.get("source_status_stale") is True:
+        reasons.append("source_status_stale")
+    if status.get("loop_running") is False:
+        reasons.append("source_loop_not_running")
+    if status.get("status") in {"error", "failing"}:
+        reasons.append("source_status_failing")
+
+    primary_reason = reasons[0] if reasons else None
+    health_status = "degraded" if reasons else "live"
+    return {
+        "status": health_status,
+        "ok": health_status == "live",
+        "reasons": reasons,
+        "primary_reason": primary_reason,
+        "label": source_health_label(primary_reason),
+    }
+
+
 def build_payload(args: argparse.Namespace) -> dict[str, Any]:
+    status = read_status(
+        args.status_file,
+        args.pid_file,
+        args.status_stale_after_seconds,
+    )
     return {
         "pushed_at": utc_now(),
-        "status": read_status(
-            args.status_file,
-            args.pid_file,
-            args.status_stale_after_seconds,
-        ),
+        "status": status,
         "log_tail": tail_text(args.log_file, args.tail_lines, args.max_log_bytes),
         "publisher": {
             "host": socket.gethostname(),
@@ -233,6 +273,7 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
             "status_file": repo_relative(args.status_file),
             "pid_file": repo_relative(args.pid_file),
             "log_file": repo_relative(args.log_file),
+            "source_health": publisher_source_health(status),
             "git": git_snapshot(),
         },
     }
