@@ -125,6 +125,56 @@ class CockpitApiProxyTest(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_upstreams_reject_whitespace_and_control_characters_before_parsing(self) -> None:
+        result = run_node(
+            """
+            const assert = require("assert");
+            const { upstreams } = require("./api/cockpit-upstreams");
+
+            const surrounded = upstreams({
+              relayPath: "/api/status",
+              bridgePath: "/api/status",
+              env: {
+                AUTOMOAT_RELAY_URL: " https://automoat-cockpit-relay.example",
+                AUTOMOAT_BRIDGE_URL: "https://legacy-bridge.example ",
+              },
+            });
+            assert.deepStrictEqual(surrounded.configured, []);
+            assert.deepStrictEqual(surrounded.invalid, [
+              {
+                kind: "relay",
+                error: "must not include leading or trailing whitespace",
+              },
+              {
+                kind: "legacy_bridge",
+                error: "must not include leading or trailing whitespace",
+              },
+            ]);
+
+            const embedded = upstreams({
+              relayPath: "/api/status",
+              bridgePath: "/api/status",
+              env: {
+                AUTOMOAT_RELAY_URL: "https://automoat-cockpit-relay.example\\n/ingest",
+                AUTOMOAT_BRIDGE_URL: "https://legacy-bridge.example/debug path",
+              },
+            });
+            assert.deepStrictEqual(embedded.configured, []);
+            assert.deepStrictEqual(embedded.invalid, [
+              {
+                kind: "relay",
+                error: "must be a single-line URL without control characters",
+              },
+              {
+                kind: "legacy_bridge",
+                error: "must not contain whitespace",
+              },
+            ]);
+            """
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_upstreams_validate_configured_timeout(self) -> None:
         result = run_node(
             """

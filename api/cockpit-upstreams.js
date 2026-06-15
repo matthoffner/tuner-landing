@@ -11,9 +11,19 @@ const EXPOSED_UPSTREAM_HEADERS = [
 const NOT_CONFIGURED_UPSTREAMS_HEADER = "relay,legacy_bridge";
 
 function normalizeBaseUrl(value, options = {}) {
-  const raw = (value || "").trim();
+  const rawValue = String(value || "");
+  const raw = rawValue.trim();
   if (!raw) {
     return { url: "", error: null };
+  }
+  if (rawValue !== raw) {
+    return { url: "", error: "must not include leading or trailing whitespace" };
+  }
+  if (/[\r\n\x00-\x1f\x7f]/.test(rawValue)) {
+    return { url: "", error: "must be a single-line URL without control characters" };
+  }
+  if (/\s/.test(rawValue)) {
+    return { url: "", error: "must not contain whitespace" };
   }
 
   let parsed;
