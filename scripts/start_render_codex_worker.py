@@ -328,6 +328,8 @@ def validate_git_identity_value(
         return
     if name.endswith("_EMAIL") and not is_plain_git_email(value):
         errors.append(f"{name} must be a plain email address with one @")
+    if name.endswith("_NAME") and not is_plain_git_display_name(value):
+        errors.append(f"{name} must be a plain display name without email punctuation")
 
 
 def is_plain_git_email(value: str) -> bool:
@@ -341,6 +343,10 @@ def is_plain_git_email(value: str) -> bool:
     if domain_part.startswith(".") or domain_part.endswith(".") or ".." in domain_part:
         return False
     return True
+
+
+def is_plain_git_display_name(value: str) -> bool:
+    return not any(character in "<>()[],:;\\\"@" for character in value)
 
 
 def validate_secret_value(

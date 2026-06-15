@@ -2296,6 +2296,70 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             ],
         )
 
+    def test_rejects_git_identity_names_with_email_punctuation_before_git_config(
+        self,
+    ) -> None:
+        base_env = {
+            "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            "GITHUB_TOKEN": "github-token",
+            "CODEX_ACCESS_TOKEN": "codex-token",
+        }
+        errors = self.worker.validate_worker_environment(
+            {
+                **base_env,
+                "GIT_AUTHOR_NAME": "Render Agent <render-agent@example.com>",
+                "GIT_AUTHOR_EMAIL": "render-agent@example.com",
+                "GIT_COMMITTER_NAME": "Render Agent, Backup",
+                "GIT_COMMITTER_EMAIL": "render-agent@example.com",
+            },
+            found_command,
+        )
+
+        self.assertEqual(
+            errors,
+            [
+                "GIT_AUTHOR_NAME must be a plain display name without email punctuation",
+                "GIT_COMMITTER_NAME must be a plain display name without email punctuation",
+            ],
+        )
+
+    def test_check_env_json_routes_git_identity_name_punctuation_without_echoing_value(
+        self,
+    ) -> None:
+        output = io.StringIO()
+
+        with redirect_stdout(output):
+            errors = self.worker.emit_environment_preflight(
+                {
+                    "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+                    "AUTOMOAT_RELAY_TOKEN": "relay-token",
+                    "GITHUB_TOKEN": "github-token",
+                    "CODEX_ACCESS_TOKEN": "codex-token",
+                    "GIT_AUTHOR_NAME": "Secret Render Agent <secret@example.com>",
+                },
+                found_command,
+                output_format="json",
+            )
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(
+            errors,
+            ["GIT_AUTHOR_NAME must be a plain display name without email punctuation"],
+        )
+        self.assertEqual(payload["status"], "failed")
+        self.assertEqual(
+            payload["diagnostics"]["error_categories"],
+            ["invalid_git_identity"],
+        )
+        self.assertEqual(
+            payload["diagnostics"]["failed_configuration_keys"],
+            ["GIT_AUTHOR_NAME"],
+        )
+        self.assertNotIn("Secret Render Agent", output.getvalue())
+        self.assertNotIn("secret@example.com", output.getvalue())
+        self.assertNotIn("relay-token", output.getvalue())
+
     def test_write_codex_config_escapes_string_values(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             self.worker.CODEX_HOME = Path(temp_dir) / "codex-home"
