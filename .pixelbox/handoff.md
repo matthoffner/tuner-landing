@@ -4,6 +4,11 @@ Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
 - lane: editor
+- status: added standalone cockpit relay publisher process identity to Render-visible snapshots and log lines so each publish carries `publisher_started_at`, `pid`, per-process `snapshot_sequence`, host, git head, and dirty-path count for diagnosing stale, restarted, or cross-worker publishers; no Dallas raw CSV rows were edited
+- files: scripts/publish_cockpit_to_relay.py, tests/test_cockpit_relay_publisher.py, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- checks: `python3 -m unittest tests.test_cockpit_relay_publisher -v`; `python3 -m py_compile scripts/publish_cockpit_to_relay.py tests/test_cockpit_relay_publisher.py`; `python3 -m unittest discover -s tests -v`; `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json > /tmp/automoat-publisher-identity-ready.json`; `python3 -m json.tool /tmp/automoat-publisher-identity-ready.json >/tmp/automoat-publisher-identity-ready.pretty.json`; `cmp -s generated/landing.html index.html`; `git diff --exit-code -- .pxcode/preview.json generated/raw generated/landing.html index.html`; `git diff --check`
+- next: when Render relay logs or `/api/status.relay.publisher` look stale, compare `publisher_started_at`, `publisher_pid`, `publisher_snapshot_sequence`, and `publisher_git_head` before debugging relay freshness or source-loop state
+- lane: editor
 - status: added compact source-health fields to standalone cockpit relay publisher log lines so Render logs show `source_health_status`, `source_health_primary_reason`, and `source_health_label` on successful publishes and relay/HTTP/transport failures; no Dallas raw CSV rows were edited
 - files: scripts/publish_cockpit_to_relay.py, tests/test_cockpit_relay_publisher.py, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
 - checks: `python3 -m unittest tests.test_cockpit_relay_publisher`; `python3 -m py_compile scripts/publish_cockpit_to_relay.py tests/test_cockpit_relay_publisher.py`; `python3 -m unittest discover -s tests`; `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json`; `cmp -s generated/landing.html index.html`; `git diff --name-only -- generated/raw .pxcode/preview.json generated/landing.html index.html`; `git diff --check`

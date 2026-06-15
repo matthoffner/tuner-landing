@@ -68,6 +68,10 @@ def utc_now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+PUBLISHER_STARTED_AT = utc_now()
+PUBLISHER_SNAPSHOT_SEQUENCE = 0
+
+
 def emit(message: str, *, log_path: Path) -> None:
     line = f"[{utc_now()}] {message}"
     print(line, flush=True)
@@ -351,6 +355,12 @@ def git_snapshot() -> dict[str, Any]:
     }
 
 
+def next_publisher_snapshot_sequence() -> int:
+    global PUBLISHER_SNAPSHOT_SEQUENCE
+    PUBLISHER_SNAPSHOT_SEQUENCE += 1
+    return PUBLISHER_SNAPSHOT_SEQUENCE
+
+
 def source_health_label(reason: str | None) -> str:
     if reason is None:
         return "Live"
@@ -396,6 +406,9 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         "log_tail": tail_text(args.log_file, args.tail_lines, args.max_log_bytes),
         "publisher": {
             "host": socket.gethostname(),
+            "pid": os.getpid(),
+            "publisher_started_at": PUBLISHER_STARTED_AT,
+            "snapshot_sequence": next_publisher_snapshot_sequence(),
             "repo": str(ROOT),
             "status_file": repo_relative(args.status_file),
             "pid_file": repo_relative(args.pid_file),
@@ -436,6 +449,9 @@ def source_status_log_fields(payload: dict[str, Any]) -> dict[str, Any]:
     source_health = publisher.get("source_health")
     if not isinstance(source_health, dict):
         source_health = {}
+    git = publisher.get("git")
+    if not isinstance(git, dict):
+        git = {}
     return {
         "source_status": status.get("status", "unknown"),
         "source_loop_running": status.get("loop_running"),
@@ -445,6 +461,12 @@ def source_status_log_fields(payload: dict[str, Any]) -> dict[str, Any]:
         "source_health_status": source_health.get("status"),
         "source_health_primary_reason": source_health.get("primary_reason"),
         "source_health_label": source_health.get("label"),
+        "publisher_host": publisher.get("host"),
+        "publisher_pid": publisher.get("pid"),
+        "publisher_started_at": publisher.get("publisher_started_at"),
+        "publisher_snapshot_sequence": publisher.get("snapshot_sequence"),
+        "publisher_git_head": git.get("head"),
+        "publisher_git_dirty_path_count": git.get("dirty_path_count"),
     }
 
 
@@ -528,7 +550,13 @@ def publish_once_result(args: argparse.Namespace) -> dict[str, Any]:
             f"source_status_file_status={source_fields.get('source_status_file_status')} "
             f"source_health_status={source_fields.get('source_health_status')} "
             f"source_health_primary_reason={source_fields.get('source_health_primary_reason')} "
-            f"source_health_label={source_fields.get('source_health_label')}",
+            f"source_health_label={source_fields.get('source_health_label')} "
+            f"publisher_host={source_fields.get('publisher_host')} "
+            f"publisher_pid={source_fields.get('publisher_pid')} "
+            f"publisher_started_at={source_fields.get('publisher_started_at')} "
+            f"publisher_snapshot_sequence={source_fields.get('publisher_snapshot_sequence')} "
+            f"publisher_git_head={source_fields.get('publisher_git_head')} "
+            f"publisher_git_dirty_path_count={source_fields.get('publisher_git_dirty_path_count')}",
             log_path=args.publisher_log,
         )
         return {
@@ -546,7 +574,13 @@ def publish_once_result(args: argparse.Namespace) -> dict[str, Any]:
             f"source_status_file_status={source_fields.get('source_status_file_status')} "
             f"source_health_status={source_fields.get('source_health_status')} "
             f"source_health_primary_reason={source_fields.get('source_health_primary_reason')} "
-            f"source_health_label={source_fields.get('source_health_label')}",
+            f"source_health_label={source_fields.get('source_health_label')} "
+            f"publisher_host={source_fields.get('publisher_host')} "
+            f"publisher_pid={source_fields.get('publisher_pid')} "
+            f"publisher_started_at={source_fields.get('publisher_started_at')} "
+            f"publisher_snapshot_sequence={source_fields.get('publisher_snapshot_sequence')} "
+            f"publisher_git_head={source_fields.get('publisher_git_head')} "
+            f"publisher_git_dirty_path_count={source_fields.get('publisher_git_dirty_path_count')}",
             log_path=args.publisher_log,
         )
         return {
@@ -564,7 +598,13 @@ def publish_once_result(args: argparse.Namespace) -> dict[str, Any]:
             f"source_status_file_status={source_fields['source_status_file_status']} "
             f"source_health_status={source_fields['source_health_status']} "
             f"source_health_primary_reason={source_fields['source_health_primary_reason']} "
-            f"source_health_label={source_fields['source_health_label']}",
+            f"source_health_label={source_fields['source_health_label']} "
+            f"publisher_host={source_fields['publisher_host']} "
+            f"publisher_pid={source_fields['publisher_pid']} "
+            f"publisher_started_at={source_fields['publisher_started_at']} "
+            f"publisher_snapshot_sequence={source_fields['publisher_snapshot_sequence']} "
+            f"publisher_git_head={source_fields['publisher_git_head']} "
+            f"publisher_git_dirty_path_count={source_fields['publisher_git_dirty_path_count']}",
             log_path=args.publisher_log,
         )
         return {
@@ -581,7 +621,13 @@ def publish_once_result(args: argparse.Namespace) -> dict[str, Any]:
         f"source_status_file_status={source_fields['source_status_file_status']} "
         f"source_health_status={source_fields['source_health_status']} "
         f"source_health_primary_reason={source_fields['source_health_primary_reason']} "
-        f"source_health_label={source_fields['source_health_label']}",
+        f"source_health_label={source_fields['source_health_label']} "
+        f"publisher_host={source_fields['publisher_host']} "
+        f"publisher_pid={source_fields['publisher_pid']} "
+        f"publisher_started_at={source_fields['publisher_started_at']} "
+        f"publisher_snapshot_sequence={source_fields['publisher_snapshot_sequence']} "
+        f"publisher_git_head={source_fields['publisher_git_head']} "
+        f"publisher_git_dirty_path_count={source_fields['publisher_git_dirty_path_count']}",
         log_path=args.publisher_log,
     )
     return {

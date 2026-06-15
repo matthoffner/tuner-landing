@@ -92,6 +92,21 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertEqual(payload["publisher"]["status_file"], str(status_file))
         self.assertEqual(payload["publisher"]["pid_file"], str(pid_file))
         self.assertEqual(payload["publisher"]["log_file"], str(log_file))
+        self.assertEqual(payload["publisher"]["pid"], os.getpid())
+        self.assertEqual(
+            payload["publisher"]["publisher_started_at"],
+            self.publisher.PUBLISHER_STARTED_AT,
+        )
+        self.assertEqual(payload["publisher"]["snapshot_sequence"], 1)
+        self.assertEqual(
+            payload["publisher"]["git"],
+            {
+                "head": "testhead",
+                "branch": "testbranch",
+                "dirty_paths": [],
+                "dirty_path_count": 0,
+            },
+        )
         self.assertEqual(
             payload["publisher"]["source_health"],
             {
@@ -819,13 +834,21 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 },
                 "log_tail": "loop log\n",
                 "publisher": {
+                    "host": "worker-1",
+                    "pid": 4321,
+                    "publisher_started_at": "2026-06-14T20:10:00Z",
+                    "snapshot_sequence": 7,
                     "source_health": {
                         "status": "degraded",
                         "ok": False,
                         "reasons": ["source_status_stale"],
                         "primary_reason": "source_status_stale",
                         "label": "Source status is stale",
-                    }
+                    },
+                    "git": {
+                        "head": "abc1234",
+                        "dirty_path_count": 2,
+                    },
                 },
             }
             self.publisher.build_payload = lambda _args: payload
@@ -843,6 +866,12 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertIn("source_health_status=degraded", log_text)
         self.assertIn("source_health_primary_reason=source_status_stale", log_text)
         self.assertIn("source_health_label=Source status is stale", log_text)
+        self.assertIn("publisher_host=worker-1", log_text)
+        self.assertIn("publisher_pid=4321", log_text)
+        self.assertIn("publisher_started_at=2026-06-14T20:10:00Z", log_text)
+        self.assertIn("publisher_snapshot_sequence=7", log_text)
+        self.assertIn("publisher_git_head=abc1234", log_text)
+        self.assertIn("publisher_git_dirty_path_count=2", log_text)
 
     def test_publish_once_logs_relay_ok_false_as_failure(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
