@@ -242,9 +242,9 @@ class MvpCockpitServerTest(unittest.TestCase):
                 json.dumps(
                     {
                         "status": "running",
-                        "public_url": "https://automoat-test.ngrok.app",
-                        "local_read_only_url": "http://127.0.0.1:4181/",
-                        "ngrok_api_url": "http://127.0.0.1:4041/api/tunnels",
+                        "public_url": "https://user:secret@automoat-test.ngrok.app/live?token=abc#frag",
+                        "local_read_only_url": "http://reader:secret@127.0.0.1:4181/?relay=abc",
+                        "ngrok_api_url": "http://127.0.0.1:4041/api/tunnels?api_key=secret",
                         "updated_at": "2026-06-15T03:20:00Z",
                         "bridge_started_at": "2026-06-15T03:19:00Z",
                         "bridge_pid": "12345",
@@ -270,9 +270,21 @@ class MvpCockpitServerTest(unittest.TestCase):
         self.assertTrue(summary["available"])
         self.assertEqual(summary["status_file_status"], "loaded")
         self.assertEqual(summary["status"], "running")
-        self.assertEqual(summary["public_url"], "https://automoat-test.ngrok.app")
-        self.assertEqual(summary["local_read_only_url"], "http://127.0.0.1:4181/")
-        self.assertEqual(summary["ngrok_api_url"], "http://127.0.0.1:4041/api/tunnels")
+        self.assertEqual(
+            summary["public_url"],
+            "https://automoat-test.ngrok.app/live?[redacted]#[redacted]",
+        )
+        self.assertEqual(
+            summary["local_read_only_url"],
+            "http://127.0.0.1:4181/?[redacted]",
+        )
+        self.assertEqual(
+            summary["ngrok_api_url"],
+            "http://127.0.0.1:4041/api/tunnels?[redacted]",
+        )
+        self.assertNotIn("secret", json.dumps(summary))
+        self.assertNotIn("token=abc", json.dumps(summary))
+        self.assertNotIn("api_key", json.dumps(summary))
         self.assertEqual(summary["bridge_pid"], 12345)
         self.assertEqual(summary["bridge_status_sequence"], 4)
         self.assertEqual(summary["interval"], 5.5)
