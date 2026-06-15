@@ -785,6 +785,17 @@ def run_autonomy_policy_check(log_file: Path) -> dict[str, Any]:
         )
     elapsed = round(time.monotonic() - started, 3)
     emit(log_file, f"step end: {name} status={exit_status} seconds={elapsed}")
+    policy_diagnostics = autonomy_policy_diagnostics(
+        exit_status=exit_status,
+        failure_reason=failure_reason,
+        preview_changed=preview_changed,
+        synthetic_row_count=len(synthetic_rows),
+        raw_csv_path_count=len(raw_csv_paths),
+        productive_path_count=len(productive_paths),
+        policy_allows_synthetic_append=policy_allows_synthetic_append,
+        allow_override=allow_override,
+        policy_snapshot=policy_snapshot,
+    )
     return {
         "name": name,
         "command": ["internal", "autonomy_policy_check"],
@@ -801,8 +812,53 @@ def run_autonomy_policy_check(log_file: Path) -> dict[str, Any]:
         "policy_allows_synthetic_append": policy_allows_synthetic_append,
         "policy_override": allow_override,
         "policy_snapshot": policy_snapshot,
+        "policy_diagnostics": policy_diagnostics,
         "failure_reason": failure_reason,
     }
+
+
+def autonomy_policy_diagnostics(
+    *,
+    exit_status: int,
+    failure_reason: str | None,
+    preview_changed: bool,
+    synthetic_row_count: int,
+    raw_csv_path_count: int,
+    productive_path_count: int,
+    policy_allows_synthetic_append: bool,
+    allow_override: bool,
+    policy_snapshot: dict[str, Any],
+) -> dict[str, Any]:
+    """Return compact routeable counts for the policy step status payload."""
+    return {
+        "status": "passed" if exit_status == 0 else "failed",
+        "failure_reason": failure_reason,
+        "route_hint": autonomy_policy_route_hint(failure_reason),
+        "decision_reason": sanitized_policy_scalar(
+            policy_snapshot.get("decision_reason")
+        ),
+        "current_focus": sanitized_policy_scalar(policy_snapshot.get("current_focus")),
+        "preview_json_changed": preview_changed,
+        "synthetic_row_count": synthetic_row_count,
+        "raw_dallas_csv_changed_path_count": raw_csv_path_count,
+        "productive_changed_path_count": productive_path_count,
+        "policy_allows_synthetic_append": policy_allows_synthetic_append,
+        "policy_override": allow_override,
+    }
+
+
+def autonomy_policy_route_hint(failure_reason: str | None) -> str:
+    if failure_reason == "preview_json_changed":
+        return "pixelbox_preview_metadata"
+    if failure_reason == "synthetic_append_disallowed_by_snapshot":
+        return "dallas_synthetic_fixture_growth_disallowed"
+    if failure_reason == "raw_dallas_csv_without_productive_work":
+        return "dallas_raw_fixture_without_productive_companion"
+    if failure_reason == "synthetic_append_without_productive_work":
+        return "dallas_synthetic_fixture_without_productive_companion"
+    if failure_reason:
+        return "policy_failure"
+    return "ok"
 
 
 def autonomy_policy_error_message(policy_step: dict[str, Any]) -> str:

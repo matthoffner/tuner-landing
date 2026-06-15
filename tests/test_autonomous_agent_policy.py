@@ -424,6 +424,22 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
         )
         self.assertEqual(result["productive_changed_paths"], [])
         self.assertIn("policy_snapshot", result)
+        self.assertEqual(
+            result["policy_diagnostics"],
+            {
+                "status": "failed",
+                "failure_reason": "synthetic_append_disallowed_by_snapshot",
+                "route_hint": "dallas_synthetic_fixture_growth_disallowed",
+                "decision_reason": "dallas_ready_no_thin_groups",
+                "current_focus": "autonomy_visibility_or_real_ingest",
+                "preview_json_changed": False,
+                "synthetic_row_count": 1,
+                "raw_dallas_csv_changed_path_count": 1,
+                "productive_changed_path_count": 0,
+                "policy_allows_synthetic_append": False,
+                "policy_override": False,
+            },
+        )
 
     def test_synthetic_row_samples_are_bounded_and_secret_safe(self) -> None:
         rows = [
@@ -606,6 +622,58 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
         self.assertEqual(
             result["productive_changed_paths"],
             ["scripts/import_dallas_permit_extracts.py"],
+        )
+        self.assertEqual(result["policy_diagnostics"]["status"], "passed")
+        self.assertEqual(result["policy_diagnostics"]["route_hint"], "ok")
+        self.assertEqual(
+            result["policy_diagnostics"]["raw_dallas_csv_changed_path_count"],
+            1,
+        )
+        self.assertEqual(
+            result["policy_diagnostics"]["productive_changed_path_count"],
+            1,
+        )
+
+    def test_policy_diagnostics_are_routeable_and_secret_safe(self) -> None:
+        diagnostics = self.loop.autonomy_policy_diagnostics(
+            exit_status=1,
+            failure_reason="preview_json_changed",
+            preview_changed=True,
+            synthetic_row_count=2,
+            raw_csv_path_count=3,
+            productive_path_count=4,
+            policy_allows_synthetic_append=False,
+            allow_override=False,
+            policy_snapshot={
+                "decision_reason": "blocked token=secret\nsecond line",
+                "current_focus": "fix_import_readiness_blockers",
+            },
+        )
+
+        self.assertEqual(diagnostics["status"], "failed")
+        self.assertEqual(diagnostics["route_hint"], "pixelbox_preview_metadata")
+        self.assertEqual(diagnostics["failure_reason"], "preview_json_changed")
+        self.assertEqual(diagnostics["decision_reason"], "blocked token=<redacted> second line")
+        self.assertEqual(diagnostics["current_focus"], "fix_import_readiness_blockers")
+        self.assertTrue(diagnostics["preview_json_changed"])
+        self.assertEqual(diagnostics["synthetic_row_count"], 2)
+        self.assertEqual(diagnostics["raw_dallas_csv_changed_path_count"], 3)
+        self.assertEqual(diagnostics["productive_changed_path_count"], 4)
+        self.assertNotIn("secret", str(diagnostics))
+
+    def test_policy_route_hint_covers_known_failure_reasons(self) -> None:
+        self.assertEqual(self.loop.autonomy_policy_route_hint(None), "ok")
+        self.assertEqual(
+            self.loop.autonomy_policy_route_hint("synthetic_append_without_productive_work"),
+            "dallas_synthetic_fixture_without_productive_companion",
+        )
+        self.assertEqual(
+            self.loop.autonomy_policy_route_hint("raw_dallas_csv_without_productive_work"),
+            "dallas_raw_fixture_without_productive_companion",
+        )
+        self.assertEqual(
+            self.loop.autonomy_policy_route_hint("unexpected"),
+            "policy_failure",
         )
 
     def test_policy_check_rejects_synthetic_row_when_snapshot_disallows_it(self) -> None:
