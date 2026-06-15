@@ -6,6 +6,7 @@ const EXPOSED_UPSTREAM_HEADERS = [
   "X-Automoat-Upstream-Fallback-Count",
   "X-Automoat-Upstream-Attempt-Count",
   "X-Automoat-Upstream-Status-Code",
+  "X-Automoat-Upstream-Error",
   "X-Automoat-Upstream-Attempts",
   "X-Automoat-Upstream-Timeout-Ms",
   "X-Automoat-Upstream-Invalid-Config",
@@ -235,6 +236,38 @@ function upstreamAttemptsHeader(attempts) {
     .join(",");
 }
 
+function upstreamAttemptError(attempt) {
+  if (!attempt) {
+    return "";
+  }
+  if (attempt.error) {
+    return String(attempt.error).replace(/[\r\n,]/g, " ").trim().slice(0, 120);
+  }
+  if (attempt.message) {
+    return classifyUpstreamError(attempt);
+  }
+  if (Number.isInteger(attempt.status) && (attempt.status < 200 || attempt.status >= 300)) {
+    return `http_${attempt.status}`;
+  }
+  return "";
+}
+
+function upstreamErrorHeader(upstreamKind, attempts) {
+  const selectedAttempt = attempts.length ? attempts[attempts.length - 1] : null;
+  const selectedError = upstreamAttemptError(selectedAttempt);
+  if (selectedError) {
+    return selectedError;
+  }
+  if (
+    upstreamKind === "invalid_configuration"
+    || upstreamKind === "not_configured"
+    || upstreamKind === "method_not_allowed"
+  ) {
+    return upstreamKind;
+  }
+  return "";
+}
+
 function invalidUpstreamsHeader(invalid) {
   return invalid
     .map((item) => {
@@ -287,6 +320,7 @@ function setUpstreamSelectionHeaders(response, upstreamKind, fallbackCount, atte
   response.setHeader("X-Automoat-Upstream-Fallback-Count", String(fallbackCount));
   response.setHeader("X-Automoat-Upstream-Attempt-Count", String(attempts.length));
   response.setHeader("X-Automoat-Upstream-Status-Code", selectedStatus);
+  response.setHeader("X-Automoat-Upstream-Error", upstreamErrorHeader(upstreamKind, attempts));
   response.setHeader("X-Automoat-Upstream-Attempts", upstreamAttemptsHeader(attempts));
 }
 
@@ -488,7 +522,9 @@ module.exports = {
   sendProxyResponse,
   setProxyHeaders,
   setUpstreamSelectionHeaders,
+  upstreamAttemptError,
   upstreamAttemptSummary,
   upstreamAttemptsHeader,
+  upstreamErrorHeader,
   upstreams,
 };
