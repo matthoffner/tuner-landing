@@ -1742,6 +1742,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             "AUTOMOAT_RELAY_TOKEN": "relay-token",
             "GITHUB_TOKEN": "github-token",
             "CODEX_ACCESS_TOKEN": "codex-token",
+            "AUTOMOAT_BRIDGE_STATUS_FILE": "/tmp/automoat-bridge-status.json",
             "AUTOMOAT_BRIDGE_STATUS_STALE_AFTER_SECONDS": "240",
         }
         output = io.StringIO()
@@ -1758,6 +1759,10 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertEqual(
             payload["config"]["bridge_status_stale_after_seconds"],
             "240",
+        )
+        self.assertEqual(
+            payload["config"]["bridge_status_file"],
+            "/tmp/automoat-bridge-status.json",
         )
 
     def test_check_env_json_categorizes_bad_bridge_stale_threshold(self) -> None:
@@ -1787,6 +1792,44 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             payload["diagnostics"]["error_categories"],
             ["invalid_runtime_config"],
         )
+        self.assertNotIn("github-token", output.getvalue())
+        self.assertNotIn("codex-token", output.getvalue())
+
+    def test_check_env_json_categorizes_bad_bridge_status_file_path(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            bridge_status_file = Path(temp_dir) / "bridge-status-dir"
+            bridge_status_file.mkdir()
+            env = {
+                "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+                "AUTOMOAT_RELAY_TOKEN": "relay-token",
+                "GITHUB_TOKEN": "github-token",
+                "CODEX_ACCESS_TOKEN": "codex-token",
+                "AUTOMOAT_BRIDGE_STATUS_FILE": str(bridge_status_file),
+            }
+            output = io.StringIO()
+
+            with redirect_stdout(output):
+                errors = self.worker.emit_environment_preflight(
+                    env,
+                    found_command,
+                    output_format="json",
+                )
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(
+            errors,
+            ["AUTOMOAT_BRIDGE_STATUS_FILE must be a file path, not a directory"],
+        )
+        self.assertEqual(payload["status"], "failed")
+        self.assertEqual(
+            payload["diagnostics"]["error_categories"],
+            ["invalid_file_path"],
+        )
+        self.assertEqual(
+            payload["diagnostics"]["failed_configuration_keys"],
+            ["AUTOMOAT_BRIDGE_STATUS_FILE"],
+        )
+        self.assertNotIn(str(bridge_status_file), output.getvalue())
         self.assertNotIn("github-token", output.getvalue())
         self.assertNotIn("codex-token", output.getvalue())
 

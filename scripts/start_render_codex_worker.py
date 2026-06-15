@@ -52,6 +52,7 @@ RUNTIME_CONFIG_LIMITS = {
     "AUTOMOAT_STATUS_STALE_AFTER_SECONDS": 3600,
     "AUTOMOAT_BRIDGE_STATUS_STALE_AFTER_SECONDS": 3600,
 }
+PUBLISHER_FILE_PATH_ENV_NAMES = ("AUTOMOAT_BRIDGE_STATUS_FILE",)
 MAX_GIT_BRANCH_CHARS = 240
 GIT_IDENTITY_ENV_DEFAULTS = {
     "GIT_AUTHOR_NAME": "automoat-render-agent",
@@ -472,6 +473,8 @@ def validate_worker_environment(
     )
     validate_codex_config_value(env, "AUTOMOAT_CODEX_MODEL", errors)
     validate_codex_config_value(env, "AUTOMOAT_CODEX_REASONING_EFFORT", errors)
+    for name in PUBLISHER_FILE_PATH_ENV_NAMES:
+        validate_publisher_file_path_env_value(env, name, errors)
     for name in GIT_IDENTITY_ENV_DEFAULTS:
         validate_git_identity_value(env, name, errors)
 
@@ -586,6 +589,8 @@ def preflight_error_category(error: str) -> str:
         return "invalid_git_branch"
     if error.startswith("AUTOMOAT_WORKDIR") or error.startswith("CODEX_HOME"):
         return "invalid_path"
+    if any(error.startswith(name) for name in PUBLISHER_FILE_PATH_ENV_NAMES):
+        return "invalid_file_path"
     if error.startswith("reserved runtime file "):
         return "invalid_path"
     if error.startswith("CODEX_AUTH_JSON_B64 must decode"):
@@ -631,6 +636,7 @@ def preflight_error_key(error: str) -> str:
         *GIT_AUTH_ENV_NAMES,
         *CODEX_CONFIG_ENV_DEFAULTS,
         *RUNTIME_CONFIG_LIMITS,
+        *PUBLISHER_FILE_PATH_ENV_NAMES,
         *GIT_IDENTITY_ENV_DEFAULTS,
     }:
         return first_token
@@ -815,6 +821,45 @@ def blocking_directory_path_component(path: Path) -> Path | None:
         current_path = current_path.parent
 
 
+def blocking_parent_path_component(path: Path) -> Path | None:
+    current_path = path.parent
+    while True:
+        if current_path.exists():
+            return None if current_path.is_dir() else current_path
+        if current_path.parent == current_path:
+            return None
+        current_path = current_path.parent
+
+
+def validate_publisher_file_path_env_value(
+    env: os._Environ[str] | dict[str, str],
+    name: str,
+    errors: list[str],
+) -> None:
+    if name not in env:
+        return
+    value = env.get(name, "")
+    if not value.strip():
+        errors.append(f"{name} must not be empty")
+        return
+    if value != value.strip():
+        errors.append(f"{name} must not include leading or trailing whitespace")
+        return
+    if any(
+        character in "\r\n" or ord(character) < 32 or ord(character) == 127
+        for character in value
+    ):
+        errors.append(f"{name} must be a single-line path without control characters")
+        return
+
+    path = Path(value)
+    if path.exists() and path.is_dir():
+        errors.append(f"{name} must be a file path, not a directory")
+        return
+    if blocking_parent_path_component(path) is not None:
+        errors.append(f"{name} parent path must be a directory")
+
+
 def reserved_runtime_file_conflict(path: Path) -> Path | None:
     for runtime_file in RESERVED_RUNTIME_FILE_PATHS:
         try:
@@ -900,6 +945,10 @@ def environment_preflight_summary(
         "status_stale_after_seconds": env.get(
             "AUTOMOAT_STATUS_STALE_AFTER_SECONDS",
             "660",
+        ),
+        "bridge_status_file": env.get(
+            "AUTOMOAT_BRIDGE_STATUS_FILE",
+            ".automoat/state/mvp-bridge-status.json",
         ),
         "bridge_status_stale_after_seconds": env.get(
             "AUTOMOAT_BRIDGE_STATUS_STALE_AFTER_SECONDS",
