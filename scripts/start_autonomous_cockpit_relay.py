@@ -248,6 +248,28 @@ def startup_preflight_error_categories(errors: list[str]) -> list[str]:
     return sorted({startup_preflight_error_category(error) for error in errors})
 
 
+def startup_preflight_error_key(error: str) -> str:
+    if error == "AUTOMOAT_RELAY_URL or --relay-url is required":
+        return "AUTOMOAT_RELAY_URL|--relay-url"
+    if error == "AUTOMOAT_RELAY_TOKEN or --token is required":
+        return "AUTOMOAT_RELAY_TOKEN|--token"
+    if error.startswith("--relay-url"):
+        return "AUTOMOAT_RELAY_URL|--relay-url"
+    if error.startswith("--token"):
+        return "AUTOMOAT_RELAY_TOKEN|--token"
+    if error.startswith("--publish-interval"):
+        return "--publish-interval"
+    if error.startswith("--interval"):
+        return "--interval"
+    if error.startswith("--port"):
+        return "--port"
+    return "startup_configuration"
+
+
+def startup_preflight_error_keys(errors: list[str]) -> list[str]:
+    return sorted({startup_preflight_error_key(error) for error in errors})
+
+
 def startup_preflight_summary(args: argparse.Namespace, errors: list[str]) -> dict[str, Any]:
     payload: dict[str, Any] = {
         "status": "failed" if errors else "passed",
@@ -257,6 +279,7 @@ def startup_preflight_summary(args: argparse.Namespace, errors: list[str]) -> di
         payload["diagnostics"] = {
             "error_count": len(errors),
             "error_categories": startup_preflight_error_categories(errors),
+            "failed_configuration_keys": startup_preflight_error_keys(errors),
             "relay_url_configured": bool(str(args.relay_url).strip()),
             "relay_token_configured": bool(str(args.token).strip()),
         }

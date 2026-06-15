@@ -424,6 +424,10 @@ class StartAutonomousCockpitRelayTest(unittest.TestCase):
             payload["diagnostics"]["error_categories"],
             ["invalid_relay_url", "invalid_runtime_config"],
         )
+        self.assertEqual(
+            payload["diagnostics"]["failed_configuration_keys"],
+            ["--interval", "AUTOMOAT_RELAY_URL|--relay-url"],
+        )
         self.assertTrue(payload["diagnostics"]["relay_url_configured"])
         self.assertTrue(payload["diagnostics"]["relay_token_configured"])
         self.assertNotIn("relay-token", output.getvalue())
@@ -461,6 +465,10 @@ class StartAutonomousCockpitRelayTest(unittest.TestCase):
         self.assertEqual(
             payload["diagnostics"]["error_categories"],
             ["invalid_relay_url"],
+        )
+        self.assertEqual(
+            payload["diagnostics"]["failed_configuration_keys"],
+            ["AUTOMOAT_RELAY_URL|--relay-url"],
         )
         self.assertNotIn("automoat-cockpit-relay.example/ingest", output.getvalue())
         self.assertNotIn("relay-token", output.getvalue())
@@ -579,6 +587,10 @@ class StartAutonomousCockpitRelayTest(unittest.TestCase):
             payload["diagnostics"]["error_categories"],
             ["invalid_runtime_config"],
         )
+        self.assertEqual(
+            payload["diagnostics"]["failed_configuration_keys"],
+            ["--interval", "--publish-interval"],
+        )
         self.assertNotIn("relay-token", output.getvalue())
 
     def test_check_env_json_categorizes_token_and_url_shape_without_printing_values(self) -> None:
@@ -615,6 +627,13 @@ class StartAutonomousCockpitRelayTest(unittest.TestCase):
         self.assertEqual(
             payload["diagnostics"]["error_categories"],
             ["invalid_relay_url", "invalid_secret"],
+        )
+        self.assertEqual(
+            payload["diagnostics"]["failed_configuration_keys"],
+            [
+                "AUTOMOAT_RELAY_TOKEN|--token",
+                "AUTOMOAT_RELAY_URL|--relay-url",
+            ],
         )
         self.assertNotIn("relay-token", output.getvalue())
         self.assertNotIn("automoat-cockpit-relay.example:abc", output.getvalue())

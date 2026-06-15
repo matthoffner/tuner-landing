@@ -241,6 +241,10 @@ class StartAutonomousCockpitBridgeTest(unittest.TestCase):
             payload["diagnostics"]["error_categories"],
             ["invalid_runtime_config", "missing_command"],
         )
+        self.assertEqual(
+            payload["diagnostics"]["failed_configuration_keys"],
+            ["--bridge-port|--port", "PATH:ngrok"],
+        )
         self.assertTrue(payload["diagnostics"]["ngrok_required"])
         self.assertFalse(payload["diagnostics"]["ngrok_available"])
 
@@ -281,6 +285,10 @@ class StartAutonomousCockpitBridgeTest(unittest.TestCase):
             payload["diagnostics"]["error_categories"],
             ["invalid_runtime_config"],
         )
+        self.assertEqual(
+            payload["diagnostics"]["failed_configuration_keys"],
+            ["--bridge-interval", "--interval"],
+        )
 
     def test_check_env_json_reports_ngrok_web_port_collision(self) -> None:
         output = io.StringIO()
@@ -311,6 +319,10 @@ class StartAutonomousCockpitBridgeTest(unittest.TestCase):
         self.assertEqual(payload["status"], "failed")
         self.assertEqual(payload["errors"], ["--bridge-port must not equal --ngrok-web-port"])
         self.assertEqual(payload["diagnostics"]["error_categories"], ["invalid_runtime_config"])
+        self.assertEqual(
+            payload["diagnostics"]["failed_configuration_keys"],
+            ["--bridge-port|--ngrok-web-port"],
+        )
 
     def test_json_format_is_only_supported_for_check_env(self) -> None:
         stderr = io.StringIO()

@@ -181,6 +181,32 @@ def startup_preflight_error_categories(errors: list[str]) -> list[str]:
     return sorted({startup_preflight_error_category(error) for error in errors})
 
 
+def startup_preflight_error_key(error: str) -> str:
+    if error.startswith("ngrok "):
+        return "PATH:ngrok"
+    if error == "--port must not equal --bridge-port":
+        return "--bridge-port|--port"
+    if error == "--port must not equal --ngrok-web-port":
+        return "--ngrok-web-port|--port"
+    if error == "--bridge-port must not equal --ngrok-web-port":
+        return "--bridge-port|--ngrok-web-port"
+    if error.startswith("--bridge-interval"):
+        return "--bridge-interval"
+    if error.startswith("--ngrok-web-port"):
+        return "--ngrok-web-port"
+    if error.startswith("--bridge-port"):
+        return "--bridge-port"
+    if error.startswith("--interval"):
+        return "--interval"
+    if error.startswith("--port"):
+        return "--port"
+    return "startup_configuration"
+
+
+def startup_preflight_error_keys(errors: list[str]) -> list[str]:
+    return sorted({startup_preflight_error_key(error) for error in errors})
+
+
 def startup_preflight_summary(args: argparse.Namespace, errors: list[str]) -> dict[str, Any]:
     ngrok_path = shutil.which("ngrok")
     payload: dict[str, Any] = {
@@ -191,6 +217,7 @@ def startup_preflight_summary(args: argparse.Namespace, errors: list[str]) -> di
         payload["diagnostics"] = {
             "error_count": len(errors),
             "error_categories": startup_preflight_error_categories(errors),
+            "failed_configuration_keys": startup_preflight_error_keys(errors),
             "ngrok_required": not bool(args.keep_bridge),
             "ngrok_available": ngrok_path is not None,
         }
