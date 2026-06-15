@@ -1682,6 +1682,55 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertNotIn("github-token", output.getvalue())
         self.assertNotIn("codex-token", output.getvalue())
 
+    def test_check_env_json_routes_unresolvable_paths_without_echoing_values(self) -> None:
+        env = {
+            "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            "GITHUB_TOKEN": "github-token",
+            "CODEX_ACCESS_TOKEN": "codex-token",
+            "AUTOMOAT_WORKDIR": "/work/secret-path-token-repo",
+            "CODEX_HOME": "/tmp/secret-path-token-codex",
+            "AUTOMOAT_BRIDGE_STATUS_FILE": ".automoat/state/secret-path-token-status.json",
+        }
+        original_resolve = self.worker.Path.resolve
+
+        def fake_resolve(path: Path, *args, **kwargs):
+            if "secret-path-token" in str(path):
+                raise OSError("secret-path-token must not leak")
+            return original_resolve(path, *args, **kwargs)
+
+        output = io.StringIO()
+        with patch.object(self.worker.Path, "resolve", fake_resolve):
+            with redirect_stdout(output):
+                errors = self.worker.emit_environment_preflight(
+                    env,
+                    found_command,
+                    output_format="json",
+                )
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(
+            errors,
+            [
+                "AUTOMOAT_WORKDIR could not be resolved",
+                "CODEX_HOME could not be resolved",
+                "AUTOMOAT_BRIDGE_STATUS_FILE could not be resolved",
+            ],
+        )
+        self.assertEqual(payload["status"], "failed")
+        self.assertEqual(
+            payload["diagnostics"]["error_categories"],
+            ["invalid_file_path", "invalid_path"],
+        )
+        self.assertEqual(
+            payload["diagnostics"]["failed_configuration_keys"],
+            ["AUTOMOAT_BRIDGE_STATUS_FILE", "AUTOMOAT_WORKDIR", "CODEX_HOME"],
+        )
+        self.assertNotIn("secret-path-token", output.getvalue())
+        self.assertNotIn("relay-token", output.getvalue())
+        self.assertNotIn("github-token", output.getvalue())
+        self.assertNotIn("codex-token", output.getvalue())
+
     def test_validate_worker_environment_uses_supplied_path_env_values(self) -> None:
         base_env = {
             "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",

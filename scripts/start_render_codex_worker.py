@@ -921,8 +921,8 @@ def validate_workdir_path(path: Path, errors: list[str], *, codex_home: Path | N
         resolved_path = expanded_path.resolve(strict=False)
         codex_home_path = codex_home if codex_home is not None else CODEX_HOME
         resolved_codex_home = codex_home_path.expanduser().resolve(strict=False)
-    except OSError as exc:
-        errors.append(f"AUTOMOAT_WORKDIR could not be resolved: {exc}")
+    except OSError:
+        errors.append("AUTOMOAT_WORKDIR could not be resolved")
         return
 
     named_parts = [part for part in resolved_path.parts if part != resolved_path.anchor]
@@ -978,8 +978,8 @@ def validate_codex_home_path(path: Path, workdir: Path, errors: list[str]) -> No
 
     try:
         resolved_path = expanded_path.resolve(strict=False)
-    except OSError as exc:
-        errors.append(f"CODEX_HOME could not be resolved: {exc}")
+    except OSError:
+        errors.append("CODEX_HOME could not be resolved")
         return
 
     named_parts = [part for part in resolved_path.parts if part != resolved_path.anchor]
@@ -1069,8 +1069,8 @@ def validate_publisher_file_path_env_value(
     path = publisher_file_path(env, value)
     try:
         resolved_path = path.expanduser().resolve(strict=False)
-    except OSError as exc:
-        errors.append(f"{name} could not be resolved: {exc}")
+    except OSError:
+        errors.append(f"{name} could not be resolved")
         return
     conflicting_runtime_file = reserved_runtime_file_conflict(resolved_path)
     if conflicting_runtime_file is not None:
@@ -1079,8 +1079,8 @@ def validate_publisher_file_path_env_value(
     try:
         workdir, _codex_home = configured_worker_paths(env)
         resolved_workdir = workdir.expanduser().resolve(strict=False)
-    except OSError as exc:
-        errors.append(f"{name} could not verify AUTOMOAT_WORKDIR containment: {exc}")
+    except OSError:
+        errors.append(f"{name} could not verify AUTOMOAT_WORKDIR containment")
         return
     if (
         resolved_workdir.is_absolute()
