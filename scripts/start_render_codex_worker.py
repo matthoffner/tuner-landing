@@ -182,6 +182,14 @@ def sanitize_worker_log_text(
     return sanitized
 
 
+def sanitize_worker_config_text(
+    value: str,
+    env: os._Environ[str] | dict[str, str],
+) -> str:
+    """Redact copied secrets from otherwise nonsecret preflight config fields."""
+    return sanitize_worker_log_text(value, env)
+
+
 def require_env(name: str) -> str:
     value = os.environ.get(name, "").strip()
     if not value:
@@ -1237,9 +1245,18 @@ def environment_preflight_summary(
         return payload
 
     payload["config"] = {
-        "relay_url": env.get("AUTOMOAT_RELAY_URL", "").strip(),
-        "git_repo": env.get("AUTOMOAT_GIT_REPO", DEFAULT_REPO).strip(),
-        "git_branch": env.get("AUTOMOAT_GIT_BRANCH", "main").strip() or "main",
+        "relay_url": sanitize_worker_config_text(
+            env.get("AUTOMOAT_RELAY_URL", "").strip(),
+            env,
+        ),
+        "git_repo": sanitize_worker_config_text(
+            env.get("AUTOMOAT_GIT_REPO", DEFAULT_REPO).strip(),
+            env,
+        ),
+        "git_branch": sanitize_worker_config_text(
+            env.get("AUTOMOAT_GIT_BRANCH", "main").strip() or "main",
+            env,
+        ),
         "workdir": worker_config_path_label(workdir),
         "codex_home": worker_config_path_label(codex_home),
         "git_auth": configured_names(env, GIT_AUTH_ENV_NAMES),
@@ -1278,10 +1295,13 @@ def environment_preflight_summary(
             "AUTOMOAT_BRIDGE_STATUS_STALE_AFTER_SECONDS",
             "660",
         ),
-        "codex_model": codex_config_value(env, "AUTOMOAT_CODEX_MODEL"),
-        "codex_reasoning_effort": codex_config_value(
+        "codex_model": sanitize_worker_config_text(
+            codex_config_value(env, "AUTOMOAT_CODEX_MODEL"),
             env,
-            "AUTOMOAT_CODEX_REASONING_EFFORT",
+        ),
+        "codex_reasoning_effort": sanitize_worker_config_text(
+            codex_config_value(env, "AUTOMOAT_CODEX_REASONING_EFFORT"),
+            env,
         ),
         "commands": list(REQUIRED_COMMANDS),
         "command_paths": command_path_labels,
@@ -1350,15 +1370,35 @@ def emit_environment_preflight(
     workdir_label = worker_config_path_label(workdir)
     codex_home_label = worker_config_path_label(codex_home)
     command_path_labels = safe_command_path_labels(command_paths)
+    relay_url_label = sanitize_worker_config_text(
+        env.get("AUTOMOAT_RELAY_URL", "").strip(),
+        env,
+    )
+    git_repo_label = sanitize_worker_config_text(
+        env.get("AUTOMOAT_GIT_REPO", DEFAULT_REPO).strip(),
+        env,
+    )
+    git_branch_label = sanitize_worker_config_text(
+        env.get("AUTOMOAT_GIT_BRANCH", "main").strip() or "main",
+        env,
+    )
+    codex_model_label = sanitize_worker_config_text(
+        codex_config_value(env, "AUTOMOAT_CODEX_MODEL"),
+        env,
+    )
+    codex_reasoning_effort_label = sanitize_worker_config_text(
+        codex_config_value(env, "AUTOMOAT_CODEX_REASONING_EFFORT"),
+        env,
+    )
     bridge_status_file = worker_file_label(
         env.get("AUTOMOAT_BRIDGE_STATUS_FILE", DEFAULT_BRIDGE_STATUS_FILE),
         env,
     )
     emit(
         "environment preflight passed: "
-        f"relay_url={env.get('AUTOMOAT_RELAY_URL', '').strip()} "
-        f"git_repo={env.get('AUTOMOAT_GIT_REPO', DEFAULT_REPO).strip()} "
-        f"git_branch={env.get('AUTOMOAT_GIT_BRANCH', 'main').strip() or 'main'} "
+        f"relay_url={relay_url_label} "
+        f"git_repo={git_repo_label} "
+        f"git_branch={git_branch_label} "
         f"workdir={workdir_label} "
         f"codex_home={codex_home_label} "
         f"git_auth={','.join(configured_names(env, GIT_AUTH_ENV_NAMES))} "
@@ -1390,9 +1430,8 @@ def emit_environment_preflight(
         f"bridge_status_file={bridge_status_file} "
         f"bridge_status_stale_after_seconds="
         f"{env.get('AUTOMOAT_BRIDGE_STATUS_STALE_AFTER_SECONDS', '660')} "
-        f"codex_model={codex_config_value(env, 'AUTOMOAT_CODEX_MODEL')} "
-        f"codex_reasoning_effort="
-        f"{codex_config_value(env, 'AUTOMOAT_CODEX_REASONING_EFFORT')} "
+        f"codex_model={codex_model_label} "
+        f"codex_reasoning_effort={codex_reasoning_effort_label} "
         f"commands={','.join(REQUIRED_COMMANDS)} "
         f"command_paths={json.dumps(command_path_labels, sort_keys=True)} "
         f"runtime_limits={json.dumps(RUNTIME_CONFIG_LIMITS, sort_keys=True)}"

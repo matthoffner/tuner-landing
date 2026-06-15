@@ -2225,6 +2225,44 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertNotIn('"/tmp/codex-home"', output.getvalue())
         self.assertNotIn("/usr/bin", output.getvalue())
 
+    def test_passed_preflight_redacts_secret_matching_config_values(self) -> None:
+        env = {
+            "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            "GITHUB_TOKEN": "github-token",
+            "CODEX_ACCESS_TOKEN": "codex-token",
+            "AUTOMOAT_GIT_BRANCH": "release/github-token",
+            "AUTOMOAT_CODEX_MODEL": "codex-token",
+            "AUTOMOAT_CODEX_REASONING_EFFORT": "high-github-token",
+        }
+
+        text_output = io.StringIO()
+        with redirect_stdout(text_output):
+            text_errors = self.worker.emit_environment_preflight(env, found_command)
+
+        json_output = io.StringIO()
+        with redirect_stdout(json_output):
+            json_errors = self.worker.emit_environment_preflight(
+                env,
+                found_command,
+                output_format="json",
+            )
+
+        payload = json.loads(json_output.getvalue())
+        self.assertEqual(text_errors, [])
+        self.assertEqual(json_errors, [])
+        self.assertEqual(payload["status"], "passed")
+        self.assertEqual(payload["config"]["git_branch"], "release/[redacted]")
+        self.assertEqual(payload["config"]["codex_model"], "[redacted]")
+        self.assertEqual(payload["config"]["codex_reasoning_effort"], "high-[redacted]")
+        self.assertIn("git_branch=release/[redacted]", text_output.getvalue())
+        self.assertIn("codex_model=[redacted]", text_output.getvalue())
+        self.assertIn("codex_reasoning_effort=high-[redacted]", text_output.getvalue())
+        combined_output = text_output.getvalue() + json_output.getvalue()
+        self.assertNotIn("github-token", combined_output)
+        self.assertNotIn("codex-token", combined_output)
+        self.assertNotIn("relay-token", combined_output)
+
     def test_check_env_json_does_not_echo_command_path_components(self) -> None:
         env = {
             "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
