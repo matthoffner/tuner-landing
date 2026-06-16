@@ -3613,6 +3613,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                     reason="relay_publisher_startup_exit token=relay-secret",
                     worker_exit_status=1,
                     publisher_exit_status=0,
+                    message="publisher failed token=relay-secret",
                 )
 
             status_text = self.worker.cockpit_status_file().read_text(encoding="utf-8")
@@ -3626,6 +3627,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             {
                 "category": "render_worker",
                 "failure_reason": "relay_publisher_startup_exit token=[redacted]",
+                "message": "publisher failed token=[redacted]",
                 "publisher_exit_status": 0,
                 "route_hint": self.worker.RELAY_PUBLISHER_UNAVAILABLE,
                 "worker_exit_status": 1,
@@ -3649,6 +3651,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                 reason=self.worker.PUBLISHER_EXITED,
                 worker_exit_status=1,
                 publisher_exit_status=0,
+                message="secret-token publisher failure",
             )
 
         self.assertIn(
@@ -5165,7 +5168,10 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         ) as start_publisher, patch.object(
             self.worker,
             "start_loop",
-        ) as start_loop, redirect_stdout(
+        ) as start_loop, patch.object(
+            self.worker,
+            "record_render_worker_failure_status",
+        ) as record_failure_status, redirect_stdout(
             output
         ):
             parse_args.return_value = type(
@@ -5174,11 +5180,61 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                 {"check_env": False, "format": "text"},
             )()
 
-            with self.assertRaisesRegex(RuntimeError, "publisher preflight failed"):
-                self.worker.main()
+            status = self.worker.main()
 
+        self.assertEqual(status, 1)
         start_publisher.assert_not_called()
         start_loop.assert_not_called()
+        record_failure_status.assert_called_once_with(
+            reason="relay_publisher_preflight_failed",
+            worker_exit_status=1,
+            message="publisher preflight failed with status 2",
+        )
+
+    def test_publisher_start_failure_records_worker_status(self) -> None:
+        output = io.StringIO()
+
+        with patch.object(self.worker, "parse_args") as parse_args, patch.object(
+            self.worker,
+            "emit_environment_preflight",
+            return_value=[],
+        ), patch.object(self.worker, "configure_git_auth"), patch.object(
+            self.worker,
+            "configure_codex_auth",
+        ), patch.object(
+            self.worker,
+            "sync_repo",
+        ), patch.object(
+            self.worker,
+            "check_relay_publisher_preflight",
+        ), patch.object(
+            self.worker,
+            "start_publisher",
+            side_effect=RuntimeError("could not start relay publisher: OSError"),
+        ), patch.object(
+            self.worker,
+            "start_loop",
+        ) as start_loop, patch.object(
+            self.worker,
+            "record_render_worker_failure_status",
+        ) as record_failure_status, redirect_stdout(
+            output
+        ):
+            parse_args.return_value = type(
+                "Args",
+                (),
+                {"check_env": False, "format": "text"},
+            )()
+
+            status = self.worker.main()
+
+        self.assertEqual(status, 1)
+        start_loop.assert_not_called()
+        record_failure_status.assert_called_once_with(
+            reason="relay_publisher_start_failed",
+            worker_exit_status=1,
+            message="could not start relay publisher: OSError",
+        )
 
     def test_startup_clean_publisher_exit_is_worker_failure(self) -> None:
         publisher = FakeProcess(pid=202, initial_status=0)

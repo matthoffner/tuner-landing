@@ -2218,6 +2218,7 @@ def write_render_worker_failure_status(
     reason: str,
     worker_exit_status: int,
     publisher_exit_status: int | None = None,
+    message: str | None = None,
 ) -> None:
     """Write a compact cockpit status when the Render supervisor cannot continue."""
     status_path = cockpit_status_file()
@@ -2233,6 +2234,10 @@ def write_render_worker_failure_status(
     compact_publisher_status = compact_worker_exit_status(publisher_exit_status)
     if compact_publisher_status is not None:
         failure["publisher_exit_status"] = compact_publisher_status
+    if message:
+        failure["message"] = sanitize_worker_log_text(message)[
+            :MAX_BUSINESS_HOURS_CONFIG_VALUE_CHARS
+        ]
     payload = {
         "run_id": "render-worker-supervisor",
         "iteration": 0,
@@ -2263,12 +2268,14 @@ def record_render_worker_failure_status(
     reason: str,
     worker_exit_status: int,
     publisher_exit_status: int | None = None,
+    message: str | None = None,
 ) -> None:
     try:
         write_render_worker_failure_status(
             reason=reason,
             worker_exit_status=worker_exit_status,
             publisher_exit_status=publisher_exit_status,
+            message=message,
         )
     except OSError as exc:
         emit(f"could not write render worker failure status: {type(exc).__name__}")
@@ -2621,8 +2628,24 @@ def main() -> int:
     configure_git_auth()
     configure_codex_auth()
     sync_repo()
-    check_relay_publisher_preflight()
-    publisher = start_publisher()
+    try:
+        check_relay_publisher_preflight()
+    except RuntimeError as exc:
+        record_render_worker_failure_status(
+            reason="relay_publisher_preflight_failed",
+            worker_exit_status=1,
+            message=str(exc),
+        )
+        return 1
+    try:
+        publisher = start_publisher()
+    except RuntimeError as exc:
+        record_render_worker_failure_status(
+            reason="relay_publisher_start_failed",
+            worker_exit_status=1,
+            message=str(exc),
+        )
+        return 1
     publisher_startup_status = child_startup_exit_status(
         publisher,
         "relay publisher",
