@@ -32,6 +32,7 @@ DEFAULT_MAX_CONSECUTIVE_FAILURES = 3
 DEFAULT_MAX_CONSECUTIVE_STALE_STATUSES = 0
 DEFAULT_STATUS_STALE_AFTER_SECONDS = 660
 DEFAULT_BRIDGE_STATUS_STALE_AFTER_SECONDS = 660
+MAX_RELAY_URL_CHARS = 500
 MAX_RELAY_TOKEN_CHARS = 8192
 PUBLISHER_RUNTIME_DEFAULTS = {
     "interval": 3.0,
@@ -1577,6 +1578,8 @@ def validate_publisher_configuration(args: argparse.Namespace) -> list[str]:
         errors.append("--relay-url must be a single-line URL without control characters")
     elif any(character.isspace() for character in relay_url):
         errors.append("--relay-url must not contain whitespace")
+    elif len(relay_url_value) > MAX_RELAY_URL_CHARS:
+        errors.append(f"--relay-url must be {MAX_RELAY_URL_CHARS} characters or fewer")
     elif not relay_url.startswith(("http://", "https://")):
         errors.append("--relay-url must start with http:// or https://")
     else:

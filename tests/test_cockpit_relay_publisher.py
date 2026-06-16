@@ -2250,6 +2250,37 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             ],
         )
 
+    def test_validate_publisher_configuration_rejects_oversized_relay_url(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            args = Namespace(
+                relay_url=(
+                    "https://"
+                    + ("oversized-relay-url-segment-" * 20)
+                    + ".example"
+                ),
+                token="relay-token",
+                interval=3,
+                timeout=8,
+                tail_lines=180,
+                max_log_bytes=256 * 1024,
+                max_consecutive_failures=3,
+                max_consecutive_stale_statuses=0,
+                status_stale_after_seconds=660,
+                bridge_status_stale_after_seconds=660,
+                status_file=tmp_path / "status.json",
+                pid_file=tmp_path / "loop.pid",
+                log_file=tmp_path / "loop.log",
+                publisher_log=tmp_path / "publisher.log",
+            )
+
+            errors = self.publisher.validate_publisher_configuration(args)
+
+        self.assertEqual(
+            errors,
+            [f"--relay-url must be {self.publisher.MAX_RELAY_URL_CHARS} characters or fewer"],
+        )
+
     def test_validate_publisher_configuration_accepts_plain_http_local_relay_url(
         self,
     ) -> None:
@@ -2385,6 +2416,52 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         )
         self.assertEqual(payload["diagnostics"]["error_categories"], ["invalid_relay_url"])
         self.assertNotIn("automoat-cockpit-relay.example", output.getvalue())
+        self.assertNotIn("relay-token", output.getvalue())
+
+    def test_check_env_json_rejects_oversized_relay_url_without_echoing_value(
+        self,
+    ) -> None:
+        oversized_relay_url = (
+            "https://"
+            + ("secret-relay-url-segment-" * 22)
+            + ".example"
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            env = {
+                "AUTOMOAT_RELAY_URL": oversized_relay_url,
+                "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            }
+            output = io.StringIO()
+            self.publisher.publish_once = lambda _args: self.fail("publish_once should not run")
+            with patch.dict(os.environ, env, clear=True), patch.object(
+                sys,
+                "argv",
+                [
+                    "publish_cockpit_to_relay.py",
+                    "--check-env",
+                    "--format",
+                    "json",
+                    "--publisher-log",
+                    str(tmp_path / "publisher.log"),
+                ],
+            ), redirect_stdout(output):
+                status = self.publisher.main()
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(status, 2)
+        self.assertEqual(payload["status"], "failed")
+        self.assertEqual(
+            payload["errors"],
+            [f"--relay-url must be {self.publisher.MAX_RELAY_URL_CHARS} characters or fewer"],
+        )
+        self.assertEqual(payload["diagnostics"]["error_categories"], ["invalid_relay_url"])
+        self.assertEqual(
+            payload["diagnostics"]["failed_configuration_keys"],
+            ["AUTOMOAT_RELAY_URL|--relay-url"],
+        )
+        self.assertTrue(payload["diagnostics"]["relay_url_configured"])
+        self.assertNotIn("secret-relay-url-segment", output.getvalue())
         self.assertNotIn("relay-token", output.getvalue())
 
     def test_check_env_json_rejects_relay_url_endpoint_path(self) -> None:
