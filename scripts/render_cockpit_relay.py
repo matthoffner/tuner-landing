@@ -1126,7 +1126,7 @@ def cockpit_health(
         reasons.append("source_loop_not_running")
     if "autonomy_policy_failed" in source_attention_reason_values:
         reasons.append("source_autonomy_policy_failed")
-    if status.get("status") in {"error", "failing"}:
+    if status.get("status") in {"error", "failing", "invalid-status-json"}:
         reasons.append("source_status_failing")
     if source_summary.get("operator_attention") is True:
         reasons.append("source_cockpit_attention")

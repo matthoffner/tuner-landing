@@ -1141,10 +1141,18 @@ def read_status(
     bridge_status_stale_after_seconds: int = DEFAULT_BRIDGE_STATUS_STALE_AFTER_SECONDS,
 ) -> dict[str, Any]:
     loaded_status, source_file_metadata = read_json_with_status(status_file)
-    status = loaded_status or {
-        "status": "waiting",
-        "updated_at": None,
-    }
+    if loaded_status is not None:
+        status = loaded_status
+    else:
+        status_file_status = source_file_metadata.get("source_status_file_status")
+        status = {
+            "status": (
+                "waiting"
+                if status_file_status == "missing"
+                else "invalid-status-json"
+            ),
+            "updated_at": None,
+        }
     status = dict(status)
     normalized_status_value, status_value_invalid = normalize_source_status_value(
         status.get("status")
@@ -1292,6 +1300,7 @@ def publisher_source_health(status: dict[str, Any]) -> dict[str, Any]:
         status_value in {"error", "failing", "invalid-status-value"}
         or status.get("source_status_value_invalid") is True
         or status_value_invalid
+        or status.get("status") == "invalid-status-json"
     ):
         reasons.append("source_status_failing")
     if (

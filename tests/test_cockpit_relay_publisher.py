@@ -2097,12 +2097,21 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 status_stale_after_seconds=120,
             )
 
-        self.assertEqual(status["status"], "waiting")
+        self.assertEqual(status["status"], "invalid-status-json")
         self.assertEqual(status["source_status_file"], "<external>/status.json")
         self.assertNotIn(str(tmp_path), json.dumps(status, sort_keys=True))
         self.assertEqual(status["source_status_file_status"], "invalid_json")
         self.assertIn("line 1 column 2", status["source_status_file_error"])
         self.assertTrue(status["source_status_stale"])
+        self.assertEqual(status["cockpit_summary"]["status"], "invalid-status-json")
+        self.assertIn(
+            "status_failing",
+            status["cockpit_summary"]["operator_attention_reasons"],
+        )
+        self.assertIn(
+            "source_status_failing",
+            self.publisher.publisher_source_health(status)["reasons"],
+        )
 
     def test_read_status_rejects_nonstandard_json_constants(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -2123,7 +2132,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             )
             status_text = json.dumps(status, sort_keys=True, allow_nan=False)
 
-        self.assertEqual(status["status"], "waiting")
+        self.assertEqual(status["status"], "invalid-status-json")
         self.assertEqual(status["source_status_file_status"], "invalid_json")
         self.assertIn("invalid JSON constant NaN", status["source_status_file_error"])
         self.assertTrue(status["source_status_stale"])
@@ -2147,10 +2156,19 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             health = self.publisher.publisher_source_health(status)
             status_text = json.dumps(status, sort_keys=True)
 
-        self.assertEqual(status["status"], "waiting")
+        self.assertEqual(status["status"], "invalid-status-json")
         self.assertEqual(status["source_status_file_status"], "too_large")
         self.assertIn("max JSON bytes", status["source_status_file_error"])
-        self.assertIn("source_status_unavailable", health["reasons"])
+        self.assertEqual(
+            health["reasons"],
+            [
+                "source_status_unavailable",
+                "source_status_stale",
+                "source_loop_not_running",
+                "source_status_failing",
+                "source_cockpit_attention",
+            ],
+        )
         self.assertNotIn("x" * 40, status_text)
 
     def test_read_status_routes_malformed_status_value_without_crashing(self) -> None:
@@ -2217,7 +2235,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             )
             status_text = json.dumps(status, sort_keys=True)
 
-        self.assertEqual(status["status"], "waiting")
+        self.assertEqual(status["status"], "invalid-status-json")
         self.assertEqual(status["source_status_file"], "<external>/status.json")
         self.assertEqual(status["source_status_file_status"], "read_failed")
         self.assertIn("<external>/status.json", status["source_status_file_error"])
