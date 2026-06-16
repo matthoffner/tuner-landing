@@ -49,6 +49,7 @@ OPERATOR_ATTENTION_LABELS = {
     "autonomy_policy_failed": "Autonomy policy failed",
     "status_stale": "Status is stale",
     "status_timestamp_invalid": "Status timestamp is invalid",
+    "status_timestamp_future": "Status timestamp is in the future",
     "artifact_health_not_loaded": "Artifact health is not loaded",
     "import_readiness_not_ready": "Import readiness is not ready",
     "import_readiness_blocked": "Import readiness is blocked",
@@ -277,7 +278,7 @@ def latest_autonomy_policy_step(status: dict[str, object]) -> dict[str, object] 
     return None
 
 
-def utc_timestamp_age_seconds(value: object, now: datetime | None = None) -> int | None:
+def parse_utc_timestamp(value: object) -> datetime | None:
     if not isinstance(value, str) or not value.strip():
         return None
     normalized = value.strip()
@@ -289,9 +290,24 @@ def utc_timestamp_age_seconds(value: object, now: datetime | None = None) -> int
         return None
     if timestamp.tzinfo is None:
         timestamp = timestamp.replace(tzinfo=timezone.utc)
+    return timestamp.astimezone(timezone.utc)
+
+
+def utc_timestamp_age_seconds(value: object, now: datetime | None = None) -> int | None:
+    timestamp = parse_utc_timestamp(value)
+    if timestamp is None:
+        return None
     current = now or datetime.now(timezone.utc)
-    age = int((current - timestamp.astimezone(timezone.utc)).total_seconds())
+    age = int((current - timestamp).total_seconds())
     return max(age, 0)
+
+
+def utc_timestamp_is_future(value: object, now: datetime | None = None) -> bool:
+    timestamp = parse_utc_timestamp(value)
+    if timestamp is None:
+        return False
+    current = now or datetime.now(timezone.utc)
+    return timestamp > current
 
 
 def bridge_health_summary(value: object) -> dict[str, object]:
@@ -538,6 +554,7 @@ def cockpit_summary(status: dict[str, object]) -> dict[str, object]:
     if status_age_seconds is not None:
         status_stale = status_age_seconds > STATUS_STALE_AFTER_SECONDS
     status_timestamp_invalid = updated_at is not None and status_age_seconds is None
+    status_timestamp_future = utc_timestamp_is_future(updated_at)
 
     status_value = status.get("status") or "waiting"
     loop_running = bool(status.get("loop_running"))
@@ -712,6 +729,8 @@ def cockpit_summary(status: dict[str, object]) -> dict[str, object]:
         attention_reasons.append("status_stale")
     if status_timestamp_invalid:
         attention_reasons.append("status_timestamp_invalid")
+    if status_timestamp_future:
+        attention_reasons.append("status_timestamp_future")
     if artifact_health_status != "loaded":
         attention_reasons.append("artifact_health_not_loaded")
     if import_readiness != "ready":
@@ -734,6 +753,7 @@ def cockpit_summary(status: dict[str, object]) -> dict[str, object]:
         "status_stale_after_seconds": STATUS_STALE_AFTER_SECONDS,
         "status_stale": status_stale,
         "status_timestamp_invalid": status_timestamp_invalid,
+        "status_timestamp_future": status_timestamp_future,
         "operator_attention": bool(attention_reasons),
         "operator_attention_reasons": attention_reasons,
         "operator_attention_primary_reason": primary_attention_reason,
@@ -1236,7 +1256,9 @@ def cockpit_html() -> str:
           .map(([name, value]) => `${{name}}: ${{value}}`)
           .join(", ");
         const age = cockpit.status_age_seconds;
-        if (typeof age === "number") {{
+        if (cockpit.status_timestamp_future) {{
+          freshness.textContent = "future";
+        }} else if (typeof age === "number") {{
           freshness.textContent = cockpit.status_stale ? `stale ${{age}}s` : `fresh ${{age}}s`;
         }} else {{
           freshness.textContent = "unknown";

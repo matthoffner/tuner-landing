@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 import contextlib
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import importlib.util
 import io
 import json
@@ -62,6 +62,10 @@ class MvpCockpitServerTest(unittest.TestCase):
         self.assertEqual(
             self.cockpit.operator_attention_label("status_timestamp_invalid"),
             "Status timestamp is invalid",
+        )
+        self.assertEqual(
+            self.cockpit.operator_attention_label("status_timestamp_future"),
+            "Status timestamp is in the future",
         )
         self.assertEqual(
             self.cockpit.operator_attention_label("new_attention_reason"),
@@ -389,6 +393,42 @@ class MvpCockpitServerTest(unittest.TestCase):
         self.assertEqual(
             summary["operator_attention_label"],
             "Status timestamp is invalid",
+        )
+
+    def test_cockpit_summary_reports_future_status_timestamp(self) -> None:
+        future_timestamp = datetime.now(timezone.utc).replace(microsecond=0) + timedelta(
+            days=365
+        )
+        status = {
+            "status": "passing",
+            "updated_at": future_timestamp.isoformat().replace("+00:00", "Z"),
+            "loop_running": True,
+            "artifacts": {
+                "artifact_health": {"status": "loaded"},
+                "import_pipeline": {
+                    "execution_readiness": {"status": "ready", "blockers": []}
+                },
+            },
+        }
+
+        summary = self.cockpit.cockpit_summary(status)
+
+        self.assertEqual(summary["status_age_seconds"], 0)
+        self.assertFalse(summary["status_stale"])
+        self.assertFalse(summary["status_timestamp_invalid"])
+        self.assertTrue(summary["status_timestamp_future"])
+        self.assertTrue(summary["operator_attention"])
+        self.assertEqual(
+            summary["operator_attention_reasons"],
+            ["status_timestamp_future"],
+        )
+        self.assertEqual(
+            summary["operator_attention_primary_reason"],
+            "status_timestamp_future",
+        )
+        self.assertEqual(
+            summary["operator_attention_label"],
+            "Status timestamp is in the future",
         )
 
     def test_cockpit_summary_reports_autonomy_policy_failure_details(self) -> None:
