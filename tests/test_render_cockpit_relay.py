@@ -483,6 +483,137 @@ class RenderCockpitRelayTest(unittest.TestCase):
             expected_source_health,
         )
 
+    def test_status_and_health_treat_business_hours_pause_as_scheduled(self) -> None:
+        self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
+        self.relay.update_state(
+            {
+                "pushed_at": "2026-06-14T19:59:30Z",
+                "status": {
+                    "status": "paused",
+                    "phase": "outside_business_hours",
+                    "loop_running": False,
+                    "source_status_stale": False,
+                    "business_hours": {
+                        "enabled": True,
+                        "in_business_hours": False,
+                        "timezone": "America/Chicago",
+                        "next_start_at": (
+                            "2026-06-15T09:00:00-05:00 "
+                            "https://user:pause-secret@example.test/start?token=abc#debug"
+                        ),
+                    },
+                    "cockpit_summary": {
+                        "status": "paused",
+                        "phase": "outside_business_hours",
+                        "operator_attention": False,
+                        "operator_attention_reasons": [],
+                        "operator_attention_label": "Clear",
+                        "business_hours_pause": True,
+                        "business_hours": {
+                            "enabled": True,
+                            "in_business_hours": False,
+                            "timezone": "America/Chicago",
+                            "next_start_at": "2026-06-15T09:00:00-05:00",
+                        },
+                    },
+                },
+                "publisher": {
+                    "source_health": {
+                        "status": "live",
+                        "ok": True,
+                        "reasons": [],
+                        "primary_reason": None,
+                        "label": "Scheduled pause",
+                    },
+                },
+                "log_tail": "worker paused outside business hours\n",
+            }
+        )
+        self.relay.utc_now = lambda: "2026-06-14T20:00:00Z"
+
+        health = self.relay.health_payload()
+        status = self.relay.relay_status_payload()
+
+        expected_business_hours = {
+            "available": True,
+            "enabled": True,
+            "in_business_hours": False,
+            "timezone": "America/Chicago",
+            "next_start_at": (
+                "2026-06-15T09:00:00-05:00 "
+                "https://example.test/start?[redacted]#[redacted]"
+            ),
+            "active_pause": True,
+        }
+        self.assertTrue(health["cockpit_ok"])
+        self.assertEqual(health["cockpit_status"], "live")
+        self.assertEqual(health["cockpit_health"]["reasons"], [])
+        self.assertIsNone(health["cockpit_health_primary_reason"])
+        self.assertEqual(health["cockpit_health_label"], "Scheduled pause")
+        self.assertTrue(health["cockpit_health"]["source_business_hours_pause"])
+        self.assertEqual(
+            health["cockpit_health"]["source_business_hours"],
+            expected_business_hours,
+        )
+        self.assertEqual(status["cockpit_health_label"], "Scheduled pause")
+        self.assertEqual(status["cockpit_health"]["reasons"], [])
+        self.assertTrue(status["cockpit_health"]["source_business_hours_pause"])
+        self.assertEqual(status["business_hours"], expected_business_hours)
+        self.assertEqual(
+            status["cockpit_summary"]["business_hours"],
+            {
+                "available": True,
+                "enabled": True,
+                "in_business_hours": False,
+                "timezone": "America/Chicago",
+                "next_start_at": "2026-06-15T09:00:00-05:00",
+                "active_pause": True,
+            },
+        )
+        self.assertNotIn("pause-secret", json.dumps(status, sort_keys=True))
+
+    def test_status_and_health_keep_stale_business_hours_pause_degraded(self) -> None:
+        self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
+        self.relay.update_state(
+            {
+                "pushed_at": "2026-06-14T19:59:30Z",
+                "status": {
+                    "status": "paused",
+                    "phase": "outside_business_hours",
+                    "loop_running": False,
+                    "source_status_stale": True,
+                    "business_hours": {
+                        "enabled": True,
+                        "in_business_hours": False,
+                        "timezone": "America/Chicago",
+                    },
+                    "cockpit_summary": {
+                        "operator_attention": True,
+                        "operator_attention_reasons": ["status_stale"],
+                        "operator_attention_primary_reason": "status_stale",
+                        "operator_attention_label": "Status is stale",
+                        "business_hours_pause": True,
+                    },
+                },
+                "log_tail": "pause status is stale\n",
+            }
+        )
+        self.relay.utc_now = lambda: "2026-06-14T20:00:00Z"
+
+        health = self.relay.health_payload()
+        status = self.relay.relay_status_payload()
+
+        self.assertFalse(health["cockpit_ok"])
+        self.assertEqual(health["cockpit_status"], "degraded")
+        self.assertEqual(
+            health["cockpit_health"]["reasons"],
+            ["source_status_stale", "source_cockpit_attention"],
+        )
+        self.assertEqual(health["cockpit_health_label"], "Source status is stale")
+        self.assertTrue(health["cockpit_health"]["source_business_hours_pause"])
+        self.assertNotIn("source_loop_not_running", health["cockpit_health"]["reasons"])
+        self.assertEqual(status["cockpit_health"]["reasons"], health["cockpit_health"]["reasons"])
+
     def test_status_and_health_sanitize_nested_health_diagnostics(self) -> None:
         self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
         self.relay.update_state(

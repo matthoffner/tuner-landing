@@ -660,6 +660,50 @@ def source_bridge_summary(status: dict[str, Any]) -> dict[str, Any]:
     return summary
 
 
+def source_business_hours_summary(status: dict[str, Any]) -> dict[str, Any]:
+    business_hours = status.get("business_hours")
+    if not isinstance(business_hours, dict):
+        source_summary = status.get("cockpit_summary")
+        if isinstance(source_summary, dict):
+            business_hours = source_summary.get("business_hours")
+    if not isinstance(business_hours, dict) or not business_hours:
+        return {"available": False}
+
+    summary: dict[str, Any] = {"available": True}
+    for key in ("enabled", "in_business_hours", "active_pause"):
+        value = business_hours.get(key)
+        if isinstance(value, bool):
+            summary[key] = value
+    for key in (
+        "timezone",
+        "start",
+        "end",
+        "days",
+        "local_time",
+        "local_weekday",
+        "next_start_at",
+    ):
+        compact_value = compact_policy_detail(business_hours.get(key), max_length=120)
+        if compact_value is not None:
+            summary[key] = compact_value
+    if "active_pause" not in summary:
+        summary["active_pause"] = summary.get("in_business_hours") is False
+    return summary
+
+
+def source_business_hours_pause_active(
+    status: dict[str, Any],
+    source_business_hours: dict[str, Any] | None = None,
+) -> bool:
+    if source_business_hours is None:
+        source_business_hours = source_business_hours_summary(status)
+    return (
+        status.get("status") == "paused"
+        and status.get("phase") == "outside_business_hours"
+        and source_business_hours.get("active_pause") is True
+    )
+
+
 def source_policy_summary(status: dict[str, Any]) -> dict[str, Any]:
     source_summary = status.get("cockpit_summary")
     if not isinstance(source_summary, dict):
@@ -1217,6 +1261,10 @@ def sanitize_cockpit_summary_for_relay_response(summary: Any) -> dict[str, Any] 
     if import_handoff["available"]:
         sanitized["import_handoff"] = import_handoff
 
+    business_hours = source_business_hours_summary({"cockpit_summary": summary})
+    if business_hours["available"]:
+        sanitized["business_hours"] = business_hours
+
     coordination = source_coordination_summary({"cockpit_summary": summary})
     if coordination["available"]:
         sanitized["coordination"] = coordination
@@ -1278,6 +1326,12 @@ def sanitize_status_for_relay_response(status: dict[str, Any]) -> dict[str, Any]
     if cockpit_summary is not None:
         response_status["cockpit_summary"] = cockpit_summary
 
+    business_hours = source_business_hours_summary(response_status)
+    if business_hours["available"]:
+        response_status["business_hours"] = business_hours
+    elif "business_hours" in response_status:
+        response_status.pop("business_hours", None)
+
     return response_status
 
 
@@ -1289,6 +1343,11 @@ def cockpit_health(
     reasons: list[str] = []
     source_health = publisher_source_health(state)
     source_bridge = source_bridge_summary(status)
+    source_business_hours = source_business_hours_summary(status)
+    business_hours_pause = source_business_hours_pause_active(
+        status,
+        source_business_hours,
+    )
     source_policy = source_policy_summary(status)
     source_readiness = source_readiness_summary(status)
     source_coordination = source_coordination_summary(status)
@@ -1346,7 +1405,7 @@ def cockpit_health(
         "too_large",
     }:
         reasons.append("source_status_unavailable")
-    if status.get("loop_running") is False:
+    if status.get("loop_running") is False and not business_hours_pause:
         reasons.append("source_loop_not_running")
     if "autonomy_policy_failed" in source_attention_reason_values:
         reasons.append("source_autonomy_policy_failed")
@@ -1417,18 +1476,23 @@ def cockpit_health(
     else:
         health_status = "live"
     primary_reason = reasons[0] if reasons else None
+    label = cockpit_health_label(primary_reason, source_attention_label)
+    if primary_reason is None and business_hours_pause:
+        label = "Scheduled pause"
     return {
         "status": health_status,
         "ok": health_status == "live",
         "reasons": reasons,
         "primary_reason": primary_reason,
-        "label": cockpit_health_label(primary_reason, source_attention_label),
+        "label": label,
         "source_cockpit_attention_reasons": source_attention_reason_samples,
         "source_cockpit_attention_reasons_count": len(source_attention_reason_values),
         "source_cockpit_attention_primary_reason": source_attention_primary_reason,
         "source_cockpit_attention_label": source_attention_label,
         "source_status_diagnostics": source_status_diagnostics(status),
         "source_bridge": source_bridge,
+        "source_business_hours": source_business_hours,
+        "source_business_hours_pause": business_hours_pause,
         "source_policy": source_policy,
         "source_readiness": source_readiness,
         "source_coordination": source_coordination,
