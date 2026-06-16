@@ -285,6 +285,55 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
             ],
         )
 
+    def test_runtime_configuration_rejects_invalid_prompt_file(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            prompt_dir = Path(tmp) / "prompt-dir"
+            prompt_dir.mkdir()
+            oversized_prompt = Path(tmp) / "oversized-prompt.txt"
+            oversized_prompt.write_text(
+                "x" * (self.loop.MAX_PROMPT_FILE_BYTES + 1),
+                encoding="utf-8",
+            )
+            invalid_utf8_prompt = Path(tmp) / "invalid-utf8-prompt.txt"
+            invalid_utf8_prompt.write_bytes(b"\xff")
+
+            base_args = {
+                "iterations": 1,
+                "interval": 0,
+                "codex_timeout": 30,
+            }
+
+            self.assertEqual(
+                self.loop.runtime_configuration_errors(
+                    SimpleNamespace(
+                        **base_args,
+                        prompt_file=Path(tmp) / "missing-prompt.txt",
+                    )
+                ),
+                ["--prompt-file must point to an existing file"],
+            )
+            self.assertEqual(
+                self.loop.runtime_configuration_errors(
+                    SimpleNamespace(**base_args, prompt_file=prompt_dir)
+                ),
+                ["--prompt-file must point to a regular file"],
+            )
+            self.assertEqual(
+                self.loop.runtime_configuration_errors(
+                    SimpleNamespace(**base_args, prompt_file=oversized_prompt)
+                ),
+                [
+                    "--prompt-file must be less than or equal to "
+                    f"{self.loop.MAX_PROMPT_FILE_BYTES} bytes"
+                ],
+            )
+            self.assertEqual(
+                self.loop.runtime_configuration_errors(
+                    SimpleNamespace(**base_args, prompt_file=invalid_utf8_prompt)
+                ),
+                ["--prompt-file must be UTF-8 text"],
+            )
+
     def test_main_rejects_invalid_runtime_configuration_before_startup(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             self.loop.parse_args = lambda: SimpleNamespace(
@@ -303,6 +352,28 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
         self.assertEqual(result, 2)
         self.assertIn(
             "configuration error: --codex-timeout must be greater than 0",
+            stderr.getvalue(),
+        )
+        self.assertFalse(log_exists)
+
+    def test_main_rejects_invalid_prompt_file_before_startup(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            self.loop.parse_args = lambda: SimpleNamespace(
+                iterations=1,
+                interval=0,
+                codex_timeout=30,
+                log_file=Path(tmp) / "loop.log",
+                prompt_file=Path(tmp) / "missing-prompt.txt",
+            )
+
+            stderr = io.StringIO()
+            with contextlib.redirect_stderr(stderr):
+                result = self.loop.main()
+            log_exists = (Path(tmp) / "loop.log").exists()
+
+        self.assertEqual(result, 2)
+        self.assertIn(
+            "configuration error: --prompt-file must point to an existing file",
             stderr.getvalue(),
         )
         self.assertFalse(log_exists)

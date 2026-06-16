@@ -13,6 +13,7 @@ import re
 import selectors
 import shlex
 import signal
+import stat as stat_module
 import subprocess
 import sys
 import time
@@ -101,6 +102,7 @@ MAX_COMMAND_LOG_ARG_CHARS = 160
 MAX_AGENT_ITERATIONS = 1000
 MAX_AGENT_INTERVAL_SECONDS = 3600
 MAX_CODEX_TIMEOUT_SECONDS = 7200
+MAX_PROMPT_FILE_BYTES = 128 * 1024
 PIPELINE_SUMMARY_OBJECT_SECTIONS = (
     "execution_readiness",
     "contract",
@@ -1418,7 +1420,33 @@ def runtime_configuration_errors(args: argparse.Namespace) -> list[str]:
         errors.append(
             f"--codex-timeout must be less than or equal to {MAX_CODEX_TIMEOUT_SECONDS}"
         )
+    errors.extend(prompt_file_configuration_errors(getattr(args, "prompt_file", None)))
     return errors
+
+
+def prompt_file_configuration_errors(prompt_file: Path | None) -> list[str]:
+    """Return routeable prompt-file errors without echoing configured paths."""
+    if prompt_file is None:
+        return []
+    try:
+        prompt_stat = prompt_file.stat()
+    except FileNotFoundError:
+        return ["--prompt-file must point to an existing file"]
+    except OSError:
+        return ["--prompt-file could not be inspected"]
+    if not stat_module.S_ISREG(prompt_stat.st_mode):
+        return ["--prompt-file must point to a regular file"]
+    if prompt_stat.st_size > MAX_PROMPT_FILE_BYTES:
+        return [
+            f"--prompt-file must be less than or equal to {MAX_PROMPT_FILE_BYTES} bytes"
+        ]
+    try:
+        prompt_file.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        return ["--prompt-file must be UTF-8 text"]
+    except OSError:
+        return ["--prompt-file could not be read"]
+    return []
 
 
 def main() -> int:
