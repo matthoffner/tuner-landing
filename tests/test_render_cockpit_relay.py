@@ -2584,6 +2584,57 @@ class RenderCockpitRelayTest(unittest.TestCase):
             health["cockpit_health"]["reasons"],
         )
 
+    def test_status_and_health_preserve_status_unavailable_attention_reason(self) -> None:
+        self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
+        self.relay.update_state(
+            {
+                "pushed_at": "2026-06-14T19:59:30Z",
+                "status": {
+                    "status": "waiting",
+                    "loop_running": False,
+                    "source_status_file": ".automoat/state/mvp-loop-status.json",
+                    "source_status_file_status": "missing",
+                    "source_status_stale": True,
+                    "cockpit_summary": {
+                        "status": "waiting",
+                        "operator_attention": True,
+                        "operator_attention_reasons": [
+                            "loop_not_running",
+                            "status_unavailable",
+                        ],
+                        "operator_attention_primary_reason": "loop_not_running",
+                        "operator_attention_label": "Loop is not running",
+                    },
+                },
+                "log_tail": "loop status file has not been written\n",
+            }
+        )
+        self.relay.utc_now = lambda: "2026-06-14T20:00:00Z"
+
+        health = self.relay.health_payload()
+        status = self.relay.relay_status_payload()
+
+        self.assertEqual(
+            status["cockpit_summary"]["operator_attention_reasons"],
+            ["loop_not_running", "status_unavailable"],
+        )
+        self.assertEqual(
+            status["cockpit_summary"]["operator_attention_reasons_count"],
+            2,
+        )
+        self.assertEqual(
+            health["cockpit_health"]["source_cockpit_attention_reasons"],
+            ["loop_not_running", "status_unavailable"],
+        )
+        self.assertEqual(
+            health["cockpit_health"]["reasons"],
+            [
+                "source_status_unavailable",
+                "source_loop_not_running",
+                "source_cockpit_attention",
+            ],
+        )
+
     def test_status_and_health_sanitize_top_level_source_status_fields(self) -> None:
         self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
         self.relay.update_state(

@@ -423,10 +423,14 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             status["cockpit_summary"]["operator_attention_reasons"],
             [
                 "loop_not_running",
-                "status_stale",
+                "status_unavailable",
                 "artifact_health_not_loaded",
                 "import_readiness_not_ready",
             ],
+        )
+        self.assertEqual(
+            status["cockpit_summary"]["operator_attention_label"],
+            "Loop is not running",
         )
         self.assertFalse(status["bridge_summary"]["available"])
         self.assertEqual(status["bridge_summary"]["status_file_status"], "missing")
@@ -2522,6 +2526,10 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertIn("line 1 column 2", status["source_status_file_error"])
         self.assertTrue(status["source_status_stale"])
         self.assertEqual(status["cockpit_summary"]["status"], "invalid-status-json")
+        self.assertIn(
+            "status_unavailable",
+            status["cockpit_summary"]["operator_attention_reasons"],
+        )
         self.assertIn(
             "status_failing",
             status["cockpit_summary"]["operator_attention_reasons"],

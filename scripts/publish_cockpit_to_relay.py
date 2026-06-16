@@ -125,6 +125,7 @@ SOURCE_HEALTH_LABELS = {
 }
 OPERATOR_ATTENTION_LABELS = {
     "loop_not_running": "Loop is not running",
+    "status_unavailable": "Status file is unavailable",
     "status_failing": "Loop status is failing",
     "autonomy_policy_failed": "Autonomy policy failed",
     "status_stale": "Status is stale",
@@ -1110,8 +1111,17 @@ def publisher_cockpit_summary(status: dict[str, Any]) -> dict[str, Any]:
     )
 
     attention_reasons: list[str] = []
+    source_status_unavailable = status.get("source_status_file_status") in {
+        "missing",
+        "read_failed",
+        "invalid_json",
+        "not_object",
+        "too_large",
+    }
     if not loop_running and not business_hours_pause:
         attention_reasons.append("loop_not_running")
+    if source_status_unavailable:
+        attention_reasons.append("status_unavailable")
     if policy_failure:
         attention_reasons.append("autonomy_policy_failed")
     if status_value in {
@@ -1127,6 +1137,7 @@ def publisher_cockpit_summary(status: dict[str, Any]) -> dict[str, Any]:
         status.get("source_status_stale") is True
         and not source_status_timestamp_invalid
         and not source_status_timestamp_future
+        and not source_status_unavailable
     ):
         attention_reasons.append("status_stale")
     if source_status_timestamp_invalid:
