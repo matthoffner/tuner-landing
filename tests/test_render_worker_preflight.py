@@ -2970,6 +2970,75 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertNotIn("github-token", output.getvalue())
         self.assertNotIn("codex-token", output.getvalue())
 
+    def test_rejects_url_shaped_publisher_file_overrides_before_publisher_preflight(
+        self,
+    ) -> None:
+        errors = self.worker.validate_worker_environment(
+            {
+                "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+                "AUTOMOAT_RELAY_TOKEN": "relay-token",
+                "GITHUB_TOKEN": "github-token",
+                "CODEX_ACCESS_TOKEN": "codex-token",
+                "AUTOMOAT_LOOP_STATUS_FILE": "https://relay.example/status.json",
+                "AUTOMOAT_PUBLISHER_LOG_FILE": "file://.automoat/logs/publisher.log",
+            },
+            found_command,
+        )
+
+        self.assertEqual(
+            errors,
+            [
+                "AUTOMOAT_LOOP_STATUS_FILE must be a file path, not a URL",
+                "AUTOMOAT_PUBLISHER_LOG_FILE must be a file path, not a URL",
+            ],
+        )
+
+    def test_check_env_json_routes_path_list_publisher_file_without_value_echo(
+        self,
+    ) -> None:
+        output = io.StringIO()
+
+        with redirect_stdout(output):
+            errors = self.worker.emit_environment_preflight(
+                {
+                    "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+                    "AUTOMOAT_RELAY_TOKEN": "relay-token",
+                    "GITHUB_TOKEN": "github-token",
+                    "CODEX_ACCESS_TOKEN": "codex-token",
+                    "AUTOMOAT_LOOP_LOG_FILE": (
+                        ".automoat/logs/secret-loop.log:.automoat/logs/alt.log"
+                    ),
+                    "AUTOMOAT_LOOP_PID_FILE": (
+                        ".automoat/state/secret-loop.pid;.automoat/state/alt.pid"
+                    ),
+                },
+                found_command,
+                output_format="json",
+            )
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(
+            errors,
+            [
+                "AUTOMOAT_LOOP_PID_FILE must be a single file path, not a path list",
+                "AUTOMOAT_LOOP_LOG_FILE must be a single file path, not a path list",
+            ],
+        )
+        self.assertEqual(payload["status"], "failed")
+        self.assertEqual(payload["diagnostics"]["error_categories"], ["invalid_file_path"])
+        self.assertEqual(
+            payload["diagnostics"]["failed_configuration_keys"],
+            ["AUTOMOAT_LOOP_LOG_FILE", "AUTOMOAT_LOOP_PID_FILE"],
+        )
+        self.assertEqual(
+            payload["diagnostics"]["runtime_configured_keys"],
+            ["AUTOMOAT_LOOP_LOG_FILE", "AUTOMOAT_LOOP_PID_FILE"],
+        )
+        self.assertNotIn("secret-loop", output.getvalue())
+        self.assertNotIn("relay-token", output.getvalue())
+        self.assertNotIn("github-token", output.getvalue())
+        self.assertNotIn("codex-token", output.getvalue())
+
     def test_rejects_relative_bridge_status_file_blocked_under_workdir(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)

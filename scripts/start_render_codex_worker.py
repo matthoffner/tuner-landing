@@ -49,6 +49,7 @@ SECRET_ASSIGNMENT_PATTERN = re.compile(
     r"\b(token|relay_token|access_token|api_key|x-automoat-relay-token)\s*[:=]\s*[^\s,;]+",
     re.IGNORECASE,
 )
+URL_SCHEME_PATTERN = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*://")
 REQUIRED_COMMANDS = ("git", "codex")
 CODEX_CONFIG_ENV_DEFAULTS = {
     "AUTOMOAT_CODEX_MODEL": "gpt-5.5",
@@ -1167,6 +1168,12 @@ def validate_publisher_file_path_env_value(
         for character in value
     ):
         errors.append(f"{name} must be a single-line path without control characters")
+        return
+    if URL_SCHEME_PATTERN.match(value):
+        errors.append(f"{name} must be a file path, not a URL")
+        return
+    if ":" in value or ";" in value:
+        errors.append(f"{name} must be a single file path, not a path list")
         return
     if len(value) > MAX_WORKER_PATH_CHARS:
         errors.append(f"{name} must be {MAX_WORKER_PATH_CHARS} characters or fewer")
