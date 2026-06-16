@@ -277,11 +277,87 @@ def latest_handoff_status() -> str:
     return "handoff present"
 
 
+def handoff_read_error(exc: BaseException, path: Path) -> str:
+    """Return a bounded handoff read error without leaking absolute paths."""
+    message = str(exc)
+    safe_label = repo_path(path)
+    path_strings = {str(path)}
+    try:
+        path_strings.add(str(path.resolve()))
+    except OSError:
+        pass
+    for path_string in sorted(path_strings, key=len, reverse=True):
+        if path_string:
+            message = message.replace(path_string, safe_label)
+    return sanitized_policy_detail(message) or type(exc).__name__
+
+
+def handoff_age_seconds(path: Path) -> int | None:
+    try:
+        modified_at = path.stat().st_mtime
+    except OSError:
+        return None
+    return max(0, int(datetime.now(timezone.utc).timestamp() - modified_at))
+
+
+def handoff_line_snapshot(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        return {
+            "handoff_file_status": "missing",
+            "latest_section_found": False,
+            "latest_status_found": False,
+            "latest_handoff_status": "handoff missing",
+        }
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except OSError as exc:
+        return {
+            "handoff_file_status": "read_failed",
+            "latest_section_found": False,
+            "latest_status_found": False,
+            "latest_handoff_status": "handoff unreadable",
+            "handoff_error": handoff_read_error(exc, path),
+        }
+    except UnicodeDecodeError as exc:
+        return {
+            "handoff_file_status": "invalid_encoding",
+            "latest_section_found": False,
+            "latest_status_found": False,
+            "latest_handoff_status": "handoff unreadable",
+            "handoff_error": sanitized_policy_detail(f"invalid UTF-8 at byte {exc.start}"),
+        }
+
+    latest_section_found = False
+    for index, line in enumerate(lines):
+        if line.strip() == "## Latest":
+            latest_section_found = True
+            continue
+        if line.startswith("- status:"):
+            return {
+                "handoff_file_status": "loaded",
+                "latest_section_found": latest_section_found,
+                "latest_status_found": True,
+                "latest_handoff_status": sanitized_policy_scalar(
+                    line.replace("- status:", "", 1).strip()
+                ),
+                "handoff_age_seconds": handoff_age_seconds(path),
+            }
+        if index > 24:
+            break
+    return {
+        "handoff_file_status": "loaded",
+        "latest_section_found": latest_section_found,
+        "latest_status_found": False,
+        "latest_handoff_status": "handoff present",
+        "handoff_age_seconds": handoff_age_seconds(path),
+    }
+
+
 def coordination_snapshot() -> dict[str, Any]:
     """Return compact shared-lane context for cockpit status consumers."""
     return {
         "handoff_path": repo_path(HANDOFF_PATH),
-        "latest_handoff_status": sanitized_policy_scalar(latest_handoff_status()),
+        **handoff_line_snapshot(HANDOFF_PATH),
     }
 
 

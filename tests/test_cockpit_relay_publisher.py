@@ -1000,6 +1000,10 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                         },
                         "coordination": {
                             "handoff_path": ".pixelbox/handoff.md",
+                            "handoff_file_status": "loaded",
+                            "latest_section_found": True,
+                            "latest_status_found": True,
+                            "handoff_age_seconds": 45,
                             "latest_handoff_status": (
                                 "relay publishing token=handoff-secret "
                                 "https://user:secret@example.local/status"
@@ -1113,6 +1117,10 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             {
                 "available": True,
                 "handoff_path": ".pixelbox/handoff.md",
+                "handoff_file_status": "loaded",
+                "latest_section_found": True,
+                "latest_status_found": True,
+                "handoff_age_seconds": 45,
                 "latest_handoff_status": (
                     "relay publishing token=[redacted] "
                     "https://example.local/status?[redacted]#[redacted]"
@@ -3760,6 +3768,10 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                         },
                         "coordination": {
                             "handoff_path": ".pixelbox/handoff.md",
+                            "handoff_file_status": "loaded",
+                            "latest_section_found": True,
+                            "latest_status_found": True,
+                            "handoff_age_seconds": 75,
                             "latest_handoff_status": "worker handoff ready",
                         },
                     },
@@ -3832,10 +3844,15 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertIn("source_policy_productive_path_count=1", log_text)
         self.assertIn("source_policy_synthetic_row_count=3", log_text)
         self.assertIn("source_coordination_handoff_path=.pixelbox/handoff.md", log_text)
+        self.assertIn("source_coordination_handoff_file_status=loaded", log_text)
         self.assertIn(
             "source_coordination_handoff_status=worker handoff ready",
             log_text,
         )
+        self.assertIn("source_coordination_latest_section_found=True", log_text)
+        self.assertIn("source_coordination_latest_status_found=True", log_text)
+        self.assertIn("source_coordination_handoff_age_seconds=75", log_text)
+        self.assertIn("source_coordination_handoff_error=None", log_text)
         self.assertIn("source_failure_category=artifact_health", log_text)
         self.assertIn("source_failure_route_hint=cockpit_artifact_health", log_text)
         self.assertIn("source_failure_phase=artifact_health_failed", log_text)
@@ -3976,6 +3993,16 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                         "coordination": {
                             "handoff_path": (
                                 ".pixelbox/handoff.md token=coord-path-secret"
+                            ),
+                            "handoff_file_status": (
+                                "loaded token=coord-file-status-secret"
+                            ),
+                            "latest_section_found": "not-a-bool",
+                            "latest_status_found": False,
+                            "handoff_age_seconds": "91",
+                            "handoff_error": (
+                                "/tmp/customer/.pixelbox/handoff.md "
+                                "token=coord-error-secret"
                             ),
                             "latest_handoff_status": (
                                 "running authorization: Bearer coord-status-secret "
@@ -4134,8 +4161,19 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             log_text,
         )
         self.assertIn(
+            "source_coordination_handoff_file_status=loaded token=[redacted]",
+            log_text,
+        )
+        self.assertIn(
             "source_coordination_handoff_status=running authorization: Bearer "
             "[redacted] https://coord.example/status?[redacted]#[redacted]",
+            log_text,
+        )
+        self.assertIn("source_coordination_latest_section_found=None", log_text)
+        self.assertIn("source_coordination_latest_status_found=False", log_text)
+        self.assertIn("source_coordination_handoff_age_seconds=91", log_text)
+        self.assertIn(
+            "source_coordination_handoff_error=<external>/handoff.md token=[redacted]",
             log_text,
         )
         self.assertIn("publisher_git_head=abc1234 token=[redacted]", log_text)
@@ -4148,6 +4186,8 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertNotIn("label-secret", log_text)
         self.assertNotIn("head-secret", log_text)
         self.assertNotIn("failure-phase-secret", log_text)
+        self.assertNotIn("coord-file-status-secret", log_text)
+        self.assertNotIn("coord-error-secret", log_text)
         self.assertNotIn("failure-category-secret", log_text)
         self.assertNotIn("failure-route-secret", log_text)
         self.assertNotIn("failure-message-secret", log_text)

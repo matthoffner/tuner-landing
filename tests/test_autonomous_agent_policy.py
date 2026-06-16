@@ -220,11 +220,31 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
             snapshot = self.loop.coordination_snapshot()
 
         self.assertEqual(snapshot["handoff_path"], ".pixelbox/handoff.md")
+        self.assertEqual(snapshot["handoff_file_status"], "loaded")
+        self.assertTrue(snapshot["latest_section_found"])
+        self.assertTrue(snapshot["latest_status_found"])
+        self.assertIsInstance(snapshot["handoff_age_seconds"], int)
         self.assertIn("running token=<redacted>", snapshot["latest_handoff_status"])
         self.assertIn("https://example.local/status", snapshot["latest_handoff_status"])
         self.assertNotIn("super-secret", snapshot["latest_handoff_status"])
         self.assertNotIn("user:pass", snapshot["latest_handoff_status"])
         self.assertNotIn("token=secret", snapshot["latest_handoff_status"])
+
+    def test_coordination_snapshot_reports_missing_handoff(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            handoff_path = root / ".pixelbox" / "handoff.md"
+            self.loop.ROOT = root
+            self.loop.HANDOFF_PATH = handoff_path
+
+            snapshot = self.loop.coordination_snapshot()
+
+        self.assertEqual(snapshot["handoff_path"], ".pixelbox/handoff.md")
+        self.assertEqual(snapshot["handoff_file_status"], "missing")
+        self.assertFalse(snapshot["latest_section_found"])
+        self.assertFalse(snapshot["latest_status_found"])
+        self.assertEqual(snapshot["latest_handoff_status"], "handoff missing")
+        self.assertNotIn("handoff_age_seconds", snapshot)
 
     def test_status_payload_includes_coordination_snapshot(self) -> None:
         self.loop.utc_now = lambda: "2026-06-16T02:10:00Z"

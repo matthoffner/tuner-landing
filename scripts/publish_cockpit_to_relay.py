@@ -692,12 +692,21 @@ def coordination_summary(status: dict[str, Any]) -> dict[str, Any]:
     summary: dict[str, Any] = {"available": True}
     fields = {
         "handoff_path": coordination.get("handoff_path"),
+        "handoff_file_status": coordination.get("handoff_file_status"),
         "latest_handoff_status": coordination.get("latest_handoff_status"),
+        "handoff_error": coordination.get("handoff_error"),
     }
     for key, value in fields.items():
         compact_value = compact_policy_detail(value)
         if compact_value is not None:
             summary[key] = compact_value
+    for key in ("latest_section_found", "latest_status_found"):
+        value = coordination.get(key)
+        if isinstance(value, bool):
+            summary[key] = value
+    age_seconds = compact_int(coordination.get("handoff_age_seconds"))
+    if age_seconds is not None:
+        summary["handoff_age_seconds"] = age_seconds
     return summary
 
 
@@ -1682,9 +1691,30 @@ def source_status_log_fields(payload: dict[str, Any]) -> dict[str, Any]:
             coordination.get("handoff_path"),
             max_length=160,
         ),
+        "source_coordination_handoff_file_status": compact_policy_detail(
+            coordination.get("handoff_file_status"),
+            max_length=80,
+        ),
         "source_coordination_handoff_status": compact_policy_detail(
             coordination.get("latest_handoff_status"),
             max_length=240,
+        ),
+        "source_coordination_latest_section_found": coordination.get(
+            "latest_section_found"
+        )
+        if isinstance(coordination.get("latest_section_found"), bool)
+        else None,
+        "source_coordination_latest_status_found": coordination.get(
+            "latest_status_found"
+        )
+        if isinstance(coordination.get("latest_status_found"), bool)
+        else None,
+        "source_coordination_handoff_age_seconds": compact_int(
+            coordination.get("handoff_age_seconds")
+        ),
+        "source_coordination_handoff_error": compact_path_diagnostic(
+            coordination.get("handoff_error"),
+            max_length=180,
         ),
         "source_failure_category": compact_policy_detail(
             failure.get("category"),
@@ -1809,7 +1839,12 @@ SOURCE_STATUS_LOG_FIELD_NAMES = (
     "source_policy_productive_path_count",
     "source_policy_synthetic_row_count",
     "source_coordination_handoff_path",
+    "source_coordination_handoff_file_status",
     "source_coordination_handoff_status",
+    "source_coordination_latest_section_found",
+    "source_coordination_latest_status_found",
+    "source_coordination_handoff_age_seconds",
+    "source_coordination_handoff_error",
     "source_failure_category",
     "source_failure_route_hint",
     "source_failure_phase",
