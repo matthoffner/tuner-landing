@@ -2464,6 +2464,69 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             "2026-06-15T09:00:00-05:00",
         )
 
+    def test_read_status_honors_compact_business_hours_active_pause(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            status_file = tmp_path / "status.json"
+            log_file = tmp_path / "loop.log"
+            publisher_log = tmp_path / "publisher.log"
+            status_file.write_text(
+                json.dumps(
+                    {
+                        "status": "paused",
+                        "phase": "outside_business_hours",
+                        "mode": "autonomous_codex",
+                        "updated_at": "2026-06-14T19:30:00Z",
+                        "business_hours": {
+                            "enabled": True,
+                            "active_pause": True,
+                            "timezone": "America/Chicago",
+                            "next_start_at": "2026-06-15T09:00:00-05:00",
+                        },
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            log_file.write_text("compact business-hours pause\n", encoding="utf-8")
+            args = Namespace(
+                status_file=status_file,
+                pid_file=tmp_path / "missing.pid",
+                log_file=log_file,
+                publisher_log=publisher_log,
+                bridge_status_file=tmp_path / "missing-bridge-status.json",
+                interval=4.5,
+                timeout=11.25,
+                tail_lines=2,
+                max_log_bytes=1024,
+                max_consecutive_failures=5,
+                max_consecutive_stale_statuses=6,
+                status_stale_after_seconds=120,
+                bridge_status_stale_after_seconds=120,
+            )
+            self.publisher.utc_now = lambda: "2026-06-14T19:31:00Z"
+
+            payload = self.publisher.build_payload(args)
+            log_fields = self.publisher.source_status_log_fields(payload)
+
+        summary = payload["status"]["cockpit_summary"]
+        self.assertTrue(summary["business_hours_pause"])
+        self.assertTrue(summary["business_hours"]["active_pause"])
+        self.assertNotIn("in_business_hours", summary["business_hours"])
+        self.assertFalse(summary["operator_attention"])
+        self.assertEqual(summary["operator_attention_reasons"], [])
+        self.assertEqual(
+            payload["publisher"]["source_health"],
+            {
+                "status": "live",
+                "ok": True,
+                "reasons": [],
+                "primary_reason": None,
+                "label": "Scheduled pause",
+            },
+        )
+        self.assertTrue(log_fields["source_business_hours_paused"])
+
     def test_read_status_stale_business_hours_pause_still_routes_stale(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)

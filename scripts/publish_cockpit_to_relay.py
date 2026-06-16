@@ -749,7 +749,7 @@ def business_hours_summary(value: Any) -> dict[str, Any]:
         return {"available": False}
 
     summary: dict[str, Any] = {"available": True}
-    for key in ("enabled", "in_business_hours"):
+    for key in ("enabled", "in_business_hours", "active_pause"):
         field_value = business_hours.get(key)
         if isinstance(field_value, bool):
             summary[key] = field_value
@@ -765,7 +765,8 @@ def business_hours_summary(value: Any) -> dict[str, Any]:
         compact_value = compact_policy_detail(business_hours.get(key), max_length=120)
         if compact_value is not None:
             summary[key] = compact_value
-    summary["active_pause"] = summary.get("in_business_hours") is False
+    if "active_pause" not in summary:
+        summary["active_pause"] = summary.get("in_business_hours") is False
     return summary
 
 

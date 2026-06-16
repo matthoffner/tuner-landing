@@ -479,6 +479,39 @@ class MvpCockpitServerTest(unittest.TestCase):
         self.assertNotIn("next-secret", summary_text)
         self.assertNotIn("user:secret", summary_text)
 
+    def test_cockpit_summary_honors_compact_business_hours_active_pause(self) -> None:
+        current_timestamp = datetime.now(timezone.utc).replace(microsecond=0)
+        status = {
+            "status": "paused",
+            "phase": "outside_business_hours",
+            "mode": "autonomous_codex",
+            "loop_running": False,
+            "updated_at": current_timestamp.isoformat().replace("+00:00", "Z"),
+            "business_hours": {
+                "enabled": True,
+                "active_pause": True,
+                "timezone": "America/Chicago",
+                "next_start_at": "2026-06-17T09:00:00-05:00",
+            },
+        }
+
+        summary = self.cockpit.cockpit_summary(status)
+
+        self.assertFalse(summary["operator_attention"])
+        self.assertEqual(summary["operator_attention_reasons"], [])
+        self.assertEqual(summary["operator_attention_label"], "Clear")
+        self.assertTrue(summary["business_hours_pause"])
+        self.assertEqual(
+            summary["business_hours"],
+            {
+                "available": True,
+                "enabled": True,
+                "active_pause": True,
+                "timezone": "America/Chicago",
+                "next_start_at": "2026-06-17T09:00:00-05:00",
+            },
+        )
+
     def test_cockpit_summary_keeps_stale_business_hours_pause_degraded(self) -> None:
         status = {
             "status": "paused",
