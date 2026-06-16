@@ -2136,6 +2136,125 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             },
         )
 
+    def test_read_status_surfaces_business_hours_pause_without_false_attention(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            status_file = tmp_path / "status.json"
+            log_file = tmp_path / "loop.log"
+            publisher_log = tmp_path / "publisher.log"
+            status_file.write_text(
+                json.dumps(
+                    {
+                        "status": "paused",
+                        "phase": "outside_business_hours",
+                        "mode": "autonomous_codex",
+                        "updated_at": "2026-06-14T19:30:00Z",
+                        "business_hours": {
+                            "enabled": True,
+                            "in_business_hours": False,
+                            "timezone": "America/Chicago",
+                            "start": "09:00",
+                            "end": "17:00",
+                            "days": "mon-fri",
+                            "local_time": "2026-06-14T14:30:00-05:00",
+                            "local_weekday": "sun",
+                            "next_start_at": "2026-06-15T09:00:00-05:00",
+                        },
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            log_file.write_text("business-hours pause\n", encoding="utf-8")
+            args = Namespace(
+                status_file=status_file,
+                pid_file=tmp_path / "missing.pid",
+                log_file=log_file,
+                publisher_log=publisher_log,
+                bridge_status_file=tmp_path / "missing-bridge-status.json",
+                interval=4.5,
+                timeout=11.25,
+                tail_lines=2,
+                max_log_bytes=1024,
+                max_consecutive_failures=5,
+                max_consecutive_stale_statuses=6,
+                status_stale_after_seconds=120,
+                bridge_status_stale_after_seconds=120,
+            )
+            self.publisher.utc_now = lambda: "2026-06-14T19:31:00Z"
+
+            payload = self.publisher.build_payload(args)
+            log_fields = self.publisher.source_status_log_fields(payload)
+
+        status = payload["status"]
+        summary = status["cockpit_summary"]
+        self.assertEqual(status["status"], "paused")
+        self.assertEqual(summary["phase"], "outside_business_hours")
+        self.assertTrue(summary["business_hours_pause"])
+        self.assertFalse(summary["business_hours"]["in_business_hours"])
+        self.assertEqual(summary["business_hours"]["timezone"], "America/Chicago")
+        self.assertFalse(summary["operator_attention"])
+        self.assertEqual(summary["operator_attention_reasons"], [])
+        self.assertEqual(summary["operator_attention_label"], "Clear")
+        self.assertEqual(
+            payload["publisher"]["source_health"],
+            {
+                "status": "live",
+                "ok": True,
+                "reasons": [],
+                "primary_reason": None,
+                "label": "Scheduled pause",
+            },
+        )
+        self.assertTrue(log_fields["source_business_hours_paused"])
+        self.assertEqual(log_fields["source_business_hours_timezone"], "America/Chicago")
+        self.assertEqual(
+            log_fields["source_business_hours_next_start_at"],
+            "2026-06-15T09:00:00-05:00",
+        )
+
+    def test_read_status_stale_business_hours_pause_still_routes_stale(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            status_file = tmp_path / "status.json"
+            status_file.write_text(
+                json.dumps(
+                    {
+                        "status": "paused",
+                        "phase": "outside_business_hours",
+                        "updated_at": "2026-06-14T19:20:00Z",
+                        "business_hours": {
+                            "enabled": True,
+                            "in_business_hours": False,
+                            "timezone": "America/Chicago",
+                            "next_start_at": "2026-06-15T09:00:00-05:00",
+                        },
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            self.publisher.utc_now = lambda: "2026-06-14T19:31:00Z"
+
+            status = self.publisher.read_status(
+                status_file,
+                tmp_path / "missing.pid",
+                status_stale_after_seconds=120,
+                bridge_status_file=tmp_path / "missing-bridge-status.json",
+            )
+            health = self.publisher.publisher_source_health(status)
+
+        summary = status["cockpit_summary"]
+        self.assertTrue(summary["business_hours_pause"])
+        self.assertTrue(summary["status_stale"])
+        self.assertEqual(summary["operator_attention_reasons"], ["status_stale"])
+        self.assertEqual(summary["operator_attention_label"], "Status is stale")
+        self.assertEqual(
+            health["reasons"],
+            ["source_status_stale", "source_cockpit_attention"],
+        )
+        self.assertEqual(health["primary_reason"], "source_status_stale")
+
     def test_read_status_marks_malformed_status_file_unavailable(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)

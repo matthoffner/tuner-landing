@@ -710,6 +710,50 @@ def coordination_summary(status: dict[str, Any]) -> dict[str, Any]:
     return summary
 
 
+def business_hours_summary(value: Any) -> dict[str, Any]:
+    business_hours = as_dict(value)
+    if not business_hours:
+        return {"available": False}
+
+    summary: dict[str, Any] = {"available": True}
+    for key in ("enabled", "in_business_hours"):
+        field_value = business_hours.get(key)
+        if isinstance(field_value, bool):
+            summary[key] = field_value
+    for key in (
+        "timezone",
+        "start",
+        "end",
+        "days",
+        "local_time",
+        "local_weekday",
+        "next_start_at",
+    ):
+        compact_value = compact_policy_detail(business_hours.get(key), max_length=120)
+        if compact_value is not None:
+            summary[key] = compact_value
+    summary["active_pause"] = summary.get("in_business_hours") is False
+    return summary
+
+
+def business_hours_pause_active(status: dict[str, Any]) -> bool:
+    status_value = compact_policy_detail(status.get("status"), max_length=80)
+    phase_value = compact_policy_detail(status.get("phase"), max_length=120)
+    business_hours = as_dict(status.get("business_hours"))
+    if not business_hours:
+        cockpit_summary = as_dict(status.get("cockpit_summary"))
+        business_hours = as_dict(cockpit_summary.get("business_hours"))
+    active_pause = (
+        business_hours.get("active_pause") is True
+        or business_hours.get("in_business_hours") is False
+    )
+    return (
+        status_value == "paused"
+        and phase_value == "outside_business_hours"
+        and active_pause
+    )
+
+
 def failure_summary(status: dict[str, Any]) -> dict[str, Any]:
     failure = as_dict(status.get("failure"))
     if not failure:
@@ -854,7 +898,14 @@ def publisher_cockpit_summary(status: dict[str, Any]) -> dict[str, Any]:
     status_value_invalid = (
         status_value_invalid or status.get("source_status_value_invalid") is True
     )
+    phase_value = compact_policy_detail(status.get("phase"), max_length=120)
     loop_running = bool(status.get("loop_running"))
+    business_hours = business_hours_summary(status.get("business_hours"))
+    business_hours_pause = (
+        status_value == "paused"
+        and phase_value == "outside_business_hours"
+        and business_hours.get("active_pause") is True
+    )
     artifact_health_status = artifact_health.get("status") or "unknown"
     artifact_statuses = artifact_status_summary(artifact_health.get("statuses"))
     artifact_problem_artifacts = artifact_problem_summary(
@@ -1027,7 +1078,7 @@ def publisher_cockpit_summary(status: dict[str, Any]) -> dict[str, Any]:
     )
 
     attention_reasons: list[str] = []
-    if not loop_running:
+    if not loop_running and not business_hours_pause:
         attention_reasons.append("loop_not_running")
     if policy_failure:
         attention_reasons.append("autonomy_policy_failed")
@@ -1050,9 +1101,9 @@ def publisher_cockpit_summary(status: dict[str, Any]) -> dict[str, Any]:
         attention_reasons.append("status_timestamp_invalid")
     if source_status_timestamp_future:
         attention_reasons.append("status_timestamp_future")
-    if artifact_health_status != "loaded":
+    if artifact_health_status != "loaded" and not business_hours_pause:
         attention_reasons.append("artifact_health_not_loaded")
-    if import_readiness != "ready":
+    if import_readiness != "ready" and not business_hours_pause:
         attention_reasons.append("import_readiness_not_ready")
     if readiness_blockers:
         attention_reasons.append("import_readiness_blocked")
@@ -1062,7 +1113,7 @@ def publisher_cockpit_summary(status: dict[str, Any]) -> dict[str, Any]:
 
     return {
         "status": status_value,
-        "phase": compact_policy_detail(status.get("phase"), max_length=120),
+        "phase": phase_value,
         "mode": compact_policy_detail(status.get("mode"), max_length=120)
         or "unknown",
         "loop_running": loop_running,
@@ -1079,6 +1130,8 @@ def publisher_cockpit_summary(status: dict[str, Any]) -> dict[str, Any]:
         "operator_attention_reasons": attention_reasons,
         "operator_attention_primary_reason": primary_attention_reason,
         "operator_attention_label": operator_attention_label(primary_attention_reason),
+        "business_hours": business_hours,
+        "business_hours_pause": business_hours_pause,
         "artifact_health": artifact_health_status,
         "artifact_health_summary": artifact_health_text,
         "artifact_count": artifact_counts["artifact_count"],
@@ -1281,6 +1334,7 @@ def publisher_source_health(status: dict[str, Any]) -> dict[str, Any]:
     cockpit_summary = as_dict(status.get("cockpit_summary"))
     bridge_summary = as_dict(status.get("bridge_summary"))
     bridge_health = as_dict(bridge_summary.get("bridge_health"))
+    business_hours_pause = business_hours_pause_active(status)
     status_value, status_value_invalid = normalize_source_status_value(
         status.get("status")
     )
@@ -1307,7 +1361,7 @@ def publisher_source_health(status: dict[str, Any]) -> dict[str, Any]:
         and not source_timestamp_future
     ):
         reasons.append("source_status_stale")
-    if status.get("loop_running") is False:
+    if status.get("loop_running") is False and not business_hours_pause:
         reasons.append("source_loop_not_running")
     if "autonomy_policy_failed" in cockpit_attention_reasons:
         reasons.append("source_autonomy_policy_failed")
@@ -1370,6 +1424,8 @@ def publisher_source_health(status: dict[str, Any]) -> dict[str, Any]:
     primary_reason = reasons[0] if reasons else None
     health_status = "degraded" if reasons else "live"
     label = source_health_label(primary_reason)
+    if primary_reason is None and business_hours_pause:
+        label = "Scheduled pause"
     cockpit_attention_label = compact_text(cockpit_summary.get("operator_attention_label"))
     if primary_reason == "source_cockpit_attention" and cockpit_attention_label is not None:
         label = cockpit_attention_label
@@ -1559,6 +1615,9 @@ def source_status_log_fields(payload: dict[str, Any]) -> dict[str, Any]:
     cockpit_summary = status.get("cockpit_summary")
     if not isinstance(cockpit_summary, dict):
         cockpit_summary = {}
+    business_hours = cockpit_summary.get("business_hours")
+    if not isinstance(business_hours, dict):
+        business_hours = {}
     bridge_summary = status.get("bridge_summary")
     if not isinstance(bridge_summary, dict):
         bridge_summary = {}
@@ -1611,7 +1670,21 @@ def source_status_log_fields(payload: dict[str, Any]) -> dict[str, Any]:
         "source_status_remote_omitted_field_count": compact_int(
             status.get("source_status_remote_omitted_field_count")
         ),
-        "source_health_status": compact_policy_detail(source_health.get("status"), max_length=80),
+        "source_business_hours_paused": cockpit_summary.get("business_hours_pause")
+        if isinstance(cockpit_summary.get("business_hours_pause"), bool)
+        else None,
+        "source_business_hours_timezone": compact_policy_detail(
+            business_hours.get("timezone"),
+            max_length=120,
+        ),
+        "source_business_hours_next_start_at": compact_policy_detail(
+            business_hours.get("next_start_at"),
+            max_length=120,
+        ),
+        "source_health_status": compact_policy_detail(
+            source_health.get("status"),
+            max_length=80,
+        ),
         "source_health_primary_reason": compact_policy_detail(
             source_health.get("primary_reason"),
             max_length=120,
@@ -1823,6 +1896,9 @@ SOURCE_STATUS_LOG_FIELD_NAMES = (
     "source_status_file_status",
     "source_status_file_error",
     "source_status_remote_omitted_field_count",
+    "source_business_hours_paused",
+    "source_business_hours_timezone",
+    "source_business_hours_next_start_at",
     "source_health_status",
     "source_health_primary_reason",
     "source_health_label",
