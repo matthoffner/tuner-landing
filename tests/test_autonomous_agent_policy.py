@@ -48,6 +48,10 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
                 "ready_for_next_import_records": True,
             },
             "coverage": {
+                "latest_thin_counts": {
+                    "result_states": 0,
+                    "failure_reasons": 0,
+                },
                 "thin_groups": {
                     "result_states": [],
                     "failure_reasons": [],
@@ -74,6 +78,13 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
         self.assertFalse(snapshot["synthetic_example_local_dallas_appends_allowed"])
         self.assertEqual(snapshot["thin_group_count"], 0)
         self.assertEqual(snapshot["thin_group_categories"], [])
+        self.assertEqual(
+            snapshot["coverage_latest_thin_counts"],
+            {
+                "result_states": "0",
+                "failure_reasons": "0",
+            },
+        )
 
     def test_policy_snapshot_focuses_readiness_when_thin_groups_remain(self) -> None:
         self.loop.import_pipeline_snapshot = lambda: {
@@ -96,6 +107,43 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
         self.assertFalse(snapshot["dallas_pipeline_ready"])
         self.assertEqual(snapshot["thin_group_count"], 1)
         self.assertEqual(snapshot["thin_group_categories"], ["result_states"])
+
+    def test_policy_snapshot_honors_latest_thin_counts_when_groups_are_empty(self) -> None:
+        self.loop.import_pipeline_snapshot = lambda: {
+            "execution_readiness": {
+                "status": "ready",
+                "ready_for_next_import_records": True,
+            },
+            "coverage": {
+                "latest_thin_counts": {
+                    "result_states": 0,
+                    "failure_reasons": 2,
+                    "pattern_slices": 0,
+                },
+                "thin_groups": {
+                    "result_states": [],
+                    "failure_reasons": [],
+                    "pattern_slices": [],
+                },
+            },
+        }
+
+        snapshot = self.loop.autonomy_policy_snapshot()
+
+        self.assertEqual(snapshot["current_focus"], "fix_import_readiness_blockers")
+        self.assertEqual(snapshot["decision_reason"], "coverage_thin_groups_present")
+        self.assertFalse(snapshot["dallas_pipeline_ready"])
+        self.assertEqual(snapshot["thin_group_count"], 2)
+        self.assertEqual(snapshot["thin_group_category_count"], 1)
+        self.assertEqual(snapshot["thin_group_categories"], ["failure_reasons"])
+        self.assertEqual(
+            snapshot["coverage_latest_thin_counts"],
+            {
+                "result_states": "0",
+                "failure_reasons": "2",
+                "pattern_slices": "0",
+            },
+        )
 
     def test_policy_snapshot_reports_readiness_blockers_when_not_ready(self) -> None:
         self.loop.import_pipeline_snapshot = lambda: {

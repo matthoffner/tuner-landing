@@ -838,6 +838,17 @@ def synthetic_dallas_appends_allowed_by_policy() -> bool:
     return snapshot.get("synthetic_example_local_dallas_appends_allowed") is True
 
 
+def policy_thin_count(value: Any) -> int:
+    """Return a conservative nonnegative thin-count value for policy routing."""
+    if isinstance(value, bool):
+        return int(value)
+    if isinstance(value, int):
+        return max(0, value)
+    if isinstance(value, float) and math.isfinite(value):
+        return max(0, math.ceil(value))
+    return 0
+
+
 def autonomy_policy_snapshot() -> dict[str, Any]:
     import_pipeline = import_pipeline_snapshot()
     import_pipeline_status = import_pipeline.get("status")
@@ -848,14 +859,26 @@ def autonomy_policy_snapshot() -> dict[str, Any]:
         readiness = {}
     if not isinstance(thin_groups, dict):
         thin_groups = {}
+    latest_thin_counts = coverage.get("latest_thin_counts", {})
+    if not isinstance(latest_thin_counts, dict):
+        latest_thin_counts = {}
     raw_blockers = readiness.get("blockers", [])
     blockers = raw_blockers if isinstance(raw_blockers, list) else []
-    thin_group_count = sum(
+    thin_group_item_count = sum(
         len(value) for value in thin_groups.values() if isinstance(value, list)
     )
-    raw_thin_group_categories = sorted(
-        key for key, value in thin_groups.items() if isinstance(value, list) and value
+    latest_thin_count_total = sum(
+        policy_thin_count(value) for value in latest_thin_counts.values()
     )
+    latest_thin_categories = {
+        key
+        for key, value in latest_thin_counts.items()
+        if policy_thin_count(value) > 0
+    }
+    raw_thin_group_categories = sorted({
+        key for key, value in thin_groups.items() if isinstance(value, list) and value
+    } | latest_thin_categories)
+    thin_group_count = max(thin_group_item_count, latest_thin_count_total)
     ready = (
         readiness.get("ready_for_next_import_records") is True
         and readiness.get("status") == "ready"
@@ -888,6 +911,7 @@ def autonomy_policy_snapshot() -> dict[str, Any]:
         "thin_group_count": thin_group_count,
         "thin_group_category_count": len(raw_thin_group_categories),
         "thin_group_categories": bounded_sanitized_policy_list(raw_thin_group_categories),
+        "coverage_latest_thin_counts": bounded_sanitized_policy_map(latest_thin_counts),
         "policy": (
             "When Dallas readiness is already green, do not append another "
             "synthetic ELZ fixture row unless paired with a real product, "
