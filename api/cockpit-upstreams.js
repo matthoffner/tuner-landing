@@ -18,6 +18,8 @@ const EXPOSED_UPSTREAM_HEADERS = [
   "X-Automoat-Upstream-Not-Configured",
 ].join(", ");
 const NOT_CONFIGURED_UPSTREAMS_HEADER = "relay,legacy_bridge";
+const MAX_UPSTREAM_HEADER_PART_CHARS = 120;
+const SENSITIVE_HEADER_ASSIGNMENT_RE = /\b(access_token|api_key|codex_access_token|gh_token|github_token|password|passwd|relay_token|secret|token|key)=\S+/gi;
 
 function normalizeBaseUrl(value, options = {}) {
   const rawValue = String(value || "");
@@ -243,32 +245,41 @@ function upstreamFetchFailureAttempt(kind, error) {
 }
 
 function upstreamAttemptSummary(attempt) {
-  const kind = attempt.kind || "unknown";
+  const kind = compactUpstreamHeaderPart(attempt.kind || "unknown");
   if (Number.isInteger(attempt.status)) {
     return attempt.error
-      ? `${kind}:${attempt.status}:${attempt.error}`
+      ? `${kind}:${attempt.status}:${compactUpstreamHeaderPart(attempt.error)}`
       : `${kind}:${attempt.status}`;
   }
   if (attempt.error) {
-    return `${kind}:${attempt.error}`;
+    return `${kind}:${compactUpstreamHeaderPart(attempt.error)}`;
   }
   if (attempt.message) {
-    return `${kind}:${attempt.message}`;
+    return `${kind}:${compactUpstreamHeaderPart(attempt.message)}`;
   }
   return kind;
+}
+
+function compactUpstreamHeaderPart(value) {
+  const text = String(value || "")
+    .replace(SENSITIVE_HEADER_ASSIGNMENT_RE, (_match, key) => `${key}=[redacted]`)
+    .replace(/[\r\n,]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return (text || "unknown").slice(0, MAX_UPSTREAM_HEADER_PART_CHARS);
 }
 
 function upstreamAttemptsHeader(attempts) {
   return attempts
     .map((attempt) => {
-      const kind = attempt.kind || "unknown";
+      const kind = compactUpstreamHeaderPart(attempt.kind || "unknown");
       if (Number.isInteger(attempt.status)) {
         return attempt.error
-          ? `${kind}:${attempt.status}:${attempt.error}`
+          ? `${kind}:${attempt.status}:${compactUpstreamHeaderPart(attempt.error)}`
           : `${kind}:${attempt.status}`;
       }
       if (attempt.error) {
-        return `${kind}:${attempt.error}`;
+        return `${kind}:${compactUpstreamHeaderPart(attempt.error)}`;
       }
       if (attempt.message) {
         return `${kind}:${classifyUpstreamError(attempt)}`;
@@ -313,8 +324,8 @@ function upstreamErrorHeader(upstreamKind, attempts) {
 function invalidUpstreamsHeader(invalid) {
   return invalid
     .map((item) => {
-      const kind = item.kind || "unknown";
-      const error = String(item.error || "invalid_configuration").replace(/[\r\n]/g, " ");
+      const kind = compactUpstreamHeaderPart(item.kind || "unknown");
+      const error = compactUpstreamHeaderPart(item.error || "invalid_configuration");
       return `${kind}:${error}`;
     })
     .join(",");
@@ -614,10 +625,12 @@ module.exports = {
   ALLOWED_PROXY_METHODS,
   DEFAULT_UPSTREAM_TIMEOUT_MS,
   EXPOSED_UPSTREAM_HEADERS,
+  MAX_UPSTREAM_HEADER_PART_CHARS,
   MAX_RELAY_TOKEN_CHARS,
   MAX_UPSTREAM_TIMEOUT_MS,
   NOT_CONFIGURED_UPSTREAMS_HEADER,
   classifyUpstreamError,
+  compactUpstreamHeaderPart,
   fetchUpstreamText,
   explicitPortValue,
   invalidExplicitPortError,

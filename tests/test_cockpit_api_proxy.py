@@ -573,6 +573,9 @@ class CockpitApiProxyTest(unittest.TestCase):
             const {
               ALLOWED_PROXY_METHODS,
               EXPOSED_UPSTREAM_HEADERS,
+              MAX_UPSTREAM_HEADER_PART_CHARS,
+              compactUpstreamHeaderPart,
+              invalidUpstreamsHeader,
               sendMethodNotAllowed,
               sendOptionsResponse,
               sendProxyResponse,
@@ -688,6 +691,34 @@ class CockpitApiProxyTest(unittest.TestCase):
               "http_503",
             );
             assert.strictEqual(upstreamErrorHeader("not_configured", []), "not_configured");
+
+            const longError = "x".repeat(MAX_UPSTREAM_HEADER_PART_CHARS + 10);
+            assert.strictEqual(
+              compactUpstreamHeaderPart(" bad\\r\\nvalue, next "),
+              "bad value next",
+            );
+            assert.strictEqual(
+              compactUpstreamHeaderPart(longError).length,
+              MAX_UPSTREAM_HEADER_PART_CHARS,
+            );
+            assert.strictEqual(
+              invalidUpstreamsHeader([{
+                kind: "relay\\nkind",
+                error: "bad\\r\\nconfig, token=secret",
+              }]),
+              "relay kind:bad config token=[redacted]",
+            );
+            assert.strictEqual(
+              setUpstreamSelectionHeaders(getResponse, "unreachable", 1, [
+                { kind: "relay\\r\\nextra", status: 503, error: "bad\\nstatus,next" },
+                { kind: "legacy_bridge", message: "boom\\nsecret" },
+              ]),
+              undefined,
+            );
+            assert.strictEqual(
+              getResponse.headers["X-Automoat-Upstream-Attempts"],
+              "relay extra:503:bad status next,legacy_bridge:fetch_error",
+            );
             """
         )
 
@@ -1096,7 +1127,7 @@ class CockpitApiProxyTest(unittest.TestCase):
               assert(!statusResponse.body.includes("legacy-bridge.example"));
               assert.strictEqual(
                 statusResponse.headers["X-Automoat-Upstream-Invalid-Config"],
-                "legacy_bridge:must use https:// unless the host is localhost, 127.0.0.1, or ::1",
+                "legacy_bridge:must use https:// unless the host is localhost 127.0.0.1 or ::1",
               );
               assert.strictEqual(
                 statusResponse.headers["X-Automoat-Upstream-Invalid-Keys"],
@@ -1112,7 +1143,7 @@ class CockpitApiProxyTest(unittest.TestCase):
               assert(!logResponse.body.includes("legacy-bridge.example"));
               assert.strictEqual(
                 logResponse.headers["X-Automoat-Upstream-Invalid-Config"],
-                "legacy_bridge:must use https:// unless the host is localhost, 127.0.0.1, or ::1",
+                "legacy_bridge:must use https:// unless the host is localhost 127.0.0.1 or ::1",
               );
               assert.strictEqual(
                 logResponse.headers["X-Automoat-Upstream-Invalid-Keys"],
