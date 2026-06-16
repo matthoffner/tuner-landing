@@ -562,6 +562,17 @@ def operator_attention_label(reason: str | None) -> str:
     return OPERATOR_ATTENTION_LABELS.get(reason, reason.replace("_", " "))
 
 
+def normalize_source_status_value(value: Any) -> tuple[str, bool]:
+    if value is None:
+        return "waiting", False
+    if not isinstance(value, str):
+        return "invalid-status-value", True
+    compact_value = compact_policy_detail(value, max_length=80)
+    if compact_value is None:
+        return "waiting", True
+    return compact_value, False
+
+
 def failed_autonomy_policy_step(status: dict[str, Any]) -> dict[str, Any] | None:
     step = latest_autonomy_policy_step(status)
     if step is not None and step.get("exit_status") != 0:
@@ -704,7 +715,12 @@ def publisher_cockpit_summary(status: dict[str, Any]) -> dict[str, Any]:
     if passed_checks is not None and total_checks is not None:
         contract_checks = f"{passed_checks}/{total_checks}"
 
-    status_value = status.get("status") or "waiting"
+    status_value, status_value_invalid = normalize_source_status_value(
+        status.get("status")
+    )
+    status_value_invalid = (
+        status_value_invalid or status.get("source_status_value_invalid") is True
+    )
     loop_running = bool(status.get("loop_running"))
     artifact_health_status = artifact_health.get("status") or "unknown"
     artifact_statuses = artifact_status_summary(artifact_health.get("statuses"))
@@ -868,7 +884,12 @@ def publisher_cockpit_summary(status: dict[str, Any]) -> dict[str, Any]:
         attention_reasons.append("loop_not_running")
     if policy_failure:
         attention_reasons.append("autonomy_policy_failed")
-    if status_value in {"error", "failing", "invalid-status-json"}:
+    if status_value in {
+        "error",
+        "failing",
+        "invalid-status-json",
+        "invalid-status-value",
+    }:
         attention_reasons.append("status_failing")
     source_status_timestamp_invalid = status.get("source_status_timestamp_invalid") is True
     source_status_timestamp_future = status.get("source_status_timestamp_future") is True
@@ -905,6 +926,7 @@ def publisher_cockpit_summary(status: dict[str, Any]) -> dict[str, Any]:
         "status_stale": status.get("source_status_stale"),
         "status_timestamp_invalid": source_status_timestamp_invalid,
         "status_timestamp_future": source_status_timestamp_future,
+        "status_value_invalid": status_value_invalid,
         "operator_attention": bool(attention_reasons),
         "operator_attention_reasons": attention_reasons,
         "operator_attention_primary_reason": primary_attention_reason,
@@ -976,6 +998,11 @@ def read_status(
         "updated_at": None,
     }
     status = dict(status)
+    normalized_status_value, status_value_invalid = normalize_source_status_value(
+        status.get("status")
+    )
+    status["status"] = normalized_status_value
+    status["source_status_value_invalid"] = status_value_invalid
     status.update(source_file_metadata)
     status.update(status_freshness(status, status_stale_after_seconds))
     pid = local_loop_pid(pid_file)
@@ -1089,6 +1116,9 @@ def publisher_source_health(status: dict[str, Any]) -> dict[str, Any]:
     cockpit_summary = as_dict(status.get("cockpit_summary"))
     bridge_summary = as_dict(status.get("bridge_summary"))
     bridge_health = as_dict(bridge_summary.get("bridge_health"))
+    status_value, status_value_invalid = normalize_source_status_value(
+        status.get("status")
+    )
     cockpit_attention_reasons = as_string_list(
         cockpit_summary.get("operator_attention_reasons")
     )
@@ -1109,7 +1139,11 @@ def publisher_source_health(status: dict[str, Any]) -> dict[str, Any]:
         reasons.append("source_loop_not_running")
     if "autonomy_policy_failed" in cockpit_attention_reasons:
         reasons.append("source_autonomy_policy_failed")
-    if status.get("status") in {"error", "failing"}:
+    if (
+        status_value in {"error", "failing", "invalid-status-value"}
+        or status.get("source_status_value_invalid") is True
+        or status_value_invalid
+    ):
         reasons.append("source_status_failing")
     if (
         bridge_summary.get("available") is True

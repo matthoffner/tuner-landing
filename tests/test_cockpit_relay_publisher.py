@@ -1616,6 +1616,56 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertTrue(status["source_status_stale"])
         self.assertNotIn("passed_checks", status_text)
 
+    def test_read_status_routes_malformed_status_value_without_crashing(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            status_file = tmp_path / "status.json"
+            status_file.write_text(
+                json.dumps(
+                    {
+                        "status": {
+                            "state": "passing",
+                            "token": "status-secret",
+                        },
+                        "updated_at": "2026-06-14T19:30:00Z",
+                        "artifacts": {
+                            "artifact_health": {"status": "loaded"},
+                            "import_pipeline": {
+                                "execution_readiness": {
+                                    "status": "ready",
+                                    "blockers": [],
+                                }
+                            },
+                        },
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            self.publisher.utc_now = lambda: "2026-06-14T19:31:00Z"
+            self.publisher.local_loop_pid = lambda _pid_file: 4242
+
+            status = self.publisher.read_status(
+                status_file,
+                tmp_path / "loop.pid",
+                status_stale_after_seconds=120,
+            )
+
+        status_text = json.dumps(status, sort_keys=True)
+        summary = status["cockpit_summary"]
+        self.assertEqual(status["source_status_file_status"], "loaded")
+        self.assertEqual(status["status"], "invalid-status-value")
+        self.assertTrue(status["source_status_value_invalid"])
+        self.assertEqual(summary["status"], "invalid-status-value")
+        self.assertTrue(summary["status_value_invalid"])
+        self.assertEqual(summary["operator_attention_reasons"], ["status_failing"])
+        self.assertEqual(summary["operator_attention_label"], "Loop status is failing")
+        self.assertEqual(
+            self.publisher.publisher_source_health(status)["reasons"],
+            ["source_status_failing", "source_cockpit_attention"],
+        )
+        self.assertNotIn("status-secret", status_text)
+
     def test_read_status_masks_local_path_in_read_error(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
