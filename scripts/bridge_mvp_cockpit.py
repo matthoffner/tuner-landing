@@ -26,6 +26,7 @@ BRIDGE_STATUS = STATE_DIR / "mvp-bridge-status.json"
 BRIDGE_PID = STATE_DIR / "mvp-bridge.pid"
 STARTUP_OUTPUT_TIMEOUT_SECONDS = 0.5
 STARTUP_OUTPUT_MAX_CHARS = 4000
+MAX_NGROK_API_RESPONSE_BYTES = 64 * 1024
 BRIDGE_HEALTH_LABELS = {
     "bridge_status_unknown": "Bridge status is unknown",
     "viewer_start_failed": "Read-only viewer failed to start",
@@ -199,9 +200,13 @@ def stop_and_collect_output(
 def http_json(url: str) -> dict[str, object] | None:
     try:
         with urlopen(url, timeout=1.5) as response:
-            return json.loads(response.read().decode("utf-8"))
+            body = response.read(MAX_NGROK_API_RESPONSE_BYTES + 1)
+            if len(body) > MAX_NGROK_API_RESPONSE_BYTES:
+                return None
+            payload = json.loads(body.decode("utf-8"))
     except Exception:
         return None
+    return payload if isinstance(payload, dict) else None
 
 
 def wait_for_read_only_server(port: int, timeout: float = 10.0) -> bool:

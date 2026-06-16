@@ -74,6 +74,22 @@ class SlowStartupProcess:
         return self.output, None
 
 
+class FakeHttpResponse:
+    def __init__(self, body: bytes) -> None:
+        self.body = body
+        self.read_sizes: list[int] = []
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args) -> None:  # noqa: ANN002 - mirrors context manager protocol.
+        return None
+
+    def read(self, size: int = -1) -> bytes:
+        self.read_sizes.append(size)
+        return self.body if size < 0 else self.body[:size]
+
+
 class BridgeMvpCockpitTest(unittest.TestCase):
     def setUp(self) -> None:
         self.bridge = load_bridge_module()
@@ -349,6 +365,32 @@ class BridgeMvpCockpitTest(unittest.TestCase):
             public_url = self.bridge.wait_for_ngrok_url(4041, timeout=0.1)
 
         self.assertEqual(public_url, "https://automoat-test.ngrok.app")
+
+    def test_http_json_reads_ngrok_api_response_with_byte_cap(self) -> None:
+        response = FakeHttpResponse(b'{"tunnels":[]}')
+
+        with patch.object(self.bridge, "urlopen", return_value=response):
+            payload = self.bridge.http_json("http://127.0.0.1:4041/api/tunnels")
+
+        self.assertEqual(payload, {"tunnels": []})
+        self.assertEqual(response.read_sizes, [self.bridge.MAX_NGROK_API_RESPONSE_BYTES + 1])
+
+    def test_http_json_rejects_oversized_ngrok_api_response(self) -> None:
+        response = FakeHttpResponse(b"x" * (self.bridge.MAX_NGROK_API_RESPONSE_BYTES + 1))
+
+        with patch.object(self.bridge, "urlopen", return_value=response):
+            payload = self.bridge.http_json("http://127.0.0.1:4041/api/tunnels")
+
+        self.assertIsNone(payload)
+        self.assertEqual(response.read_sizes, [self.bridge.MAX_NGROK_API_RESPONSE_BYTES + 1])
+
+    def test_http_json_rejects_non_object_ngrok_api_response(self) -> None:
+        response = FakeHttpResponse(b'["not", "a", "tunnel", "payload"]')
+
+        with patch.object(self.bridge, "urlopen", return_value=response):
+            payload = self.bridge.http_json("http://127.0.0.1:4041/api/tunnels")
+
+        self.assertIsNone(payload)
 
     def test_main_passes_configured_web_addr_to_ngrok(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
