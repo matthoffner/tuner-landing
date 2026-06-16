@@ -324,6 +324,139 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
         self.assertNotIn("summary-secret", failure_json)
         self.assertNotIn("message-secret", failure_json)
 
+    def test_status_payload_promotes_import_readiness_failure_summary(self) -> None:
+        self.loop.utc_now = lambda: "2026-06-16T02:10:00Z"
+        self.loop.inspect_artifacts = lambda: {"artifact_health": {"status": "loaded"}}
+        self.loop.autonomy_policy_snapshot = lambda: {
+            "current_focus": "fix_import_readiness_blockers"
+        }
+        self.loop.git_state = lambda: {"dirty_count_excluding_preview": 0}
+        self.loop.coordination_snapshot = lambda: {
+            "handoff_path": ".pixelbox/handoff.md",
+            "latest_handoff_status": "readiness check failed",
+        }
+        self.loop.import_pipeline_snapshot = lambda: {
+            "status": "loaded",
+            "summary_path": "generated/pipeline/dallas-import-pipeline-summary-v1/summary.json",
+            "execution_readiness": {
+                "status": "blocked",
+                "ready_for_next_import_records": False,
+                "blockers": [
+                    "correction token=secret-one",
+                    "see https://user:pass@example.local/dallas?token=secret-two",
+                ],
+            },
+        }
+
+        payload = self.loop.status_payload(
+            "run-1",
+            3,
+            "failing",
+            "import_readiness_failed",
+            "2026-06-16T02:09:00Z",
+            [],
+            "Dallas import execution readiness check failed token=message-secret",
+        )
+
+        self.assertEqual(
+            payload["failure"],
+            {
+                "phase": "import_readiness_failed",
+                "message": (
+                    "Dallas import execution readiness check failed token=<redacted>"
+                ),
+                "category": "import_readiness",
+                "route_hint": "dallas_import_readiness",
+                "import_pipeline_status": "loaded",
+                "import_pipeline_summary_path": (
+                    "generated/pipeline/dallas-import-pipeline-summary-v1/summary.json"
+                ),
+                "readiness_status": "blocked",
+                "ready_for_next_import_records": False,
+                "readiness_blocker_count": 2,
+                "readiness_blockers": [
+                    "correction token=<redacted>",
+                    "see https://example.local/dallas",
+                ],
+            },
+        )
+        failure_json = json.dumps(payload["failure"], sort_keys=True)
+        self.assertNotIn("secret-one", failure_json)
+        self.assertNotIn("user:pass", failure_json)
+        self.assertNotIn("secret-two", failure_json)
+        self.assertNotIn("message-secret", failure_json)
+
+    def test_status_payload_promotes_artifact_health_failure_summary(self) -> None:
+        self.loop.utc_now = lambda: "2026-06-16T02:10:00Z"
+        self.loop.inspect_artifacts = lambda: {
+            "artifact_health": {
+                "status": "degraded",
+                "summary": "status=degraded loaded=3/4 degraded=1",
+            }
+        }
+        self.loop.autonomy_policy_snapshot = lambda: {
+            "current_focus": "autonomy_visibility_or_real_ingest"
+        }
+        self.loop.git_state = lambda: {"dirty_count_excluding_preview": 0}
+        self.loop.coordination_snapshot = lambda: {
+            "handoff_path": ".pixelbox/handoff.md",
+            "latest_handoff_status": "artifact check failed",
+        }
+        artifact_step = {
+            "name": "cockpit artifact health check",
+            "exit_status": 1,
+            "artifact_health_status": "degraded",
+            "artifact_health_summary": (
+                "status=degraded token=summary-secret loaded=3/4 degraded=1"
+            ),
+            "degraded_artifacts": [
+                "coverage",
+                "import_pipeline token=artifact-secret",
+            ],
+            "artifact_statuses": {
+                "contract": "loaded",
+                "coverage": "invalid token=status-secret",
+                "import_pipeline": "loaded",
+            },
+        }
+
+        payload = self.loop.status_payload(
+            "run-1",
+            3,
+            "failing",
+            "artifact_health_failed",
+            "2026-06-16T02:09:00Z",
+            [artifact_step],
+            "Cockpit artifact health is degraded token=message-secret",
+        )
+
+        self.assertEqual(
+            payload["failure"],
+            {
+                "phase": "artifact_health_failed",
+                "message": "Cockpit artifact health is degraded token=<redacted>",
+                "category": "artifact_health",
+                "route_hint": "cockpit_artifact_health",
+                "artifact_health_status": "degraded",
+                "summary": "status=degraded token=<redacted> loaded=3/4 degraded=1",
+                "degraded_artifact_count": 2,
+                "degraded_artifacts": [
+                    "coverage",
+                    "import_pipeline token=<redacted>",
+                ],
+                "artifact_statuses": {
+                    "contract": "loaded",
+                    "coverage": "invalid token=<redacted>",
+                    "import_pipeline": "loaded",
+                },
+            },
+        )
+        failure_json = json.dumps(payload["failure"], sort_keys=True)
+        self.assertNotIn("summary-secret", failure_json)
+        self.assertNotIn("artifact-secret", failure_json)
+        self.assertNotIn("status-secret", failure_json)
+        self.assertNotIn("message-secret", failure_json)
+
     def test_docs_and_status_files_do_not_make_synthetic_rows_productive(self) -> None:
         paths = [
             "README.md",

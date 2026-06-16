@@ -603,6 +603,17 @@ def bounded_sanitized_policy_list(values: list[Any]) -> list[str]:
     ]
 
 
+def bounded_sanitized_policy_map(value: Any) -> dict[str, str]:
+    """Return a bounded secret-safe string map for routeable status payloads."""
+    if not isinstance(value, dict):
+        return {}
+    items = list(value.items())[:MAX_POLICY_LIST_ITEMS]
+    return {
+        sanitized_policy_detail(str(key)): sanitized_policy_detail(str(item_value))
+        for key, item_value in items
+    }
+
+
 def sanitized_policy_scalar(value: Any) -> Any:
     """Return a secret-safe scalar policy value while preserving missing values."""
     if value is None:
@@ -880,6 +891,65 @@ def status_failure_snapshot(
                         "productive_changed_path_count",
                         len(policy_step.get("productive_changed_paths") or []),
                     )
+                ),
+            }
+        )
+    elif phase == "import_readiness_failed":
+        import_pipeline = import_pipeline_snapshot()
+        readiness = import_pipeline.get("execution_readiness", {})
+        if not isinstance(readiness, dict):
+            readiness = {}
+        blockers = readiness.get("blockers", [])
+        if not isinstance(blockers, list):
+            blockers = []
+        failure.update(
+            {
+                "category": "import_readiness",
+                "route_hint": "dallas_import_readiness",
+                "import_pipeline_status": sanitized_policy_scalar(
+                    import_pipeline.get("status")
+                ),
+                "import_pipeline_summary_path": sanitized_policy_scalar(
+                    import_pipeline.get("summary_path")
+                ),
+                "readiness_status": sanitized_policy_scalar(readiness.get("status")),
+                "ready_for_next_import_records": readiness.get(
+                    "ready_for_next_import_records"
+                ),
+                "readiness_blocker_count": len(blockers),
+                "readiness_blockers": bounded_sanitized_policy_list(blockers),
+            }
+        )
+    elif phase == "artifact_health_failed":
+        artifact_step = next(
+            (
+                step
+                for step in reversed(steps)
+                if step.get("name") == "cockpit artifact health check"
+            ),
+            None,
+        )
+        if not isinstance(artifact_step, dict):
+            artifact_step = {}
+        degraded_artifacts = artifact_step.get("degraded_artifacts", [])
+        if not isinstance(degraded_artifacts, list):
+            degraded_artifacts = []
+        failure.update(
+            {
+                "category": "artifact_health",
+                "route_hint": "cockpit_artifact_health",
+                "artifact_health_status": sanitized_policy_scalar(
+                    artifact_step.get("artifact_health_status")
+                ),
+                "summary": sanitized_policy_scalar(
+                    artifact_step.get("artifact_health_summary")
+                ),
+                "degraded_artifact_count": len(degraded_artifacts),
+                "degraded_artifacts": bounded_sanitized_policy_list(
+                    degraded_artifacts
+                ),
+                "artifact_statuses": bounded_sanitized_policy_map(
+                    artifact_step.get("artifact_statuses")
                 ),
             }
         )
