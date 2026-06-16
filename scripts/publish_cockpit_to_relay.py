@@ -1295,11 +1295,17 @@ def publisher_source_health(status: dict[str, Any]) -> dict[str, Any]:
         "too_large",
     }:
         reasons.append("source_status_unavailable")
-    if status.get("source_status_timestamp_invalid") is True:
+    source_timestamp_invalid = status.get("source_status_timestamp_invalid") is True
+    source_timestamp_future = status.get("source_status_timestamp_future") is True
+    if source_timestamp_invalid:
         reasons.append("source_status_timestamp_invalid")
-    if status.get("source_status_timestamp_future") is True:
+    if source_timestamp_future:
         reasons.append("source_status_timestamp_future")
-    if status.get("source_status_stale") is True:
+    if (
+        status.get("source_status_stale") is True
+        and not source_timestamp_invalid
+        and not source_timestamp_future
+    ):
         reasons.append("source_status_stale")
     if status.get("loop_running") is False:
         reasons.append("source_loop_not_running")
@@ -1312,19 +1318,23 @@ def publisher_source_health(status: dict[str, Any]) -> dict[str, Any]:
         or status.get("status") == "invalid-status-json"
     ):
         reasons.append("source_status_failing")
-    if (
+    bridge_timestamp_invalid = (
         bridge_summary.get("available") is True
         and bridge_summary.get("bridge_status_timestamp_invalid") is True
-    ):
-        reasons.append("source_bridge_status_timestamp_invalid")
-    elif (
+    )
+    bridge_timestamp_future = (
         bridge_summary.get("available") is True
         and bridge_summary.get("bridge_status_timestamp_future") is True
-    ):
+    )
+    if bridge_timestamp_invalid:
+        reasons.append("source_bridge_status_timestamp_invalid")
+    elif bridge_timestamp_future:
         reasons.append("source_bridge_status_timestamp_future")
     elif (
         bridge_summary.get("available") is True
         and bridge_summary.get("bridge_status_stale") is True
+        and not bridge_timestamp_invalid
+        and not bridge_timestamp_future
     ):
         reasons.append("source_bridge_status_stale")
     if bridge_summary.get("status_file_status") in {

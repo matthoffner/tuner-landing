@@ -1907,10 +1907,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             {
                 "status": "degraded",
                 "ok": False,
-                "reasons": [
-                    "source_status_timestamp_invalid",
-                    "source_status_stale",
-                ],
+                "reasons": ["source_status_timestamp_invalid"],
                 "primary_reason": "source_status_timestamp_invalid",
                 "label": "Source status timestamp is invalid",
             },
@@ -1932,10 +1929,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             {
                 "status": "degraded",
                 "ok": False,
-                "reasons": [
-                    "source_status_timestamp_future",
-                    "source_status_stale",
-                ],
+                "reasons": ["source_status_timestamp_future"],
                 "primary_reason": "source_status_timestamp_future",
                 "label": "Source status timestamp is in the future",
             },
@@ -2032,6 +2026,55 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 "label": "Source bridge status is stale",
             },
         )
+
+    def test_publisher_source_health_suppresses_bridge_stale_for_timestamp_errors(self) -> None:
+        for timestamp_field, expected_reason, expected_label in (
+            (
+                "bridge_status_timestamp_invalid",
+                "source_bridge_status_timestamp_invalid",
+                "Source bridge status timestamp is invalid",
+            ),
+            (
+                "bridge_status_timestamp_future",
+                "source_bridge_status_timestamp_future",
+                "Source bridge status is in the future",
+            ),
+        ):
+            with self.subTest(timestamp_field=timestamp_field):
+                status = {
+                    "status": "passing",
+                    "loop_running": True,
+                    "source_status_stale": False,
+                    "source_status_file_status": "loaded",
+                    "bridge_summary": {
+                        "available": True,
+                        "status_file_status": "loaded",
+                        "bridge_status_stale": True,
+                        "bridge_status_timestamp_invalid": False,
+                        "bridge_status_timestamp_future": False,
+                        timestamp_field: True,
+                        "bridge_health": {
+                            "status": "live",
+                            "ok": True,
+                            "reasons": [],
+                            "primary_reason": None,
+                            "label": "Live",
+                        },
+                    },
+                }
+
+                health = self.publisher.publisher_source_health(status)
+
+                self.assertEqual(
+                    health,
+                    {
+                        "status": "degraded",
+                        "ok": False,
+                        "reasons": [expected_reason],
+                        "primary_reason": expected_reason,
+                        "label": expected_label,
+                    },
+                )
 
     def test_publisher_source_health_routes_unavailable_source_bridge_status(self) -> None:
         status = {
