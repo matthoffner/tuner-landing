@@ -111,7 +111,7 @@ PIPELINE_SUMMARY_OBJECT_SECTIONS = (
     "coverage",
     "latest_import",
 )
-URL_TOKEN_PATTERN = re.compile(r"https?://[^\s,]+", re.IGNORECASE)
+URL_TOKEN_PATTERN = re.compile(r"https?://[^\s,'\"<>\]\)]+", re.IGNORECASE)
 TOKEN_ASSIGNMENT_PATTERN = re.compile(
     r"\b([A-Za-z0-9_-]*(?:token|secret|password|api[_-]?key|access[_-]?key)"
     r"[A-Za-z0-9_-]*)=([^,\s;]+)",
@@ -1087,9 +1087,88 @@ def status_failure_snapshot(
                 "command": sanitized_policy_scalar(command_label),
             }
         )
+    elif phase == "failed":
+        failed_step = latest_failed_step(steps)
+        failed_substep = latest_failed_substep(failed_step)
+        route_step = failed_substep if failed_substep is not None else failed_step
+        failure.update(
+            {
+                "category": "post_codex_check",
+                "route_hint": post_codex_failure_route_hint(
+                    failed_step,
+                    failed_substep,
+                ),
+                "failed_step": sanitized_policy_scalar(
+                    failed_step.get("name") if failed_step else None
+                ),
+                "failed_step_exit_status": compact_exit_status(
+                    failed_step.get("exit_status") if failed_step else None
+                ),
+                "failed_substep": sanitized_policy_scalar(
+                    failed_substep.get("name") if failed_substep else None
+                ),
+                "failed_substep_exit_status": compact_exit_status(
+                    failed_substep.get("exit_status") if failed_substep else None
+                ),
+                "command": sanitized_policy_scalar(command_label_from_step(route_step)),
+            }
+        )
     else:
         failure["category"] = sanitized_policy_scalar(phase)
     return failure
+
+
+def latest_failed_step(steps: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """Return the latest top-level step with a nonzero exit status."""
+    for step in reversed(steps):
+        if isinstance(step, dict) and step.get("exit_status") != 0:
+            return step
+    return None
+
+
+def latest_failed_substep(step: dict[str, Any] | None) -> dict[str, Any] | None:
+    """Return the latest failed publish substep, if present."""
+    if not isinstance(step, dict):
+        return None
+    substeps = step.get("substeps")
+    if not isinstance(substeps, list):
+        return None
+    for substep in reversed(substeps):
+        if isinstance(substep, dict) and substep.get("exit_status") != 0:
+            return substep
+    return None
+
+
+def command_label_from_step(step: dict[str, Any] | None) -> str | None:
+    """Return a compact command label from a routeable step payload."""
+    if not isinstance(step, dict):
+        return None
+    command = step.get("command")
+    if isinstance(command, list) and all(isinstance(part, str) for part in command):
+        return command_log_text(command)
+    return None
+
+
+def post_codex_failure_route_hint(
+    failed_step: dict[str, Any] | None,
+    failed_substep: dict[str, Any] | None,
+) -> str:
+    """Return a stable route hint for failures after Codex has made changes."""
+    step_name = failed_step.get("name") if isinstance(failed_step, dict) else None
+    substep_name = (
+        failed_substep.get("name") if isinstance(failed_substep, dict) else None
+    )
+    if step_name == "git diff check":
+        return "git_diff_check_failed"
+    if step_name == "publish changes":
+        if substep_name == "stage autonomous changes":
+            return "publish_stage_failed"
+        if substep_name == "commit autonomous changes":
+            return "publish_commit_failed"
+        if substep_name == "push autonomous changes":
+            return "publish_push_failed"
+        return "publish_changes_failed"
+    return "post_codex_step_failed"
 
 
 def compact_exit_status(value: Any) -> int | None:

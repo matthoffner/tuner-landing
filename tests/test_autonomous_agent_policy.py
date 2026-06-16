@@ -587,6 +587,117 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
         self.assertNotIn("prompt-secret", failure_json)
         self.assertNotIn("message-secret", failure_json)
 
+    def test_status_payload_promotes_git_diff_check_failure_summary(self) -> None:
+        self.loop.utc_now = lambda: "2026-06-16T02:10:00Z"
+        self.loop.inspect_artifacts = lambda: {"artifact_health": {"status": "loaded"}}
+        self.loop.autonomy_policy_snapshot = lambda: {
+            "current_focus": "autonomy_visibility_or_real_ingest"
+        }
+        self.loop.git_state = lambda: {"dirty_count_excluding_preview": 1}
+        self.loop.coordination_snapshot = lambda: {
+            "handoff_path": ".pixelbox/handoff.md",
+            "latest_handoff_status": "diff check failed",
+        }
+        diff_step = {
+            "name": "git diff check",
+            "command": ["git", "diff", "--check", "token=command-secret"],
+            "exit_status": 2,
+            "seconds": 0.02,
+        }
+
+        payload = self.loop.status_payload(
+            "run-1",
+            3,
+            "failing",
+            "failed",
+            "2026-06-16T02:09:00Z",
+            [diff_step],
+            "Post-Codex check failed token=message-secret",
+        )
+
+        self.assertEqual(
+            payload["failure"],
+            {
+                "phase": "failed",
+                "message": "Post-Codex check failed token=<redacted>",
+                "category": "post_codex_check",
+                "route_hint": "git_diff_check_failed",
+                "failed_step": "git diff check",
+                "failed_step_exit_status": 2,
+                "failed_substep": None,
+                "failed_substep_exit_status": None,
+                "command": "git diff --check token=<redacted>",
+            },
+        )
+        failure_json = json.dumps(payload["failure"], sort_keys=True)
+        self.assertNotIn("command-secret", failure_json)
+        self.assertNotIn("message-secret", failure_json)
+
+    def test_status_payload_promotes_publish_substep_failure_summary(self) -> None:
+        self.loop.utc_now = lambda: "2026-06-16T02:10:00Z"
+        self.loop.inspect_artifacts = lambda: {"artifact_health": {"status": "loaded"}}
+        self.loop.autonomy_policy_snapshot = lambda: {
+            "current_focus": "autonomy_visibility_or_real_ingest"
+        }
+        self.loop.git_state = lambda: {"dirty_count_excluding_preview": 1}
+        self.loop.coordination_snapshot = lambda: {
+            "handoff_path": ".pixelbox/handoff.md",
+            "latest_handoff_status": "publish failed",
+        }
+        publish_step = {
+            "name": "publish changes",
+            "command": ["git", "add/commit/push"],
+            "exit_status": "128",
+            "seconds": 0.3,
+            "substeps": [
+                {
+                    "name": "stage autonomous changes",
+                    "command": ["git", "add", "-A"],
+                    "exit_status": 0,
+                    "seconds": 0.1,
+                },
+                {
+                    "name": "push autonomous changes",
+                    "command": [
+                        "git",
+                        "push",
+                        "https://user:pass@example.local/repo.git?token=secret",
+                    ],
+                    "exit_status": "128",
+                    "seconds": 0.2,
+                },
+            ],
+        }
+
+        payload = self.loop.status_payload(
+            "run-1",
+            3,
+            "failing",
+            "failed",
+            "2026-06-16T02:09:00Z",
+            [publish_step],
+            "Publish failed token=message-secret",
+        )
+
+        self.assertEqual(
+            payload["failure"],
+            {
+                "phase": "failed",
+                "message": "Publish failed token=<redacted>",
+                "category": "post_codex_check",
+                "route_hint": "publish_push_failed",
+                "failed_step": "publish changes",
+                "failed_step_exit_status": 128,
+                "failed_substep": "push autonomous changes",
+                "failed_substep_exit_status": 128,
+                "command": "git push 'https://example.local/repo.git'",
+            },
+        )
+        failure_json = json.dumps(payload["failure"], sort_keys=True)
+        self.assertNotIn("user:pass", failure_json)
+        self.assertNotIn("token=secret", failure_json)
+        self.assertNotIn("message-secret", failure_json)
+
     def test_docs_and_status_files_do_not_make_synthetic_rows_productive(self) -> None:
         paths = [
             "README.md",
