@@ -163,9 +163,11 @@ BUSINESS_HOURS_CLOSED = "business_hours_closed"
 LOOP_EXITED = "loop_exited"
 PUBLISHER_EXITED = "publisher_exited"
 RELAY_PUBLISHER_UNAVAILABLE = "relay_publisher_unavailable"
+AUTONOMOUS_LOOP_STARTUP_EXIT = "autonomous_loop_startup_exit"
 ENVIRONMENT_PREFLIGHT_FAILED = "environment_preflight_failed"
 RENDER_WORKER_SETUP_FAILED = "render_worker_setup_failed"
 RENDER_WORKER_FAILURE_ROUTE_HINTS = {
+    AUTONOMOUS_LOOP_STARTUP_EXIT,
     ENVIRONMENT_PREFLIGHT_FAILED,
     RENDER_WORKER_SETUP_FAILED,
     "relay_publisher_preflight_failed",
@@ -2687,6 +2689,10 @@ def run_business_hours_schedule(
             loop_process = start_loop()
             loop_startup_status = child_startup_exit_status(loop_process, "autonomous loop")
             if loop_startup_status is not None:
+                record_render_worker_failure_status(
+                    reason=AUTONOMOUS_LOOP_STARTUP_EXIT,
+                    worker_exit_status=loop_startup_status,
+                )
                 stop_children()
                 return loop_startup_status
             reason, status = monitor_scheduled_loop(loop_process, publisher_process, env=env)

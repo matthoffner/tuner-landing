@@ -3723,6 +3723,32 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertEqual(status["failure"]["message"], "git fetch failed token=[redacted]")
         self.assertNotIn("relay-secret", status_text)
 
+    def test_write_render_worker_failure_status_routes_loop_startup_exit(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            self.worker.WORKDIR = Path(temp_dir) / "repo"
+            self.worker.WORKDIR.mkdir(parents=True)
+
+            with patch.object(
+                self.worker,
+                "worker_git_snapshot",
+                return_value={"branch": "main", "head": "abc123"},
+            ):
+                self.worker.write_render_worker_failure_status(
+                    reason=self.worker.AUTONOMOUS_LOOP_STARTUP_EXIT,
+                    worker_exit_status=6,
+                )
+
+            status = json.loads(
+                self.worker.cockpit_status_file().read_text(encoding="utf-8")
+            )
+
+        self.assertEqual(status["phase"], self.worker.AUTONOMOUS_LOOP_STARTUP_EXIT)
+        self.assertEqual(
+            status["failure"]["route_hint"],
+            self.worker.AUTONOMOUS_LOOP_STARTUP_EXIT,
+        )
+        self.assertEqual(status["failure"]["worker_exit_status"], 6)
+
     def test_write_render_worker_failure_status_keeps_unknown_route_generic(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             self.worker.WORKDIR = Path(temp_dir) / "repo"
@@ -5640,6 +5666,12 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                 "local_time": "2026-06-15T10:00:00-05:00",
             },
         ), patch.object(
+            self.worker,
+            "record_render_worker_failure_status",
+        ) as record_failure_status, patch.object(
+            self.worker,
+            "stop_children",
+        ) as stop_children, patch.object(
             self.worker.time,
             "sleep",
         ), redirect_stdout(
@@ -5655,11 +5687,82 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             status = self.worker.main()
 
         self.assertEqual(status, 6)
-        self.assertTrue(publisher.terminated)
+        record_failure_status.assert_called_once_with(
+            reason=self.worker.AUTONOMOUS_LOOP_STARTUP_EXIT,
+            worker_exit_status=6,
+        )
+        stop_children.assert_called_once()
         self.assertIn(
             "autonomous loop exited during startup status=6; worker_exit_status=6",
             output.getvalue(),
         )
+
+    def test_startup_loop_poll_failure_records_worker_status(self) -> None:
+        publisher = FakeProcess(pid=202)
+        loop = PollRaisesProcess(pid=101)
+        output = io.StringIO()
+
+        with patch.object(self.worker, "parse_args") as parse_args, patch.object(
+            self.worker,
+            "emit_environment_preflight",
+            return_value=[],
+        ), patch.object(self.worker, "configure_git_auth"), patch.object(
+            self.worker,
+            "configure_codex_auth",
+        ), patch.object(
+            self.worker,
+            "sync_repo",
+        ), patch.object(
+            self.worker,
+            "check_relay_publisher_preflight",
+        ), patch.object(
+            self.worker,
+            "start_publisher",
+            return_value=publisher,
+        ), patch.object(
+            self.worker,
+            "start_loop",
+            return_value=loop,
+        ), patch.object(
+            self.worker,
+            "current_business_hours_state",
+            return_value={
+                "enabled": True,
+                "in_business_hours": True,
+                "local_time": "2026-06-15T10:00:00-05:00",
+            },
+        ), patch.object(
+            self.worker,
+            "record_render_worker_failure_status",
+        ) as record_failure_status, patch.object(
+            self.worker,
+            "stop_children",
+        ) as stop_children, patch.object(
+            self.worker.time,
+            "sleep",
+        ), redirect_stdout(
+            output
+        ):
+            parse_args.return_value = type(
+                "Args",
+                (),
+                {"check_env": False, "format": "text"},
+            )()
+            self.worker.CHILDREN.extend([publisher, loop])
+
+            status = self.worker.main()
+
+        self.assertEqual(status, self.worker.CHILD_POLL_FAILURE_EXIT_STATUS)
+        record_failure_status.assert_called_once_with(
+            reason=self.worker.AUTONOMOUS_LOOP_STARTUP_EXIT,
+            worker_exit_status=self.worker.CHILD_POLL_FAILURE_EXIT_STATUS,
+        )
+        stop_children.assert_called_once()
+        self.assertIn(
+            "could not poll autonomous loop pid=101: OSError; worker_exit_status=1",
+            output.getvalue(),
+        )
+        self.assertNotIn("secret-token", output.getvalue())
 
     def test_stop_children_continues_when_child_poll_raises(self) -> None:
         missing_child = PollRaisesProcess(pid=202)
