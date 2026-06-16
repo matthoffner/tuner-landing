@@ -1253,6 +1253,71 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertNotIn("blocker-url-secret", failure_text)
         self.assertNotIn("hidden-debug", failure_text)
 
+    def test_read_status_sanitizes_failure_summary_paths_for_relay(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            source_path = tmp_path / "private-build" / "generated" / "landing.html"
+            target_path = tmp_path / "private-build" / "index.html"
+            status_file = tmp_path / "status.json"
+            status_file.write_text(
+                json.dumps(
+                    {
+                        "status": "failing",
+                        "phase": "landing_sync_failed",
+                        "mode": "autonomous_codex",
+                        "updated_at": "2026-06-14T19:30:00Z",
+                        "failure": {
+                            "phase": "landing_sync_failed",
+                            "category": "landing_sync",
+                            "route_hint": "landing_index_sync",
+                            "message": "Landing page sync failed",
+                            "source_path": f"{source_path} token=source-path-secret",
+                            "target_path": f"{target_path} token=target-path-secret",
+                            "import_pipeline_summary_path": (
+                                f"{tmp_path}/summary.json token=summary-path-secret"
+                            ),
+                            "sync_exit_status": 1,
+                        },
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            self.publisher.utc_now = lambda: "2026-06-14T19:31:00Z"
+            self.publisher.local_loop_pid = lambda _pid_file: 4242
+
+            status = self.publisher.read_status(
+                status_file,
+                tmp_path / "loop.pid",
+                status_stale_after_seconds=120,
+                bridge_status_file=tmp_path / "missing-bridge-status.json",
+            )
+            remote_status = self.publisher.source_status_for_relay(status)
+
+        failure = status["cockpit_summary"]["failure_summary"]
+        failure_text = json.dumps(failure, sort_keys=True)
+        self.assertEqual(
+            failure["source_path"],
+            "<external>/landing.html token=[redacted]",
+        )
+        self.assertEqual(
+            failure["target_path"],
+            "<external>/index.html token=[redacted]",
+        )
+        self.assertEqual(
+            failure["import_pipeline_summary_path"],
+            "<external>/summary.json token=[redacted]",
+        )
+        self.assertEqual(failure["sync_exit_status"], 1)
+        self.assertEqual(
+            remote_status["cockpit_summary"]["failure_summary"],
+            failure,
+        )
+        self.assertNotIn(str(tmp_path), failure_text)
+        self.assertNotIn("source-path-secret", failure_text)
+        self.assertNotIn("target-path-secret", failure_text)
+        self.assertNotIn("summary-path-secret", failure_text)
+
     def test_read_status_sanitizes_top_level_cockpit_summary_fields(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
@@ -3743,6 +3808,15 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                                 "https://failure.example/debug"
                                 "?token=failure-url-secret#trace"
                             ),
+                            "source_path": (
+                                "/tmp/customer/generated/landing.html "
+                                "token=failure-source-path-secret"
+                            ),
+                            "target_path": (
+                                "/tmp/customer/index.html "
+                                "token=failure-target-path-secret"
+                            ),
+                            "sync_exit_status": "2",
                         },
                         "coordination": {
                             "handoff_path": (
@@ -3851,6 +3925,15 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             log_text,
         )
         self.assertIn(
+            "source_failure_source_path=<external>/landing.html token=[redacted]",
+            log_text,
+        )
+        self.assertIn(
+            "source_failure_target_path=<external>/index.html token=[redacted]",
+            log_text,
+        )
+        self.assertIn("source_failure_sync_exit_status=2", log_text)
+        self.assertIn(
             "source_coordination_handoff_path=.pixelbox/handoff.md token=[redacted]",
             log_text,
         )
@@ -3873,6 +3956,10 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertNotIn("failure-route-secret", log_text)
         self.assertNotIn("failure-message-secret", log_text)
         self.assertNotIn("failure-url-secret", log_text)
+        self.assertNotIn("failure-source-path-secret", log_text)
+        self.assertNotIn("failure-target-path-secret", log_text)
+        self.assertNotIn("/tmp/customer/generated/landing.html", log_text)
+        self.assertNotIn("/tmp/customer/index.html", log_text)
         self.assertNotIn("bridge-status-secret", log_text)
         self.assertNotIn("bridge-user", log_text)
         self.assertNotIn("bridge-pass", log_text)

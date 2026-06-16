@@ -717,15 +717,22 @@ def failure_summary(status: dict[str, Any]) -> dict[str, Any]:
         "decision_reason": failure.get("decision_reason"),
         "current_focus": failure.get("current_focus"),
         "import_pipeline_status": failure.get("import_pipeline_status"),
-        "import_pipeline_summary_path": failure.get("import_pipeline_summary_path"),
         "readiness_status": failure.get("readiness_status"),
         "artifact_health_status": failure.get("artifact_health_status"),
-        "source_path": failure.get("source_path"),
-        "target_path": failure.get("target_path"),
         "command": failure.get("command"),
     }
     for key, value in text_fields.items():
         compact_value = compact_policy_detail(value)
+        if compact_value is not None:
+            summary[key] = compact_value
+
+    path_fields = {
+        "import_pipeline_summary_path": failure.get("import_pipeline_summary_path"),
+        "source_path": failure.get("source_path"),
+        "target_path": failure.get("target_path"),
+    }
+    for key, value in path_fields.items():
+        compact_value = compact_path_diagnostic(value)
         if compact_value is not None:
             summary[key] = compact_value
 
@@ -1683,6 +1690,17 @@ def source_status_log_fields(payload: dict[str, Any]) -> dict[str, Any]:
             failure.get("message"),
             max_length=160,
         ),
+        "source_failure_source_path": compact_path_diagnostic(
+            failure.get("source_path"),
+            max_length=160,
+        ),
+        "source_failure_target_path": compact_path_diagnostic(
+            failure.get("target_path"),
+            max_length=160,
+        ),
+        "source_failure_sync_exit_status": compact_int(
+            failure.get("sync_exit_status")
+        ),
         "publisher_host": compact_policy_detail(publisher.get("host"), max_length=120),
         "publisher_pid": compact_int(publisher.get("pid")),
         "publisher_started_at": compact_policy_detail(
@@ -1735,6 +1753,9 @@ SOURCE_STATUS_LOG_FIELD_NAMES = (
     "source_failure_route_hint",
     "source_failure_phase",
     "source_failure_message",
+    "source_failure_source_path",
+    "source_failure_target_path",
+    "source_failure_sync_exit_status",
     "publisher_host",
     "publisher_pid",
     "publisher_started_at",
