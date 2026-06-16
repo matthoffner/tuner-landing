@@ -312,6 +312,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 status_file,
                 tmp_path / "missing.pid",
                 status_stale_after_seconds=120,
+                bridge_status_file=tmp_path / "missing-bridge-status.json",
             )
 
         self.assertEqual(status["status"], "waiting")
@@ -898,6 +899,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 status_file,
                 tmp_path / "loop.pid",
                 status_stale_after_seconds=120,
+                bridge_status_file=tmp_path / "missing-bridge-status.json",
             )
 
         summary = status["cockpit_summary"]
@@ -1106,6 +1108,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 status_file,
                 tmp_path / "loop.pid",
                 status_stale_after_seconds=120,
+                bridge_status_file=tmp_path / "missing-bridge-status.json",
             )
 
         summary = status["cockpit_summary"]
@@ -1873,6 +1876,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 status_file,
                 tmp_path / "loop.pid",
                 status_stale_after_seconds=120,
+                bridge_status_file=tmp_path / "missing-bridge-status.json",
             )
 
         status_text = json.dumps(status, sort_keys=True)

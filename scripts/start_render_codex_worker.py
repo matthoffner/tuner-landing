@@ -17,9 +17,11 @@ import subprocess
 import sys
 import time
 from collections.abc import Callable
+from datetime import datetime, time as datetime_time, timedelta, timezone
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse, urlunparse
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 
 DEFAULT_REPO = "https://github.com/matthoffner/tuner-landing.git"
@@ -126,6 +128,39 @@ PUBLISHER_RUNTIME_ENV_ARGS = (
 )
 MAX_WORKER_URL_CHARS = 500
 MAX_WORKER_PATH_CHARS = 500
+BUSINESS_HOURS_ENV_DEFAULTS = {
+    "AUTOMOAT_BUSINESS_HOURS_ENABLED": "1",
+    "AUTOMOAT_BUSINESS_HOURS_TIMEZONE": "America/Chicago",
+    "AUTOMOAT_BUSINESS_HOURS_START": "09:00",
+    "AUTOMOAT_BUSINESS_HOURS_END": "17:00",
+    "AUTOMOAT_BUSINESS_HOURS_DAYS": "mon-fri",
+    "AUTOMOAT_BUSINESS_HOURS_IDLE_SLEEP": "300",
+}
+BUSINESS_HOURS_TRUE_VALUES = {"1", "true", "yes", "on", "enabled"}
+BUSINESS_HOURS_FALSE_VALUES = {"0", "false", "no", "off", "disabled"}
+BUSINESS_HOURS_ENV_NAMES = tuple(BUSINESS_HOURS_ENV_DEFAULTS)
+BUSINESS_DAY_NAMES = {
+    "mon": 0,
+    "monday": 0,
+    "tue": 1,
+    "tues": 1,
+    "tuesday": 1,
+    "wed": 2,
+    "wednesday": 2,
+    "thu": 3,
+    "thur": 3,
+    "thurs": 3,
+    "thursday": 3,
+    "fri": 4,
+    "friday": 4,
+    "sat": 5,
+    "saturday": 5,
+    "sun": 6,
+    "sunday": 6,
+}
+BUSINESS_HOURS_CLOSED = "business_hours_closed"
+LOOP_EXITED = "loop_exited"
+PUBLISHER_EXITED = "publisher_exited"
 
 
 def emit(message: str) -> None:
@@ -203,6 +238,10 @@ def sanitize_worker_config_text(
 ) -> str:
     """Redact copied secrets from otherwise nonsecret preflight config fields."""
     return sanitize_worker_log_text(value, env)
+
+
+def utc_now() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def require_env(name: str) -> str:
@@ -462,6 +501,150 @@ def format_number(value: float | int) -> str:
     return str(int(parsed)) if parsed.is_integer() else str(parsed)
 
 
+def business_hours_env_value(
+    env: os._Environ[str] | dict[str, str],
+    name: str,
+) -> str:
+    return env.get(name, BUSINESS_HOURS_ENV_DEFAULTS[name]).strip()
+
+
+def business_hours_enabled(env: os._Environ[str] | dict[str, str]) -> bool:
+    raw_value = business_hours_env_value(env, "AUTOMOAT_BUSINESS_HOURS_ENABLED").lower()
+    return raw_value not in BUSINESS_HOURS_FALSE_VALUES
+
+
+def parse_business_time(value: str, name: str) -> datetime_time:
+    parts = value.strip().split(":")
+    if len(parts) != 2:
+        raise ValueError(f"{name} must use HH:MM 24-hour time")
+    try:
+        hour = int(parts[0])
+        minute = int(parts[1])
+    except ValueError as exc:
+        raise ValueError(f"{name} must use HH:MM 24-hour time") from exc
+    if hour < 0 or hour > 23 or minute < 0 or minute > 59:
+        raise ValueError(f"{name} must use HH:MM 24-hour time")
+    return datetime_time(hour=hour, minute=minute)
+
+
+def parse_business_day_token(token: str) -> int:
+    normalized = token.strip().lower()
+    if not normalized:
+        raise ValueError("AUTOMOAT_BUSINESS_HOURS_DAYS must not contain empty day values")
+    try:
+        return BUSINESS_DAY_NAMES[normalized]
+    except KeyError as exc:
+        raise ValueError(
+            "AUTOMOAT_BUSINESS_HOURS_DAYS must use day names like mon-fri or mon,wed,fri"
+        ) from exc
+
+
+def parse_business_days(value: str) -> tuple[int, ...]:
+    days: set[int] = set()
+    for item in value.strip().split(","):
+        part = item.strip().lower()
+        if not part:
+            raise ValueError("AUTOMOAT_BUSINESS_HOURS_DAYS must not contain empty day values")
+        if "-" in part:
+            start_text, end_text = (piece.strip() for piece in part.split("-", 1))
+            start_day = parse_business_day_token(start_text)
+            end_day = parse_business_day_token(end_text)
+            if start_day <= end_day:
+                days.update(range(start_day, end_day + 1))
+            else:
+                days.update(range(start_day, 7))
+                days.update(range(0, end_day + 1))
+        else:
+            days.add(parse_business_day_token(part))
+    if not days:
+        raise ValueError("AUTOMOAT_BUSINESS_HOURS_DAYS must include at least one day")
+    return tuple(sorted(days))
+
+
+def business_hours_settings(
+    env: os._Environ[str] | dict[str, str] | None = None,
+) -> dict[str, object]:
+    env = env if env is not None else os.environ
+    enabled = business_hours_enabled(env)
+    if enabled:
+        timezone_name = business_hours_env_value(env, "AUTOMOAT_BUSINESS_HOURS_TIMEZONE")
+        start_text = business_hours_env_value(env, "AUTOMOAT_BUSINESS_HOURS_START")
+        end_text = business_hours_env_value(env, "AUTOMOAT_BUSINESS_HOURS_END")
+        days_text = business_hours_env_value(env, "AUTOMOAT_BUSINESS_HOURS_DAYS")
+        idle_sleep_text = business_hours_env_value(env, "AUTOMOAT_BUSINESS_HOURS_IDLE_SLEEP")
+    else:
+        timezone_name = BUSINESS_HOURS_ENV_DEFAULTS["AUTOMOAT_BUSINESS_HOURS_TIMEZONE"]
+        start_text = BUSINESS_HOURS_ENV_DEFAULTS["AUTOMOAT_BUSINESS_HOURS_START"]
+        end_text = BUSINESS_HOURS_ENV_DEFAULTS["AUTOMOAT_BUSINESS_HOURS_END"]
+        days_text = BUSINESS_HOURS_ENV_DEFAULTS["AUTOMOAT_BUSINESS_HOURS_DAYS"]
+        idle_sleep_text = BUSINESS_HOURS_ENV_DEFAULTS["AUTOMOAT_BUSINESS_HOURS_IDLE_SLEEP"]
+    idle_sleep = float(idle_sleep_text)
+    zone = ZoneInfo(timezone_name)
+    start = parse_business_time(start_text, "AUTOMOAT_BUSINESS_HOURS_START")
+    end = parse_business_time(end_text, "AUTOMOAT_BUSINESS_HOURS_END")
+    days = parse_business_days(days_text)
+    return {
+        "enabled": enabled,
+        "timezone_name": timezone_name,
+        "zone": zone,
+        "start": start,
+        "start_text": start_text,
+        "end": end,
+        "end_text": end_text,
+        "days": days,
+        "days_text": days_text,
+        "idle_sleep": idle_sleep,
+    }
+
+
+def validate_business_hours_environment(
+    env: os._Environ[str] | dict[str, str],
+    errors: list[str],
+) -> None:
+    enabled_value = business_hours_env_value(env, "AUTOMOAT_BUSINESS_HOURS_ENABLED").lower()
+    if enabled_value not in BUSINESS_HOURS_TRUE_VALUES | BUSINESS_HOURS_FALSE_VALUES:
+        errors.append(
+            "AUTOMOAT_BUSINESS_HOURS_ENABLED must be true/false, yes/no, on/off, or 1/0"
+        )
+        return
+    if enabled_value in BUSINESS_HOURS_FALSE_VALUES:
+        return
+
+    try:
+        timezone_name = business_hours_env_value(env, "AUTOMOAT_BUSINESS_HOURS_TIMEZONE")
+        ZoneInfo(timezone_name)
+    except ZoneInfoNotFoundError:
+        errors.append("AUTOMOAT_BUSINESS_HOURS_TIMEZONE must be a valid IANA timezone")
+
+    try:
+        start = parse_business_time(
+            business_hours_env_value(env, "AUTOMOAT_BUSINESS_HOURS_START"),
+            "AUTOMOAT_BUSINESS_HOURS_START",
+        )
+    except ValueError as exc:
+        errors.append(str(exc))
+        start = None
+
+    try:
+        end = parse_business_time(
+            business_hours_env_value(env, "AUTOMOAT_BUSINESS_HOURS_END"),
+            "AUTOMOAT_BUSINESS_HOURS_END",
+        )
+    except ValueError as exc:
+        errors.append(str(exc))
+        end = None
+
+    if start is not None and end is not None and start >= end:
+        errors.append("AUTOMOAT_BUSINESS_HOURS_START must be before AUTOMOAT_BUSINESS_HOURS_END")
+
+    try:
+        parse_business_days(business_hours_env_value(env, "AUTOMOAT_BUSINESS_HOURS_DAYS"))
+    except ValueError as exc:
+        errors.append(str(exc))
+
+    validate_positive_float(env, "AUTOMOAT_BUSINESS_HOURS_IDLE_SLEEP", errors)
+
+
 def codex_config_value(
     env: os._Environ[str] | dict[str, str],
     name: str,
@@ -684,6 +867,7 @@ def validate_worker_environment(
         errors,
         maximum=RUNTIME_CONFIG_LIMITS["AUTOMOAT_AGENT_ITERATIONS"],
     )
+    validate_business_hours_environment(env, errors)
     validate_codex_config_value(env, "AUTOMOAT_CODEX_MODEL", errors)
     validate_codex_config_value(env, "AUTOMOAT_CODEX_REASONING_EFFORT", errors)
     for name in PUBLISHER_FILE_PATH_ENV_NAMES:
@@ -728,7 +912,11 @@ def configured_runtime_keys(env: os._Environ[str] | dict[str, str]) -> list[str]
     """Return nonsecret runtime override keys present in the worker environment."""
     return sorted(
         name
-        for name in (*RUNTIME_CONFIG_LIMITS, *PUBLISHER_FILE_PATH_ENV_NAMES)
+        for name in (
+            *RUNTIME_CONFIG_LIMITS,
+            *PUBLISHER_FILE_PATH_ENV_NAMES,
+            *BUSINESS_HOURS_ENV_NAMES,
+        )
         if name in env
     )
 
@@ -932,6 +1120,7 @@ def preflight_error_key(error: str) -> str:
         *GIT_AUTH_ENV_NAMES,
         *CODEX_CONFIG_ENV_DEFAULTS,
         *RUNTIME_CONFIG_LIMITS,
+        *BUSINESS_HOURS_ENV_NAMES,
         *PUBLISHER_FILE_PATH_ENV_NAMES,
         *GIT_IDENTITY_ENV_DEFAULTS,
     }:
@@ -1083,6 +1272,11 @@ def validate_codex_home_path(path: Path, workdir: Path, errors: list[str]) -> No
     expanded_path = path.expanduser()
     if not expanded_path.is_absolute():
         errors.append("CODEX_HOME must be an absolute path")
+        return
+
+    expanded_named_parts = [part for part in expanded_path.parts if part != expanded_path.anchor]
+    if len(expanded_named_parts) < 2:
+        errors.append("CODEX_HOME must not be filesystem root or a top-level directory")
         return
 
     try:
@@ -1331,6 +1525,30 @@ def environment_preflight_summary(
             "AUTOMOAT_STATUS_STALE_AFTER_SECONDS",
             "660",
         ),
+        "business_hours_enabled": business_hours_env_value(
+            env,
+            "AUTOMOAT_BUSINESS_HOURS_ENABLED",
+        ),
+        "business_hours_timezone": business_hours_env_value(
+            env,
+            "AUTOMOAT_BUSINESS_HOURS_TIMEZONE",
+        ),
+        "business_hours_start": business_hours_env_value(
+            env,
+            "AUTOMOAT_BUSINESS_HOURS_START",
+        ),
+        "business_hours_end": business_hours_env_value(
+            env,
+            "AUTOMOAT_BUSINESS_HOURS_END",
+        ),
+        "business_hours_days": business_hours_env_value(
+            env,
+            "AUTOMOAT_BUSINESS_HOURS_DAYS",
+        ),
+        "business_hours_idle_sleep": business_hours_env_value(
+            env,
+            "AUTOMOAT_BUSINESS_HOURS_IDLE_SLEEP",
+        ),
         **relay_publisher_file_labels(env),
         "bridge_status_stale_after_seconds": env.get(
             "AUTOMOAT_BRIDGE_STATUS_STALE_AFTER_SECONDS",
@@ -1467,6 +1685,18 @@ def emit_environment_preflight(
         f"relay_tail_lines={env.get('AUTOMOAT_RELAY_TAIL_LINES', '180')} "
         f"relay_max_log_bytes={env.get('AUTOMOAT_RELAY_MAX_LOG_BYTES', str(256 * 1024))} "
         f"status_stale_after_seconds={env.get('AUTOMOAT_STATUS_STALE_AFTER_SECONDS', '660')} "
+        f"business_hours_enabled="
+        f"{business_hours_env_value(env, 'AUTOMOAT_BUSINESS_HOURS_ENABLED')} "
+        f"business_hours_timezone="
+        f"{business_hours_env_value(env, 'AUTOMOAT_BUSINESS_HOURS_TIMEZONE')} "
+        f"business_hours_start="
+        f"{business_hours_env_value(env, 'AUTOMOAT_BUSINESS_HOURS_START')} "
+        f"business_hours_end="
+        f"{business_hours_env_value(env, 'AUTOMOAT_BUSINESS_HOURS_END')} "
+        f"business_hours_days="
+        f"{business_hours_env_value(env, 'AUTOMOAT_BUSINESS_HOURS_DAYS')} "
+        f"business_hours_idle_sleep="
+        f"{business_hours_env_value(env, 'AUTOMOAT_BUSINESS_HOURS_IDLE_SLEEP')} "
         f"status_file={file_labels['status_file']} "
         f"pid_file={file_labels['pid_file']} "
         f"log_file={file_labels['log_file']} "
@@ -1801,6 +2031,134 @@ def check_relay_publisher_preflight() -> None:
     emit("checked-out relay publisher preflight passed")
 
 
+def git_text(args: list[str]) -> str:
+    result = subprocess.run(
+        ["git", *args],
+        cwd=WORKDIR,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        text=True,
+        check=False,
+    )
+    return result.stdout.strip()
+
+
+def worker_git_snapshot() -> dict[str, object]:
+    return {
+        "branch": git_text(["branch", "--show-current"]),
+        "head": git_text(["rev-parse", "--short", "HEAD"]),
+    }
+
+
+def current_business_hours_state(
+    env: os._Environ[str] | dict[str, str] | None = None,
+    now: datetime | None = None,
+) -> dict[str, object]:
+    env = env if env is not None else os.environ
+    settings = business_hours_settings(env)
+    enabled = bool(settings["enabled"])
+    zone = settings["zone"]
+    assert isinstance(zone, ZoneInfo)
+    current = now if now is not None else datetime.now(timezone.utc)
+    if current.tzinfo is None:
+        current = current.replace(tzinfo=timezone.utc)
+    local_now = current.astimezone(zone)
+    start = settings["start"]
+    end = settings["end"]
+    assert isinstance(start, datetime_time)
+    assert isinstance(end, datetime_time)
+    days = settings["days"]
+    assert isinstance(days, tuple)
+    in_hours = (
+        not enabled
+        or (
+            local_now.weekday() in days
+            and start <= local_now.time().replace(second=0, microsecond=0) < end
+        )
+    )
+    next_start = None if in_hours else next_business_start(local_now, settings)
+    return {
+        "enabled": enabled,
+        "in_business_hours": in_hours,
+        "timezone": settings["timezone_name"],
+        "start": settings["start_text"],
+        "end": settings["end_text"],
+        "days": settings["days_text"],
+        "local_time": local_now.isoformat(timespec="seconds"),
+        "local_weekday": local_now.strftime("%a").lower(),
+        "next_start_at": next_start.isoformat(timespec="seconds") if next_start else None,
+    }
+
+
+def next_business_start(
+    local_now: datetime,
+    settings: dict[str, object],
+) -> datetime:
+    start = settings["start"]
+    days = settings["days"]
+    assert isinstance(start, datetime_time)
+    assert isinstance(days, tuple)
+    for day_offset in range(0, 14):
+        candidate_date = local_now.date() + timedelta(days=day_offset)
+        if candidate_date.weekday() not in days:
+            continue
+        candidate = datetime.combine(candidate_date, start, tzinfo=local_now.tzinfo)
+        if candidate > local_now:
+            return candidate
+    return local_now + timedelta(minutes=5)
+
+
+def seconds_until_next_business_start(state: dict[str, object]) -> float:
+    next_start = state.get("next_start_at")
+    if not isinstance(next_start, str) or not next_start:
+        return 0.0
+    try:
+        parsed = datetime.fromisoformat(next_start)
+    except ValueError:
+        return 0.0
+    current = datetime.now(parsed.tzinfo or timezone.utc)
+    return max(0.0, (parsed - current).total_seconds())
+
+
+def cockpit_log_file() -> Path:
+    return WORKDIR / ".automoat" / "logs" / "mvp-loop.log"
+
+
+def cockpit_status_file() -> Path:
+    return WORKDIR / ".automoat" / "state" / "mvp-loop-status.json"
+
+
+def append_cockpit_log(message: str) -> None:
+    log_file = cockpit_log_file()
+    log_file.parent.mkdir(parents=True, exist_ok=True)
+    with log_file.open("a", encoding="utf-8") as handle:
+        handle.write(f"[{utc_now()}] {message}\n")
+
+
+def write_business_hours_pause_status(state: dict[str, object]) -> None:
+    status_path = cockpit_status_file()
+    status_path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "run_id": "business-hours-schedule",
+        "iteration": 0,
+        "status": "paused",
+        "mode": "autonomous_codex",
+        "phase": "outside_business_hours",
+        "started_at": utc_now(),
+        "updated_at": utc_now(),
+        "steps": [],
+        "business_hours": state,
+        "git": worker_git_snapshot(),
+    }
+    status_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    append_cockpit_log(
+        "business-hours pause: "
+        f"local_time={state.get('local_time')} "
+        f"window={state.get('days')} {state.get('start')}-{state.get('end')} "
+        f"next_start_at={state.get('next_start_at')}"
+    )
+
+
 def start_publisher() -> subprocess.Popen[object]:
     require_env("AUTOMOAT_RELAY_URL")
     require_env("AUTOMOAT_RELAY_TOKEN")
@@ -1922,6 +2280,145 @@ def monitor_worker_children(
         time.sleep(poll_interval)
 
 
+def terminate_process(
+    process: subprocess.Popen[object],
+    *,
+    label: str = "child",
+    grace_seconds: float = 15.0,
+) -> None:
+    status, poll_ok = safe_child_poll(process, label)
+    if status is not None or not poll_ok:
+        return
+    try:
+        process.terminate()
+    except OSError as exc:
+        emit(f"could not terminate {label} pid={process.pid}: {type(exc).__name__}")
+        return
+    deadline = time.monotonic() + grace_seconds
+    while time.monotonic() < deadline:
+        status, poll_ok = safe_child_poll(process, label)
+        if status is not None or not poll_ok:
+            return
+        time.sleep(0.2)
+    status, poll_ok = safe_child_poll(process, label)
+    if status is None and poll_ok:
+        try:
+            process.kill()
+        except OSError as exc:
+            emit(f"could not kill {label} pid={process.pid}: {type(exc).__name__}")
+
+
+def monitor_scheduled_loop(
+    loop_process: subprocess.Popen[object],
+    publisher_process: subprocess.Popen[object],
+    *,
+    env: os._Environ[str] | dict[str, str] | None = None,
+    poll_interval: float = 5.0,
+) -> tuple[str, int]:
+    """Monitor a running loop and stop it when the configured business window closes."""
+    while True:
+        if STOP_REQUESTED:
+            stop_children()
+            return LOOP_EXITED, 0
+
+        state = current_business_hours_state(env)
+        if not state["in_business_hours"]:
+            emit(
+                "business hours closed; stopping autonomous loop "
+                f"local_time={state.get('local_time')} "
+                f"next_start_at={state.get('next_start_at')}"
+            )
+            terminate_process(loop_process, label="autonomous loop")
+            write_business_hours_pause_status(state)
+            return BUSINESS_HOURS_CLOSED, 0
+
+        loop_status, loop_poll_ok = safe_child_poll(loop_process, "autonomous loop")
+        if loop_status is not None:
+            if loop_poll_ok:
+                emit(f"autonomous loop exited status={loop_status}")
+            else:
+                stop_children()
+            return LOOP_EXITED, loop_status
+
+        publisher_status, publisher_poll_ok = safe_child_poll(
+            publisher_process,
+            "relay publisher",
+        )
+        if publisher_status is not None:
+            if publisher_poll_ok:
+                emit(
+                    "relay publisher exited unexpectedly "
+                    f"status={publisher_status}; stopping autonomous loop"
+                )
+            terminate_process(loop_process, label="autonomous loop")
+            if not publisher_poll_ok:
+                stop_children()
+            return PUBLISHER_EXITED, publisher_status if publisher_status != 0 else 1
+
+        time.sleep(poll_interval)
+
+
+def sleep_outside_business_hours(
+    publisher_process: subprocess.Popen[object],
+    state: dict[str, object],
+    *,
+    env: os._Environ[str] | dict[str, str] | None = None,
+    poll_interval: float = 5.0,
+) -> tuple[str, int]:
+    env = env if env is not None else os.environ
+    settings = business_hours_settings(env)
+    idle_sleep = float(settings["idle_sleep"])
+    wait_seconds = min(max(idle_sleep, 1.0), max(seconds_until_next_business_start(state), 1.0))
+    deadline = time.monotonic() + wait_seconds
+    while not STOP_REQUESTED and time.monotonic() < deadline:
+        publisher_status = publisher_process.poll()
+        if publisher_status is not None:
+            emit(f"relay publisher exited unexpectedly status={publisher_status}")
+            return PUBLISHER_EXITED, publisher_status if publisher_status != 0 else 1
+        time.sleep(min(poll_interval, max(0.0, deadline - time.monotonic())))
+    if STOP_REQUESTED:
+        stop_children()
+        return LOOP_EXITED, 0
+    return BUSINESS_HOURS_CLOSED, 0
+
+
+def run_business_hours_schedule(
+    publisher_process: subprocess.Popen[object],
+    *,
+    env: os._Environ[str] | dict[str, str] | None = None,
+) -> int:
+    env = env if env is not None else os.environ
+    while not STOP_REQUESTED:
+        state = current_business_hours_state(env)
+        if state["in_business_hours"]:
+            emit(
+                "business hours open; starting autonomous loop "
+                f"local_time={state.get('local_time')}"
+            )
+            loop_process = start_loop()
+            loop_startup_status = child_startup_exit_status(loop_process, "autonomous loop")
+            if loop_startup_status is not None:
+                stop_children()
+                return loop_startup_status
+            reason, status = monitor_scheduled_loop(loop_process, publisher_process, env=env)
+            if reason == BUSINESS_HOURS_CLOSED:
+                continue
+            return status
+
+        emit(
+            "outside business hours; autonomous loop paused "
+            f"local_time={state.get('local_time')} "
+            f"next_start_at={state.get('next_start_at')}"
+        )
+        write_business_hours_pause_status(state)
+        reason, status = sleep_outside_business_hours(publisher_process, state, env=env)
+        if reason == PUBLISHER_EXITED:
+            return status
+
+    stop_children()
+    return 0
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -2011,13 +2508,7 @@ def main() -> int:
         stop_children()
         return publisher_startup_status
 
-    loop = start_loop()
-    loop_startup_status = child_startup_exit_status(loop, "autonomous loop")
-    if loop_startup_status is not None:
-        stop_children()
-        return loop_startup_status
-
-    return monitor_worker_children(loop, publisher)
+    return run_business_hours_schedule(publisher)
 
 
 if __name__ == "__main__":

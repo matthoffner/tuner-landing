@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import base64
 from contextlib import redirect_stdout
+from datetime import datetime, timezone
 import importlib.util
 import io
 import json
@@ -1718,11 +1719,11 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             self.worker.CODEX_HOME: "AUTOMOAT_WORKDIR must not equal CODEX_HOME",
             self.worker.GITHUB_TOKEN_FILE: (
                 "AUTOMOAT_WORKDIR must not be equal to or inside reserved runtime file "
-                f"{self.worker.GITHUB_TOKEN_FILE}"
+                f"{self.worker.GITHUB_TOKEN_FILE.expanduser().resolve(strict=False)}"
             ),
             self.worker.GIT_ASKPASS / "repo": (
                 "AUTOMOAT_WORKDIR must not be equal to or inside reserved runtime file "
-                f"{self.worker.GIT_ASKPASS}"
+                f"{self.worker.GIT_ASKPASS.expanduser().resolve(strict=False)}"
             ),
         }
 
@@ -1991,11 +1992,11 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             Path("relative/codex-home"): "CODEX_HOME must be an absolute path",
             self.worker.GITHUB_TOKEN_FILE: (
                 "CODEX_HOME must not be equal to or inside reserved runtime file "
-                f"{self.worker.GITHUB_TOKEN_FILE}"
+                f"{self.worker.GITHUB_TOKEN_FILE.expanduser().resolve(strict=False)}"
             ),
             self.worker.GIT_ASKPASS / "codex-home": (
                 "CODEX_HOME must not be equal to or inside reserved runtime file "
-                f"{self.worker.GIT_ASKPASS}"
+                f"{self.worker.GIT_ASKPASS.expanduser().resolve(strict=False)}"
             ),
             Path("/work/automoat/repo/.codex-home"): (
                 "CODEX_HOME must not be inside AUTOMOAT_WORKDIR"
@@ -2220,6 +2221,9 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             'command_paths={"codex": "<found>", "git": "<found>"}',
             output.getvalue(),
         )
+        self.assertIn("business_hours_timezone=America/Chicago", output.getvalue())
+        self.assertIn("business_hours_start=09:00", output.getvalue())
+        self.assertIn("business_hours_end=17:00", output.getvalue())
         self.assertNotIn("workdir=/work/automoat", output.getvalue())
         self.assertNotIn("codex_home=/tmp/codex-home", output.getvalue())
         self.assertNotIn("automoat-render-bot@example.com", output.getvalue())
@@ -3377,6 +3381,127 @@ class RenderWorkerPreflightTest(unittest.TestCase):
 
         self.assertEqual(status, 2)
         self.assertIn("--format json is only supported with --check-env", output.getvalue())
+
+    def test_business_hours_state_uses_central_weekday_window(self) -> None:
+        env = {}
+        monday_morning_central = datetime(2026, 6, 15, 15, 0, tzinfo=timezone.utc)
+        monday_evening_central = datetime(2026, 6, 15, 23, 0, tzinfo=timezone.utc)
+        saturday_morning_central = datetime(2026, 6, 20, 15, 0, tzinfo=timezone.utc)
+
+        open_state = self.worker.current_business_hours_state(
+            env,
+            now=monday_morning_central,
+        )
+        evening_state = self.worker.current_business_hours_state(
+            env,
+            now=monday_evening_central,
+        )
+        weekend_state = self.worker.current_business_hours_state(
+            env,
+            now=saturday_morning_central,
+        )
+
+        self.assertTrue(open_state["in_business_hours"])
+        self.assertFalse(evening_state["in_business_hours"])
+        self.assertEqual(
+            evening_state["next_start_at"],
+            "2026-06-16T09:00:00-05:00",
+        )
+        self.assertFalse(weekend_state["in_business_hours"])
+        self.assertEqual(
+            weekend_state["next_start_at"],
+            "2026-06-22T09:00:00-05:00",
+        )
+
+    def test_business_hours_can_be_disabled(self) -> None:
+        state = self.worker.current_business_hours_state(
+            {
+                "AUTOMOAT_BUSINESS_HOURS_ENABLED": "0",
+                "AUTOMOAT_BUSINESS_HOURS_TIMEZONE": "Not/AZone",
+            },
+            now=datetime(2026, 6, 21, 3, 0, tzinfo=timezone.utc),
+        )
+
+        self.assertFalse(state["enabled"])
+        self.assertTrue(state["in_business_hours"])
+
+    def test_rejects_bad_business_hours_config(self) -> None:
+        base_env = {
+            "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            "GITHUB_TOKEN": "github-token",
+            "CODEX_ACCESS_TOKEN": "codex-token",
+        }
+        errors = self.worker.validate_worker_environment(
+            {
+                **base_env,
+                "AUTOMOAT_BUSINESS_HOURS_ENABLED": "maybe",
+                "AUTOMOAT_BUSINESS_HOURS_TIMEZONE": "Not/AZone",
+                "AUTOMOAT_BUSINESS_HOURS_START": "17:00",
+                "AUTOMOAT_BUSINESS_HOURS_END": "09:00",
+                "AUTOMOAT_BUSINESS_HOURS_DAYS": "funday",
+                "AUTOMOAT_BUSINESS_HOURS_IDLE_SLEEP": "0",
+            },
+            found_command,
+        )
+
+        self.assertEqual(
+            errors,
+            [
+                (
+                    "AUTOMOAT_BUSINESS_HOURS_ENABLED must be true/false, yes/no, "
+                    "on/off, or 1/0"
+                ),
+            ],
+        )
+
+        errors = self.worker.validate_worker_environment(
+            {
+                **base_env,
+                "AUTOMOAT_BUSINESS_HOURS_TIMEZONE": "Not/AZone",
+                "AUTOMOAT_BUSINESS_HOURS_START": "17:00",
+                "AUTOMOAT_BUSINESS_HOURS_END": "09:00",
+                "AUTOMOAT_BUSINESS_HOURS_DAYS": "funday",
+                "AUTOMOAT_BUSINESS_HOURS_IDLE_SLEEP": "0",
+            },
+            found_command,
+        )
+
+        self.assertEqual(
+            errors,
+            [
+                "AUTOMOAT_BUSINESS_HOURS_TIMEZONE must be a valid IANA timezone",
+                "AUTOMOAT_BUSINESS_HOURS_START must be before AUTOMOAT_BUSINESS_HOURS_END",
+                (
+                    "AUTOMOAT_BUSINESS_HOURS_DAYS must use day names like "
+                    "mon-fri or mon,wed,fri"
+                ),
+                "AUTOMOAT_BUSINESS_HOURS_IDLE_SLEEP must be greater than 0",
+            ],
+        )
+
+    def test_write_business_hours_pause_status_updates_cockpit_files(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            self.worker.WORKDIR = Path(temp_dir) / "repo"
+            self.worker.WORKDIR.mkdir(parents=True)
+            state = self.worker.current_business_hours_state(
+                {},
+                now=datetime(2026, 6, 15, 23, 0, tzinfo=timezone.utc),
+            )
+
+            with patch.object(
+                self.worker,
+                "worker_git_snapshot",
+                return_value={"branch": "main", "head": "abc123"},
+            ):
+                self.worker.write_business_hours_pause_status(state)
+
+            status = self.worker.cockpit_status_file().read_text(encoding="utf-8")
+            log = self.worker.cockpit_log_file().read_text(encoding="utf-8")
+
+        self.assertIn('"phase": "outside_business_hours"', status)
+        self.assertIn('"status": "paused"', status)
+        self.assertIn("business-hours pause:", log)
 
     def test_rejects_bad_codex_config_values_before_writing_config(self) -> None:
         base_env = {
@@ -4912,6 +5037,14 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             "start_loop",
             return_value=loop,
         ), patch.object(
+            self.worker,
+            "current_business_hours_state",
+            return_value={
+                "enabled": True,
+                "in_business_hours": True,
+                "local_time": "2026-06-15T10:00:00-05:00",
+            },
+        ), patch.object(
             self.worker.time,
             "sleep",
         ), redirect_stdout(
@@ -4956,6 +5089,60 @@ class RenderWorkerPreflightTest(unittest.TestCase):
 
         self.assertTrue(stubborn_child.terminate_attempted)
         self.assertIn("could not terminate child pid=303: OSError", output.getvalue())
+        self.assertNotIn("secret-token", output.getvalue())
+
+    def test_scheduled_monitor_stops_loop_when_business_hours_close(self) -> None:
+        loop = FakeProcess(pid=101)
+        publisher = FakeProcess(pid=202)
+        state = {
+            "enabled": True,
+            "in_business_hours": False,
+            "local_time": "2026-06-15T17:01:00-05:00",
+            "next_start_at": "2026-06-16T09:00:00-05:00",
+        }
+
+        with (
+            patch.object(self.worker, "current_business_hours_state", return_value=state),
+            patch.object(self.worker, "write_business_hours_pause_status") as write_status,
+        ):
+            reason, status = self.worker.monitor_scheduled_loop(
+                loop,
+                publisher,
+                poll_interval=0,
+            )
+
+        self.assertEqual(reason, self.worker.BUSINESS_HOURS_CLOSED)
+        self.assertEqual(status, 0)
+        self.assertTrue(loop.terminated)
+        self.assertIsNone(publisher.poll())
+        write_status.assert_called_once_with(state)
+
+    def test_scheduled_monitor_handles_loop_poll_failure_without_exception_text(self) -> None:
+        loop = PollRaisesProcess(pid=101)
+        publisher = FakeProcess(pid=202)
+        state = {
+            "enabled": True,
+            "in_business_hours": True,
+            "local_time": "2026-06-15T10:00:00-05:00",
+            "next_start_at": None,
+        }
+        output = io.StringIO()
+
+        with (
+            patch.object(self.worker, "current_business_hours_state", return_value=state),
+            patch.object(self.worker, "stop_children") as stop_children,
+            redirect_stdout(output),
+        ):
+            reason, status = self.worker.monitor_scheduled_loop(
+                loop,
+                publisher,
+                poll_interval=0,
+            )
+
+        self.assertEqual(reason, self.worker.LOOP_EXITED)
+        self.assertEqual(status, self.worker.CHILD_POLL_FAILURE_EXIT_STATUS)
+        stop_children.assert_called_once()
+        self.assertIn("could not poll autonomous loop pid=101: OSError", output.getvalue())
         self.assertNotIn("secret-token", output.getvalue())
 
 

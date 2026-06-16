@@ -287,7 +287,7 @@ def coordination_snapshot() -> dict[str, Any]:
 
 def repo_path(path: Path) -> str:
     try:
-        return path.resolve().relative_to(ROOT).as_posix()
+        return path.resolve().relative_to(ROOT.resolve()).as_posix()
     except ValueError:
         return str(path)
 

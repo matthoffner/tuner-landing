@@ -40,6 +40,18 @@ services:
         sync: false
       - key: AUTOMOAT_AGENT_INTERVAL
         value: "300"
+      - key: AUTOMOAT_BUSINESS_HOURS_ENABLED
+        value: "1"
+      - key: AUTOMOAT_BUSINESS_HOURS_TIMEZONE
+        value: America/Chicago
+      - key: AUTOMOAT_BUSINESS_HOURS_START
+        value: "09:00"
+      - key: AUTOMOAT_BUSINESS_HOURS_END
+        value: "17:00"
+      - key: AUTOMOAT_BUSINESS_HOURS_DAYS
+        value: mon-fri
+      - key: AUTOMOAT_BUSINESS_HOURS_IDLE_SLEEP
+        value: "300"
       - key: AUTOMOAT_RELAY_INTERVAL
         value: "3"
       - key: AUTOMOAT_RELAY_MAX_CONSECUTIVE_STALE_STATUSES

@@ -191,7 +191,7 @@ class RenderCockpitRelayTest(unittest.TestCase):
                 "publisher_started_at": "2026-06-14T19:58:00Z",
                 "pushed_at": "2026-06-14T19:59:30Z",
                 "snapshot_sequence": 7,
-                "repo": ".",
+                "repo": "<external>/automoat",
                 "git": {
                     "head": "abc1234",
                     "branch": "main",
