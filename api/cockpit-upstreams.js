@@ -234,6 +234,13 @@ function classifyUpstreamError(error) {
   return "fetch_error";
 }
 
+function upstreamFetchFailureAttempt(kind, error) {
+  return {
+    kind,
+    error: classifyUpstreamError(error),
+  };
+}
+
 function upstreamAttemptSummary(attempt) {
   const kind = attempt.kind || "unknown";
   if (Number.isInteger(attempt.status)) {
@@ -559,6 +566,7 @@ module.exports = {
   setProxyHeaders,
   setUpstreamSelectionHeaders,
   upstreamAttemptError,
+  upstreamFetchFailureAttempt,
   upstreamAttemptSummary,
   upstreamAttemptsHeader,
   upstreamErrorHeader,

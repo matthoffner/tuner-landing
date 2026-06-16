@@ -1962,6 +1962,103 @@ class CockpitApiProxyTest(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_handlers_report_fetch_errors_without_message_leak(self) -> None:
+        result = run_node(
+            """
+            const assert = require("assert");
+            const statusHandler = require("./api/cockpit-status");
+            const logHandler = require("./api/cockpit-log");
+
+            function response() {
+              return {
+                statusCode: null,
+                body: "",
+                headers: {},
+                setHeader(name, value) {
+                  this.headers[name] = value;
+                },
+                status(code) {
+                  this.statusCode = code;
+                  return this;
+                },
+                send(body) {
+                  this.body = String(body);
+                  return this;
+                },
+                end(body = "") {
+                  this.body = String(body);
+                  return this;
+                },
+              };
+            }
+
+            process.env.AUTOMOAT_RELAY_URL = "https://automoat-cockpit-relay.example";
+            process.env.AUTOMOAT_RELAY_TOKEN = "relay-token";
+            process.env.AUTOMOAT_RELAY_READ_TOKEN = "relay-read-token";
+            process.env.AUTOMOAT_BRIDGE_URL = "https://legacy-bridge.example";
+            process.env.AUTOMOAT_COCKPIT_UPSTREAM_TIMEOUT_MS = "";
+            global.fetch = async (url) => {
+              if (url.includes("automoat-cockpit-relay.example")) {
+                throw new Error(
+                  "connect failed https://automoat-cockpit-relay.example/api/status?token=relay-secret",
+                );
+              }
+              throw new Error(
+                "connect failed https://legacy-bridge.example/api/status#token=bridge-secret",
+              );
+            };
+
+            (async () => {
+              const statusResponse = response();
+              await statusHandler({ method: "GET" }, statusResponse);
+              assert.strictEqual(statusResponse.statusCode, 502);
+              const statusPayload = JSON.parse(statusResponse.body);
+              assert.deepStrictEqual(statusPayload, {
+                error: "cockpit_relay_unreachable",
+                attempts: [
+                  { kind: "relay", error: "fetch_error" },
+                  { kind: "legacy_bridge", error: "fetch_error" },
+                ],
+              });
+              assert.strictEqual(
+                statusResponse.headers["X-Automoat-Upstream-Attempts"],
+                "relay:fetch_error,legacy_bridge:fetch_error",
+              );
+              assert.strictEqual(
+                statusResponse.headers["X-Automoat-Upstream-Error"],
+                "fetch_error",
+              );
+              assert(!statusResponse.body.includes("automoat-cockpit-relay.example"));
+              assert(!statusResponse.body.includes("legacy-bridge.example"));
+              assert(!statusResponse.body.includes("relay-secret"));
+              assert(!statusResponse.body.includes("bridge-secret"));
+              assert(!statusResponse.body.includes("connect failed"));
+
+              const logResponse = response();
+              await logHandler({ method: "GET" }, logResponse);
+              assert.strictEqual(logResponse.statusCode, 502);
+              assert.strictEqual(
+                logResponse.body,
+                "cockpit_relay_unreachable: relay:fetch_error, legacy_bridge:fetch_error\\n",
+              );
+              assert.strictEqual(
+                logResponse.headers["X-Automoat-Upstream-Attempts"],
+                "relay:fetch_error,legacy_bridge:fetch_error",
+              );
+              assert(!logResponse.body.includes("automoat-cockpit-relay.example"));
+              assert(!logResponse.body.includes("legacy-bridge.example"));
+              assert(!logResponse.body.includes("relay-secret"));
+              assert(!logResponse.body.includes("bridge-secret"));
+              assert(!logResponse.body.includes("connect failed"));
+            })().catch((error) => {
+              console.error(error.stack || error);
+              process.exit(1);
+            });
+            """
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_handlers_cancel_oversized_chunked_upstreams_and_fall_back(self) -> None:
         result = run_node(
             """

@@ -1,6 +1,5 @@
 const {
   NOT_CONFIGURED_UPSTREAMS_HEADER,
-  classifyUpstreamError,
   fetchUpstreamText,
   invalidUpstreamKeysHeader,
   invalidUpstreamsHeader,
@@ -9,6 +8,7 @@ const {
   sendProxyResponse,
   setProxyHeaders,
   setUpstreamSelectionHeaders,
+  upstreamFetchFailureAttempt,
   upstreamAttemptSummary,
   upstreams,
 } = require("./cockpit-upstreams");
@@ -111,11 +111,7 @@ module.exports = async function handler(request, response) {
       sendProxyResponse(request, response, upstream.status, parsed.body);
       return;
     } catch (error) {
-      attempts.push({
-        kind: upstreamConfig.kind,
-        error: classifyUpstreamError(error),
-        message: error.message,
-      });
+      attempts.push(upstreamFetchFailureAttempt(upstreamConfig.kind, error));
     }
   }
 
