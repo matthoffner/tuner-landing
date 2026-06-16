@@ -860,6 +860,76 @@ class RenderCockpitRelayTest(unittest.TestCase):
         self.assertEqual(health["cockpit_health"]["source_bridge"], expected_bridge)
         self.assertEqual(status["cockpit_health"]["source_bridge"], expected_bridge)
 
+    def test_status_and_health_report_invalid_and_future_source_bridge_timestamps(self) -> None:
+        scenarios = (
+            (
+                "invalid",
+                {
+                    "updated_at": "not-a-timestamp",
+                    "bridge_status_age_seconds": None,
+                    "bridge_status_stale_after_seconds": 120,
+                    "bridge_status_stale": True,
+                    "bridge_status_timestamp_invalid": True,
+                    "bridge_status_timestamp_future": False,
+                },
+                "source_bridge_status_timestamp_invalid",
+                "Source bridge status timestamp is invalid",
+            ),
+            (
+                "future",
+                {
+                    "updated_at": "2026-06-14T20:01:00Z",
+                    "bridge_status_age_seconds": None,
+                    "bridge_status_stale_after_seconds": 120,
+                    "bridge_status_stale": True,
+                    "bridge_status_timestamp_invalid": False,
+                    "bridge_status_timestamp_future": True,
+                },
+                "source_bridge_status_timestamp_future",
+                "Source bridge status timestamp is in the future",
+            ),
+        )
+
+        for _name, freshness, expected_reason, expected_label in scenarios:
+            with self.subTest(reason=expected_reason):
+                self.relay.STATE.clear()
+                self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
+                self.relay.update_state(
+                    {
+                        "pushed_at": "2026-06-14T19:59:30Z",
+                        "status": {
+                            "status": "running",
+                            "loop_running": True,
+                            "bridge_summary": {
+                                "available": True,
+                                "status_file_status": "loaded",
+                                "status": "running",
+                                **freshness,
+                            },
+                        },
+                        "log_tail": "bridge timestamp problem\n",
+                    }
+                )
+                self.relay.utc_now = lambda: "2026-06-14T20:00:00Z"
+
+                health = self.relay.health_payload()
+                status = self.relay.relay_status_payload()
+
+                self.assertFalse(health["cockpit_ok"])
+                self.assertEqual(health["cockpit_health"]["reasons"], [expected_reason])
+                self.assertEqual(health["cockpit_health_label"], expected_label)
+                source_bridge = health["cockpit_health"]["source_bridge"]
+                self.assertTrue(source_bridge["bridge_status_stale"])
+                self.assertEqual(
+                    source_bridge["bridge_status_timestamp_invalid"],
+                    freshness["bridge_status_timestamp_invalid"],
+                )
+                self.assertEqual(
+                    source_bridge["bridge_status_timestamp_future"],
+                    freshness["bridge_status_timestamp_future"],
+                )
+                self.assertEqual(status["cockpit_health"]["source_bridge"], source_bridge)
+
     def test_status_and_health_omit_non_finite_source_bridge_interval(self) -> None:
         self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
         self.relay.update_state(

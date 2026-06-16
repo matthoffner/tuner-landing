@@ -628,6 +628,50 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertEqual(summary["bridge_status_age_seconds"], 180)
         self.assertEqual(summary["bridge_status_stale_after_seconds"], 120)
         self.assertTrue(summary["bridge_status_stale"])
+        self.assertFalse(summary["bridge_status_timestamp_invalid"])
+        self.assertFalse(summary["bridge_status_timestamp_future"])
+
+    def test_read_bridge_summary_marks_invalid_and_future_timestamps(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            bridge_status_file = tmp_path / "mvp-bridge-status.json"
+            self.publisher.utc_now = lambda: "2026-06-15T03:21:00Z"
+
+            bridge_status_file.write_text(
+                json.dumps({"status": "running", "updated_at": "not-a-timestamp"})
+                + "\n",
+                encoding="utf-8",
+            )
+            invalid_summary = self.publisher.read_bridge_summary(
+                bridge_status_file,
+                stale_after_seconds=120,
+            )
+
+            bridge_status_file.write_text(
+                json.dumps(
+                    {
+                        "status": "running",
+                        "updated_at": "2026-06-15T03:22:00Z",
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            future_summary = self.publisher.read_bridge_summary(
+                bridge_status_file,
+                stale_after_seconds=120,
+            )
+
+        self.assertTrue(invalid_summary["available"])
+        self.assertIsNone(invalid_summary["bridge_status_age_seconds"])
+        self.assertTrue(invalid_summary["bridge_status_stale"])
+        self.assertTrue(invalid_summary["bridge_status_timestamp_invalid"])
+        self.assertFalse(invalid_summary["bridge_status_timestamp_future"])
+        self.assertTrue(future_summary["available"])
+        self.assertIsNone(future_summary["bridge_status_age_seconds"])
+        self.assertTrue(future_summary["bridge_status_stale"])
+        self.assertFalse(future_summary["bridge_status_timestamp_invalid"])
+        self.assertTrue(future_summary["bridge_status_timestamp_future"])
 
     def test_read_bridge_summary_masks_local_path_in_read_error(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

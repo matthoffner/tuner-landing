@@ -63,6 +63,8 @@ COCKPIT_HEALTH_LABELS = {
     "source_cockpit_attention": "Source cockpit needs attention",
     "source_bridge_status_unavailable": "Source bridge status is unavailable",
     "source_bridge_status_stale": "Source bridge status is stale",
+    "source_bridge_status_timestamp_invalid": "Source bridge status timestamp is invalid",
+    "source_bridge_status_timestamp_future": "Source bridge status timestamp is in the future",
 }
 EMBEDDED_URL_RE = re.compile(r"https?://[^\s,;|]+")
 PATH_TOKEN_RE = re.compile(r"(?<![\w:/])(?:~|/)[^\s,;|'\"\])}]+")
@@ -606,6 +608,12 @@ def source_bridge_summary(status: dict[str, Any]) -> dict[str, Any]:
     bridge_status_stale = bridge.get("bridge_status_stale")
     if isinstance(bridge_status_stale, bool):
         summary["bridge_status_stale"] = bridge_status_stale
+    bridge_timestamp_invalid = bridge.get("bridge_status_timestamp_invalid")
+    if isinstance(bridge_timestamp_invalid, bool):
+        summary["bridge_status_timestamp_invalid"] = bridge_timestamp_invalid
+    bridge_timestamp_future = bridge.get("bridge_status_timestamp_future")
+    if isinstance(bridge_timestamp_future, bool):
+        summary["bridge_status_timestamp_future"] = bridge_timestamp_future
 
     bridge_health = compact_bridge_health(bridge.get("bridge_health"))
     if bridge_health is not None:
@@ -1095,6 +1103,16 @@ def cockpit_health(
         reasons.append("source_cockpit_attention")
     source_bridge_health = source_bridge.get("bridge_health")
     if (
+        source_bridge.get("available") is True
+        and source_bridge.get("bridge_status_timestamp_invalid") is True
+    ):
+        reasons.append("source_bridge_status_timestamp_invalid")
+    elif (
+        source_bridge.get("available") is True
+        and source_bridge.get("bridge_status_timestamp_future") is True
+    ):
+        reasons.append("source_bridge_status_timestamp_future")
+    elif (
         source_bridge.get("available") is True
         and source_bridge.get("bridge_status_stale") is True
     ):

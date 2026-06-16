@@ -242,19 +242,33 @@ def bridge_status_freshness(
     status: dict[str, Any],
     stale_after_seconds: int,
 ) -> dict[str, Any]:
-    updated_at = parse_utc_timestamp(status.get("updated_at"))
+    updated_at_value = status.get("updated_at")
+    updated_at = parse_utc_timestamp(updated_at_value)
     current_time = parse_utc_timestamp(utc_now())
+    timestamp_invalid = compact_text(updated_at_value) is not None and updated_at is None
     if updated_at is None or current_time is None:
         return {
             "bridge_status_age_seconds": None,
             "bridge_status_stale_after_seconds": stale_after_seconds,
             "bridge_status_stale": True,
+            "bridge_status_timestamp_invalid": timestamp_invalid,
+            "bridge_status_timestamp_future": False,
+        }
+    if updated_at > current_time:
+        return {
+            "bridge_status_age_seconds": None,
+            "bridge_status_stale_after_seconds": stale_after_seconds,
+            "bridge_status_stale": True,
+            "bridge_status_timestamp_invalid": False,
+            "bridge_status_timestamp_future": True,
         }
     age_seconds = max(0, int((current_time - updated_at).total_seconds()))
     return {
         "bridge_status_age_seconds": age_seconds,
         "bridge_status_stale_after_seconds": stale_after_seconds,
         "bridge_status_stale": age_seconds > stale_after_seconds,
+        "bridge_status_timestamp_invalid": False,
+        "bridge_status_timestamp_future": False,
     }
 
 
@@ -1242,6 +1256,16 @@ def source_status_log_fields(payload: dict[str, Any]) -> dict[str, Any]:
         "bridge_status_stale": bridge_summary.get("bridge_status_stale")
         if isinstance(bridge_summary.get("bridge_status_stale"), bool)
         else None,
+        "bridge_status_timestamp_invalid": bridge_summary.get(
+            "bridge_status_timestamp_invalid"
+        )
+        if isinstance(bridge_summary.get("bridge_status_timestamp_invalid"), bool)
+        else None,
+        "bridge_status_timestamp_future": bridge_summary.get(
+            "bridge_status_timestamp_future"
+        )
+        if isinstance(bridge_summary.get("bridge_status_timestamp_future"), bool)
+        else None,
         "bridge_status_age_seconds": compact_int(
             bridge_summary.get("bridge_status_age_seconds")
         ),
@@ -1320,6 +1344,8 @@ SOURCE_STATUS_LOG_FIELD_NAMES = (
     "bridge_status",
     "bridge_status_file_status",
     "bridge_status_stale",
+    "bridge_status_timestamp_invalid",
+    "bridge_status_timestamp_future",
     "bridge_status_age_seconds",
     "bridge_status_stale_after_seconds",
     "bridge_health_status",
