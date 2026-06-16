@@ -1346,6 +1346,31 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             },
         )
 
+    def test_publisher_source_health_routes_future_source_timestamp(self) -> None:
+        status = {
+            "status": "passing",
+            "loop_running": True,
+            "source_status_stale": True,
+            "source_status_timestamp_future": True,
+            "source_status_file_status": "loaded",
+        }
+
+        health = self.publisher.publisher_source_health(status)
+
+        self.assertEqual(
+            health,
+            {
+                "status": "degraded",
+                "ok": False,
+                "reasons": [
+                    "source_status_timestamp_future",
+                    "source_status_stale",
+                ],
+                "primary_reason": "source_status_timestamp_future",
+                "label": "Source status timestamp is in the future",
+            },
+        )
+
     def test_publisher_source_health_reports_cockpit_attention(self) -> None:
         status = {
             "status": "passing",
@@ -1514,6 +1539,54 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             "loop_not_running",
         )
         self.assertEqual(summary["operator_attention_label"], "Loop is not running")
+
+    def test_read_status_routes_future_source_status_timestamp(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            status_file = tmp_path / "status.json"
+            status_file.write_text(
+                json.dumps(
+                    {
+                        "status": "passing",
+                        "updated_at": "2026-06-14T19:35:00Z",
+                        "artifacts": {
+                            "artifact_health": {"status": "loaded"},
+                            "import_pipeline": {
+                                "execution_readiness": {
+                                    "status": "ready",
+                                    "blockers": [],
+                                }
+                            },
+                        },
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            self.publisher.utc_now = lambda: "2026-06-14T19:31:00Z"
+
+            status = self.publisher.read_status(
+                status_file,
+                tmp_path / "missing.pid",
+                status_stale_after_seconds=120,
+            )
+
+        self.assertIsNone(status["source_status_age_seconds"])
+        self.assertTrue(status["source_status_stale"])
+        self.assertFalse(status["source_status_timestamp_invalid"])
+        self.assertTrue(status["source_status_timestamp_future"])
+        summary = status["cockpit_summary"]
+        self.assertFalse(summary["status_timestamp_invalid"])
+        self.assertTrue(summary["status_timestamp_future"])
+        self.assertTrue(summary["operator_attention"])
+        self.assertEqual(
+            summary["operator_attention_reasons"],
+            ["loop_not_running", "status_timestamp_future"],
+        )
+        self.assertEqual(
+            summary["operator_attention_primary_reason"],
+            "loop_not_running",
+        )
 
     def test_read_status_marks_old_source_status_stale(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -2541,6 +2614,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                     "status": "running",
                     "loop_running": False,
                     "source_status_stale": True,
+                    "source_status_timestamp_future": True,
                     "source_status_age_seconds": 700,
                 },
                 "log_tail": "loop log\n",
@@ -2562,6 +2636,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertIn("source_status=running", log_text)
         self.assertIn("source_loop_running=False", log_text)
         self.assertIn("source_status_stale=True", log_text)
+        self.assertIn("source_status_timestamp_future=True", log_text)
         self.assertIn("source_status_age_seconds=700", log_text)
         self.assertIn("source_status_file_status=None", log_text)
         self.assertIn("source_health_status=None", log_text)

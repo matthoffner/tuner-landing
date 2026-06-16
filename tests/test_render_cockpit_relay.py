@@ -1061,6 +1061,60 @@ class RenderCockpitRelayTest(unittest.TestCase):
             "source_status_timestamp_invalid",
         )
 
+    def test_status_and_health_route_future_source_status_timestamp(self) -> None:
+        self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
+        self.relay.update_state(
+            {
+                "pushed_at": "2026-06-14T19:59:30Z",
+                "status": {
+                    "status": "running",
+                    "loop_running": True,
+                    "source_status_stale": True,
+                    "source_status_timestamp_future": True,
+                    "cockpit_summary": {
+                        "operator_attention": True,
+                        "status_timestamp_future": True,
+                        "operator_attention_primary_reason": "status_timestamp_future",
+                        "operator_attention_label": "Status timestamp is in the future",
+                        "operator_attention_reasons": ["status_timestamp_future"],
+                    },
+                },
+                "log_tail": "loop is working\n",
+            }
+        )
+        self.relay.utc_now = lambda: "2026-06-14T20:00:00Z"
+
+        health = self.relay.health_payload()
+        status = self.relay.relay_status_payload()
+
+        self.assertFalse(health["cockpit_ok"])
+        self.assertEqual(
+            health["cockpit_health"]["reasons"],
+            [
+                "source_status_timestamp_future",
+                "source_status_stale",
+                "source_cockpit_attention",
+            ],
+        )
+        self.assertEqual(
+            health["cockpit_health_primary_reason"],
+            "source_status_timestamp_future",
+        )
+        self.assertEqual(
+            health["cockpit_health_label"],
+            "Source status timestamp is in the future",
+        )
+        self.assertTrue(
+            health["cockpit_health"]["source_status_diagnostics"][
+                "source_status_timestamp_future"
+            ]
+        )
+        self.assertTrue(status["cockpit_summary"]["status_timestamp_future"])
+        self.assertEqual(
+            status["cockpit_health"]["primary_reason"],
+            "source_status_timestamp_future",
+        )
+
     def test_status_and_health_sanitize_source_cockpit_attention_fields(self) -> None:
         self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
         self.relay.update_state(

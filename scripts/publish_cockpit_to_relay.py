@@ -103,6 +103,7 @@ SOURCE_HEALTH_LABELS = {
     "source_cockpit_attention": "Source cockpit needs attention",
     "source_status_unavailable": "Source status is unavailable",
     "source_status_timestamp_invalid": "Source status timestamp is invalid",
+    "source_status_timestamp_future": "Source status timestamp is in the future",
     "source_status_stale": "Source status is stale",
     "source_loop_not_running": "Source loop is not running",
     "source_status_failing": "Source status is failing",
@@ -113,6 +114,7 @@ OPERATOR_ATTENTION_LABELS = {
     "autonomy_policy_failed": "Autonomy policy failed",
     "status_stale": "Status is stale",
     "status_timestamp_invalid": "Status timestamp is invalid",
+    "status_timestamp_future": "Status timestamp is in the future",
     "artifact_health_not_loaded": "Artifact health is not loaded",
     "import_readiness_not_ready": "Import readiness is not ready",
     "import_readiness_blocked": "Import readiness is blocked",
@@ -216,6 +218,15 @@ def status_freshness(status: dict[str, Any], stale_after_seconds: int) -> dict[s
             "source_status_stale_after_seconds": stale_after_seconds,
             "source_status_stale": True,
             "source_status_timestamp_invalid": timestamp_invalid,
+            "source_status_timestamp_future": False,
+        }
+    if updated_at > current_time:
+        return {
+            "source_status_age_seconds": None,
+            "source_status_stale_after_seconds": stale_after_seconds,
+            "source_status_stale": True,
+            "source_status_timestamp_invalid": False,
+            "source_status_timestamp_future": True,
         }
     age_seconds = max(0, int((current_time - updated_at).total_seconds()))
     return {
@@ -223,6 +234,7 @@ def status_freshness(status: dict[str, Any], stale_after_seconds: int) -> dict[s
         "source_status_stale_after_seconds": stale_after_seconds,
         "source_status_stale": age_seconds > stale_after_seconds,
         "source_status_timestamp_invalid": False,
+        "source_status_timestamp_future": False,
     }
 
 
@@ -837,10 +849,17 @@ def publisher_cockpit_summary(status: dict[str, Any]) -> dict[str, Any]:
     if status_value in {"error", "failing", "invalid-status-json"}:
         attention_reasons.append("status_failing")
     source_status_timestamp_invalid = status.get("source_status_timestamp_invalid") is True
-    if status.get("source_status_stale") is True and not source_status_timestamp_invalid:
+    source_status_timestamp_future = status.get("source_status_timestamp_future") is True
+    if (
+        status.get("source_status_stale") is True
+        and not source_status_timestamp_invalid
+        and not source_status_timestamp_future
+    ):
         attention_reasons.append("status_stale")
     if source_status_timestamp_invalid:
         attention_reasons.append("status_timestamp_invalid")
+    if source_status_timestamp_future:
+        attention_reasons.append("status_timestamp_future")
     if artifact_health_status != "loaded":
         attention_reasons.append("artifact_health_not_loaded")
     if import_readiness != "ready":
@@ -863,6 +882,7 @@ def publisher_cockpit_summary(status: dict[str, Any]) -> dict[str, Any]:
         "status_stale_after_seconds": status.get("source_status_stale_after_seconds"),
         "status_stale": status.get("source_status_stale"),
         "status_timestamp_invalid": source_status_timestamp_invalid,
+        "status_timestamp_future": source_status_timestamp_future,
         "operator_attention": bool(attention_reasons),
         "operator_attention_reasons": attention_reasons,
         "operator_attention_primary_reason": primary_attention_reason,
@@ -1057,6 +1077,8 @@ def publisher_source_health(status: dict[str, Any]) -> dict[str, Any]:
         reasons.append("source_status_unavailable")
     if status.get("source_status_timestamp_invalid") is True:
         reasons.append("source_status_timestamp_invalid")
+    if status.get("source_status_timestamp_future") is True:
+        reasons.append("source_status_timestamp_future")
     if status.get("source_status_stale") is True:
         reasons.append("source_status_stale")
     if status.get("loop_running") is False:
@@ -1195,6 +1217,9 @@ def source_status_log_fields(payload: dict[str, Any]) -> dict[str, Any]:
         "source_status_stale": status.get("source_status_stale")
         if isinstance(status.get("source_status_stale"), bool)
         else None,
+        "source_status_timestamp_future": status.get("source_status_timestamp_future")
+        if isinstance(status.get("source_status_timestamp_future"), bool)
+        else None,
         "source_status_age_seconds": compact_int(status.get("source_status_age_seconds")),
         "source_status_file_status": compact_policy_detail(
             status.get("source_status_file_status"),
@@ -1285,6 +1310,7 @@ SOURCE_STATUS_LOG_FIELD_NAMES = (
     "source_status",
     "source_loop_running",
     "source_status_stale",
+    "source_status_timestamp_future",
     "source_status_age_seconds",
     "source_status_file_status",
     "source_health_status",

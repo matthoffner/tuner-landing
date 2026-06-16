@@ -58,6 +58,7 @@ COCKPIT_HEALTH_LABELS = {
     "source_status_unavailable": "Source status is unavailable",
     "source_loop_not_running": "Source loop is not running",
     "source_status_failing": "Source status is failing",
+    "source_status_timestamp_future": "Source status timestamp is in the future",
     "source_autonomy_policy_failed": "Autonomy policy failed",
     "source_cockpit_attention": "Source cockpit needs attention",
     "source_bridge_status_unavailable": "Source bridge status is unavailable",
@@ -510,6 +511,9 @@ def source_status_diagnostics(status: dict[str, Any]) -> dict[str, Any]:
     timestamp_invalid = status.get("source_status_timestamp_invalid")
     if isinstance(timestamp_invalid, bool):
         diagnostics["source_status_timestamp_invalid"] = timestamp_invalid
+    timestamp_future = status.get("source_status_timestamp_future")
+    if isinstance(timestamp_future, bool):
+        diagnostics["source_status_timestamp_future"] = timestamp_future
     return diagnostics
 
 
@@ -909,6 +913,7 @@ def sanitize_cockpit_summary_for_relay_response(summary: Any) -> dict[str, Any] 
     bool_fields = {
         "operator_attention": summary.get("operator_attention"),
         "status_timestamp_invalid": summary.get("status_timestamp_invalid"),
+        "status_timestamp_future": summary.get("status_timestamp_future"),
         "ready_for_next_import_records": summary.get("ready_for_next_import_records"),
         "dallas_pipeline_ready": summary.get("dallas_pipeline_ready"),
         "policy_preview_json_changed": summary.get("policy_preview_json_changed"),
@@ -1069,6 +1074,8 @@ def cockpit_health(
         reasons.append("relay_snapshot_stale")
     if status.get("source_status_timestamp_invalid") is True:
         reasons.append("source_status_timestamp_invalid")
+    if status.get("source_status_timestamp_future") is True:
+        reasons.append("source_status_timestamp_future")
     if status.get("source_status_stale") is True:
         reasons.append("source_status_stale")
     if status.get("source_status_file_status") in {
