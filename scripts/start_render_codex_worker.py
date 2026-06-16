@@ -162,6 +162,7 @@ BUSINESS_DAY_NAMES = {
 BUSINESS_HOURS_CLOSED = "business_hours_closed"
 LOOP_EXITED = "loop_exited"
 PUBLISHER_EXITED = "publisher_exited"
+RELAY_PUBLISHER_UNAVAILABLE = "relay_publisher_unavailable"
 
 
 def emit(message: str) -> None:
@@ -2204,6 +2205,75 @@ def write_business_hours_pause_status(state: dict[str, object]) -> None:
     )
 
 
+def compact_worker_exit_status(value: object) -> int | None:
+    if isinstance(value, bool):
+        return int(value)
+    if isinstance(value, int):
+        return value
+    return None
+
+
+def write_render_worker_failure_status(
+    *,
+    reason: str,
+    worker_exit_status: int,
+    publisher_exit_status: int | None = None,
+) -> None:
+    """Write a compact cockpit status when the Render supervisor cannot continue."""
+    status_path = cockpit_status_file()
+    status_path.parent.mkdir(parents=True, exist_ok=True)
+    now = utc_now()
+    safe_reason = sanitize_worker_log_text(reason)[:MAX_BUSINESS_HOURS_CONFIG_VALUE_CHARS]
+    failure: dict[str, object] = {
+        "category": "render_worker",
+        "route_hint": RELAY_PUBLISHER_UNAVAILABLE,
+        "failure_reason": safe_reason,
+        "worker_exit_status": worker_exit_status,
+    }
+    compact_publisher_status = compact_worker_exit_status(publisher_exit_status)
+    if compact_publisher_status is not None:
+        failure["publisher_exit_status"] = compact_publisher_status
+    payload = {
+        "run_id": "render-worker-supervisor",
+        "iteration": 0,
+        "status": "failed",
+        "mode": "autonomous_codex",
+        "phase": RELAY_PUBLISHER_UNAVAILABLE,
+        "started_at": now,
+        "updated_at": now,
+        "steps": [],
+        "failure": failure,
+        "git": worker_git_snapshot(),
+    }
+    status_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    append_cockpit_log(
+        "render-worker failure: "
+        f"reason={safe_reason} "
+        f"worker_exit_status={worker_exit_status}"
+        + (
+            f" publisher_exit_status={compact_publisher_status}"
+            if compact_publisher_status is not None
+            else ""
+        )
+    )
+
+
+def record_render_worker_failure_status(
+    *,
+    reason: str,
+    worker_exit_status: int,
+    publisher_exit_status: int | None = None,
+) -> None:
+    try:
+        write_render_worker_failure_status(
+            reason=reason,
+            worker_exit_status=worker_exit_status,
+            publisher_exit_status=publisher_exit_status,
+        )
+    except OSError as exc:
+        emit(f"could not write render worker failure status: {type(exc).__name__}")
+
+
 def start_publisher() -> subprocess.Popen[object]:
     require_env("AUTOMOAT_RELAY_URL")
     require_env("AUTOMOAT_RELAY_TOKEN")
@@ -2396,6 +2466,11 @@ def monitor_scheduled_loop(
                     f"status={publisher_status}; stopping autonomous loop"
                 )
             terminate_process(loop_process, label="autonomous loop")
+            record_render_worker_failure_status(
+                reason=PUBLISHER_EXITED,
+                worker_exit_status=publisher_status if publisher_status != 0 else 1,
+                publisher_exit_status=publisher_status if publisher_poll_ok else None,
+            )
             if not publisher_poll_ok:
                 stop_children()
             return PUBLISHER_EXITED, publisher_status if publisher_status != 0 else 1
@@ -2554,6 +2629,11 @@ def main() -> int:
         clean_exit_status=1,
     )
     if publisher_startup_status is not None:
+        record_render_worker_failure_status(
+            reason="relay_publisher_startup_exit",
+            worker_exit_status=publisher_startup_status,
+            publisher_exit_status=publisher.returncode,
+        )
         stop_children()
         return publisher_startup_status
 

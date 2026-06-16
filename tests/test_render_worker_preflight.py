@@ -3595,6 +3595,68 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertIn('"status": "paused"', status)
         self.assertIn("business-hours pause:", log)
 
+    def test_write_render_worker_failure_status_updates_cockpit_files(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            self.worker.WORKDIR = Path(temp_dir) / "repo"
+            self.worker.WORKDIR.mkdir(parents=True)
+
+            with patch.dict(
+                self.worker.os.environ,
+                {"AUTOMOAT_RELAY_TOKEN": "relay-secret"},
+                clear=True,
+            ), patch.object(
+                self.worker,
+                "worker_git_snapshot",
+                return_value={"branch": "main", "head": "abc123"},
+            ):
+                self.worker.write_render_worker_failure_status(
+                    reason="relay_publisher_startup_exit token=relay-secret",
+                    worker_exit_status=1,
+                    publisher_exit_status=0,
+                )
+
+            status_text = self.worker.cockpit_status_file().read_text(encoding="utf-8")
+            log_text = self.worker.cockpit_log_file().read_text(encoding="utf-8")
+            status = json.loads(status_text)
+
+        self.assertEqual(status["status"], "failed")
+        self.assertEqual(status["phase"], self.worker.RELAY_PUBLISHER_UNAVAILABLE)
+        self.assertEqual(
+            status["failure"],
+            {
+                "category": "render_worker",
+                "failure_reason": "relay_publisher_startup_exit token=[redacted]",
+                "publisher_exit_status": 0,
+                "route_hint": self.worker.RELAY_PUBLISHER_UNAVAILABLE,
+                "worker_exit_status": 1,
+            },
+        )
+        self.assertIn("render-worker failure:", log_text)
+        self.assertIn("worker_exit_status=1", log_text)
+        self.assertIn("publisher_exit_status=0", log_text)
+        self.assertNotIn("relay-secret", status_text)
+        self.assertNotIn("relay-secret", log_text)
+
+    def test_record_render_worker_failure_status_is_best_effort(self) -> None:
+        output = io.StringIO()
+
+        with patch.object(
+            self.worker,
+            "write_render_worker_failure_status",
+            side_effect=OSError("secret-token path failure"),
+        ), redirect_stdout(output):
+            self.worker.record_render_worker_failure_status(
+                reason=self.worker.PUBLISHER_EXITED,
+                worker_exit_status=1,
+                publisher_exit_status=0,
+            )
+
+        self.assertIn(
+            "could not write render worker failure status: OSError",
+            output.getvalue(),
+        )
+        self.assertNotIn("secret-token", output.getvalue())
+
     def test_business_hours_pause_status_uses_supplied_runtime_workdir_env_value(
         self,
     ) -> None:
@@ -4994,6 +5056,9 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             self.worker,
             "start_loop",
         ) as start_loop, patch.object(
+            self.worker,
+            "record_render_worker_failure_status",
+        ) as record_failure_status, patch.object(
             self.worker.time,
             "sleep",
         ), redirect_stdout(
@@ -5010,6 +5075,11 @@ class RenderWorkerPreflightTest(unittest.TestCase):
 
         self.assertEqual(status, 4)
         start_loop.assert_not_called()
+        record_failure_status.assert_called_once_with(
+            reason="relay_publisher_startup_exit",
+            worker_exit_status=4,
+            publisher_exit_status=4,
+        )
         self.assertIn(
             "relay publisher exited during startup status=4; worker_exit_status=4",
             output.getvalue(),
@@ -5042,6 +5112,9 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             self.worker,
             "start_loop",
         ) as start_loop, patch.object(
+            self.worker,
+            "record_render_worker_failure_status",
+        ) as record_failure_status, patch.object(
             self.worker.time,
             "sleep",
         ), redirect_stdout(
@@ -5058,6 +5131,11 @@ class RenderWorkerPreflightTest(unittest.TestCase):
 
         self.assertEqual(status, 1)
         start_loop.assert_not_called()
+        record_failure_status.assert_called_once_with(
+            reason="relay_publisher_startup_exit",
+            worker_exit_status=1,
+            publisher_exit_status=None,
+        )
         self.assertIn(
             "could not poll relay publisher pid=202: OSError; worker_exit_status=1",
             output.getvalue(),
@@ -5127,6 +5205,9 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             self.worker,
             "start_loop",
         ) as start_loop, patch.object(
+            self.worker,
+            "record_render_worker_failure_status",
+        ) as record_failure_status, patch.object(
             self.worker.time,
             "sleep",
         ), redirect_stdout(
@@ -5143,6 +5224,11 @@ class RenderWorkerPreflightTest(unittest.TestCase):
 
         self.assertEqual(status, 1)
         start_loop.assert_not_called()
+        record_failure_status.assert_called_once_with(
+            reason="relay_publisher_startup_exit",
+            worker_exit_status=1,
+            publisher_exit_status=0,
+        )
         self.assertIn(
             "relay publisher exited during startup status=0; worker_exit_status=1",
             output.getvalue(),
@@ -5282,6 +5368,41 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         stop_children.assert_called_once()
         self.assertIn("could not poll autonomous loop pid=101: OSError", output.getvalue())
         self.assertNotIn("secret-token", output.getvalue())
+
+    def test_scheduled_monitor_writes_failure_status_when_publisher_exits(self) -> None:
+        loop = FakeProcess(pid=101)
+        publisher = FakeProcess(pid=202, initial_status=0)
+        state = {
+            "enabled": True,
+            "in_business_hours": True,
+            "local_time": "2026-06-15T10:00:00-05:00",
+            "next_start_at": None,
+        }
+        output = io.StringIO()
+
+        with (
+            patch.object(self.worker, "current_business_hours_state", return_value=state),
+            patch.object(
+                self.worker,
+                "record_render_worker_failure_status",
+            ) as record_failure_status,
+            redirect_stdout(output),
+        ):
+            reason, status = self.worker.monitor_scheduled_loop(
+                loop,
+                publisher,
+                poll_interval=0,
+            )
+
+        self.assertEqual(reason, self.worker.PUBLISHER_EXITED)
+        self.assertEqual(status, 1)
+        self.assertTrue(loop.terminated)
+        record_failure_status.assert_called_once_with(
+            reason=self.worker.PUBLISHER_EXITED,
+            worker_exit_status=1,
+            publisher_exit_status=0,
+        )
+        self.assertIn("relay publisher exited unexpectedly status=0", output.getvalue())
 
     def test_business_hours_sleep_handles_publisher_poll_failure_without_exception_text(
         self,
