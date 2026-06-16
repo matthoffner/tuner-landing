@@ -133,6 +133,15 @@ POLICY_ROW_SAMPLE_LIMIT = 5
 IMPORT_APPEND_SEQUENCE_SAMPLE_LIMIT = 4
 
 
+class PublisherArgumentError(Exception):
+    """Raised when argparse rejects publisher CLI/env configuration."""
+
+
+class PublisherArgumentParser(argparse.ArgumentParser):
+    def error(self, message: str) -> None:
+        raise PublisherArgumentError(message)
+
+
 def utc_now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
@@ -1928,6 +1937,88 @@ def publisher_preflight_error_keys(errors: list[str]) -> list[str]:
     return sorted({publisher_preflight_error_key(error) for error in errors})
 
 
+def parse_float_argument(value: str) -> float:
+    try:
+        return float(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("must be a number") from exc
+
+
+def parse_int_argument(value: str) -> int:
+    try:
+        return int(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("must be an integer") from exc
+
+
+def publisher_argument_error_to_config_error(message: str) -> str:
+    argument_prefixes = {
+        "argument --interval:": "--interval must be a number",
+        "argument --timeout:": "--timeout must be a number",
+        "argument --tail-lines:": "--tail-lines must be an integer",
+        "argument --max-log-bytes:": "--max-log-bytes must be an integer",
+        "argument --max-consecutive-failures:": (
+            "--max-consecutive-failures must be an integer"
+        ),
+        "argument --max-consecutive-stale-statuses:": (
+            "--max-consecutive-stale-statuses must be an integer"
+        ),
+        "argument --status-stale-after-seconds:": (
+            "--status-stale-after-seconds must be an integer"
+        ),
+        "argument --bridge-status-stale-after-seconds:": (
+            "--bridge-status-stale-after-seconds must be an integer"
+        ),
+    }
+    for prefix, error in argument_prefixes.items():
+        if message.startswith(prefix):
+            return error
+    return "publisher arguments could not be parsed"
+
+
+def publisher_argument_error_summary(message: str) -> dict[str, Any]:
+    errors = [publisher_argument_error_to_config_error(message)]
+    failed_keys = publisher_preflight_error_keys(errors)
+    runtime_keys = [
+        key
+        for key in failed_keys
+        if key.startswith("AUTOMOAT_")
+        and key
+        not in {
+            "AUTOMOAT_RELAY_URL|--relay-url",
+            "AUTOMOAT_RELAY_TOKEN|--token",
+            "AUTOMOAT_BRIDGE_STATUS_FILE|--bridge-status-file",
+        }
+    ]
+    return {
+        "status": "failed",
+        "errors": errors,
+        "diagnostics": {
+            "error_count": len(errors),
+            "error_categories": publisher_preflight_error_categories(errors),
+            "failed_configuration_keys": failed_keys,
+            "relay_url_configured": bool(os.environ.get("AUTOMOAT_RELAY_URL", "").strip()),
+            "relay_token_configured": bool(
+                os.environ.get("AUTOMOAT_RELAY_TOKEN", "").strip()
+            ),
+            "runtime_configured_keys": runtime_keys,
+            "file_configured_keys": [],
+            "runtime_limits": PUBLISHER_CONFIG_LIMITS,
+        },
+    }
+
+
+def argv_requests_json_check_env(argv: list[str]) -> bool:
+    if "--check-env" not in argv:
+        return False
+    for index, value in enumerate(argv):
+        if value == "--format" and index + 1 < len(argv) and argv[index + 1] == "json":
+            return True
+        if value == "--format=json":
+            return True
+    return False
+
+
 def paths_equal(left: Path, right: Path) -> bool:
     try:
         return left.expanduser().resolve(strict=False) == right.expanduser().resolve(
@@ -2067,12 +2158,12 @@ def emit_publisher_preflight(
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = PublisherArgumentParser(description=__doc__)
     parser.add_argument("--relay-url", default=os.environ.get("AUTOMOAT_RELAY_URL", ""))
     parser.add_argument("--token", default=os.environ.get("AUTOMOAT_RELAY_TOKEN", ""))
     parser.add_argument(
         "--interval",
-        type=float,
+        type=parse_float_argument,
         default=os.environ.get(
             "AUTOMOAT_RELAY_INTERVAL",
             str(PUBLISHER_RUNTIME_DEFAULTS["interval"]),
@@ -2080,7 +2171,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--timeout",
-        type=float,
+        type=parse_float_argument,
         default=os.environ.get(
             "AUTOMOAT_RELAY_TIMEOUT",
             str(PUBLISHER_RUNTIME_DEFAULTS["timeout"]),
@@ -2100,7 +2191,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--tail-lines",
-        type=int,
+        type=parse_int_argument,
         default=os.environ.get(
             "AUTOMOAT_RELAY_TAIL_LINES",
             str(PUBLISHER_RUNTIME_DEFAULTS["tail_lines"]),
@@ -2108,7 +2199,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--max-log-bytes",
-        type=int,
+        type=parse_int_argument,
         default=os.environ.get(
             "AUTOMOAT_RELAY_MAX_LOG_BYTES",
             str(PUBLISHER_RUNTIME_DEFAULTS["max_log_bytes"]),
@@ -2128,7 +2219,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--status-stale-after-seconds",
-        type=int,
+        type=parse_int_argument,
         default=os.environ.get(
             "AUTOMOAT_STATUS_STALE_AFTER_SECONDS",
             str(PUBLISHER_RUNTIME_DEFAULTS["status_stale_after_seconds"]),
@@ -2137,7 +2228,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--bridge-status-stale-after-seconds",
-        type=int,
+        type=parse_int_argument,
         default=os.environ.get(
             "AUTOMOAT_BRIDGE_STATUS_STALE_AFTER_SECONDS",
             str(PUBLISHER_RUNTIME_DEFAULTS["bridge_status_stale_after_seconds"]),
@@ -2148,7 +2239,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--max-consecutive-failures",
-        type=int,
+        type=parse_int_argument,
         default=os.environ.get(
             "AUTOMOAT_RELAY_MAX_CONSECUTIVE_FAILURES",
             str(PUBLISHER_RUNTIME_DEFAULTS["max_consecutive_failures"]),
@@ -2160,7 +2251,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--max-consecutive-stale-statuses",
-        type=int,
+        type=parse_int_argument,
         default=os.environ.get(
             "AUTOMOAT_RELAY_MAX_CONSECUTIVE_STALE_STATUSES",
             str(PUBLISHER_RUNTIME_DEFAULTS["max_consecutive_stale_statuses"]),
@@ -2183,7 +2274,23 @@ def normalize_args(args: argparse.Namespace) -> argparse.Namespace:
 
 
 def main() -> int:
-    args = normalize_args(parse_args())
+    try:
+        args = normalize_args(parse_args())
+    except PublisherArgumentError as exc:
+        if argv_requests_json_check_env(sys.argv):
+            print(
+                json.dumps(
+                    publisher_argument_error_summary(str(exc)),
+                    sort_keys=True,
+                ),
+                flush=True,
+            )
+        else:
+            print(
+                publisher_argument_error_to_config_error(str(exc)),
+                file=sys.stderr,
+            )
+        return 2
     if args.format == "json" and not args.check_env:
         print("--format json is only supported with --check-env", file=sys.stderr)
         return 2

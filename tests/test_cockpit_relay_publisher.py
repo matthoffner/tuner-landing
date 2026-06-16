@@ -2979,6 +2979,50 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         json.dumps(payload, allow_nan=False)
         self.assertNotIn("relay-token", output.getvalue())
 
+    def test_check_env_json_routes_non_numeric_runtime_values_without_argparse_usage(
+        self,
+    ) -> None:
+        env = {
+            "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+        }
+        output = io.StringIO()
+        error_output = io.StringIO()
+        self.publisher.publish_once = lambda _args: self.fail("publish_once should not run")
+        with patch.dict(os.environ, env, clear=True), patch.object(
+            sys,
+            "argv",
+            [
+                "publish_cockpit_to_relay.py",
+                "--check-env",
+                "--format=json",
+                "--tail-lines",
+                "not-a-count",
+            ],
+        ), redirect_stdout(output), redirect_stderr(error_output):
+            status = self.publisher.main()
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(status, 2)
+        self.assertEqual(payload["status"], "failed")
+        self.assertEqual(payload["errors"], ["--tail-lines must be an integer"])
+        self.assertEqual(
+            payload["diagnostics"]["error_categories"],
+            ["invalid_runtime_config"],
+        )
+        self.assertEqual(
+            payload["diagnostics"]["failed_configuration_keys"],
+            ["AUTOMOAT_RELAY_TAIL_LINES|--tail-lines"],
+        )
+        self.assertEqual(
+            payload["diagnostics"]["runtime_configured_keys"],
+            ["AUTOMOAT_RELAY_TAIL_LINES|--tail-lines"],
+        )
+        self.assertEqual(error_output.getvalue(), "")
+        self.assertNotIn("usage:", output.getvalue())
+        self.assertNotIn("not-a-count", output.getvalue())
+        self.assertNotIn("relay-token", output.getvalue())
+
     def test_format_json_is_check_env_only(self) -> None:
         env = {
             "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
