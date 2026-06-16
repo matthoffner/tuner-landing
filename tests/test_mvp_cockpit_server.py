@@ -425,6 +425,82 @@ class MvpCockpitServerTest(unittest.TestCase):
             "Coordination handoff is incomplete",
         )
 
+    def test_cockpit_summary_treats_business_hours_pause_as_scheduled(self) -> None:
+        current_timestamp = datetime.now(timezone.utc).replace(microsecond=0)
+        status = {
+            "status": "paused",
+            "phase": "outside_business_hours",
+            "mode": "autonomous_codex",
+            "loop_running": False,
+            "updated_at": current_timestamp.isoformat().replace("+00:00", "Z"),
+            "business_hours": {
+                "enabled": True,
+                "in_business_hours": False,
+                "timezone": "America/Chicago token=timezone-secret",
+                "start": "09:00",
+                "end": "17:00",
+                "days": "mon-fri",
+                "local_time": "2026-06-16T07:00:00-05:00",
+                "local_weekday": "tue",
+                "next_start_at": (
+                    "https://user:secret@example.local/next?token=next-secret#debug"
+                ),
+            },
+        }
+
+        summary = self.cockpit.cockpit_summary(status)
+
+        self.assertFalse(summary["operator_attention"])
+        self.assertEqual(summary["operator_attention_reasons"], [])
+        self.assertEqual(summary["operator_attention_label"], "Clear")
+        self.assertTrue(summary["business_hours_pause"])
+        self.assertEqual(
+            summary["business_hours"],
+            {
+                "available": True,
+                "enabled": True,
+                "in_business_hours": False,
+                "timezone": "America/Chicago token=[redacted]",
+                "start": "09:00",
+                "end": "17:00",
+                "days": "mon-fri",
+                "local_time": "2026-06-16T07:00:00-05:00",
+                "local_weekday": "tue",
+                "next_start_at": (
+                    "https://example.local/next?[redacted]#[redacted]"
+                ),
+                "active_pause": True,
+            },
+        )
+        self.assertEqual(summary["artifact_health"], "unknown")
+        self.assertEqual(summary["import_readiness"], "unknown")
+        summary_text = json.dumps(summary, sort_keys=True)
+        self.assertNotIn("timezone-secret", summary_text)
+        self.assertNotIn("next-secret", summary_text)
+        self.assertNotIn("user:secret", summary_text)
+
+    def test_cockpit_summary_keeps_stale_business_hours_pause_degraded(self) -> None:
+        status = {
+            "status": "paused",
+            "phase": "outside_business_hours",
+            "loop_running": False,
+            "updated_at": "2000-01-01T00:00:00Z",
+            "business_hours": {
+                "enabled": True,
+                "in_business_hours": False,
+                "timezone": "America/Chicago",
+                "next_start_at": "2026-06-17T09:00:00-05:00",
+            },
+        }
+
+        summary = self.cockpit.cockpit_summary(status)
+
+        self.assertTrue(summary["operator_attention"])
+        self.assertEqual(summary["operator_attention_reasons"], ["status_stale"])
+        self.assertEqual(summary["operator_attention_label"], "Status is stale")
+        self.assertTrue(summary["business_hours_pause"])
+        self.assertEqual(summary["business_hours"]["active_pause"], True)
+
     def test_cockpit_summary_reports_invalid_status_timestamp(self) -> None:
         status = {
             "status": "passing",

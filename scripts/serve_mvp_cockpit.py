@@ -560,6 +560,32 @@ def coordination_summary(status: dict[str, object]) -> dict[str, object]:
     return summary
 
 
+def business_hours_summary(value: object) -> dict[str, object]:
+    business_hours = as_dict(value)
+    if not business_hours:
+        return {"available": False}
+
+    summary: dict[str, object] = {"available": True}
+    for key in ("enabled", "in_business_hours"):
+        field_value = business_hours.get(key)
+        if isinstance(field_value, bool):
+            summary[key] = field_value
+    for key in (
+        "timezone",
+        "start",
+        "end",
+        "days",
+        "local_time",
+        "local_weekday",
+        "next_start_at",
+    ):
+        compact_value = compact_policy_detail(business_hours.get(key), max_length=120)
+        if compact_value is not None:
+            summary[key] = compact_value
+    summary["active_pause"] = summary.get("in_business_hours") is False
+    return summary
+
+
 def cockpit_summary(status: dict[str, object]) -> dict[str, object]:
     artifacts = as_dict(status.get("artifacts"))
     artifact_health = as_dict(artifacts.get("artifact_health"))
@@ -585,7 +611,14 @@ def cockpit_summary(status: dict[str, object]) -> dict[str, object]:
     status_timestamp_future = utc_timestamp_is_future(updated_at)
 
     status_value = status.get("status") or "waiting"
+    phase_value = compact_policy_detail(status.get("phase"), max_length=120)
     loop_running = bool(status.get("loop_running"))
+    business_hours = business_hours_summary(status.get("business_hours"))
+    business_hours_pause = (
+        status_value == "paused"
+        and phase_value == "outside_business_hours"
+        and business_hours.get("active_pause") is True
+    )
     artifact_health_status = artifact_health.get("status") or "unknown"
     artifact_statuses = artifact_status_summary(artifact_health.get("statuses"))
     artifact_problem_artifacts = artifact_problem_summary(
@@ -748,7 +781,7 @@ def cockpit_summary(status: dict[str, object]) -> dict[str, object]:
     coordination = coordination_summary(status)
 
     attention_reasons: list[str] = []
-    if not loop_running:
+    if not loop_running and not business_hours_pause:
         attention_reasons.append("loop_not_running")
     if policy_failure:
         attention_reasons.append("autonomy_policy_failed")
@@ -769,9 +802,9 @@ def cockpit_summary(status: dict[str, object]) -> dict[str, object]:
         or coordination.get("latest_status_found") is False
     ):
         attention_reasons.append("handoff_coordination_incomplete")
-    if artifact_health_status != "loaded":
+    if artifact_health_status != "loaded" and not business_hours_pause:
         attention_reasons.append("artifact_health_not_loaded")
-    if import_readiness != "ready":
+    if import_readiness != "ready" and not business_hours_pause:
         attention_reasons.append("import_readiness_not_ready")
     if readiness_blockers:
         attention_reasons.append("import_readiness_blocked")
@@ -781,7 +814,7 @@ def cockpit_summary(status: dict[str, object]) -> dict[str, object]:
 
     return {
         "status": status_value,
-        "phase": status.get("phase"),
+        "phase": phase_value,
         "mode": status.get("mode") or SERVER_CONFIG.get("loop_mode", "mvp"),
         "loop_running": loop_running,
         "loop_pid": status.get("loop_pid"),
@@ -796,6 +829,8 @@ def cockpit_summary(status: dict[str, object]) -> dict[str, object]:
         "operator_attention_reasons": attention_reasons,
         "operator_attention_primary_reason": primary_attention_reason,
         "operator_attention_label": operator_attention_label(primary_attention_reason),
+        "business_hours": business_hours,
+        "business_hours_pause": business_hours_pause,
         "artifact_health": artifact_health_status,
         "artifact_health_summary": artifact_health_text,
         "artifact_count": artifact_counts["artifact_count"],
