@@ -2291,6 +2291,7 @@ def run_publish_loop(args: argparse.Namespace) -> int:
                 ):
                     emit(
                         "exiting after consecutive stale source statuses "
+                        "failure_kind=consecutive_stale_source_statuses "
                         f"count={consecutive_stale_statuses} "
                         f"limit={args.max_consecutive_stale_statuses}",
                         log_path=args.publisher_log,
@@ -2306,6 +2307,7 @@ def run_publish_loop(args: argparse.Namespace) -> int:
             ):
                 emit(
                     "exiting after consecutive publish failures "
+                    "failure_kind=consecutive_publish_failures "
                     f"count={consecutive_failures} "
                     f"limit={args.max_consecutive_failures}",
                     log_path=args.publisher_log,

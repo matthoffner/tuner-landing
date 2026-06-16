@@ -5049,9 +5049,11 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertEqual(status, 1)
         self.assertEqual(calls, [False, False])
         self.assertIn(
-            "exiting after consecutive publish failures count=2 limit=2",
+            "exiting after consecutive publish failures "
+            "failure_kind=consecutive_publish_failures count=2 limit=2",
             log_text,
         )
+        self.assertNotIn("source_status_stale", log_text)
 
     def test_publish_loop_resets_failure_count_after_success(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -5074,7 +5076,8 @@ class CockpitRelayPublisherTest(unittest.TestCase):
 
         self.assertEqual(status, 1)
         self.assertIn(
-            "exiting after consecutive publish failures count=2 limit=2",
+            "exiting after consecutive publish failures "
+            "failure_kind=consecutive_publish_failures count=2 limit=2",
             log_text,
         )
 
@@ -5100,7 +5103,8 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertEqual(status, 1)
         self.assertEqual(calls, [True, True])
         self.assertIn(
-            "exiting after consecutive stale source statuses count=2 limit=2",
+            "exiting after consecutive stale source statuses "
+            "failure_kind=consecutive_stale_source_statuses count=2 limit=2",
             log_text,
         )
 
@@ -5125,7 +5129,8 @@ class CockpitRelayPublisherTest(unittest.TestCase):
 
         self.assertEqual(status, 1)
         self.assertIn(
-            "exiting after consecutive stale source statuses count=2 limit=2",
+            "exiting after consecutive stale source statuses "
+            "failure_kind=consecutive_stale_source_statuses count=2 limit=2",
             log_text,
         )
 
