@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import sys
 from pathlib import Path
 
 
@@ -12,15 +13,27 @@ DEFAULT_BATCH_INPUT_DIR = ROOT / "generated" / "intake"
 DEFAULT_BATCH_OUTPUT_DIR = ROOT / "generated" / "discovery"
 
 
+DISCOVERY_ARTIFACT_NAMES = (
+    "business-profile.json",
+    "moat-hypotheses.json",
+    "eval-opportunities.json",
+    "workflow-map.md",
+    "data-gap-plan.md",
+    "discovery-summary.md",
+)
+
+
 def load_json(path: Path):
-    with path.open() as handle:
+    with path.open(encoding="utf-8") as handle:
         return json.load(handle)
 
 
-def write_json(path: Path, payload):
-    with path.open("w") as handle:
-        json.dump(payload, handle, indent=2)
-        handle.write("\n")
+def json_artifact_text(payload):
+    return json.dumps(payload, indent=2) + "\n"
+
+
+def write_text(path: Path, content: str):
+    path.write_text(content, encoding="utf-8")
 
 
 def build_business_profile(intake):
@@ -194,20 +207,66 @@ def parse_args():
         default=DEFAULT_BATCH_OUTPUT_DIR,
         help="Root output directory for batch generation.",
     )
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="Verify expected discovery artifacts are present and current without writing files.",
+    )
+    parser.add_argument(
+        "--format",
+        choices=("text", "json"),
+        default="text",
+        help="Output format for --check diagnostics.",
+    )
     return parser.parse_args()
+
+
+def build_artifact_contents(intake):
+    return {
+        "business-profile.json": json_artifact_text(build_business_profile(intake)),
+        "moat-hypotheses.json": json_artifact_text(intake["moat_hypotheses"]),
+        "eval-opportunities.json": json_artifact_text(intake["eval_opportunities"]),
+        "workflow-map.md": build_workflow_map(intake),
+        "data-gap-plan.md": build_data_gap_plan(intake),
+        "discovery-summary.md": build_discovery_summary(intake),
+    }
 
 
 def generate_artifacts(input_path: Path, output_path: Path):
     intake = load_json(input_path)
+    artifacts = build_artifact_contents(intake)
 
     output_path.mkdir(parents=True, exist_ok=True)
 
-    write_json(output_path / "business-profile.json", build_business_profile(intake))
-    write_json(output_path / "moat-hypotheses.json", intake["moat_hypotheses"])
-    write_json(output_path / "eval-opportunities.json", intake["eval_opportunities"])
-    (output_path / "workflow-map.md").write_text(build_workflow_map(intake))
-    (output_path / "data-gap-plan.md").write_text(build_data_gap_plan(intake))
-    (output_path / "discovery-summary.md").write_text(build_discovery_summary(intake))
+    for artifact_name in DISCOVERY_ARTIFACT_NAMES:
+        write_text(output_path / artifact_name, artifacts[artifact_name])
+
+
+def check_artifacts(input_path: Path, output_path: Path):
+    intake = load_json(input_path)
+    artifacts = build_artifact_contents(intake)
+    missing = []
+    stale = []
+
+    for artifact_name in DISCOVERY_ARTIFACT_NAMES:
+        artifact_path = output_path / artifact_name
+        try:
+            actual = artifact_path.read_text(encoding="utf-8")
+        except FileNotFoundError:
+            missing.append(artifact_name)
+            continue
+        if actual != artifacts[artifact_name]:
+            stale.append(artifact_name)
+
+    status = "passed" if not missing and not stale else "failed"
+    return {
+        "status": status,
+        "input_path": input_path.as_posix(),
+        "output_path": output_path.as_posix(),
+        "missing_artifacts": missing,
+        "stale_artifacts": stale,
+        "artifact_count": len(DISCOVERY_ARTIFACT_NAMES),
+    }
 
 
 def generate_batch(input_dir: Path, output_dir: Path):
@@ -219,14 +278,68 @@ def generate_batch(input_dir: Path, output_dir: Path):
         generate_artifacts(intake_path, output_dir / intake_path.parent.name)
 
 
-def main():
-    args = parse_args()
-    if args.batch_input_dir:
-        generate_batch(args.batch_input_dir, args.batch_output_dir)
+def check_batch(input_dir: Path, output_dir: Path):
+    intake_paths = sorted(input_dir.glob("*/intake.json"))
+    if not intake_paths:
+        raise SystemExit(f"No intake files found under {input_dir}")
+
+    checks = [
+        check_artifacts(intake_path, output_dir / intake_path.parent.name)
+        for intake_path in intake_paths
+    ]
+    failed = [check for check in checks if check["status"] != "passed"]
+    return {
+        "status": "passed" if not failed else "failed",
+        "checked_dataset_count": len(checks),
+        "failed_dataset_count": len(failed),
+        "checks": checks,
+    }
+
+
+def emit_check_result(result, output_format: str):
+    if output_format == "json":
+        print(json.dumps(result, indent=2))
         return
 
+    if "checks" in result:
+        print(
+            "discovery artifact check "
+            f"{result['status']}: datasets={result['checked_dataset_count']} "
+            f"failed={result['failed_dataset_count']}"
+        )
+        for check in result["checks"]:
+            if check["status"] != "passed":
+                print(
+                    f"- {check['output_path']}: "
+                    f"missing={len(check['missing_artifacts'])} "
+                    f"stale={len(check['stale_artifacts'])}"
+                )
+        return
+
+    print(
+        "discovery artifact check "
+        f"{result['status']}: missing={len(result['missing_artifacts'])} "
+        f"stale={len(result['stale_artifacts'])} output={result['output_path']}"
+    )
+
+
+def main():
+    args = parse_args()
+    if args.check:
+        if args.batch_input_dir:
+            result = check_batch(args.batch_input_dir, args.batch_output_dir)
+        else:
+            result = check_artifacts(args.input, args.output)
+        emit_check_result(result, args.format)
+        return 0 if result["status"] == "passed" else 1
+
+    if args.batch_input_dir:
+        generate_batch(args.batch_input_dir, args.batch_output_dir)
+        return 0
+
     generate_artifacts(args.input, args.output)
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
