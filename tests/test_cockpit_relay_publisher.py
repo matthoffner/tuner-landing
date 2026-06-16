@@ -2020,7 +2020,6 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             health["reasons"],
             [
                 "source_status_unavailable",
-                "source_status_stale",
                 "source_loop_not_running",
                 "source_status_failing",
             ],
@@ -2523,7 +2522,6 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             health["reasons"],
             [
                 "source_status_unavailable",
-                "source_status_stale",
                 "source_loop_not_running",
                 "source_status_failing",
                 "source_cockpit_attention",

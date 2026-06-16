@@ -1373,13 +1373,14 @@ def publisher_source_health(status: dict[str, Any]) -> dict[str, Any]:
     cockpit_attention_reasons = as_string_list(
         cockpit_summary.get("operator_attention_reasons")
     )
-    if status.get("source_status_file_status") in {
+    source_status_unavailable = status.get("source_status_file_status") in {
         "missing",
         "read_failed",
         "invalid_json",
         "not_object",
         "too_large",
-    }:
+    }
+    if source_status_unavailable:
         reasons.append("source_status_unavailable")
     source_timestamp_invalid = status.get("source_status_timestamp_invalid") is True
     source_timestamp_future = status.get("source_status_timestamp_future") is True
@@ -1391,6 +1392,7 @@ def publisher_source_health(status: dict[str, Any]) -> dict[str, Any]:
         status.get("source_status_stale") is True
         and not source_timestamp_invalid
         and not source_timestamp_future
+        and not source_status_unavailable
     ):
         reasons.append("source_status_stale")
     if status.get("loop_running") is False and not business_hours_pause:

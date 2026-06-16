@@ -422,6 +422,48 @@ class RenderCockpitRelayTest(unittest.TestCase):
         self.assertEqual(status["cockpit_status"], "degraded")
         self.assertEqual(status["cockpit_health"]["reasons"], ["source_status_stale"])
 
+    def test_status_and_health_prioritize_unavailable_source_snapshot(self) -> None:
+        self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
+        self.relay.update_state(
+            {
+                "pushed_at": "2026-06-14T19:59:30Z",
+                "status": {
+                    "status": "invalid-status-json",
+                    "loop_running": False,
+                    "source_status_file_status": "invalid_json",
+                    "source_status_stale": True,
+                    "cockpit_summary": {
+                        "operator_attention": True,
+                        "operator_attention_primary_reason": "status_failing",
+                        "operator_attention_label": "Loop status is failing",
+                        "operator_attention_reasons": ["status_failing"],
+                    },
+                },
+                "log_tail": "status file is invalid\n",
+            }
+        )
+        self.relay.utc_now = lambda: "2026-06-14T20:00:00Z"
+
+        health = self.relay.health_payload()
+        status = self.relay.relay_status_payload()
+
+        expected_reasons = [
+            "source_status_unavailable",
+            "source_loop_not_running",
+            "source_status_failing",
+            "source_cockpit_attention",
+        ]
+        self.assertEqual(health["cockpit_health"]["reasons"], expected_reasons)
+        self.assertEqual(status["cockpit_health"]["reasons"], expected_reasons)
+        self.assertEqual(
+            health["cockpit_health_primary_reason"],
+            "source_status_unavailable",
+        )
+        self.assertEqual(
+            health["cockpit_health_label"],
+            "Source status is unavailable",
+        )
+
     def test_status_and_health_include_publisher_source_health(self) -> None:
         self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
         self.relay.update_state(
@@ -1436,7 +1478,6 @@ class RenderCockpitRelayTest(unittest.TestCase):
             health["cockpit_health"]["reasons"],
             [
                 "source_status_timestamp_invalid",
-                "source_status_stale",
                 "source_cockpit_attention",
             ],
         )
@@ -1490,7 +1531,6 @@ class RenderCockpitRelayTest(unittest.TestCase):
             health["cockpit_health"]["reasons"],
             [
                 "source_status_timestamp_future",
-                "source_status_stale",
                 "source_cockpit_attention",
             ],
         )
@@ -2518,7 +2558,6 @@ class RenderCockpitRelayTest(unittest.TestCase):
         self.assertEqual(
             health["cockpit_health"]["reasons"],
             [
-                "source_status_stale",
                 "source_status_unavailable",
                 "source_loop_not_running",
                 "source_status_failing",
@@ -2657,7 +2696,6 @@ class RenderCockpitRelayTest(unittest.TestCase):
         self.assertEqual(
             health["cockpit_health"]["reasons"],
             [
-                "source_status_stale",
                 "source_status_unavailable",
                 "source_loop_not_running",
             ],
