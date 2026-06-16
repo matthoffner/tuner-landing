@@ -103,6 +103,7 @@ MAX_AGENT_ITERATIONS = 1000
 MAX_AGENT_INTERVAL_SECONDS = 3600
 MAX_CODEX_TIMEOUT_SECONDS = 7200
 MAX_PROMPT_FILE_BYTES = 128 * 1024
+COMMAND_TERMINATE_GRACE_SECONDS = 5.0
 PIPELINE_SUMMARY_OBJECT_SECTIONS = (
     "execution_readiness",
     "contract",
@@ -852,12 +853,42 @@ def stream_command(
     assert process.stdout is not None
     selector.register(process.stdout, selectors.EVENT_READ)
     timed_out = False
+    termination_requested = False
+    termination_reason: str | None = None
+    termination_started: float | None = None
+    killed_after_terminate = False
     while True:
-        if STOP_REQUESTED:
+        now = time.monotonic()
+        if STOP_REQUESTED and process.poll() is None and not termination_requested:
+            termination_requested = True
+            termination_reason = "stop_requested"
+            termination_started = now
             process.terminate()
-        if timeout > 0 and time.monotonic() - started > timeout and process.poll() is None:
+        if (
+            timeout > 0
+            and now - started > timeout
+            and process.poll() is None
+            and not termination_requested
+        ):
             timed_out = True
+            termination_requested = True
+            termination_reason = "timeout"
+            termination_started = now
             process.terminate()
+        if (
+            termination_requested
+            and not killed_after_terminate
+            and termination_started is not None
+            and process.poll() is None
+            and time.monotonic() - termination_started > COMMAND_TERMINATE_GRACE_SECONDS
+        ):
+            killed_after_terminate = True
+            process.kill()
+            emit(
+                log_file,
+                f"step kill: {name} reason={termination_reason} "
+                f"grace_seconds={COMMAND_TERMINATE_GRACE_SECONDS}",
+            )
         for key, _events in selector.select(timeout=0.2):
             line = key.fileobj.readline()
             if line:
@@ -868,6 +899,12 @@ def stream_command(
                 for line in remainder.splitlines():
                     emit(log_file, "  " + line)
             break
+    try:
+        selector.unregister(process.stdout)
+    except (KeyError, ValueError):
+        pass
+    selector.close()
+    process.stdout.close()
     elapsed = round(time.monotonic() - started, 3)
     exit_status = process.returncode
     if timed_out:
@@ -880,6 +917,8 @@ def stream_command(
         "exit_status": exit_status,
         "seconds": elapsed,
         "timed_out": timed_out,
+        "termination_reason": termination_reason,
+        "killed_after_terminate": killed_after_terminate,
     }
 
 

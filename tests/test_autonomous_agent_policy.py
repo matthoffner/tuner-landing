@@ -8,6 +8,7 @@ import importlib.util
 import io
 import os
 from pathlib import Path
+import sys
 from types import SimpleNamespace
 import tempfile
 import unittest
@@ -447,6 +448,35 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
             stderr.getvalue(),
         )
         self.assertFalse(log_exists)
+
+    def test_stream_command_kills_child_that_ignores_timeout_terminate(self) -> None:
+        self.loop.COMMAND_TERMINATE_GRACE_SECONDS = 0.05
+        command = [
+            sys.executable,
+            "-c",
+            (
+                "import signal, time\n"
+                "signal.signal(signal.SIGTERM, signal.SIG_IGN)\n"
+                "print('child ready', flush=True)\n"
+                "time.sleep(5)\n"
+            ),
+        ]
+
+        with tempfile.TemporaryDirectory() as tmp:
+            log_file = Path(tmp) / "loop.log"
+            result = self.loop.stream_command(
+                log_file,
+                "stubborn child",
+                command,
+                timeout=0.1,
+            )
+            log_text = log_file.read_text(encoding="utf-8")
+
+        self.assertEqual(result["exit_status"], 124)
+        self.assertTrue(result["timed_out"])
+        self.assertEqual(result["termination_reason"], "timeout")
+        self.assertTrue(result["killed_after_terminate"])
+        self.assertIn("step kill: stubborn child reason=timeout", log_text)
 
     def test_dirty_paths_excluding_preview_filters_pixelbox_preview(self) -> None:
         self.loop.git_status_lines = lambda: [
