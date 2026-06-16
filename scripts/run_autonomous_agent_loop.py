@@ -276,6 +276,14 @@ def latest_handoff_status() -> str:
     return "handoff present"
 
 
+def coordination_snapshot() -> dict[str, Any]:
+    """Return compact shared-lane context for cockpit status consumers."""
+    return {
+        "handoff_path": repo_path(HANDOFF_PATH),
+        "latest_handoff_status": sanitized_policy_scalar(latest_handoff_status()),
+    }
+
+
 def repo_path(path: Path) -> str:
     try:
         return path.resolve().relative_to(ROOT).as_posix()
@@ -796,6 +804,7 @@ def status_payload(
         "steps": steps,
         "artifacts": inspect_artifacts(),
         "autonomy_policy": autonomy_policy_snapshot(),
+        "coordination": coordination_snapshot(),
         "git": git_state(),
     }
     if error:

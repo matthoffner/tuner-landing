@@ -191,6 +191,68 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
         self.assertLessEqual(len(snapshot["readiness_blockers"][2]), 240)
         self.assertNotIn("extra-6", snapshot["readiness_blockers"])
 
+    def test_coordination_snapshot_sanitizes_latest_handoff_status(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            handoff_path = root / ".pixelbox" / "handoff.md"
+            handoff_path.parent.mkdir(parents=True)
+            handoff_path.write_text(
+                "\n".join(
+                    [
+                        "# Pixelbox Agent Handoff",
+                        "",
+                        "## Latest",
+                        "- lane: editor",
+                        (
+                            "- status: running token=super-secret "
+                            "https://user:pass@example.local/status?token=secret#debug"
+                        ),
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            self.loop.ROOT = root
+            self.loop.HANDOFF_PATH = handoff_path
+
+            snapshot = self.loop.coordination_snapshot()
+
+        self.assertEqual(snapshot["handoff_path"], ".pixelbox/handoff.md")
+        self.assertIn("running token=<redacted>", snapshot["latest_handoff_status"])
+        self.assertIn("https://example.local/status", snapshot["latest_handoff_status"])
+        self.assertNotIn("super-secret", snapshot["latest_handoff_status"])
+        self.assertNotIn("user:pass", snapshot["latest_handoff_status"])
+        self.assertNotIn("token=secret", snapshot["latest_handoff_status"])
+
+    def test_status_payload_includes_coordination_snapshot(self) -> None:
+        self.loop.utc_now = lambda: "2026-06-16T02:10:00Z"
+        self.loop.inspect_artifacts = lambda: {"artifact_health": {"status": "loaded"}}
+        self.loop.autonomy_policy_snapshot = lambda: {
+            "current_focus": "autonomy_visibility_or_real_ingest"
+        }
+        self.loop.git_state = lambda: {"dirty_count_excluding_preview": 0}
+        self.loop.coordination_snapshot = lambda: {
+            "handoff_path": ".pixelbox/handoff.md",
+            "latest_handoff_status": "publisher preflight ready",
+        }
+
+        payload = self.loop.status_payload(
+            "run-1",
+            3,
+            "running",
+            "codex_exec",
+            "2026-06-16T02:09:00Z",
+            [],
+        )
+
+        self.assertEqual(
+            payload["coordination"],
+            {
+                "handoff_path": ".pixelbox/handoff.md",
+                "latest_handoff_status": "publisher preflight ready",
+            },
+        )
+
     def test_docs_and_status_files_do_not_make_synthetic_rows_productive(self) -> None:
         paths = [
             "README.md",
