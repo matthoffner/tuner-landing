@@ -2181,6 +2181,65 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                     },
                 )
 
+    def test_publisher_cockpit_summary_routes_coordination_attention(self) -> None:
+        cases = (
+            (
+                "unavailable",
+                {
+                    "handoff_file_status": "missing",
+                    "latest_section_found": True,
+                    "latest_status_found": True,
+                },
+                "handoff_coordination_unavailable",
+                "Coordination handoff is unavailable",
+            ),
+            (
+                "incomplete",
+                {
+                    "handoff_file_status": "loaded",
+                    "latest_section_found": True,
+                    "latest_status_found": False,
+                },
+                "handoff_coordination_incomplete",
+                "Coordination handoff is incomplete",
+            ),
+        )
+        for name, coordination, expected_reason, expected_label in cases:
+            with self.subTest(name=name):
+                status = {
+                    "status": "passing",
+                    "loop_running": True,
+                    "source_status_stale": False,
+                    "artifacts": {
+                        "artifact_health": {"status": "loaded"},
+                        "import_pipeline": {
+                            "execution_readiness": {
+                                "status": "ready",
+                                "ready_for_next_import_records": True,
+                                "blockers": [],
+                            },
+                        },
+                    },
+                    "coordination": coordination,
+                }
+
+                summary = self.publisher.publisher_cockpit_summary(status)
+
+                self.assertTrue(summary["operator_attention"])
+                self.assertEqual(summary["operator_attention_reasons"], [expected_reason])
+                self.assertEqual(
+                    summary["operator_attention_primary_reason"],
+                    expected_reason,
+                )
+                self.assertEqual(summary["operator_attention_label"], expected_label)
+                self.assertEqual(
+                    summary["coordination"],
+                    {
+                        "available": True,
+                        **coordination,
+                    },
+                )
+
     def test_publisher_source_health_routes_stale_source_bridge_status(self) -> None:
         status = {
             "status": "passing",
