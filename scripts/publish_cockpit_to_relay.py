@@ -1690,6 +1690,33 @@ def source_status_log_fields(payload: dict[str, Any]) -> dict[str, Any]:
             failure.get("message"),
             max_length=160,
         ),
+        "source_failure_import_pipeline_status": compact_policy_detail(
+            failure.get("import_pipeline_status"),
+            max_length=80,
+        ),
+        "source_failure_readiness_status": compact_policy_detail(
+            failure.get("readiness_status"),
+            max_length=80,
+        ),
+        "source_failure_readiness_blocker_count": compact_int(
+            failure.get("readiness_blocker_count")
+        ),
+        "source_failure_ready_for_next_import_records": failure.get(
+            "ready_for_next_import_records"
+        )
+        if isinstance(failure.get("ready_for_next_import_records"), bool)
+        else None,
+        "source_failure_artifact_health_status": compact_policy_detail(
+            failure.get("artifact_health_status"),
+            max_length=80,
+        ),
+        "source_failure_degraded_artifact_count": compact_int(
+            failure.get("degraded_artifact_count")
+        ),
+        "source_failure_import_pipeline_summary_path": compact_path_diagnostic(
+            failure.get("import_pipeline_summary_path"),
+            max_length=160,
+        ),
         "source_failure_source_path": compact_path_diagnostic(
             failure.get("source_path"),
             max_length=160,
@@ -1753,6 +1780,13 @@ SOURCE_STATUS_LOG_FIELD_NAMES = (
     "source_failure_route_hint",
     "source_failure_phase",
     "source_failure_message",
+    "source_failure_import_pipeline_status",
+    "source_failure_readiness_status",
+    "source_failure_readiness_blocker_count",
+    "source_failure_ready_for_next_import_records",
+    "source_failure_artifact_health_status",
+    "source_failure_degraded_artifact_count",
+    "source_failure_import_pipeline_summary_path",
     "source_failure_source_path",
     "source_failure_target_path",
     "source_failure_sync_exit_status",

@@ -3650,6 +3650,16 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                             "category": "artifact_health",
                             "route_hint": "cockpit_artifact_health",
                             "message": "artifact health degraded",
+                            "import_pipeline_status": "loaded",
+                            "readiness_status": "ready",
+                            "readiness_blocker_count": 0,
+                            "ready_for_next_import_records": True,
+                            "artifact_health_status": "degraded",
+                            "degraded_artifact_count": 2,
+                            "import_pipeline_summary_path": (
+                                "generated/pipeline/"
+                                "dallas-import-pipeline-summary-v1/summary.json"
+                            ),
                         },
                         "coordination": {
                             "handoff_path": ".pixelbox/handoff.md",
@@ -3732,6 +3742,20 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertIn("source_failure_route_hint=cockpit_artifact_health", log_text)
         self.assertIn("source_failure_phase=artifact_health_failed", log_text)
         self.assertIn("source_failure_message=artifact health degraded", log_text)
+        self.assertIn("source_failure_import_pipeline_status=loaded", log_text)
+        self.assertIn("source_failure_readiness_status=ready", log_text)
+        self.assertIn("source_failure_readiness_blocker_count=0", log_text)
+        self.assertIn(
+            "source_failure_ready_for_next_import_records=True",
+            log_text,
+        )
+        self.assertIn("source_failure_artifact_health_status=degraded", log_text)
+        self.assertIn("source_failure_degraded_artifact_count=2", log_text)
+        self.assertIn(
+            "source_failure_import_pipeline_summary_path=generated/pipeline/"
+            "dallas-import-pipeline-summary-v1/summary.json",
+            log_text,
+        )
         self.assertIn("publisher_host=worker-1", log_text)
         self.assertIn("publisher_pid=4321", log_text)
         self.assertIn("publisher_started_at=2026-06-14T20:10:00Z", log_text)
@@ -3807,6 +3831,22 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                                 "sync failed authorization: Bearer failure-message-secret "
                                 "https://failure.example/debug"
                                 "?token=failure-url-secret#trace"
+                            ),
+                            "import_pipeline_status": (
+                                "loaded token=failure-pipeline-status-secret"
+                            ),
+                            "readiness_status": (
+                                "blocked token=failure-readiness-status-secret"
+                            ),
+                            "readiness_blocker_count": "4",
+                            "ready_for_next_import_records": "false",
+                            "artifact_health_status": (
+                                "degraded token=failure-artifact-status-secret"
+                            ),
+                            "degraded_artifact_count": "3",
+                            "import_pipeline_summary_path": (
+                                "/tmp/customer/pipeline/summary.json "
+                                "token=failure-summary-path-secret"
                             ),
                             "source_path": (
                                 "/tmp/customer/generated/landing.html "
@@ -3925,6 +3965,29 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             log_text,
         )
         self.assertIn(
+            "source_failure_import_pipeline_status=loaded token=[redacted]",
+            log_text,
+        )
+        self.assertIn(
+            "source_failure_readiness_status=blocked token=[redacted]",
+            log_text,
+        )
+        self.assertIn("source_failure_readiness_blocker_count=4", log_text)
+        self.assertIn(
+            "source_failure_ready_for_next_import_records=None",
+            log_text,
+        )
+        self.assertIn(
+            "source_failure_artifact_health_status=degraded token=[redacted]",
+            log_text,
+        )
+        self.assertIn("source_failure_degraded_artifact_count=3", log_text)
+        self.assertIn(
+            "source_failure_import_pipeline_summary_path=<external>/summary.json "
+            "token=[redacted]",
+            log_text,
+        )
+        self.assertIn(
             "source_failure_source_path=<external>/landing.html token=[redacted]",
             log_text,
         )
@@ -3956,6 +4019,10 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertNotIn("failure-route-secret", log_text)
         self.assertNotIn("failure-message-secret", log_text)
         self.assertNotIn("failure-url-secret", log_text)
+        self.assertNotIn("failure-pipeline-status-secret", log_text)
+        self.assertNotIn("failure-readiness-status-secret", log_text)
+        self.assertNotIn("failure-artifact-status-secret", log_text)
+        self.assertNotIn("failure-summary-path-secret", log_text)
         self.assertNotIn("failure-source-path-secret", log_text)
         self.assertNotIn("failure-target-path-secret", log_text)
         self.assertNotIn("/tmp/customer/generated/landing.html", log_text)
