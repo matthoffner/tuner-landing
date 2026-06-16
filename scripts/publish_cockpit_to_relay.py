@@ -1702,6 +1702,27 @@ def source_status_log_fields(payload: dict[str, Any]) -> dict[str, Any]:
             failure.get("message"),
             max_length=160,
         ),
+        "source_failure_failure_reason": compact_policy_detail(
+            failure.get("failure_reason"),
+            max_length=160,
+        ),
+        "source_failure_decision_reason": compact_policy_detail(
+            failure.get("decision_reason"),
+            max_length=160,
+        ),
+        "source_failure_current_focus": compact_policy_detail(
+            failure.get("current_focus"),
+            max_length=120,
+        ),
+        "source_failure_synthetic_row_count": compact_int(
+            failure.get("synthetic_row_count")
+        ),
+        "source_failure_raw_path_count": compact_int(
+            failure.get("raw_dallas_csv_changed_path_count")
+        ),
+        "source_failure_productive_path_count": compact_int(
+            failure.get("productive_changed_path_count")
+        ),
         "source_failure_import_pipeline_status": compact_policy_detail(
             failure.get("import_pipeline_status"),
             max_length=80,
@@ -1793,6 +1814,12 @@ SOURCE_STATUS_LOG_FIELD_NAMES = (
     "source_failure_route_hint",
     "source_failure_phase",
     "source_failure_message",
+    "source_failure_failure_reason",
+    "source_failure_decision_reason",
+    "source_failure_current_focus",
+    "source_failure_synthetic_row_count",
+    "source_failure_raw_path_count",
+    "source_failure_productive_path_count",
     "source_failure_import_pipeline_status",
     "source_failure_readiness_status",
     "source_failure_readiness_blocker_count",

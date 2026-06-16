@@ -3856,6 +3856,20 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                                 "https://failure.example/debug"
                                 "?token=failure-url-secret#trace"
                             ),
+                            "failure_reason": (
+                                "raw fixture rejected token=failure-reason-secret"
+                            ),
+                            "decision_reason": (
+                                "dallas_ready_no_thin_groups "
+                                "token=failure-decision-secret"
+                            ),
+                            "current_focus": (
+                                "autonomy_visibility_or_real_ingest "
+                                "token=failure-focus-secret"
+                            ),
+                            "synthetic_row_count": "12",
+                            "raw_dallas_csv_changed_path_count": "9",
+                            "productive_changed_path_count": "3",
                             "import_pipeline_status": (
                                 "loaded token=failure-pipeline-status-secret"
                             ),
@@ -3990,6 +4004,23 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             log_text,
         )
         self.assertIn(
+            "source_failure_failure_reason=raw fixture rejected token=[redacted]",
+            log_text,
+        )
+        self.assertIn(
+            "source_failure_decision_reason=dallas_ready_no_thin_groups "
+            "token=[redacted]",
+            log_text,
+        )
+        self.assertIn(
+            "source_failure_current_focus=autonomy_visibility_or_real_ingest "
+            "token=[redacted]",
+            log_text,
+        )
+        self.assertIn("source_failure_synthetic_row_count=12", log_text)
+        self.assertIn("source_failure_raw_path_count=9", log_text)
+        self.assertIn("source_failure_productive_path_count=3", log_text)
+        self.assertIn(
             "source_failure_import_pipeline_status=loaded token=[redacted]",
             log_text,
         )
@@ -4044,6 +4075,9 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertNotIn("failure-route-secret", log_text)
         self.assertNotIn("failure-message-secret", log_text)
         self.assertNotIn("failure-url-secret", log_text)
+        self.assertNotIn("failure-reason-secret", log_text)
+        self.assertNotIn("failure-decision-secret", log_text)
+        self.assertNotIn("failure-focus-secret", log_text)
         self.assertNotIn("failure-pipeline-status-secret", log_text)
         self.assertNotIn("failure-readiness-status-secret", log_text)
         self.assertNotIn("failure-artifact-status-secret", log_text)
