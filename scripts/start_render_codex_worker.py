@@ -164,6 +164,13 @@ LOOP_EXITED = "loop_exited"
 PUBLISHER_EXITED = "publisher_exited"
 RELAY_PUBLISHER_UNAVAILABLE = "relay_publisher_unavailable"
 ENVIRONMENT_PREFLIGHT_FAILED = "environment_preflight_failed"
+RENDER_WORKER_FAILURE_ROUTE_HINTS = {
+    ENVIRONMENT_PREFLIGHT_FAILED,
+    "relay_publisher_preflight_failed",
+    "relay_publisher_start_failed",
+    "relay_publisher_startup_exit",
+    PUBLISHER_EXITED,
+}
 
 
 class PublisherPreflightError(RuntimeError):
@@ -2255,6 +2262,14 @@ def compact_worker_exit_status(value: object) -> int | None:
     return None
 
 
+def render_worker_failure_route_hint(reason: str) -> str:
+    safe_reason = sanitize_worker_log_text(reason)[:MAX_BUSINESS_HOURS_CONFIG_VALUE_CHARS]
+    route_candidate = safe_reason.split(maxsplit=1)[0] if safe_reason else ""
+    if route_candidate in RENDER_WORKER_FAILURE_ROUTE_HINTS:
+        return route_candidate
+    return RELAY_PUBLISHER_UNAVAILABLE
+
+
 def publisher_preflight_failure_details(exc: BaseException) -> dict[str, object]:
     if not isinstance(exc, PublisherPreflightError):
         return {}
@@ -2302,9 +2317,10 @@ def write_render_worker_failure_status(
     status_path.parent.mkdir(parents=True, exist_ok=True)
     now = utc_now()
     safe_reason = sanitize_worker_log_text(reason)[:MAX_BUSINESS_HOURS_CONFIG_VALUE_CHARS]
+    route_hint = render_worker_failure_route_hint(reason)
     failure: dict[str, object] = {
         "category": "render_worker",
-        "route_hint": RELAY_PUBLISHER_UNAVAILABLE,
+        "route_hint": route_hint,
         "failure_reason": safe_reason,
         "worker_exit_status": worker_exit_status,
     }
@@ -2323,7 +2339,7 @@ def write_render_worker_failure_status(
         "iteration": 0,
         "status": "failed",
         "mode": "autonomous_codex",
-        "phase": RELAY_PUBLISHER_UNAVAILABLE,
+        "phase": route_hint,
         "started_at": now,
         "updated_at": now,
         "steps": [],

@@ -3632,7 +3632,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             status = json.loads(status_text)
 
         self.assertEqual(status["status"], "failed")
-        self.assertEqual(status["phase"], self.worker.RELAY_PUBLISHER_UNAVAILABLE)
+        self.assertEqual(status["phase"], "relay_publisher_startup_exit")
         self.assertEqual(
             status["failure"],
             {
@@ -3647,7 +3647,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                     "failed_configuration_keys": ["AUTOMOAT_RELAY_URL|--relay-url"],
                     "status": "failed",
                 },
-                "route_hint": self.worker.RELAY_PUBLISHER_UNAVAILABLE,
+                "route_hint": "relay_publisher_startup_exit",
                 "worker_exit_status": 1,
             },
         )
@@ -3656,6 +3656,69 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertIn("publisher_exit_status=0", log_text)
         self.assertNotIn("relay-secret", status_text)
         self.assertNotIn("relay-secret", log_text)
+
+    def test_write_render_worker_failure_status_routes_environment_preflight(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            self.worker.WORKDIR = Path(temp_dir) / "repo"
+            self.worker.WORKDIR.mkdir(parents=True)
+
+            with patch.dict(self.worker.os.environ, {}, clear=True), patch.object(
+                self.worker,
+                "worker_git_snapshot",
+                return_value={"branch": "main", "head": "abc123"},
+            ):
+                self.worker.write_render_worker_failure_status(
+                    reason=self.worker.ENVIRONMENT_PREFLIGHT_FAILED,
+                    worker_exit_status=2,
+                    message=(
+                        "error_count=2 error_categories=missing_required "
+                        "failed_configuration_keys=AUTOMOAT_RELAY_URL,GITHUB_TOKEN|GH_TOKEN"
+                    ),
+                )
+
+            status = json.loads(
+                self.worker.cockpit_status_file().read_text(encoding="utf-8")
+            )
+
+        self.assertEqual(status["phase"], self.worker.ENVIRONMENT_PREFLIGHT_FAILED)
+        self.assertEqual(
+            status["failure"]["route_hint"],
+            self.worker.ENVIRONMENT_PREFLIGHT_FAILED,
+        )
+        self.assertEqual(
+            status["failure"]["failure_reason"],
+            self.worker.ENVIRONMENT_PREFLIGHT_FAILED,
+        )
+
+    def test_write_render_worker_failure_status_keeps_unknown_route_generic(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            self.worker.WORKDIR = Path(temp_dir) / "repo"
+            self.worker.WORKDIR.mkdir(parents=True)
+
+            with patch.dict(
+                self.worker.os.environ,
+                {"AUTOMOAT_RELAY_TOKEN": "relay-secret"},
+                clear=True,
+            ), patch.object(
+                self.worker,
+                "worker_git_snapshot",
+                return_value={"branch": "main", "head": "abc123"},
+            ):
+                self.worker.write_render_worker_failure_status(
+                    reason="unexpected token=relay-secret",
+                    worker_exit_status=1,
+                )
+
+            status_text = self.worker.cockpit_status_file().read_text(encoding="utf-8")
+            status = json.loads(status_text)
+
+        self.assertEqual(status["phase"], self.worker.RELAY_PUBLISHER_UNAVAILABLE)
+        self.assertEqual(
+            status["failure"]["route_hint"],
+            self.worker.RELAY_PUBLISHER_UNAVAILABLE,
+        )
+        self.assertEqual(status["failure"]["failure_reason"], "unexpected token=[redacted]")
+        self.assertNotIn("relay-secret", status_text)
 
     def test_record_render_worker_failure_status_is_best_effort(self) -> None:
         output = io.StringIO()
