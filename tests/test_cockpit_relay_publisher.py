@@ -678,6 +678,62 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertFalse(future_summary["bridge_status_timestamp_invalid"])
         self.assertTrue(future_summary["bridge_status_timestamp_future"])
 
+    def test_read_bridge_summary_routes_malformed_status_value(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            bridge_status_file = tmp_path / "mvp-bridge-status.json"
+            bridge_status_file.write_text(
+                json.dumps(
+                    {
+                        "status": {
+                            "state": "running",
+                            "token": "bridge-status-secret",
+                        },
+                        "updated_at": "2026-06-14T19:30:00Z",
+                        "bridge_health": {
+                            "status": "live",
+                            "ok": True,
+                            "reasons": [],
+                            "primary_reason": None,
+                            "label": "Live",
+                        },
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            self.publisher.utc_now = lambda: "2026-06-14T19:31:00Z"
+
+            summary = self.publisher.read_bridge_summary(
+                bridge_status_file,
+                stale_after_seconds=120,
+            )
+            health = self.publisher.publisher_source_health(
+                {
+                    "status": "passing",
+                    "loop_running": True,
+                    "source_status_stale": False,
+                    "source_status_file_status": "loaded",
+                    "bridge_summary": summary,
+                }
+            )
+
+        summary_text = json.dumps(summary, sort_keys=True)
+        self.assertEqual(summary["status"], "invalid-status-value")
+        self.assertTrue(summary["bridge_status_value_invalid"])
+        self.assertFalse(summary["bridge_status_stale"])
+        self.assertEqual(
+            health,
+            {
+                "status": "degraded",
+                "ok": False,
+                "reasons": ["source_bridge_status_failing"],
+                "primary_reason": "source_bridge_status_failing",
+                "label": "Source bridge status is failing",
+            },
+        )
+        self.assertNotIn("bridge-status-secret", summary_text)
+
     def test_read_bridge_summary_masks_local_path_in_read_error(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)

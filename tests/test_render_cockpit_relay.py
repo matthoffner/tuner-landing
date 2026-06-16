@@ -930,6 +930,68 @@ class RenderCockpitRelayTest(unittest.TestCase):
                 )
                 self.assertEqual(status["cockpit_health"]["source_bridge"], source_bridge)
 
+    def test_status_and_health_report_invalid_source_bridge_status_value(self) -> None:
+        self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
+        self.relay.update_state(
+            {
+                "pushed_at": "2026-06-14T19:59:30Z",
+                "status": {
+                    "status": "running",
+                    "loop_running": True,
+                    "bridge_summary": {
+                        "available": True,
+                        "status_file_status": "loaded",
+                        "status": "invalid-status-value",
+                        "bridge_status_value_invalid": True,
+                        "bridge_status_stale": False,
+                        "bridge_health": {
+                            "status": "live",
+                            "ok": True,
+                            "reasons": [],
+                            "primary_reason": None,
+                            "label": "Live",
+                        },
+                    },
+                },
+                "log_tail": "bridge status value invalid\n",
+            }
+        )
+        self.relay.utc_now = lambda: "2026-06-14T20:00:00Z"
+
+        health = self.relay.health_payload()
+        status = self.relay.relay_status_payload()
+
+        expected_bridge = {
+            "available": True,
+            "status_file_status": "loaded",
+            "status": "invalid-status-value",
+            "bridge_status_stale": False,
+            "bridge_status_value_invalid": True,
+            "bridge_health": {
+                "status": "live",
+                "ok": True,
+                "reasons": [],
+                "primary_reason": None,
+                "label": "Live",
+            },
+        }
+        self.assertFalse(health["cockpit_ok"])
+        self.assertEqual(
+            health["cockpit_health"]["reasons"],
+            ["source_bridge_status_failing"],
+        )
+        self.assertEqual(
+            health["cockpit_health_primary_reason"],
+            "source_bridge_status_failing",
+        )
+        self.assertEqual(
+            health["cockpit_health_label"],
+            "Source bridge status is failing",
+        )
+        self.assertEqual(health["cockpit_health"]["source_bridge"], expected_bridge)
+        self.assertEqual(status["bridge_summary"], expected_bridge)
+        self.assertEqual(status["cockpit_health"]["source_bridge"], expected_bridge)
+
     def test_status_and_health_omit_non_finite_source_bridge_interval(self) -> None:
         self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
         self.relay.update_state(

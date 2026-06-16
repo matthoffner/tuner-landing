@@ -53,6 +53,7 @@ COCKPIT_HEALTH_LABELS = {
     "relay_snapshot_missing": "Relay snapshot is missing",
     "relay_snapshot_stale": "Relay snapshot is stale",
     "source_bridge_degraded": "Source bridge is degraded",
+    "source_bridge_status_failing": "Source bridge status is failing",
     "source_status_timestamp_invalid": "Source status timestamp is invalid",
     "source_status_stale": "Source status is stale",
     "source_status_unavailable": "Source status is unavailable",
@@ -614,6 +615,9 @@ def source_bridge_summary(status: dict[str, Any]) -> dict[str, Any]:
     bridge_timestamp_future = bridge.get("bridge_status_timestamp_future")
     if isinstance(bridge_timestamp_future, bool):
         summary["bridge_status_timestamp_future"] = bridge_timestamp_future
+    bridge_status_value_invalid = bridge.get("bridge_status_value_invalid")
+    if isinstance(bridge_status_value_invalid, bool):
+        summary["bridge_status_value_invalid"] = bridge_status_value_invalid
 
     bridge_health = compact_bridge_health(bridge.get("bridge_health"))
     if bridge_health is not None:
@@ -1123,6 +1127,14 @@ def cockpit_health(
         "not_object",
     }:
         reasons.append("source_bridge_status_unavailable")
+    if (
+        source_bridge.get("available") is True
+        and (
+            source_bridge.get("status") in {"error", "failing", "invalid-status-value"}
+            or source_bridge.get("bridge_status_value_invalid") is True
+        )
+    ):
+        reasons.append("source_bridge_status_failing")
     if (
         source_bridge.get("available") is True
         and isinstance(source_bridge_health, dict)

@@ -104,6 +104,7 @@ SECRET_ASSIGNMENT_PATTERN = re.compile(
 SOURCE_HEALTH_LABELS = {
     "source_autonomy_policy_failed": "Autonomy policy failed",
     "source_bridge_degraded": "Source bridge is degraded",
+    "source_bridge_status_failing": "Source bridge status is failing",
     "source_bridge_status_stale": "Source bridge status is stale",
     "source_bridge_status_timestamp_future": "Source bridge status is in the future",
     "source_bridge_status_timestamp_invalid": "Source bridge status timestamp is invalid",
@@ -529,8 +530,14 @@ def read_bridge_summary(
         "bridge_health": bridge_health_summary(payload.get("bridge_health")),
         **bridge_status_freshness(payload, stale_after_seconds),
     }
+    bridge_status_value, bridge_status_value_invalid = normalize_source_status_value(
+        payload.get("status")
+    )
+    summary["bridge_status_value_invalid"] = bridge_status_value_invalid
+    if payload.get("status") is not None or bridge_status_value_invalid:
+        summary["status"] = bridge_status_value
+
     text_fields = {
-        "status": payload.get("status"),
         "updated_at": payload.get("updated_at"),
         "bridge_started_at": payload.get("bridge_started_at"),
         "mode": payload.get("mode"),
@@ -1215,6 +1222,18 @@ def publisher_source_health(status: dict[str, Any]) -> dict[str, Any]:
         "not_object",
     }:
         reasons.append("source_bridge_status_unavailable")
+    bridge_status_value, bridge_status_value_invalid = normalize_source_status_value(
+        bridge_summary.get("status")
+    )
+    if (
+        bridge_summary.get("available") is True
+        and (
+            bridge_status_value in {"error", "failing", "invalid-status-value"}
+            or bridge_summary.get("bridge_status_value_invalid") is True
+            or bridge_status_value_invalid
+        )
+    ):
+        reasons.append("source_bridge_status_failing")
     if (
         bridge_summary.get("available") is True
         and bridge_health.get("ok") is False
@@ -1395,6 +1414,9 @@ def source_status_log_fields(payload: dict[str, Any]) -> dict[str, Any]:
         )
         if isinstance(bridge_summary.get("bridge_status_timestamp_future"), bool)
         else None,
+        "bridge_status_value_invalid": bridge_summary.get("bridge_status_value_invalid")
+        if isinstance(bridge_summary.get("bridge_status_value_invalid"), bool)
+        else None,
         "bridge_status_age_seconds": compact_int(
             bridge_summary.get("bridge_status_age_seconds")
         ),
@@ -1484,6 +1506,7 @@ SOURCE_STATUS_LOG_FIELD_NAMES = (
     "bridge_status_stale",
     "bridge_status_timestamp_invalid",
     "bridge_status_timestamp_future",
+    "bridge_status_value_invalid",
     "bridge_status_age_seconds",
     "bridge_status_stale_after_seconds",
     "bridge_health_status",
