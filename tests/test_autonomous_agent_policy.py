@@ -457,6 +457,59 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
         self.assertNotIn("status-secret", failure_json)
         self.assertNotIn("message-secret", failure_json)
 
+    def test_status_payload_promotes_landing_sync_failure_summary(self) -> None:
+        self.loop.utc_now = lambda: "2026-06-16T02:10:00Z"
+        self.loop.inspect_artifacts = lambda: {"artifact_health": {"status": "loaded"}}
+        self.loop.autonomy_policy_snapshot = lambda: {
+            "current_focus": "autonomy_visibility_or_real_ingest"
+        }
+        self.loop.git_state = lambda: {"dirty_count_excluding_preview": 1}
+        self.loop.coordination_snapshot = lambda: {
+            "handoff_path": ".pixelbox/handoff.md",
+            "latest_handoff_status": "landing sync failed",
+        }
+        landing_step = {
+            "name": "sync landing",
+            "command": [
+                "cp",
+                "generated/landing.html",
+                "index.html",
+                "token=command-secret",
+            ],
+            "exit_status": 1,
+            "seconds": 0.01,
+        }
+
+        payload = self.loop.status_payload(
+            "run-1",
+            3,
+            "failing",
+            "landing_sync_failed",
+            "2026-06-16T02:09:00Z",
+            [landing_step],
+            "Landing page sync failed token=message-secret",
+        )
+
+        self.assertEqual(
+            payload["failure"],
+            {
+                "phase": "landing_sync_failed",
+                "message": "Landing page sync failed token=<redacted>",
+                "category": "landing_sync",
+                "route_hint": "landing_index_sync",
+                "source_path": "generated/landing.html",
+                "target_path": "index.html",
+                "sync_exit_status": 1,
+                "command": (
+                    "cp generated/landing.html index.html "
+                    "token=<redacted>"
+                ),
+            },
+        )
+        failure_json = json.dumps(payload["failure"], sort_keys=True)
+        self.assertNotIn("command-secret", failure_json)
+        self.assertNotIn("message-secret", failure_json)
+
     def test_docs_and_status_files_do_not_make_synthetic_rows_productive(self) -> None:
         paths = [
             "README.md",

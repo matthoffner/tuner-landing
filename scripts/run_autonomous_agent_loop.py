@@ -953,6 +953,33 @@ def status_failure_snapshot(
                 ),
             }
         )
+    elif phase == "landing_sync_failed":
+        landing_step = next(
+            (
+                step
+                for step in reversed(steps)
+                if step.get("name") == "sync landing"
+            ),
+            None,
+        )
+        if not isinstance(landing_step, dict):
+            landing_step = {}
+        command = landing_step.get("command")
+        command_label = None
+        if isinstance(command, list) and all(isinstance(part, str) for part in command):
+            command_label = command_log_text(command)
+        failure.update(
+            {
+                "category": "landing_sync",
+                "route_hint": "landing_index_sync",
+                "source_path": "generated/landing.html",
+                "target_path": "index.html",
+                "sync_exit_status": compact_policy_count(
+                    landing_step.get("exit_status")
+                ),
+                "command": sanitized_policy_scalar(command_label),
+            }
+        )
     else:
         failure["category"] = sanitized_policy_scalar(phase)
     return failure
