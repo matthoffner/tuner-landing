@@ -537,6 +537,9 @@ def source_status_diagnostics(status: dict[str, Any]) -> dict[str, Any]:
     timestamp_future = status.get("source_status_timestamp_future")
     if isinstance(timestamp_future, bool):
         diagnostics["source_status_timestamp_future"] = timestamp_future
+    status_value_invalid = status.get("source_status_value_invalid")
+    if isinstance(status_value_invalid, bool):
+        diagnostics["source_status_value_invalid"] = status_value_invalid
     return diagnostics
 
 
@@ -1154,7 +1157,11 @@ def cockpit_health(
         reasons.append("source_loop_not_running")
     if "autonomy_policy_failed" in source_attention_reason_values:
         reasons.append("source_autonomy_policy_failed")
-    if status.get("status") in {"error", "failing", "invalid-status-json"}:
+    if (
+        status.get("status")
+        in {"error", "failing", "invalid-status-json", "invalid-status-value"}
+        or status.get("source_status_value_invalid") is True
+    ):
         reasons.append("source_status_failing")
     if source_summary.get("operator_attention") is True:
         reasons.append("source_cockpit_attention")

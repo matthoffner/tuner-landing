@@ -2070,6 +2070,42 @@ class RenderCockpitRelayTest(unittest.TestCase):
         self.assertEqual(status["cockpit_status"], "degraded")
         self.assertEqual(status["cockpit_health"]["reasons"], ["source_status_failing"])
 
+    def test_status_and_health_route_invalid_source_status_value(self) -> None:
+        self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
+        self.relay.update_state(
+            {
+                "pushed_at": "2026-06-14T19:59:30Z",
+                "status": {
+                    "status": "invalid-status-value",
+                    "loop_running": True,
+                    "source_status_value_invalid": True,
+                },
+                "log_tail": "loop status value was malformed\n",
+            }
+        )
+        self.relay.utc_now = lambda: "2026-06-14T20:00:00Z"
+
+        health = self.relay.health_payload()
+        status = self.relay.relay_status_payload()
+
+        self.assertTrue(health["ok"])
+        self.assertFalse(health["cockpit_ok"])
+        self.assertEqual(health["cockpit_status"], "degraded")
+        self.assertEqual(health["cockpit_health"]["reasons"], ["source_status_failing"])
+        expected_diagnostics = {
+            "source_status": "invalid-status-value",
+            "source_status_value_invalid": True,
+        }
+        self.assertEqual(
+            health["cockpit_health"]["source_status_diagnostics"],
+            expected_diagnostics,
+        )
+        self.assertEqual(
+            status["cockpit_health"]["source_status_diagnostics"],
+            expected_diagnostics,
+        )
+        self.assertEqual(status["cockpit_health"]["reasons"], ["source_status_failing"])
+
     def test_malformed_persisted_state_is_visible_in_health(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             state_file = Path(tmp) / "relay-state.json"
