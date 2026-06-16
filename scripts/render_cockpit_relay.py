@@ -331,6 +331,15 @@ def compact_int(value: Any) -> int | None:
     return parsed if parsed >= 0 else None
 
 
+def compact_exit_status(value: Any) -> int | None:
+    if isinstance(value, bool):
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
 def compact_count_map(value: Any, *, max_items: int = 8) -> dict[str, int]:
     if not isinstance(value, dict):
         return {}
@@ -988,6 +997,9 @@ def source_failure_summary(status: dict[str, Any]) -> dict[str, Any]:
         "readiness_status": failure.get("readiness_status"),
         "artifact_health_status": failure.get("artifact_health_status"),
         "command": failure.get("command"),
+        "termination_reason": failure.get("termination_reason"),
+        "failed_step": failure.get("failed_step"),
+        "failed_substep": failure.get("failed_substep"),
     }
     for key, value in text_fields.items():
         compact_value = compact_policy_detail(value, max_length=240)
@@ -1044,6 +1056,21 @@ def source_failure_summary(status: dict[str, Any]) -> dict[str, Any]:
         compact_value = compact_int(value)
         if compact_value is not None:
             summary[key] = compact_value
+
+    exit_status_fields = {
+        "codex_exit_status": failure.get("codex_exit_status"),
+        "failed_step_exit_status": failure.get("failed_step_exit_status"),
+        "failed_substep_exit_status": failure.get("failed_substep_exit_status"),
+    }
+    for key, value in exit_status_fields.items():
+        compact_value = compact_exit_status(value)
+        if compact_value is not None:
+            summary[key] = compact_value
+
+    for key in ("timed_out", "killed_after_terminate"):
+        value = failure.get(key)
+        if isinstance(value, bool):
+            summary[key] = value
 
     ready_for_next_import_records = failure.get("ready_for_next_import_records")
     if isinstance(ready_for_next_import_records, bool):

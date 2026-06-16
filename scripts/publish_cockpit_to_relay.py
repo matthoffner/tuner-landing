@@ -435,6 +435,15 @@ def compact_int(value: Any) -> int | None:
     return parsed if parsed >= 0 else None
 
 
+def compact_exit_status(value: Any) -> int | None:
+    if isinstance(value, bool):
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
 def first_compact_int(*values: Any) -> int | None:
     for value in values:
         parsed = compact_int(value)
@@ -773,6 +782,9 @@ def failure_summary(status: dict[str, Any]) -> dict[str, Any]:
         "readiness_status": failure.get("readiness_status"),
         "artifact_health_status": failure.get("artifact_health_status"),
         "command": failure.get("command"),
+        "termination_reason": failure.get("termination_reason"),
+        "failed_step": failure.get("failed_step"),
+        "failed_substep": failure.get("failed_substep"),
     }
     for key, value in text_fields.items():
         compact_value = compact_policy_detail(value)
@@ -812,6 +824,21 @@ def failure_summary(status: dict[str, Any]) -> dict[str, Any]:
         compact_value = compact_int(value)
         if compact_value is not None:
             summary[key] = compact_value
+
+    exit_status_fields = {
+        "codex_exit_status": failure.get("codex_exit_status"),
+        "failed_step_exit_status": failure.get("failed_step_exit_status"),
+        "failed_substep_exit_status": failure.get("failed_substep_exit_status"),
+    }
+    for key, value in exit_status_fields.items():
+        compact_value = compact_exit_status(value)
+        if compact_value is not None:
+            summary[key] = compact_value
+
+    for key in ("timed_out", "killed_after_terminate"):
+        value = failure.get(key)
+        if isinstance(value, bool):
+            summary[key] = value
 
     ready_for_next_import_records = failure.get("ready_for_next_import_records")
     if isinstance(ready_for_next_import_records, bool):
@@ -1827,6 +1854,33 @@ def source_status_log_fields(payload: dict[str, Any]) -> dict[str, Any]:
             failure.get("current_focus"),
             max_length=120,
         ),
+        "source_failure_termination_reason": compact_policy_detail(
+            failure.get("termination_reason"),
+            max_length=120,
+        ),
+        "source_failure_failed_step": compact_policy_detail(
+            failure.get("failed_step"),
+            max_length=120,
+        ),
+        "source_failure_failed_substep": compact_policy_detail(
+            failure.get("failed_substep"),
+            max_length=120,
+        ),
+        "source_failure_codex_exit_status": compact_exit_status(
+            failure.get("codex_exit_status")
+        ),
+        "source_failure_timed_out": failure.get("timed_out")
+        if isinstance(failure.get("timed_out"), bool)
+        else None,
+        "source_failure_killed_after_terminate": failure.get("killed_after_terminate")
+        if isinstance(failure.get("killed_after_terminate"), bool)
+        else None,
+        "source_failure_failed_step_exit_status": compact_exit_status(
+            failure.get("failed_step_exit_status")
+        ),
+        "source_failure_failed_substep_exit_status": compact_exit_status(
+            failure.get("failed_substep_exit_status")
+        ),
         "source_failure_synthetic_row_count": compact_int(
             failure.get("synthetic_row_count")
         ),
@@ -1938,6 +1992,14 @@ SOURCE_STATUS_LOG_FIELD_NAMES = (
     "source_failure_failure_reason",
     "source_failure_decision_reason",
     "source_failure_current_focus",
+    "source_failure_termination_reason",
+    "source_failure_failed_step",
+    "source_failure_failed_substep",
+    "source_failure_codex_exit_status",
+    "source_failure_timed_out",
+    "source_failure_killed_after_terminate",
+    "source_failure_failed_step_exit_status",
+    "source_failure_failed_substep_exit_status",
     "source_failure_synthetic_row_count",
     "source_failure_raw_path_count",
     "source_failure_productive_path_count",

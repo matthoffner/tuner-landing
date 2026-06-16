@@ -2023,6 +2023,137 @@ class RenderCockpitRelayTest(unittest.TestCase):
         ):
             self.assertNotIn(unsafe_text, response_text)
 
+    def test_status_and_health_include_codex_failure_routing_fields(self) -> None:
+        self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
+        self.relay.update_state(
+            {
+                "pushed_at": "2026-06-14T19:59:30Z",
+                "status": {
+                    "status": "failing",
+                    "loop_running": True,
+                    "cockpit_summary": {
+                        "operator_attention": False,
+                        "failure_summary": {
+                            "available": True,
+                            "phase": "codex_exec_failed",
+                            "category": "codex_exec",
+                            "route_hint": "codex_exec_timeout",
+                            "message": (
+                                "codex timed out token=message-secret "
+                                "https://failure.example/debug"
+                                "?token=url-secret#trace"
+                            ),
+                            "command": (
+                                "codex exec authorization: Bearer command-secret"
+                            ),
+                            "codex_exit_status": "-15",
+                            "timed_out": True,
+                            "termination_reason": (
+                                "timeout token=termination-secret"
+                            ),
+                            "killed_after_terminate": True,
+                        },
+                    },
+                },
+                "log_tail": "codex failure surfaced\n",
+            }
+        )
+        self.relay.utc_now = lambda: "2026-06-14T20:00:00Z"
+
+        health = self.relay.health_payload()
+        status = self.relay.relay_status_payload()
+
+        expected_failure = {
+            "available": True,
+            "phase": "codex_exec_failed",
+            "category": "codex_exec",
+            "route_hint": "codex_exec_timeout",
+            "message": (
+                "codex timed out token=[redacted] "
+                "https://failure.example/debug?[redacted]#[redacted]"
+            ),
+            "command": "codex exec authorization: Bearer [redacted]",
+            "termination_reason": "timeout token=[redacted]",
+            "codex_exit_status": -15,
+            "timed_out": True,
+            "killed_after_terminate": True,
+        }
+        self.assertEqual(
+            health["cockpit_health"]["source_failure"],
+            expected_failure,
+        )
+        self.assertEqual(
+            status["cockpit_summary"]["failure_summary"],
+            expected_failure,
+        )
+        self.assertIn("source_status_failing", status["cockpit_health"]["reasons"])
+        response_text = json.dumps({"health": health, "status": status}, sort_keys=True)
+        for unsafe_text in (
+            "message-secret",
+            "url-secret",
+            "command-secret",
+            "termination-secret",
+        ):
+            self.assertNotIn(unsafe_text, response_text)
+
+    def test_status_and_health_include_post_codex_failure_routing_fields(self) -> None:
+        self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
+        self.relay.update_state(
+            {
+                "pushed_at": "2026-06-14T19:59:30Z",
+                "status": {
+                    "status": "failing",
+                    "loop_running": True,
+                    "cockpit_summary": {
+                        "operator_attention": False,
+                        "failure_summary": {
+                            "available": True,
+                            "phase": "failed",
+                            "category": "post_codex_check",
+                            "route_hint": "publish_push_failed",
+                            "message": "publish failed token=message-secret",
+                            "failed_step": "publish changes token=step-secret",
+                            "failed_step_exit_status": "128",
+                            "failed_substep": (
+                                "push autonomous changes token=substep-secret"
+                            ),
+                            "failed_substep_exit_status": "-13",
+                            "command": (
+                                "git push https://user:pass@example.local/repo.git"
+                                "?token=command-secret"
+                            ),
+                        },
+                    },
+                },
+                "log_tail": "post-codex failure surfaced\n",
+            }
+        )
+        self.relay.utc_now = lambda: "2026-06-14T20:00:00Z"
+
+        status = self.relay.relay_status_payload()
+        failure = status["cockpit_health"]["source_failure"]
+
+        self.assertEqual(failure["failed_step"], "publish changes token=[redacted]")
+        self.assertEqual(
+            failure["failed_substep"],
+            "push autonomous changes token=[redacted]",
+        )
+        self.assertEqual(failure["failed_step_exit_status"], 128)
+        self.assertEqual(failure["failed_substep_exit_status"], -13)
+        self.assertEqual(
+            failure["command"],
+            "git push https://example.local/repo.git?[redacted]",
+        )
+        response_text = json.dumps(status, sort_keys=True)
+        for unsafe_text in (
+            "user:pass",
+            "command-secret",
+            "message-secret",
+            "step-secret",
+            "substep-secret",
+        ):
+            self.assertNotIn(unsafe_text, response_text)
+
     def test_status_and_health_promote_autonomy_policy_attention(self) -> None:
         self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
         self.relay.update_state(

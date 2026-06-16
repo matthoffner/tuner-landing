@@ -1261,6 +1261,143 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertNotIn("blocker-url-secret", failure_text)
         self.assertNotIn("hidden-debug", failure_text)
 
+    def test_read_status_preserves_codex_failure_routing_fields_for_relay(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            status_file = tmp_path / "status.json"
+            status_file.write_text(
+                json.dumps(
+                    {
+                        "status": "failing",
+                        "phase": "codex_exec_failed",
+                        "mode": "autonomous_codex",
+                        "updated_at": "2026-06-14T19:30:00Z",
+                        "failure": {
+                            "phase": "codex_exec_failed",
+                            "category": "codex_exec",
+                            "route_hint": "codex_exec_timeout",
+                            "message": (
+                                "codex timed out token=message-secret "
+                                "https://failure.example/debug"
+                                "?token=url-secret#trace"
+                            ),
+                            "codex_exit_status": "-15",
+                            "timed_out": True,
+                            "termination_reason": (
+                                "timeout token=termination-secret"
+                            ),
+                            "killed_after_terminate": True,
+                            "command": (
+                                "codex exec authorization: Bearer command-secret"
+                            ),
+                        },
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            self.publisher.utc_now = lambda: "2026-06-14T19:31:00Z"
+            self.publisher.local_loop_pid = lambda _pid_file: 4242
+
+            status = self.publisher.read_status(
+                status_file,
+                tmp_path / "loop.pid",
+                status_stale_after_seconds=120,
+                bridge_status_file=tmp_path / "missing-bridge-status.json",
+            )
+            remote_status = self.publisher.source_status_for_relay(status)
+
+        failure = status["cockpit_summary"]["failure_summary"]
+        self.assertEqual(
+            failure,
+            {
+                "available": True,
+                "phase": "codex_exec_failed",
+                "category": "codex_exec",
+                "route_hint": "codex_exec_timeout",
+                "message": (
+                    "codex timed out token=[redacted] "
+                    "https://failure.example/debug?[redacted]#[redacted]"
+                ),
+                "command": "codex exec authorization: Bearer [redacted]",
+                "termination_reason": "timeout token=[redacted]",
+                "codex_exit_status": -15,
+                "timed_out": True,
+                "killed_after_terminate": True,
+            },
+        )
+        self.assertEqual(
+            remote_status["cockpit_summary"]["failure_summary"],
+            failure,
+        )
+        failure_text = json.dumps(failure, sort_keys=True)
+        self.assertNotIn("message-secret", failure_text)
+        self.assertNotIn("url-secret", failure_text)
+        self.assertNotIn("termination-secret", failure_text)
+        self.assertNotIn("command-secret", failure_text)
+
+    def test_read_status_preserves_post_codex_failure_routing_fields_for_relay(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            status_file = tmp_path / "status.json"
+            status_file.write_text(
+                json.dumps(
+                    {
+                        "status": "failing",
+                        "phase": "failed",
+                        "mode": "autonomous_codex",
+                        "updated_at": "2026-06-14T19:30:00Z",
+                        "failure": {
+                            "phase": "failed",
+                            "category": "post_codex_check",
+                            "route_hint": "publish_push_failed",
+                            "message": "publish failed token=message-secret",
+                            "failed_step": "publish changes token=step-secret",
+                            "failed_step_exit_status": "128",
+                            "failed_substep": (
+                                "push autonomous changes token=substep-secret"
+                            ),
+                            "failed_substep_exit_status": "-13",
+                            "command": (
+                                "git push https://user:pass@example.local/repo.git"
+                                "?token=command-secret"
+                            ),
+                        },
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            self.publisher.utc_now = lambda: "2026-06-14T19:31:00Z"
+            self.publisher.local_loop_pid = lambda _pid_file: 4242
+
+            status = self.publisher.read_status(
+                status_file,
+                tmp_path / "loop.pid",
+                status_stale_after_seconds=120,
+                bridge_status_file=tmp_path / "missing-bridge-status.json",
+            )
+
+        failure = status["cockpit_summary"]["failure_summary"]
+        self.assertEqual(failure["failed_step"], "publish changes token=[redacted]")
+        self.assertEqual(
+            failure["failed_substep"],
+            "push autonomous changes token=[redacted]",
+        )
+        self.assertEqual(failure["failed_step_exit_status"], 128)
+        self.assertEqual(failure["failed_substep_exit_status"], -13)
+        self.assertEqual(
+            failure["command"],
+            "git push https://example.local/repo.git?[redacted]",
+        )
+        failure_text = json.dumps(failure, sort_keys=True)
+        self.assertNotIn("user:pass", failure_text)
+        self.assertNotIn("command-secret", failure_text)
+        self.assertNotIn("step-secret", failure_text)
+        self.assertNotIn("substep-secret", failure_text)
+
     def test_read_status_sanitizes_failure_summary_paths_for_relay(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
