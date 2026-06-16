@@ -689,8 +689,8 @@ def artifact_status_summary(value: object) -> dict[str, str]:
     statuses = value if isinstance(value, dict) else {}
     summary: dict[str, str] = {}
     for key, status in sorted(statuses.items()):
-        artifact_name = compact_text(key, max_length=80)
-        artifact_status = compact_text(status, max_length=80)
+        artifact_name = compact_policy_detail(key, max_length=80)
+        artifact_status = compact_policy_detail(status, max_length=80)
         if artifact_name is not None and artifact_status is not None:
             summary[artifact_name] = artifact_status
     return summary
@@ -759,14 +759,21 @@ def publisher_cockpit_summary(status: dict[str, Any]) -> dict[str, Any]:
         artifact_health.get("summary"),
         max_length=240,
     )
-    import_readiness = readiness.get("status") or "unknown"
-    readiness_blockers = as_string_list(readiness.get("blockers"))
+    import_readiness = (
+        compact_policy_detail(readiness.get("status"), max_length=80) or "unknown"
+    )
+    raw_readiness_blockers = as_string_list(readiness.get("blockers"))
+    readiness_blockers = compact_policy_detail_list(
+        raw_readiness_blockers,
+        max_items=POLICY_RAW_PATH_SAMPLE_LIMIT,
+        max_length=160,
+    )
     readiness_blocker_count = first_compact_int(
         autonomy_policy.get("readiness_blocker_count"),
-        len(readiness_blockers),
+        len(raw_readiness_blockers),
     )
     if readiness_blocker_count is None:
-        readiness_blocker_count = len(readiness_blockers)
+        readiness_blocker_count = len(raw_readiness_blockers)
     policy_step = latest_autonomy_policy_step(status)
     policy_failure = (
         policy_step
@@ -891,16 +898,23 @@ def publisher_cockpit_summary(status: dict[str, Any]) -> dict[str, Any]:
         if policy_step
         else None
     )
-    thin_group_categories = as_string_list(autonomy_policy.get("thin_group_categories"))
+    raw_thin_group_categories = as_string_list(
+        autonomy_policy.get("thin_group_categories")
+    )
+    thin_group_categories = compact_policy_detail_list(
+        raw_thin_group_categories,
+        max_items=POLICY_RAW_PATH_SAMPLE_LIMIT,
+        max_length=120,
+    )
     thin_group_count = autonomy_policy.get("thin_group_count")
     if not isinstance(thin_group_count, int):
-        thin_group_count = len(thin_group_categories)
+        thin_group_count = len(raw_thin_group_categories)
     thin_group_category_count = first_compact_int(
         autonomy_policy.get("thin_group_category_count"),
-        len(thin_group_categories),
+        len(raw_thin_group_categories),
     )
     if thin_group_category_count is None:
-        thin_group_category_count = len(thin_group_categories)
+        thin_group_category_count = len(raw_thin_group_categories)
     coverage_latest_thin_counts = compact_count_map(
         pipeline_coverage.get("latest_thin_counts")
     )
@@ -941,12 +955,13 @@ def publisher_cockpit_summary(status: dict[str, Any]) -> dict[str, Any]:
 
     return {
         "status": status_value,
-        "phase": status.get("phase"),
-        "mode": status.get("mode") or "unknown",
+        "phase": compact_policy_detail(status.get("phase"), max_length=120),
+        "mode": compact_policy_detail(status.get("mode"), max_length=120)
+        or "unknown",
         "loop_running": loop_running,
         "loop_pid": status.get("loop_pid"),
         "iteration": status.get("iteration") or 0,
-        "updated_at": status.get("updated_at"),
+        "updated_at": compact_policy_detail(status.get("updated_at"), max_length=120),
         "status_age_seconds": status.get("source_status_age_seconds"),
         "status_stale_after_seconds": status.get("source_status_stale_after_seconds"),
         "status_stale": status.get("source_status_stale"),
@@ -969,8 +984,15 @@ def publisher_cockpit_summary(status: dict[str, Any]) -> dict[str, Any]:
         "ready_for_next_import_records": readiness.get("ready_for_next_import_records"),
         "import_handoff": import_handoff_summary(import_pipeline),
         "coordination": coordination_summary(status),
-        "current_focus": autonomy_policy.get("current_focus") or "mvp_loop",
-        "policy_reason": autonomy_policy.get("decision_reason"),
+        "current_focus": compact_policy_detail(
+            autonomy_policy.get("current_focus"),
+            max_length=120,
+        )
+        or "mvp_loop",
+        "policy_reason": compact_policy_detail(
+            autonomy_policy.get("decision_reason"),
+            max_length=160,
+        ),
         "policy_failure_reason": policy_failure_reason,
         "policy_diagnostics_status": policy_diagnostics_status,
         "policy_summary": policy_summary,

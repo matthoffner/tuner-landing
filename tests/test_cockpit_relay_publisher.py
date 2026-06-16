@@ -974,6 +974,153 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         )
         self.assertEqual(summary["policy_raw_dallas_csv_changed_path_count"], 1)
 
+    def test_read_status_sanitizes_top_level_cockpit_summary_fields(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            status_file = tmp_path / "status.json"
+            status_file.write_text(
+                json.dumps(
+                    {
+                        "status": "passing",
+                        "phase": (
+                            "relay publish token=phase-secret "
+                            "https://phase-user:phase-pass@example.local/phase"
+                            "?token=phase-url-secret#debug"
+                        ),
+                        "mode": "autonomous_codex authorization: Bearer mode-secret",
+                        "updated_at": "not-a-timestamp token=timestamp-secret",
+                        "artifacts": {
+                            "artifact_health": {
+                                "status": "loaded",
+                                "statuses": {
+                                    "coverage token=artifact-key-secret": (
+                                        "loaded token=artifact-status-secret"
+                                    )
+                                },
+                            },
+                            "import_pipeline": {
+                                "execution_readiness": {
+                                    "status": "blocked token=readiness-secret",
+                                    "blockers": [
+                                        (
+                                            "raw import blocked "
+                                            "https://blocker.example/path"
+                                            "?token=blocker-secret#trace"
+                                        ),
+                                        "relay_token=blocker-two-secret",
+                                    ],
+                                },
+                            },
+                        },
+                        "autonomy_policy": {
+                            "current_focus": (
+                                "autonomy_visibility token=focus-secret"
+                            ),
+                            "decision_reason": (
+                                "dallas_ready_no_thin_groups "
+                                "https://policy.example/check"
+                                "?token=policy-secret#debug"
+                            ),
+                            "thin_group_count": 9,
+                            "thin_group_category_count": 9,
+                            "thin_group_categories": [
+                                "failure_reasons token=thin-secret",
+                                (
+                                    "https://thin.example/category"
+                                    "?token=thin-url-secret#debug"
+                                ),
+                                "category-3",
+                                "category-4",
+                                "category-5",
+                                "category-6",
+                                "category-7",
+                                "category-8",
+                                "category-9 token=overflow-secret",
+                            ],
+                        },
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            self.publisher.utc_now = lambda: "2026-06-14T19:31:00Z"
+            self.publisher.local_loop_pid = lambda _pid_file: 4242
+
+            status = self.publisher.read_status(
+                status_file,
+                tmp_path / "loop.pid",
+                status_stale_after_seconds=120,
+            )
+
+        summary = status["cockpit_summary"]
+        summary_text = json.dumps(summary, sort_keys=True)
+        self.assertEqual(
+            summary["phase"],
+            "relay publish token=[redacted] "
+            "https://example.local/phase?[redacted]#[redacted]",
+        )
+        self.assertEqual(
+            summary["mode"],
+            "autonomous_codex authorization: Bearer [redacted]",
+        )
+        self.assertEqual(
+            summary["updated_at"],
+            "not-a-timestamp token=[redacted]",
+        )
+        self.assertEqual(
+            summary["artifact_statuses"],
+            {"coverage token=[redacted]": "loaded token=[redacted]"},
+        )
+        self.assertEqual(
+            summary["import_readiness"],
+            "blocked token=[redacted]",
+        )
+        self.assertEqual(
+            summary["readiness_blockers"],
+            [
+                (
+                    "raw import blocked "
+                    "https://blocker.example/path?[redacted]#[redacted]"
+                ),
+                "relay_token=[redacted]",
+            ],
+        )
+        self.assertEqual(
+            summary["current_focus"],
+            "autonomy_visibility token=[redacted]",
+        )
+        self.assertEqual(
+            summary["policy_reason"],
+            "dallas_ready_no_thin_groups "
+            "https://policy.example/check?[redacted]#[redacted]",
+        )
+        self.assertEqual(summary["thin_group_count"], 9)
+        self.assertEqual(summary["thin_group_category_count"], 9)
+        self.assertEqual(len(summary["thin_group_categories"]), 8)
+        self.assertIn(
+            "https://thin.example/category?[redacted]#[redacted]",
+            summary["thin_group_categories"],
+        )
+        self.assertNotIn("category-9", summary_text)
+        for secret in (
+            "phase-secret",
+            "phase-pass",
+            "phase-url-secret",
+            "mode-secret",
+            "timestamp-secret",
+            "artifact-key-secret",
+            "artifact-status-secret",
+            "readiness-secret",
+            "blocker-secret",
+            "blocker-two-secret",
+            "focus-secret",
+            "policy-secret",
+            "thin-secret",
+            "thin-url-secret",
+            "overflow-secret",
+        ):
+            self.assertNotIn(secret, summary_text)
+
     def test_read_status_sanitizes_remote_policy_failure_details(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
