@@ -1589,6 +1589,9 @@ def source_status_log_fields(payload: dict[str, Any]) -> dict[str, Any]:
             status.get("source_status_file_error"),
             max_length=180,
         ),
+        "source_status_remote_omitted_field_count": compact_int(
+            status.get("source_status_remote_omitted_field_count")
+        ),
         "source_health_status": compact_policy_detail(source_health.get("status"), max_length=80),
         "source_health_primary_reason": compact_policy_detail(
             source_health.get("primary_reason"),
@@ -1758,6 +1761,7 @@ SOURCE_STATUS_LOG_FIELD_NAMES = (
     "source_status_age_seconds",
     "source_status_file_status",
     "source_status_file_error",
+    "source_status_remote_omitted_field_count",
     "source_health_status",
     "source_health_primary_reason",
     "source_health_label",

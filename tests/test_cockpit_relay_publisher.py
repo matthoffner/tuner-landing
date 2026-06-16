@@ -3614,6 +3614,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertIn("source_status_age_seconds=700", log_text)
         self.assertIn("source_status_file_status=None", log_text)
         self.assertIn("source_status_file_error=None", log_text)
+        self.assertIn("source_status_remote_omitted_field_count=None", log_text)
         self.assertIn("source_health_status=None", log_text)
         self.assertIn("source_health_primary_reason=None", log_text)
         self.assertIn("source_health_label=None", log_text)
@@ -3638,6 +3639,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                     "source_status_age_seconds": 700,
                     "source_status_file_status": "loaded",
                     "source_status_file_error": "line 1 column 2: bad status JSON",
+                    "source_status_remote_omitted_field_count": 4,
                     "bridge_summary": {
                         "available": True,
                         "status": "running",
@@ -3723,6 +3725,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             "source_status_file_error=line 1 column 2: bad status JSON",
             log_text,
         )
+        self.assertIn("source_status_remote_omitted_field_count=4", log_text)
         self.assertIn("bridge_available=True", log_text)
         self.assertIn("bridge_status=running", log_text)
         self.assertIn("bridge_status_file_status=loaded", log_text)
@@ -3798,6 +3801,9 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                     "source_status_file_error": (
                         "/tmp/customer/status.json token=source-file-error-secret "
                         "https://relay-user:relay-pass@relay.example/debug?token=source-error-url-secret#trace"
+                    ),
+                    "source_status_remote_omitted_field_count": (
+                        "4 token=omitted-count-secret"
                     ),
                     "bridge_summary": {
                         "available": True,
@@ -3927,6 +3933,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             "https://relay.example/debug?[redacted]#[redacted]",
             log_text,
         )
+        self.assertIn("source_status_remote_omitted_field_count=None", log_text)
         self.assertIn("bridge_available=True", log_text)
         self.assertIn("bridge_status=running token=[redacted]", log_text)
         self.assertIn(
@@ -4052,6 +4059,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertNotIn("source-file-error-secret", log_text)
         self.assertNotIn("source-error-url-secret", log_text)
         self.assertNotIn("/tmp/customer/status.json", log_text)
+        self.assertNotIn("omitted-count-secret", log_text)
         self.assertNotIn("bridge-file-error-secret", log_text)
         self.assertNotIn("bridge-error-url-secret", log_text)
         self.assertNotIn("/tmp/customer/bridge.json", log_text)
