@@ -3,6 +3,7 @@ const { isIP } = require("node:net");
 const DEFAULT_UPSTREAM_TIMEOUT_MS = 8000;
 const MAX_UPSTREAM_TIMEOUT_MS = 15000;
 const MAX_UPSTREAM_TIMEOUT_VALUE_CHARS = 64;
+const MAX_UPSTREAM_URL_CHARS = 500;
 const MAX_RELAY_TOKEN_CHARS = 8192;
 const ALLOWED_PROXY_METHODS = "GET, HEAD, OPTIONS";
 const EXPOSED_UPSTREAM_HEADERS = [
@@ -36,6 +37,9 @@ function normalizeBaseUrl(value, options = {}) {
   }
   if (/\s/.test(rawValue)) {
     return { url: "", error: "must not contain whitespace" };
+  }
+  if (rawValue.length > MAX_UPSTREAM_URL_CHARS) {
+    return { url: "", error: `must be ${MAX_UPSTREAM_URL_CHARS} characters or fewer` };
   }
   const explicitPortError = invalidExplicitPortError(raw);
   if (explicitPortError) {
@@ -636,6 +640,7 @@ module.exports = {
   MAX_RELAY_TOKEN_CHARS,
   MAX_UPSTREAM_TIMEOUT_VALUE_CHARS,
   MAX_UPSTREAM_TIMEOUT_MS,
+  MAX_UPSTREAM_URL_CHARS,
   NOT_CONFIGURED_UPSTREAMS_HEADER,
   classifyUpstreamError,
   compactUpstreamHeaderPart,

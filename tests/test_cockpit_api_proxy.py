@@ -406,6 +406,56 @@ class CockpitApiProxyTest(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_upstreams_reject_oversized_urls_before_parsing(self) -> None:
+        result = run_node(
+            """
+            const assert = require("assert");
+            const {
+              invalidUpstreamKeysHeader,
+              invalidUpstreamsHeader,
+              MAX_UPSTREAM_URL_CHARS,
+              upstreams,
+            } = require("./api/cockpit-upstreams");
+
+            const copiedRelayUrl = "https://automoat-cockpit-relay.example/" + "token=relay-secret".repeat(40);
+            const copiedBridgeUrl = "https://legacy-bridge.example/" + "access_token=bridge-secret".repeat(30);
+            assert.ok(copiedRelayUrl.length > MAX_UPSTREAM_URL_CHARS);
+            assert.ok(copiedBridgeUrl.length > MAX_UPSTREAM_URL_CHARS);
+
+            const result = upstreams({
+              relayPath: "/api/status",
+              bridgePath: "/api/status",
+              env: {
+                AUTOMOAT_RELAY_URL: copiedRelayUrl,
+                AUTOMOAT_BRIDGE_URL: copiedBridgeUrl,
+              },
+            });
+            assert.deepStrictEqual(result.configured, []);
+            assert.deepStrictEqual(result.invalid, [
+              {
+                kind: "relay",
+                error: `must be ${MAX_UPSTREAM_URL_CHARS} characters or fewer`,
+              },
+              {
+                kind: "legacy_bridge",
+                error: `must be ${MAX_UPSTREAM_URL_CHARS} characters or fewer`,
+              },
+            ]);
+            assert.strictEqual(
+              invalidUpstreamKeysHeader(result.invalid),
+              "AUTOMOAT_RELAY_URL,AUTOMOAT_BRIDGE_URL",
+            );
+            assert.strictEqual(
+              invalidUpstreamsHeader(result.invalid),
+              "relay:must be 500 characters or fewer,legacy_bridge:must be 500 characters or fewer",
+            );
+            assert.strictEqual(invalidUpstreamsHeader(result.invalid).includes("relay-secret"), false);
+            assert.strictEqual(invalidUpstreamsHeader(result.invalid).includes("bridge-secret"), false);
+            """
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_upstreams_reject_empty_and_zero_ports_before_fetching(self) -> None:
         result = run_node(
             """
