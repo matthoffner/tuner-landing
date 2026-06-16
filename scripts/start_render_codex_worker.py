@@ -163,6 +163,7 @@ BUSINESS_HOURS_CLOSED = "business_hours_closed"
 LOOP_EXITED = "loop_exited"
 PUBLISHER_EXITED = "publisher_exited"
 RELAY_PUBLISHER_UNAVAILABLE = "relay_publisher_unavailable"
+ENVIRONMENT_PREFLIGHT_FAILED = "environment_preflight_failed"
 
 
 def emit(message: str) -> None:
@@ -2281,6 +2282,26 @@ def record_render_worker_failure_status(
         emit(f"could not write render worker failure status: {type(exc).__name__}")
 
 
+def record_environment_preflight_failure_status(errors: list[str]) -> None:
+    """Record startup preflight failures when the configured workdir is safe to touch."""
+    failed_keys = preflight_error_keys(errors)
+    if "AUTOMOAT_WORKDIR" in failed_keys:
+        emit("skipping render worker failure status because AUTOMOAT_WORKDIR is invalid")
+        return
+
+    categories = preflight_error_categories(errors)
+    message = (
+        f"error_count={len(errors)} "
+        f"error_categories={','.join(categories) or 'unknown'} "
+        f"failed_configuration_keys={','.join(failed_keys) or 'unknown'}"
+    )
+    record_render_worker_failure_status(
+        reason=ENVIRONMENT_PREFLIGHT_FAILED,
+        worker_exit_status=2,
+        message=message,
+    )
+
+
 def start_publisher() -> subprocess.Popen[object]:
     require_env("AUTOMOAT_RELAY_URL")
     require_env("AUTOMOAT_RELAY_TOKEN")
@@ -2621,6 +2642,7 @@ def main() -> int:
     if args.check_env:
         return 0 if not env_errors else 2
     if env_errors:
+        record_environment_preflight_failure_status(env_errors)
         return 2
 
     signal.signal(signal.SIGTERM, request_stop)

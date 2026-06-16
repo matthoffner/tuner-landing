@@ -5191,6 +5191,76 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             message="publisher preflight failed with status 2",
         )
 
+    def test_environment_preflight_failure_records_worker_status(self) -> None:
+        output = io.StringIO()
+
+        with patch.object(self.worker, "parse_args") as parse_args, patch.object(
+            self.worker,
+            "emit_environment_preflight",
+            return_value=[
+                "AUTOMOAT_RELAY_URL is required",
+                "GITHUB_TOKEN or GH_TOKEN is required",
+            ],
+        ), patch.object(
+            self.worker,
+            "configure_git_auth",
+        ) as configure_git_auth, patch.object(
+            self.worker,
+            "record_render_worker_failure_status",
+        ) as record_failure_status, redirect_stdout(
+            output
+        ):
+            parse_args.return_value = type(
+                "Args",
+                (),
+                {"check_env": False, "format": "text"},
+            )()
+
+            status = self.worker.main()
+
+        self.assertEqual(status, 2)
+        configure_git_auth.assert_not_called()
+        record_failure_status.assert_called_once_with(
+            reason=self.worker.ENVIRONMENT_PREFLIGHT_FAILED,
+            worker_exit_status=2,
+            message=(
+                "error_count=2 error_categories=missing_required "
+                "failed_configuration_keys=AUTOMOAT_RELAY_URL,GITHUB_TOKEN|GH_TOKEN"
+            ),
+        )
+
+    def test_environment_preflight_failure_skips_status_for_invalid_workdir(self) -> None:
+        output = io.StringIO()
+
+        with patch.object(self.worker, "parse_args") as parse_args, patch.object(
+            self.worker,
+            "emit_environment_preflight",
+            return_value=["AUTOMOAT_WORKDIR must be an absolute path"],
+        ), patch.object(
+            self.worker,
+            "configure_git_auth",
+        ) as configure_git_auth, patch.object(
+            self.worker,
+            "record_render_worker_failure_status",
+        ) as record_failure_status, redirect_stdout(
+            output
+        ):
+            parse_args.return_value = type(
+                "Args",
+                (),
+                {"check_env": False, "format": "text"},
+            )()
+
+            status = self.worker.main()
+
+        self.assertEqual(status, 2)
+        configure_git_auth.assert_not_called()
+        record_failure_status.assert_not_called()
+        self.assertIn(
+            "skipping render worker failure status because AUTOMOAT_WORKDIR is invalid",
+            output.getvalue(),
+        )
+
     def test_publisher_start_failure_records_worker_status(self) -> None:
         output = io.StringIO()
 
