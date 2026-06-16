@@ -64,6 +64,8 @@ COCKPIT_HEALTH_LABELS = {
     "source_status_timestamp_future": "Source status timestamp is in the future",
     "source_autonomy_policy_failed": "Autonomy policy failed",
     "source_cockpit_attention": "Source cockpit needs attention",
+    "source_handoff_coordination_unavailable": "Source coordination handoff is unavailable",
+    "source_handoff_coordination_incomplete": "Source coordination handoff is incomplete",
     "source_bridge_status_unavailable": "Source bridge status is unavailable",
     "source_bridge_status_stale": "Source bridge status is stale",
     "source_bridge_status_timestamp_invalid": "Source bridge status timestamp is invalid",
@@ -1214,6 +1216,17 @@ def cockpit_health(
         reasons.append("source_status_failing")
     if source_summary.get("operator_attention") is True:
         reasons.append("source_cockpit_attention")
+    if (
+        source_coordination.get("available") is True
+        and source_coordination.get("handoff_file_status")
+        in {"missing", "read_failed", "invalid_encoding", "too_large"}
+    ):
+        reasons.append("source_handoff_coordination_unavailable")
+    elif source_coordination.get("available") is True and (
+        source_coordination.get("latest_section_found") is False
+        or source_coordination.get("latest_status_found") is False
+    ):
+        reasons.append("source_handoff_coordination_incomplete")
     source_bridge_health = source_bridge.get("bridge_health")
     if (
         source_bridge.get("available") is True

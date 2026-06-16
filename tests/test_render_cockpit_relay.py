@@ -1792,6 +1792,73 @@ class RenderCockpitRelayTest(unittest.TestCase):
         ):
             self.assertNotIn(unsafe_text, response_text)
 
+    def test_status_and_health_route_source_coordination_attention(self) -> None:
+        cases = [
+            (
+                "too_large",
+                True,
+                True,
+                "source_handoff_coordination_unavailable",
+                "Source coordination handoff is unavailable",
+            ),
+            (
+                "loaded",
+                True,
+                False,
+                "source_handoff_coordination_incomplete",
+                "Source coordination handoff is incomplete",
+            ),
+        ]
+
+        for (
+            file_status,
+            latest_section_found,
+            latest_status_found,
+            expected_reason,
+            expected_label,
+        ) in cases:
+            with self.subTest(expected_reason=expected_reason):
+                with self.relay.STATE_LOCK:
+                    self.relay.STATE.clear()
+                    self.relay.STATE.update(self.relay.empty_state())
+                self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
+                self.relay.update_state(
+                    {
+                        "pushed_at": "2026-06-14T19:59:30Z",
+                        "status": {
+                            "status": "running",
+                            "loop_running": True,
+                            "cockpit_summary": {
+                                "operator_attention": False,
+                                "coordination": {
+                                    "handoff_file_status": file_status,
+                                    "latest_section_found": latest_section_found,
+                                    "latest_status_found": latest_status_found,
+                                },
+                            },
+                        },
+                        "log_tail": "running\n",
+                    }
+                )
+                self.relay.utc_now = lambda: "2026-06-14T20:00:00Z"
+
+                health = self.relay.health_payload()
+                status = self.relay.relay_status_payload()
+
+                self.assertFalse(health["cockpit_ok"])
+                self.assertEqual(health["cockpit_status"], "degraded")
+                self.assertEqual(
+                    health["cockpit_health"]["primary_reason"],
+                    expected_reason,
+                )
+                self.assertEqual(health["cockpit_health"]["label"], expected_label)
+                self.assertIn(expected_reason, health["cockpit_health"]["reasons"])
+                self.assertEqual(status["cockpit_health_label"], expected_label)
+                self.assertEqual(
+                    status["cockpit_health_primary_reason"],
+                    expected_reason,
+                )
+
     def test_status_and_health_promote_autonomy_policy_attention(self) -> None:
         self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
         self.relay.update_state(
