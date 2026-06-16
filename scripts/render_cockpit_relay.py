@@ -52,6 +52,8 @@ COCKPIT_HEALTH_LABELS = {
     "relay_state_load_failed": "Relay state failed to load",
     "relay_snapshot_missing": "Relay snapshot is missing",
     "relay_snapshot_stale": "Relay snapshot is stale",
+    "relay_snapshot_timestamp_future": "Relay snapshot timestamp is in the future",
+    "relay_snapshot_timestamp_invalid": "Relay snapshot timestamp is invalid",
     "source_bridge_degraded": "Source bridge is degraded",
     "source_bridge_status_failing": "Source bridge status is failing",
     "source_status_timestamp_invalid": "Source status timestamp is invalid",
@@ -127,19 +129,33 @@ def sanitize_request_line_for_log(value: object) -> object:
 
 def snapshot_freshness(state: dict[str, Any]) -> dict[str, Any]:
     stale_after = int(CONFIG.get("stale_after_seconds", 120))
-    received_at = parse_utc_timestamp(state.get("received_at"))
+    received_at_value = state.get("received_at")
+    received_at = parse_utc_timestamp(received_at_value)
     current_time = parse_utc_timestamp(utc_now())
+    timestamp_invalid = compact_text(received_at_value) is not None and received_at is None
     if received_at is None or current_time is None:
         return {
             "snapshot_age_seconds": None,
             "snapshot_stale_after_seconds": stale_after,
             "snapshot_stale": True,
+            "snapshot_timestamp_invalid": timestamp_invalid,
+            "snapshot_timestamp_future": False,
+        }
+    if received_at > current_time:
+        return {
+            "snapshot_age_seconds": None,
+            "snapshot_stale_after_seconds": stale_after,
+            "snapshot_stale": True,
+            "snapshot_timestamp_invalid": False,
+            "snapshot_timestamp_future": True,
         }
     age_seconds = max(0, int((current_time - received_at).total_seconds()))
     return {
         "snapshot_age_seconds": age_seconds,
         "snapshot_stale_after_seconds": stale_after,
         "snapshot_stale": age_seconds > stale_after,
+        "snapshot_timestamp_invalid": False,
+        "snapshot_timestamp_future": False,
     }
 
 
@@ -1082,6 +1098,10 @@ def cockpit_health(
         reasons.append("relay_state_load_failed")
     if not state.get("received_at"):
         reasons.append("relay_snapshot_missing")
+    if freshness.get("snapshot_timestamp_invalid") is True:
+        reasons.append("relay_snapshot_timestamp_invalid")
+    if freshness.get("snapshot_timestamp_future") is True:
+        reasons.append("relay_snapshot_timestamp_future")
     if freshness.get("snapshot_stale") is True:
         reasons.append("relay_snapshot_stale")
     if status.get("source_status_timestamp_invalid") is True:

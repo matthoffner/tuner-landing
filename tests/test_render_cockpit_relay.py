@@ -191,7 +191,7 @@ class RenderCockpitRelayTest(unittest.TestCase):
                 "publisher_started_at": "2026-06-14T19:58:00Z",
                 "pushed_at": "2026-06-14T19:59:30Z",
                 "snapshot_sequence": 7,
-                "repo": "<external>/automoat",
+                "repo": self.relay.repo_relative(Path("/work/automoat")),
                 "git": {
                     "head": "abc1234",
                     "branch": "main",
@@ -351,6 +351,50 @@ class RenderCockpitRelayTest(unittest.TestCase):
         self.assertEqual(status["cockpit_health_label"], "Relay snapshot is stale")
         self.assertEqual(status["relay"]["snapshot_age_seconds"], 150)
         self.assertTrue(status["relay"]["snapshot_stale"])
+
+    def test_status_and_health_report_future_snapshot_timestamp(self) -> None:
+        self.relay.utc_now = lambda: "2026-06-14T20:01:00Z"
+        self.relay.update_state(
+            {
+                "pushed_at": "2026-06-14T20:01:00Z",
+                "status": {"status": "running", "loop_running": True},
+                "log_tail": "loop is working\n",
+            }
+        )
+        self.relay.utc_now = lambda: "2026-06-14T20:00:00Z"
+
+        health = self.relay.health_payload()
+        status = self.relay.relay_status_payload()
+
+        self.assertTrue(health["ok"])
+        self.assertFalse(health["cockpit_ok"])
+        self.assertEqual(health["cockpit_status"], "degraded")
+        self.assertEqual(
+            health["cockpit_health"]["reasons"],
+            ["relay_snapshot_timestamp_future", "relay_snapshot_stale"],
+        )
+        self.assertEqual(
+            health["cockpit_health_primary_reason"],
+            "relay_snapshot_timestamp_future",
+        )
+        self.assertEqual(
+            health["cockpit_health_label"],
+            "Relay snapshot timestamp is in the future",
+        )
+        self.assertIsNone(health["snapshot_age_seconds"])
+        self.assertTrue(health["snapshot_stale"])
+        self.assertFalse(health["snapshot_timestamp_invalid"])
+        self.assertTrue(health["snapshot_timestamp_future"])
+        self.assertFalse(status["cockpit_ok"])
+        self.assertEqual(status["cockpit_status"], "degraded")
+        self.assertEqual(
+            status["cockpit_health"]["primary_reason"],
+            "relay_snapshot_timestamp_future",
+        )
+        self.assertIsNone(status["relay"]["snapshot_age_seconds"])
+        self.assertTrue(status["relay"]["snapshot_stale"])
+        self.assertFalse(status["relay"]["snapshot_timestamp_invalid"])
+        self.assertTrue(status["relay"]["snapshot_timestamp_future"])
 
     def test_status_and_health_report_degraded_source_snapshot(self) -> None:
         self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
