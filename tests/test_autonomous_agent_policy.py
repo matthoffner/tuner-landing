@@ -6,6 +6,7 @@ from __future__ import annotations
 import contextlib
 import importlib.util
 import io
+import json
 import os
 from pathlib import Path
 import sys
@@ -253,6 +254,75 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
                 "latest_handoff_status": "publisher preflight ready",
             },
         )
+
+    def test_status_payload_promotes_policy_failure_summary(self) -> None:
+        self.loop.utc_now = lambda: "2026-06-16T02:10:00Z"
+        self.loop.inspect_artifacts = lambda: {"artifact_health": {"status": "loaded"}}
+        self.loop.autonomy_policy_snapshot = lambda: {
+            "current_focus": "autonomy_visibility_or_real_ingest"
+        }
+        self.loop.git_state = lambda: {"dirty_count_excluding_preview": 2}
+        self.loop.coordination_snapshot = lambda: {
+            "handoff_path": ".pixelbox/handoff.md",
+            "latest_handoff_status": "publisher preflight ready",
+        }
+        policy_step = {
+            "name": "autonomy policy check",
+            "exit_status": 1,
+            "failure_reason": "diagnostic failure token=step-secret\nsecond line",
+            "synthetic_row_count": 3,
+            "raw_dallas_csv_changed_paths": [
+                "generated/raw/dallas-electrician-import-sample-v2/permits.csv"
+            ],
+            "productive_changed_paths": ["scripts/run_autonomous_agent_loop.py"],
+            "policy_diagnostics": {
+                "route_hint": "policy_failure",
+                "failure_reason": "diagnostic failure token=diagnostic-secret",
+                "decision_reason": "dallas_ready_no_thin_groups",
+                "current_focus": "autonomy_visibility_or_real_ingest",
+                "synthetic_row_count": "4",
+                "raw_dallas_csv_changed_path_count": 1,
+                "productive_changed_path_count": 1,
+            },
+            "policy_summary": (
+                "status=failed route=policy_failure "
+                "reason=diagnostic failure token=summary-secret"
+            ),
+        }
+
+        payload = self.loop.status_payload(
+            "run-1",
+            3,
+            "failing",
+            "autonomy_policy_failed",
+            "2026-06-16T02:09:00Z",
+            [policy_step],
+            "Autonomy policy rejected token=message-secret",
+        )
+
+        self.assertEqual(
+            payload["failure"],
+            {
+                "phase": "autonomy_policy_failed",
+                "message": "Autonomy policy rejected token=<redacted>",
+                "category": "autonomy_policy",
+                "route_hint": "policy_failure",
+                "failure_reason": "diagnostic failure token=<redacted>",
+                "summary": (
+                    "status=failed route=policy_failure "
+                    "reason=diagnostic failure token=<redacted>"
+                ),
+                "decision_reason": "dallas_ready_no_thin_groups",
+                "current_focus": "autonomy_visibility_or_real_ingest",
+                "synthetic_row_count": 4,
+                "raw_dallas_csv_changed_path_count": 1,
+                "productive_changed_path_count": 1,
+            },
+        )
+        failure_json = json.dumps(payload["failure"], sort_keys=True)
+        self.assertNotIn("diagnostic-secret", failure_json)
+        self.assertNotIn("summary-secret", failure_json)
+        self.assertNotIn("message-secret", failure_json)
 
     def test_docs_and_status_files_do_not_make_synthetic_rows_productive(self) -> None:
         paths = [

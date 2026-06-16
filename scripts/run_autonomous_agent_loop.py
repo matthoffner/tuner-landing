@@ -810,7 +810,95 @@ def status_payload(
     }
     if error:
         payload["error"] = error
+    failure = status_failure_snapshot(status, phase, steps, error)
+    if failure is not None:
+        payload["failure"] = failure
     return payload
+
+
+def status_failure_snapshot(
+    status: str,
+    phase: str,
+    steps: list[dict[str, Any]],
+    error: str | None,
+) -> dict[str, Any] | None:
+    """Return compact routeable failure metadata for top-level status readers."""
+    if status != "failing":
+        return None
+    failure: dict[str, Any] = {
+        "phase": sanitized_policy_scalar(phase),
+        "message": sanitized_policy_scalar(error),
+    }
+
+    policy_step = next(
+        (
+            step
+            for step in reversed(steps)
+            if step.get("name") == "autonomy policy check"
+        ),
+        None,
+    )
+    if phase == "autonomy_policy_failed" and isinstance(policy_step, dict):
+        diagnostics = policy_step.get("policy_diagnostics")
+        if not isinstance(diagnostics, dict):
+            diagnostics = {}
+        policy_summary = policy_step.get("policy_summary")
+        if policy_summary is None and diagnostics:
+            policy_summary = autonomy_policy_summary(diagnostics)
+        failure.update(
+            {
+                "category": "autonomy_policy",
+                "route_hint": sanitized_policy_scalar(
+                    diagnostics.get("route_hint")
+                    or autonomy_policy_route_hint(policy_step.get("failure_reason"))
+                ),
+                "failure_reason": sanitized_policy_scalar(
+                    diagnostics.get("failure_reason")
+                    or policy_step.get("failure_reason")
+                ),
+                "summary": sanitized_policy_scalar(policy_summary),
+                "decision_reason": sanitized_policy_scalar(
+                    diagnostics.get("decision_reason")
+                ),
+                "current_focus": sanitized_policy_scalar(
+                    diagnostics.get("current_focus")
+                ),
+                "synthetic_row_count": compact_policy_count(
+                    diagnostics.get(
+                        "synthetic_row_count",
+                        policy_step.get("synthetic_row_count") or 0,
+                    )
+                ),
+                "raw_dallas_csv_changed_path_count": compact_policy_count(
+                    diagnostics.get(
+                        "raw_dallas_csv_changed_path_count",
+                        len(policy_step.get("raw_dallas_csv_changed_paths") or []),
+                    )
+                ),
+                "productive_changed_path_count": compact_policy_count(
+                    diagnostics.get(
+                        "productive_changed_path_count",
+                        len(policy_step.get("productive_changed_paths") or []),
+                    )
+                ),
+            }
+        )
+    else:
+        failure["category"] = sanitized_policy_scalar(phase)
+    return failure
+
+
+def compact_policy_count(value: Any) -> int:
+    """Return a non-negative integer count without risking status write failures."""
+    if isinstance(value, bool):
+        return int(value)
+    if isinstance(value, int):
+        return max(0, value)
+    if isinstance(value, float) and math.isfinite(value):
+        return max(0, int(value))
+    if isinstance(value, str) and value.strip().isdigit():
+        return int(value.strip())
+    return 0
 
 
 def write_status(
