@@ -956,6 +956,106 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertNotIn("github-token", output.getvalue())
         self.assertNotIn("codex-token", output.getvalue())
 
+    def test_rejects_non_public_ip_literal_urls_before_network_access(self) -> None:
+        base_env = {
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            "GITHUB_TOKEN": "github-token",
+            "CODEX_ACCESS_TOKEN": "codex-token",
+        }
+        cases = (
+            (
+                "https://10.0.0.5",
+                "https://github.com/example/private.git",
+                ["AUTOMOAT_RELAY_URL must include a valid host"],
+            ),
+            (
+                "https://automoat-cockpit-relay.example",
+                "https://169.254.169.254/example/private.git",
+                ["AUTOMOAT_GIT_REPO must include a valid host"],
+            ),
+            (
+                "https://224.0.0.1",
+                "https://github.com/example/private.git",
+                ["AUTOMOAT_RELAY_URL must include a valid host"],
+            ),
+        )
+
+        for relay_url, git_repo, expected_errors in cases:
+            with self.subTest(relay_url=relay_url, git_repo=git_repo):
+                errors = self.worker.validate_worker_environment(
+                    {
+                        **base_env,
+                        "AUTOMOAT_RELAY_URL": relay_url,
+                        "AUTOMOAT_GIT_REPO": git_repo,
+                    },
+                    found_command,
+                )
+
+                self.assertEqual(errors, expected_errors)
+
+    def test_accepts_public_and_loopback_ip_literal_urls(self) -> None:
+        base_env = {
+            "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            "GITHUB_TOKEN": "github-token",
+            "CODEX_ACCESS_TOKEN": "codex-token",
+        }
+        cases = (
+            ("https://93.184.216.34", "https://93.184.216.34/example/private.git"),
+            ("http://127.0.0.1:4175", "http://127.0.0.1:3000/example/private.git"),
+            ("http://[::1]:4175", "http://[::1]:3000/example/private.git"),
+        )
+
+        for relay_url, git_repo in cases:
+            with self.subTest(relay_url=relay_url, git_repo=git_repo):
+                errors = self.worker.validate_worker_environment(
+                    {
+                        **base_env,
+                        "AUTOMOAT_RELAY_URL": relay_url,
+                        "AUTOMOAT_GIT_REPO": git_repo,
+                    },
+                    found_command,
+                )
+
+                self.assertEqual(errors, [])
+
+    def test_check_env_json_rejects_non_public_ip_literal_without_echoing_value(
+        self,
+    ) -> None:
+        output = io.StringIO()
+
+        with redirect_stdout(output):
+            errors = self.worker.emit_environment_preflight(
+                {
+                    "AUTOMOAT_RELAY_URL": "https://169.254.169.254",
+                    "AUTOMOAT_RELAY_TOKEN": "relay-token",
+                    "AUTOMOAT_GIT_REPO": "https://10.0.0.5/example/private.git",
+                    "GITHUB_TOKEN": "github-token",
+                    "CODEX_ACCESS_TOKEN": "codex-token",
+                },
+                found_command,
+                output_format="json",
+            )
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(
+            errors,
+            [
+                "AUTOMOAT_RELAY_URL must include a valid host",
+                "AUTOMOAT_GIT_REPO must include a valid host",
+            ],
+        )
+        self.assertEqual(payload["status"], "failed")
+        self.assertEqual(payload["diagnostics"]["error_categories"], ["invalid_url"])
+        self.assertEqual(
+            payload["diagnostics"]["failed_configuration_keys"],
+            ["AUTOMOAT_GIT_REPO", "AUTOMOAT_RELAY_URL"],
+        )
+        self.assertNotIn("169.254.169.254", output.getvalue())
+        self.assertNotIn("10.0.0.5", output.getvalue())
+        self.assertNotIn("relay-token", output.getvalue())
+        self.assertNotIn("github-token", output.getvalue())
+        self.assertNotIn("codex-token", output.getvalue())
+
     def test_check_env_json_categorizes_invalid_url_ports(self) -> None:
         env = {
             "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example:abc",
