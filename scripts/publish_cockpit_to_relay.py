@@ -114,6 +114,8 @@ SOURCE_HEALTH_LABELS = {
     "source_bridge_status_timestamp_invalid": "Source bridge status timestamp is invalid",
     "source_bridge_status_unavailable": "Source bridge status is unavailable",
     "source_cockpit_attention": "Source cockpit needs attention",
+    "source_handoff_coordination_unavailable": "Source coordination handoff is unavailable",
+    "source_handoff_coordination_incomplete": "Source coordination handoff is incomplete",
     "source_status_unavailable": "Source status is unavailable",
     "source_status_timestamp_invalid": "Source status timestamp is invalid",
     "source_status_timestamp_future": "Source status timestamp is in the future",
@@ -1361,6 +1363,9 @@ def publisher_source_health(status: dict[str, Any]) -> dict[str, Any]:
     cockpit_summary = as_dict(status.get("cockpit_summary"))
     bridge_summary = as_dict(status.get("bridge_summary"))
     bridge_health = as_dict(bridge_summary.get("bridge_health"))
+    coordination = as_dict(cockpit_summary.get("coordination"))
+    if not coordination:
+        coordination = coordination_summary(status)
     business_hours_pause = business_hours_pause_active(status)
     status_value, status_value_invalid = normalize_source_status_value(
         status.get("status")
@@ -1399,6 +1404,17 @@ def publisher_source_health(status: dict[str, Any]) -> dict[str, Any]:
         or status.get("status") == "invalid-status-json"
     ):
         reasons.append("source_status_failing")
+    if (
+        coordination.get("available") is True
+        and coordination.get("handoff_file_status")
+        in {"missing", "read_failed", "invalid_encoding", "too_large"}
+    ):
+        reasons.append("source_handoff_coordination_unavailable")
+    elif coordination.get("available") is True and (
+        coordination.get("latest_section_found") is False
+        or coordination.get("latest_status_found") is False
+    ):
+        reasons.append("source_handoff_coordination_incomplete")
     bridge_timestamp_invalid = (
         bridge_summary.get("available") is True
         and bridge_summary.get("bridge_status_timestamp_invalid") is True

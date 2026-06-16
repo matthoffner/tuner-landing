@@ -2129,6 +2129,59 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             },
         )
 
+    def test_publisher_source_health_routes_coordination_attention(self) -> None:
+        cases = (
+            (
+                "unavailable",
+                {
+                    "cockpit_summary": {
+                        "coordination": {
+                            "available": True,
+                            "handoff_file_status": "too_large",
+                            "latest_section_found": True,
+                            "latest_status_found": True,
+                        },
+                    },
+                },
+                "source_handoff_coordination_unavailable",
+                "Source coordination handoff is unavailable",
+            ),
+            (
+                "incomplete",
+                {
+                    "coordination": {
+                        "handoff_file_status": "loaded",
+                        "latest_section_found": True,
+                        "latest_status_found": False,
+                    },
+                },
+                "source_handoff_coordination_incomplete",
+                "Source coordination handoff is incomplete",
+            ),
+        )
+        for name, coordination_fields, expected_reason, expected_label in cases:
+            with self.subTest(name=name):
+                status = {
+                    "status": "passing",
+                    "loop_running": True,
+                    "source_status_stale": False,
+                    "source_status_file_status": "loaded",
+                    **coordination_fields,
+                }
+
+                health = self.publisher.publisher_source_health(status)
+
+                self.assertEqual(
+                    health,
+                    {
+                        "status": "degraded",
+                        "ok": False,
+                        "reasons": [expected_reason],
+                        "primary_reason": expected_reason,
+                        "label": expected_label,
+                    },
+                )
+
     def test_publisher_source_health_routes_stale_source_bridge_status(self) -> None:
         status = {
             "status": "passing",
