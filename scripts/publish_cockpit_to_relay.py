@@ -34,6 +34,7 @@ DEFAULT_STATUS_STALE_AFTER_SECONDS = 660
 DEFAULT_BRIDGE_STATUS_STALE_AFTER_SECONDS = 660
 MAX_RELAY_URL_CHARS = 500
 MAX_RELAY_TOKEN_CHARS = 8192
+MAX_RELAY_RESPONSE_BYTES = 64 * 1024
 PUBLISHER_RUNTIME_DEFAULTS = {
     "interval": 3.0,
     "timeout": 8.0,
@@ -1430,7 +1431,14 @@ def post_payload(args: argparse.Namespace, payload: dict[str, Any]) -> dict[str,
         },
     )
     with urlopen(request, timeout=args.timeout) as response:
-        body = response.read().decode("utf-8", errors="replace")
+        body_bytes = response.read(MAX_RELAY_RESPONSE_BYTES + 1)
+    if len(body_bytes) > MAX_RELAY_RESPONSE_BYTES:
+        return {
+            "ok": False,
+            "error": "relay_response_body_too_large",
+            "body_bytes": len(body_bytes),
+        }
+    body = body_bytes.decode("utf-8", errors="replace")
     parsed = json.loads(body, parse_constant=reject_json_constant)
     return parsed if isinstance(parsed, dict) else {"ok": False, "body": body}
 

@@ -3817,7 +3817,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             def __exit__(self, *_args: object) -> None:
                 return None
 
-            def read(self) -> bytes:
+            def read(self, _size: int = -1) -> bytes:
                 return b'{"ok":true,"received_at":NaN}\n'
 
         with tempfile.TemporaryDirectory() as tmp:
@@ -3851,6 +3851,58 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertIn("publish failed error=invalid JSON constant NaN", log_text)
         self.assertIn("source_status=running", log_text)
         self.assertIn("source_status_file_status=loaded", log_text)
+        self.assertNotIn("published relay snapshot ok=True", log_text)
+
+    def test_publish_once_routes_oversized_relay_response_body(self) -> None:
+        class FakeResponse:
+            def __enter__(self) -> "FakeResponse":
+                return self
+
+            def __exit__(self, *_args: object) -> None:
+                return None
+
+            def read(self, size: int = -1) -> bytes:
+                return self.body if size < 0 else self.body[:size]
+
+        FakeResponse.body = (
+            b'{"ok":false,"error":"relay_backpressure token=relay-secret"}'
+            + b"x" * self.publisher.MAX_RELAY_RESPONSE_BYTES
+        )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            publisher_log = Path(tmp) / "publisher.log"
+            args = Namespace(
+                relay_url="https://automoat-cockpit-relay.example",
+                token="relay-token",
+                timeout=8,
+                publisher_log=publisher_log,
+            )
+            payload = {
+                "status": {
+                    "status": "running",
+                    "loop_running": True,
+                    "source_status_stale": False,
+                    "source_status_age_seconds": 10,
+                    "source_status_file_status": "loaded",
+                },
+                "log_tail": "loop log\n",
+            }
+            self.publisher.build_payload = lambda _args: payload
+            self.publisher.urlopen = lambda _request, timeout: FakeResponse()
+
+            result = self.publisher.publish_once_result(args)
+            log_text = publisher_log.read_text(encoding="utf-8")
+
+        self.assertEqual(
+            result,
+            {"published": False, "source_status_stale": False},
+        )
+        self.assertIn("publish failed relay_ok=False", log_text)
+        self.assertIn("reason=relay_response_body_too_large", log_text)
+        self.assertIn("source_status=running", log_text)
+        self.assertIn("source_status_file_status=loaded", log_text)
+        self.assertNotIn("relay-secret", log_text)
+        self.assertNotIn("relay_backpressure", log_text)
         self.assertNotIn("published relay snapshot ok=True", log_text)
 
     def test_publish_once_logs_http_error_without_response_body(self) -> None:
