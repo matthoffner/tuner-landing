@@ -93,6 +93,7 @@ PUBLISHER_CONFIG_LIMITS = {
     "bridge_status_stale_after_seconds": 3600,
 }
 URL_TEXT_PATTERN = re.compile(r"https?://[^\s'\"<>]+")
+PATH_TEXT_PATTERN = re.compile(r"(?<![\w:/])(?:~|/)[^\s,;|'\"\])}]+")
 BEARER_SECRET_PATTERN = re.compile(
     r"\b(authorization\s*[:=]\s*bearer)\s+[^\s,;]+",
     re.IGNORECASE,
@@ -378,6 +379,17 @@ def compact_policy_detail(value: Any, *, max_length: int = 240) -> str | None:
         text,
     )
     return text[:max_length] if text else None
+
+
+def compact_path_diagnostic(value: Any, *, max_length: int = 240) -> str | None:
+    text = compact_policy_detail(value, max_length=max_length * 2)
+    if text is None:
+        return None
+    text = PATH_TEXT_PATTERN.sub(
+        lambda match: repo_relative(Path(match.group(0))),
+        text,
+    )
+    return compact_text(text, max_length=max_length)
 
 
 def compact_policy_detail_list(
@@ -1387,6 +1399,10 @@ def source_status_log_fields(payload: dict[str, Any]) -> dict[str, Any]:
             status.get("source_status_file_status"),
             max_length=80,
         ),
+        "source_status_file_error": compact_path_diagnostic(
+            status.get("source_status_file_error"),
+            max_length=180,
+        ),
         "source_health_status": compact_policy_detail(source_health.get("status"), max_length=80),
         "source_health_primary_reason": compact_policy_detail(
             source_health.get("primary_reason"),
@@ -1400,6 +1416,10 @@ def source_status_log_fields(payload: dict[str, Any]) -> dict[str, Any]:
         "bridge_status_file_status": compact_policy_detail(
             bridge_summary.get("status_file_status"),
             max_length=80,
+        ),
+        "bridge_status_file_error": compact_path_diagnostic(
+            bridge_summary.get("status_file_error"),
+            max_length=180,
         ),
         "bridge_status_stale": bridge_summary.get("bridge_status_stale")
         if isinstance(bridge_summary.get("bridge_status_stale"), bool)
@@ -1497,12 +1517,14 @@ SOURCE_STATUS_LOG_FIELD_NAMES = (
     "source_status_timestamp_future",
     "source_status_age_seconds",
     "source_status_file_status",
+    "source_status_file_error",
     "source_health_status",
     "source_health_primary_reason",
     "source_health_label",
     "bridge_available",
     "bridge_status",
     "bridge_status_file_status",
+    "bridge_status_file_error",
     "bridge_status_stale",
     "bridge_status_timestamp_invalid",
     "bridge_status_timestamp_future",

@@ -3281,12 +3281,14 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertIn("source_status_timestamp_future=True", log_text)
         self.assertIn("source_status_age_seconds=700", log_text)
         self.assertIn("source_status_file_status=None", log_text)
+        self.assertIn("source_status_file_error=None", log_text)
         self.assertIn("source_health_status=None", log_text)
         self.assertIn("source_health_primary_reason=None", log_text)
         self.assertIn("source_health_label=None", log_text)
         self.assertIn("bridge_available=None", log_text)
         self.assertIn("bridge_status=None", log_text)
         self.assertIn("bridge_status_file_status=None", log_text)
+        self.assertIn("bridge_status_file_error=None", log_text)
         self.assertIn("bridge_status_stale=None", log_text)
         self.assertIn("bridge_health_status=None", log_text)
         self.assertIn("bridge_health_primary_reason=None", log_text)
@@ -3303,10 +3305,12 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                     "source_status_stale": True,
                     "source_status_age_seconds": 700,
                     "source_status_file_status": "loaded",
+                    "source_status_file_error": "line 1 column 2: bad status JSON",
                     "bridge_summary": {
                         "available": True,
                         "status": "running",
                         "status_file_status": "loaded",
+                        "status_file_error": "line 2 column 5: bad bridge JSON",
                         "bridge_status_stale": True,
                         "bridge_status_age_seconds": 900,
                         "bridge_status_stale_after_seconds": 660,
@@ -3366,9 +3370,17 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertIn("source_health_status=degraded", log_text)
         self.assertIn("source_health_primary_reason=source_status_stale", log_text)
         self.assertIn("source_health_label=Source status is stale", log_text)
+        self.assertIn(
+            "source_status_file_error=line 1 column 2: bad status JSON",
+            log_text,
+        )
         self.assertIn("bridge_available=True", log_text)
         self.assertIn("bridge_status=running", log_text)
         self.assertIn("bridge_status_file_status=loaded", log_text)
+        self.assertIn(
+            "bridge_status_file_error=line 2 column 5: bad bridge JSON",
+            log_text,
+        )
         self.assertIn("bridge_status_stale=True", log_text)
         self.assertIn("bridge_status_age_seconds=900", log_text)
         self.assertIn("bridge_status_stale_after_seconds=660", log_text)
@@ -3416,6 +3428,10 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                         "loaded token=file-secret "
                         "https://relay-user:relay-pass@relay.example/status?token=url-secret#debug"
                     ),
+                    "source_status_file_error": (
+                        "/tmp/customer/status.json token=source-file-error-secret "
+                        "https://relay-user:relay-pass@relay.example/debug?token=source-error-url-secret#trace"
+                    ),
                     "bridge_summary": {
                         "available": True,
                         "status": "running token=bridge-status-secret",
@@ -3423,6 +3439,10 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                             "loaded "
                             "https://bridge-user:bridge-pass@bridge.example/status"
                             "?token=bridge-file-url-secret#debug"
+                        ),
+                        "status_file_error": (
+                            "/tmp/customer/bridge.json token=bridge-file-error-secret "
+                            "https://bridge-user:bridge-pass@bridge.example/debug?token=bridge-error-url-secret#trace"
                         ),
                         "bridge_status_stale": True,
                         "bridge_status_age_seconds": "800",
@@ -3497,11 +3517,21 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             "https://relay.example/status?[redacted]#[redacted]",
             log_text,
         )
+        self.assertIn(
+            "source_status_file_error=<external>/status.json token=[redacted] "
+            "https://relay.example/debug?[redacted]#[redacted]",
+            log_text,
+        )
         self.assertIn("bridge_available=True", log_text)
         self.assertIn("bridge_status=running token=[redacted]", log_text)
         self.assertIn(
             "bridge_status_file_status=loaded "
             "https://bridge.example/status?[redacted]#[redacted]",
+            log_text,
+        )
+        self.assertIn(
+            "bridge_status_file_error=<external>/bridge.json token=[redacted] "
+            "https://bridge.example/debug?[redacted]#[redacted]",
             log_text,
         )
         self.assertIn("bridge_status_stale=True", log_text)
@@ -3555,6 +3585,12 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertNotIn("bridge-user", log_text)
         self.assertNotIn("bridge-pass", log_text)
         self.assertNotIn("bridge-file-url-secret", log_text)
+        self.assertNotIn("source-file-error-secret", log_text)
+        self.assertNotIn("source-error-url-secret", log_text)
+        self.assertNotIn("/tmp/customer/status.json", log_text)
+        self.assertNotIn("bridge-file-error-secret", log_text)
+        self.assertNotIn("bridge-error-url-secret", log_text)
+        self.assertNotIn("/tmp/customer/bridge.json", log_text)
         self.assertNotIn("bridge-health-status-secret", log_text)
         self.assertNotIn("bridge-label-secret", log_text)
         self.assertNotIn("bridge-label-url-secret", log_text)
