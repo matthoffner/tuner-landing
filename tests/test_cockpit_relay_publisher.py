@@ -3627,6 +3627,83 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertIn("bridge_health_primary_reason=None", log_text)
         self.assertIn("bridge_health_label=None", log_text)
 
+    def test_publish_once_sanitizes_success_response_fields(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            publisher_log = Path(tmp) / "publisher.log"
+            args = Namespace(publisher_log=publisher_log)
+            payload = {
+                "status": {
+                    "status": "running",
+                    "loop_running": True,
+                    "source_status_stale": False,
+                    "source_status_age_seconds": 4,
+                    "source_status_file_status": "loaded",
+                },
+                "log_tail": "loop log\n",
+            }
+            self.publisher.build_payload = lambda _args: payload
+            self.publisher.post_payload = lambda _args, _body: {
+                "ok": True,
+                "received_at": (
+                    "2026-06-14T20:20:00Z\n"
+                    "authorization: Bearer relay-secret "
+                    "https://relay-user:relay-pass@relay.example/ingest"
+                    "?token=url-secret#debug relay_token=received-secret"
+                ),
+            }
+
+            result = self.publisher.publish_once_result(args)
+            log_text = publisher_log.read_text(encoding="utf-8")
+
+        self.assertEqual(
+            result,
+            {"published": True, "source_status_stale": False},
+        )
+        self.assertIn("published relay snapshot ok=True", log_text)
+        self.assertIn(
+            "received_at=2026-06-14T20:20:00Z authorization: Bearer [redacted] "
+            "https://relay.example/ingest?[redacted]#[redacted] "
+            "relay_token=[redacted]",
+            log_text,
+        )
+        self.assertNotIn("relay-secret", log_text)
+        self.assertNotIn("relay-user", log_text)
+        self.assertNotIn("relay-pass", log_text)
+        self.assertNotIn("url-secret", log_text)
+        self.assertNotIn("received-secret", log_text)
+
+    def test_publish_once_rejects_truthy_non_boolean_relay_ok(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            publisher_log = Path(tmp) / "publisher.log"
+            args = Namespace(publisher_log=publisher_log)
+            payload = {
+                "status": {
+                    "status": "running",
+                    "loop_running": True,
+                    "source_status_stale": False,
+                    "source_status_age_seconds": 4,
+                    "source_status_file_status": "loaded",
+                },
+                "log_tail": "loop log\n",
+            }
+            self.publisher.build_payload = lambda _args: payload
+            self.publisher.post_payload = lambda _args, _body: {
+                "ok": "token=relay-secret",
+                "received_at": "2026-06-14T20:20:00Z",
+            }
+
+            result = self.publisher.publish_once_result(args)
+            log_text = publisher_log.read_text(encoding="utf-8")
+
+        self.assertEqual(
+            result,
+            {"published": False, "source_status_stale": False},
+        )
+        self.assertIn("publish failed relay_ok=False", log_text)
+        self.assertIn("reason=relay_response_not_ok", log_text)
+        self.assertNotIn("published relay snapshot ok=token=", log_text)
+        self.assertNotIn("relay-secret", log_text)
+
     def test_publish_once_logs_compact_source_health(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             publisher_log = Path(tmp) / "publisher.log"

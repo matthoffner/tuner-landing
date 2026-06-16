@@ -1861,6 +1861,10 @@ def relay_response_failure_reason(response: Any) -> str:
     return "relay_response_not_ok"
 
 
+def relay_response_ok(response: Any) -> bool:
+    return isinstance(response, dict) and response.get("ok") is True
+
+
 def format_number(value: float | int) -> str:
     parsed = float(value)
     return str(int(parsed)) if parsed.is_integer() else str(parsed)
@@ -1935,7 +1939,7 @@ def publish_once_result(args: argparse.Namespace) -> dict[str, Any]:
             "published": False,
             "source_status_stale": source_fields.get("source_status_stale"),
         }
-    if not isinstance(response, dict) or not response.get("ok"):
+    if not relay_response_ok(response):
         emit(
             "publish failed relay_ok=False "
             f"reason={relay_response_failure_reason(response)} "
@@ -1947,8 +1951,8 @@ def publish_once_result(args: argparse.Namespace) -> dict[str, Any]:
             "source_status_stale": source_fields["source_status_stale"],
         }
     emit(
-        f"published relay snapshot ok={response.get('ok')} "
-        f"received_at={response.get('received_at')} "
+        "published relay snapshot ok=True "
+        f"received_at={compact_policy_detail(response.get('received_at'), max_length=120)} "
         f"{source_status_log_suffix(source_fields)}",
         log_path=args.publisher_log,
     )
