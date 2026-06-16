@@ -164,8 +164,10 @@ LOOP_EXITED = "loop_exited"
 PUBLISHER_EXITED = "publisher_exited"
 RELAY_PUBLISHER_UNAVAILABLE = "relay_publisher_unavailable"
 ENVIRONMENT_PREFLIGHT_FAILED = "environment_preflight_failed"
+RENDER_WORKER_SETUP_FAILED = "render_worker_setup_failed"
 RENDER_WORKER_FAILURE_ROUTE_HINTS = {
     ENVIRONMENT_PREFLIGHT_FAILED,
+    RENDER_WORKER_SETUP_FAILED,
     "relay_publisher_preflight_failed",
     "relay_publisher_start_failed",
     "relay_publisher_startup_exit",
@@ -2310,6 +2312,17 @@ def compact_publisher_preflight_details(details: dict[str, object]) -> dict[str,
     return compact
 
 
+def compact_render_worker_failure_details(details: dict[str, object]) -> dict[str, object]:
+    compact: dict[str, object] = {}
+    setup_stage = details.get("setup_stage")
+    if isinstance(setup_stage, str):
+        setup_stage_label = publisher_preflight_status_label(setup_stage)
+        if setup_stage_label not in {"missing", "invalid"}:
+            compact["setup_stage"] = setup_stage_label
+    compact.update(compact_publisher_preflight_details(details))
+    return compact
+
+
 def write_render_worker_failure_status(
     *,
     reason: str,
@@ -2337,7 +2350,10 @@ def write_render_worker_failure_status(
         failure["message"] = sanitize_worker_log_text(message)[
             :MAX_BUSINESS_HOURS_CONFIG_VALUE_CHARS
         ]
-    compact_details = compact_publisher_preflight_details(details or {})
+    compact_details = compact_render_worker_failure_details(details or {})
+    setup_stage = compact_details.pop("setup_stage", None)
+    if setup_stage:
+        failure["setup_stage"] = setup_stage
     if compact_details:
         failure["publisher_preflight"] = compact_details
     payload = {
@@ -2403,6 +2419,24 @@ def record_environment_preflight_failure_status(errors: list[str]) -> None:
         worker_exit_status=2,
         message=message,
     )
+
+
+def run_startup_setup_steps() -> None:
+    for setup_stage, setup_action in (
+        ("git_auth", configure_git_auth),
+        ("codex_auth", configure_codex_auth),
+        ("repo_sync", sync_repo),
+    ):
+        try:
+            setup_action()
+        except RuntimeError as exc:
+            record_render_worker_failure_status(
+                reason=RENDER_WORKER_SETUP_FAILED,
+                worker_exit_status=1,
+                message=sanitize_worker_log_text(str(exc)),
+                details={"setup_stage": setup_stage},
+            )
+            raise
 
 
 def start_publisher() -> subprocess.Popen[object]:
@@ -2750,9 +2784,10 @@ def main() -> int:
 
     signal.signal(signal.SIGTERM, request_stop)
     signal.signal(signal.SIGINT, request_stop)
-    configure_git_auth()
-    configure_codex_auth()
-    sync_repo()
+    try:
+        run_startup_setup_steps()
+    except RuntimeError:
+        return 1
     try:
         check_relay_publisher_preflight()
     except RuntimeError as exc:

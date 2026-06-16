@@ -3690,6 +3690,39 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             self.worker.ENVIRONMENT_PREFLIGHT_FAILED,
         )
 
+    def test_write_render_worker_failure_status_routes_setup_failures(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            self.worker.WORKDIR = Path(temp_dir) / "repo"
+            self.worker.WORKDIR.mkdir(parents=True)
+
+            with patch.dict(
+                self.worker.os.environ,
+                {"AUTOMOAT_RELAY_TOKEN": "relay-secret"},
+                clear=True,
+            ), patch.object(
+                self.worker,
+                "worker_git_snapshot",
+                return_value={"branch": "main", "head": "abc123"},
+            ):
+                self.worker.write_render_worker_failure_status(
+                    reason=self.worker.RENDER_WORKER_SETUP_FAILED,
+                    worker_exit_status=1,
+                    message="git fetch failed token=relay-secret",
+                    details={"setup_stage": "repo_sync"},
+                )
+
+            status_text = self.worker.cockpit_status_file().read_text(encoding="utf-8")
+            status = json.loads(status_text)
+
+        self.assertEqual(status["phase"], self.worker.RENDER_WORKER_SETUP_FAILED)
+        self.assertEqual(
+            status["failure"]["route_hint"],
+            self.worker.RENDER_WORKER_SETUP_FAILED,
+        )
+        self.assertEqual(status["failure"]["setup_stage"], "repo_sync")
+        self.assertEqual(status["failure"]["message"], "git fetch failed token=[redacted]")
+        self.assertNotIn("relay-secret", status_text)
+
     def test_write_render_worker_failure_status_keeps_unknown_route_generic(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             self.worker.WORKDIR = Path(temp_dir) / "repo"
@@ -5417,6 +5450,61 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             "skipping render worker failure status because AUTOMOAT_WORKDIR is invalid",
             output.getvalue(),
         )
+
+    def test_startup_setup_failure_records_worker_status_before_children(self) -> None:
+        output = io.StringIO()
+
+        with patch.object(self.worker, "parse_args") as parse_args, patch.object(
+            self.worker,
+            "emit_environment_preflight",
+            return_value=[],
+        ), patch.object(
+            self.worker,
+            "configure_git_auth",
+            side_effect=RuntimeError("git setup failed token=relay-secret"),
+        ) as configure_git_auth, patch.object(
+            self.worker,
+            "configure_codex_auth",
+        ) as configure_codex_auth, patch.object(
+            self.worker,
+            "sync_repo",
+        ) as sync_repo, patch.object(
+            self.worker,
+            "check_relay_publisher_preflight",
+        ) as check_relay_publisher_preflight, patch.object(
+            self.worker,
+            "start_publisher",
+        ) as start_publisher, patch.object(
+            self.worker,
+            "record_render_worker_failure_status",
+        ) as record_failure_status, patch.dict(
+            self.worker.os.environ,
+            {"AUTOMOAT_RELAY_TOKEN": "relay-secret"},
+            clear=True,
+        ), redirect_stdout(
+            output
+        ):
+            parse_args.return_value = type(
+                "Args",
+                (),
+                {"check_env": False, "format": "text"},
+            )()
+
+            status = self.worker.main()
+
+        self.assertEqual(status, 1)
+        configure_git_auth.assert_called_once_with()
+        configure_codex_auth.assert_not_called()
+        sync_repo.assert_not_called()
+        check_relay_publisher_preflight.assert_not_called()
+        start_publisher.assert_not_called()
+        record_failure_status.assert_called_once_with(
+            reason=self.worker.RENDER_WORKER_SETUP_FAILED,
+            worker_exit_status=1,
+            message="git setup failed token=[redacted]",
+            details={"setup_stage": "git_auth"},
+        )
+        self.assertNotIn("relay-secret", output.getvalue())
 
     def test_publisher_start_failure_records_worker_status(self) -> None:
         output = io.StringIO()
