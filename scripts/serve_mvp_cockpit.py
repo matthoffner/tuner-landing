@@ -50,6 +50,8 @@ OPERATOR_ATTENTION_LABELS = {
     "status_stale": "Status is stale",
     "status_timestamp_invalid": "Status timestamp is invalid",
     "status_timestamp_future": "Status timestamp is in the future",
+    "handoff_coordination_unavailable": "Coordination handoff is unavailable",
+    "handoff_coordination_incomplete": "Coordination handoff is incomplete",
     "artifact_health_not_loaded": "Artifact health is not loaded",
     "import_readiness_not_ready": "Import readiness is not ready",
     "import_readiness_blocked": "Import readiness is blocked",
@@ -743,6 +745,7 @@ def cockpit_summary(status: dict[str, object]) -> dict[str, object]:
     coverage_latest_thin_counts = compact_count_map(
         pipeline_coverage.get("latest_thin_counts")
     )
+    coordination = coordination_summary(status)
 
     attention_reasons: list[str] = []
     if not loop_running:
@@ -757,6 +760,15 @@ def cockpit_summary(status: dict[str, object]) -> dict[str, object]:
         attention_reasons.append("status_timestamp_invalid")
     if status_timestamp_future:
         attention_reasons.append("status_timestamp_future")
+    if coordination.get("available") is True and coordination.get(
+        "handoff_file_status"
+    ) in {"missing", "read_failed", "invalid_encoding", "too_large"}:
+        attention_reasons.append("handoff_coordination_unavailable")
+    elif coordination.get("available") is True and (
+        coordination.get("latest_section_found") is False
+        or coordination.get("latest_status_found") is False
+    ):
+        attention_reasons.append("handoff_coordination_incomplete")
     if artifact_health_status != "loaded":
         attention_reasons.append("artifact_health_not_loaded")
     if import_readiness != "ready":
@@ -795,7 +807,7 @@ def cockpit_summary(status: dict[str, object]) -> dict[str, object]:
         "readiness_blocker_count": readiness_blocker_count,
         "ready_for_next_import_records": readiness.get("ready_for_next_import_records"),
         "import_handoff": import_handoff_summary(import_pipeline),
-        "coordination": coordination_summary(status),
+        "coordination": coordination,
         "current_focus": autonomy_policy.get("current_focus") or "mvp_loop",
         "policy_reason": autonomy_policy.get("decision_reason"),
         "policy_failure_reason": policy_failure_reason,

@@ -68,6 +68,14 @@ class MvpCockpitServerTest(unittest.TestCase):
             "Status timestamp is in the future",
         )
         self.assertEqual(
+            self.cockpit.operator_attention_label("handoff_coordination_unavailable"),
+            "Coordination handoff is unavailable",
+        )
+        self.assertEqual(
+            self.cockpit.operator_attention_label("handoff_coordination_incomplete"),
+            "Coordination handoff is incomplete",
+        )
+        self.assertEqual(
             self.cockpit.operator_attention_label("new_attention_reason"),
             "new attention reason",
         )
@@ -361,6 +369,60 @@ class MvpCockpitServerTest(unittest.TestCase):
         self.assertEqual(summary["thin_group_category_count"], 2)
         self.assertEqual(
             summary["thin_group_categories"], ["failure_reasons", "result_states"]
+        )
+
+    def test_cockpit_summary_routes_coordination_handoff_attention(self) -> None:
+        base_status = {
+            "status": "running",
+            "loop_running": True,
+            "artifacts": {
+                "artifact_health": {"status": "loaded"},
+                "import_pipeline": {
+                    "execution_readiness": {"status": "ready", "blockers": []}
+                },
+            },
+        }
+
+        unavailable_status = {
+            **base_status,
+            "coordination": {
+                "handoff_path": ".pixelbox/handoff.md",
+                "handoff_file_status": "too_large",
+                "latest_section_found": True,
+                "latest_status_found": True,
+            },
+        }
+        unavailable_summary = self.cockpit.cockpit_summary(unavailable_status)
+
+        self.assertTrue(unavailable_summary["operator_attention"])
+        self.assertEqual(
+            unavailable_summary["operator_attention_reasons"],
+            ["handoff_coordination_unavailable"],
+        )
+        self.assertEqual(
+            unavailable_summary["operator_attention_label"],
+            "Coordination handoff is unavailable",
+        )
+
+        incomplete_status = {
+            **base_status,
+            "coordination": {
+                "handoff_path": ".pixelbox/handoff.md",
+                "handoff_file_status": "loaded",
+                "latest_section_found": True,
+                "latest_status_found": False,
+            },
+        }
+        incomplete_summary = self.cockpit.cockpit_summary(incomplete_status)
+
+        self.assertTrue(incomplete_summary["operator_attention"])
+        self.assertEqual(
+            incomplete_summary["operator_attention_reasons"],
+            ["handoff_coordination_incomplete"],
+        )
+        self.assertEqual(
+            incomplete_summary["operator_attention_label"],
+            "Coordination handoff is incomplete",
         )
 
     def test_cockpit_summary_reports_invalid_status_timestamp(self) -> None:
