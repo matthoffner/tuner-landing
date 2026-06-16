@@ -22,6 +22,8 @@ const EXPOSED_UPSTREAM_HEADERS = [
 const NOT_CONFIGURED_UPSTREAMS_HEADER = "relay,legacy_bridge";
 const MAX_UPSTREAM_HEADER_PART_CHARS = 120;
 const SENSITIVE_HEADER_ASSIGNMENT_RE = /\b(access_token|api_key|codex_access_token|gh_token|github_token|password|passwd|relay_token|secret|token|key)=\S+/gi;
+const EMBEDDED_URL_RE = /https?:\/\/[^\s,;|]+/gi;
+const BEARER_SECRET_RE = /\b(authorization\s*[:=]\s*bearer)\s+[^\s,;|]+/gi;
 
 function normalizeBaseUrl(value, options = {}) {
   const rawValue = String(value || "");
@@ -273,11 +275,31 @@ function upstreamAttemptSummary(attempt) {
 
 function compactUpstreamHeaderPart(value) {
   const text = String(value || "")
+    .replace(EMBEDDED_URL_RE, sanitizeEmbeddedUrlForHeader)
+    .replace(BEARER_SECRET_RE, "$1 [redacted]")
     .replace(SENSITIVE_HEADER_ASSIGNMENT_RE, (_match, key) => `${key}=[redacted]`)
     .replace(/[\r\n,]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
   return (text || "unknown").slice(0, MAX_UPSTREAM_HEADER_PART_CHARS);
+}
+
+function sanitizeEmbeddedUrlForHeader(rawUrl) {
+  let parsed;
+  try {
+    parsed = new URL(rawUrl);
+  } catch (_error) {
+    return rawUrl;
+  }
+  if (!parsed.username && !parsed.password && !parsed.search && !parsed.hash) {
+    return rawUrl;
+  }
+  return [
+    `${parsed.protocol}//${parsed.host}`,
+    parsed.pathname || "",
+    parsed.search ? "?[redacted]" : "",
+    parsed.hash ? "#[redacted]" : "",
+  ].join("");
 }
 
 function upstreamAttemptsHeader(attempts) {
@@ -333,13 +355,24 @@ function upstreamErrorHeader(upstreamKind, attempts) {
 }
 
 function invalidUpstreamsHeader(invalid) {
+  return invalidUpstreamDiagnostics(invalid)
+    .map((item) => `${item.kind}:${item.error}`)
+    .join(",");
+}
+
+function invalidUpstreamDiagnostics(invalid) {
   return invalid
     .map((item) => {
       const kind = compactUpstreamHeaderPart(item.kind || "unknown");
       const error = compactUpstreamHeaderPart(item.error || "invalid_configuration");
-      return `${kind}:${error}`;
-    })
-    .join(",");
+      return { kind, error };
+    });
+}
+
+function invalidUpstreamDiagnosticText(invalid) {
+  return invalidUpstreamDiagnostics(invalid)
+    .map((item) => `${item.kind}:${item.error}`)
+    .join(", ");
 }
 
 function invalidUpstreamKeysHeader(invalid) {
@@ -647,6 +680,8 @@ module.exports = {
   fetchUpstreamText,
   explicitPortValue,
   invalidExplicitPortError,
+  invalidUpstreamDiagnosticText,
+  invalidUpstreamDiagnostics,
   invalidUpstreamsHeader,
   invalidUpstreamKeysHeader,
   hasExplicitEmptyPort,

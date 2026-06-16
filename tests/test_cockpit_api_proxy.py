@@ -644,6 +644,8 @@ class CockpitApiProxyTest(unittest.TestCase):
               EXPOSED_UPSTREAM_HEADERS,
               MAX_UPSTREAM_HEADER_PART_CHARS,
               compactUpstreamHeaderPart,
+              invalidUpstreamDiagnosticText,
+              invalidUpstreamDiagnostics,
               invalidUpstreamsHeader,
               sendMethodNotAllowed,
               sendOptionsResponse,
@@ -767,8 +769,31 @@ class CockpitApiProxyTest(unittest.TestCase):
               "bad value next",
             );
             assert.strictEqual(
+              compactUpstreamHeaderPart(
+                "GET https://user:pass@relay.example/status?token=secret#debug Authorization: Bearer raw-token api_key=raw-key",
+              ),
+              "GET https://relay.example/status?[redacted]#[redacted] Authorization: Bearer [redacted] api_key=[redacted]",
+            );
+            assert.strictEqual(
               compactUpstreamHeaderPart(longError).length,
               MAX_UPSTREAM_HEADER_PART_CHARS,
+            );
+            assert.deepStrictEqual(
+              invalidUpstreamDiagnostics([{
+                kind: "relay\\nkind",
+                error: "bad\\r\\nconfig, https://user:pass@relay.example/status?token=secret#debug Authorization: Bearer raw-token api_key=raw-key",
+              }]),
+              [{
+                kind: "relay kind",
+                error: "bad config https://relay.example/status?[redacted]#[redacted] Authorization: Bearer [redacted] api_key=[redacted]",
+              }],
+            );
+            assert.strictEqual(
+              invalidUpstreamDiagnosticText([{
+                kind: "relay",
+                error: "token=raw-token, Authorization: Bearer raw-token",
+              }]),
+              "relay:token=[redacted] Authorization: Bearer [redacted]",
             );
             assert.strictEqual(
               invalidUpstreamsHeader([{

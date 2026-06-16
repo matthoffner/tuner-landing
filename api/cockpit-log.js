@@ -1,6 +1,7 @@
 const {
   NOT_CONFIGURED_UPSTREAMS_HEADER,
   fetchUpstreamText,
+  invalidUpstreamDiagnosticText,
   invalidUpstreamKeysHeader,
   invalidUpstreamsHeader,
   sendMethodNotAllowed,
@@ -54,7 +55,7 @@ module.exports = async function handler(request, response) {
     response.setHeader("X-Automoat-Upstream-Invalid-Config", invalidUpstreamsHeader(invalid));
     response.setHeader("X-Automoat-Upstream-Invalid-Keys", invalidUpstreamKeysHeader(invalid));
     setUpstreamSelectionHeaders(response, "invalid_configuration", 0, []);
-    const details = invalid.map((item) => `${item.kind}:${item.error}`).join(", ");
+    const details = invalidUpstreamDiagnosticText(invalid);
     sendProxyResponse(request, response, 503, `cockpit_relay_invalid_configuration: ${details}\n`);
     return;
   }

@@ -1,6 +1,7 @@
 const {
   NOT_CONFIGURED_UPSTREAMS_HEADER,
   fetchUpstreamText,
+  invalidUpstreamDiagnostics,
   invalidUpstreamKeysHeader,
   invalidUpstreamsHeader,
   sendMethodNotAllowed,
@@ -58,7 +59,7 @@ module.exports = async function handler(request, response) {
     setUpstreamSelectionHeaders(response, "invalid_configuration", 0, []);
     sendProxyResponse(request, response, 503, JSON.stringify({
       error: "cockpit_relay_invalid_configuration",
-      invalid,
+      invalid: invalidUpstreamDiagnostics(invalid),
     }));
     return;
   }
