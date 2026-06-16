@@ -4756,8 +4756,14 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                     stdout="publisher environment preflight passed",
                 ),
             ):
-                with self.assertRaisesRegex(RuntimeError, "did not return valid JSON"):
+                with self.assertRaisesRegex(RuntimeError, "did not return valid JSON") as context:
                     self.worker.check_relay_publisher_preflight()
+
+        self.assertIsInstance(context.exception, self.worker.PublisherPreflightError)
+        self.assertEqual(
+            self.worker.publisher_preflight_failure_details(context.exception),
+            {"status": "invalid_json"},
+        )
 
     def test_check_relay_publisher_preflight_reports_non_json_failure_status(
         self,
@@ -4798,6 +4804,11 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertNotIn("relay-secret", str(context.exception))
         self.assertNotIn("token=", str(context.exception))
         self.assertNotIn(str(workdir), str(context.exception))
+        self.assertIsInstance(context.exception, self.worker.PublisherPreflightError)
+        self.assertEqual(
+            self.worker.publisher_preflight_failure_details(context.exception),
+            {"status": "invalid_json", "exit_status": 2},
+        )
 
     def test_check_relay_publisher_preflight_rejects_passed_json_with_errors(
         self,

@@ -1855,10 +1855,16 @@ def validate_publisher_preflight_output(output: str) -> None:
     try:
         payload = json.loads(output.strip(), parse_constant=reject_json_constant)
     except (TypeError, ValueError, json.JSONDecodeError) as exc:
-        raise RuntimeError("relay publisher preflight did not return valid JSON") from exc
+        raise PublisherPreflightError(
+            "relay publisher preflight did not return valid JSON",
+            status_label="invalid_json",
+        ) from exc
 
     if not isinstance(payload, dict):
-        raise RuntimeError("relay publisher preflight did not return a JSON object")
+        raise PublisherPreflightError(
+            "relay publisher preflight did not return a JSON object",
+            status_label=f"invalid_{type(payload).__name__}",
+        )
 
     status = payload.get("status")
     if status == "passed":
