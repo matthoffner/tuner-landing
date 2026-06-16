@@ -499,7 +499,7 @@ def source_status_diagnostics(status: dict[str, Any]) -> dict[str, Any]:
         "source_status_file_status": status.get("source_status_file_status"),
     }
     for key, value in text_fields.items():
-        compact_value = compact_text(value, max_length=240)
+        compact_value = compact_policy_detail(value, max_length=240)
         if compact_value is not None:
             diagnostics[key] = compact_value
     path_fields = {
@@ -1037,14 +1037,42 @@ def sanitize_cockpit_summary_for_relay_response(summary: Any) -> dict[str, Any] 
 def sanitize_status_for_relay_response(status: dict[str, Any]) -> dict[str, Any]:
     response_status = dict(status)
 
-    source_status_file = compact_path_label(response_status.get("source_status_file"))
-    if source_status_file is not None:
-        response_status["source_status_file"] = source_status_file
-    source_status_file_error = compact_path_diagnostic(
-        response_status.get("source_status_file_error")
+    text_fields = (
+        "status",
+        "phase",
+        "mode",
+        "updated_at",
+        "publisher_updated_at",
+        "source_status_file_status",
     )
-    if source_status_file_error is not None:
-        response_status["source_status_file_error"] = source_status_file_error
+    for key in text_fields:
+        if key not in response_status:
+            continue
+        compact_value = compact_policy_detail(response_status.get(key), max_length=240)
+        if compact_value is None:
+            response_status.pop(key, None)
+        else:
+            response_status[key] = compact_value
+
+    path_fields = ("source_status_file",)
+    for key in path_fields:
+        if key not in response_status:
+            continue
+        compact_value = compact_path_label(response_status.get(key), max_length=240)
+        if compact_value is None:
+            response_status.pop(key, None)
+        else:
+            response_status[key] = compact_value
+
+    path_error_fields = ("source_status_file_error",)
+    for key in path_error_fields:
+        if key not in response_status:
+            continue
+        compact_value = compact_path_diagnostic(response_status.get(key), max_length=240)
+        if compact_value is None:
+            response_status.pop(key, None)
+        else:
+            response_status[key] = compact_value
 
     bridge_summary = response_status.get("bridge_summary")
     if isinstance(bridge_summary, dict):

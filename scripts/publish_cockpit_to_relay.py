@@ -1952,7 +1952,7 @@ def publish_once_result(args: argparse.Namespace) -> dict[str, Any]:
         }
     emit(
         "published relay snapshot ok=True "
-        f"received_at={compact_policy_detail(response.get('received_at'), max_length=120)} "
+        f"received_at={compact_policy_detail(response.get('received_at'), max_length=240)} "
         f"{source_status_log_suffix(source_fields)}",
         log_path=args.publisher_log,
     )

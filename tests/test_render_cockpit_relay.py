@@ -1923,6 +1923,91 @@ class RenderCockpitRelayTest(unittest.TestCase):
             health["cockpit_health"]["reasons"],
         )
 
+    def test_status_and_health_sanitize_top_level_source_status_fields(self) -> None:
+        self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
+        self.relay.update_state(
+            {
+                "pushed_at": "2026-06-14T19:59:30Z",
+                "status": {
+                    "status": (
+                        "running token=status-secret "
+                        "https://user:url-secret@example.local/status"
+                        "?token=query-secret#debug"
+                    ),
+                    "phase": "publish relay_token=phase-secret\nretrying",
+                    "mode": "autonomous token=mode-secret",
+                    "updated_at": "2026-06-14T19:59:30Z token=time-secret",
+                    "publisher_updated_at": (
+                        "2026-06-14T19:59:31Z token=publisher-time-secret"
+                    ),
+                    "loop_running": True,
+                    "source_status_file": {
+                        "path": "/tmp/mvp-loop-status.json",
+                        "token": "path-secret",
+                    },
+                    "source_status_file_status": "loaded token=file-status-secret",
+                    "source_status_file_error": {
+                        "message": "failed token=error-secret"
+                    },
+                },
+                "log_tail": "loop status labels copied secrets\n",
+            }
+        )
+        self.relay.utc_now = lambda: "2026-06-14T20:00:00Z"
+
+        health = self.relay.health_payload()
+        status = self.relay.relay_status_payload()
+
+        self.assertEqual(
+            status["status"],
+            "running token=[redacted] "
+            "https://example.local/status?[redacted]#[redacted]",
+        )
+        self.assertEqual(status["phase"], "publish relay_token=[redacted] retrying")
+        self.assertEqual(status["mode"], "autonomous token=[redacted]")
+        self.assertEqual(
+            status["updated_at"], "2026-06-14T19:59:30Z token=[redacted]"
+        )
+        self.assertEqual(
+            status["publisher_updated_at"],
+            "2026-06-14T19:59:31Z token=[redacted]",
+        )
+        self.assertNotIn("source_status_file", status)
+        self.assertEqual(
+            status["source_status_file_status"],
+            "loaded token=[redacted]",
+        )
+        self.assertNotIn("source_status_file_error", status)
+        expected_diagnostics = {
+            "source_status": (
+                "running token=[redacted] "
+                "https://example.local/status?[redacted]#[redacted]"
+            ),
+            "source_status_file_status": "loaded token=[redacted]",
+        }
+        self.assertEqual(
+            health["cockpit_health"]["source_status_diagnostics"],
+            expected_diagnostics,
+        )
+        self.assertEqual(
+            status["cockpit_health"]["source_status_diagnostics"],
+            expected_diagnostics,
+        )
+        combined = json.dumps({"health": health, "status": status}, sort_keys=True)
+        for secret in (
+            "status-secret",
+            "url-secret",
+            "query-secret",
+            "phase-secret",
+            "mode-secret",
+            "time-secret",
+            "publisher-time-secret",
+            "path-secret",
+            "file-status-secret",
+            "error-secret",
+        ):
+            self.assertNotIn(secret, combined)
+
     def test_status_and_health_route_oversized_source_status_file(self) -> None:
         self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
         self.relay.update_state(
