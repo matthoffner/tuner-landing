@@ -154,7 +154,12 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             {
                 "status": "degraded",
                 "ok": False,
-                "reasons": ["source_loop_not_running", "source_cockpit_attention"],
+                "reasons": [
+                    "source_loop_not_running",
+                    "source_bridge_status_stale",
+                    "source_bridge_degraded",
+                    "source_cockpit_attention",
+                ],
                 "primary_reason": "source_loop_not_running",
                 "label": "Source loop is not running",
             },
@@ -1469,6 +1474,101 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 "reasons": ["source_autonomy_policy_failed"],
                 "primary_reason": "source_autonomy_policy_failed",
                 "label": "Autonomy policy failed",
+            },
+        )
+
+    def test_publisher_source_health_routes_stale_source_bridge_status(self) -> None:
+        status = {
+            "status": "passing",
+            "loop_running": True,
+            "source_status_stale": False,
+            "source_status_file_status": "loaded",
+            "bridge_summary": {
+                "available": True,
+                "status_file_status": "loaded",
+                "bridge_status_stale": True,
+                "bridge_status_timestamp_invalid": False,
+                "bridge_status_timestamp_future": False,
+                "bridge_health": {
+                    "status": "live",
+                    "ok": True,
+                    "reasons": [],
+                    "primary_reason": None,
+                    "label": "Live",
+                },
+            },
+        }
+
+        health = self.publisher.publisher_source_health(status)
+
+        self.assertEqual(
+            health,
+            {
+                "status": "degraded",
+                "ok": False,
+                "reasons": ["source_bridge_status_stale"],
+                "primary_reason": "source_bridge_status_stale",
+                "label": "Source bridge status is stale",
+            },
+        )
+
+    def test_publisher_source_health_routes_unavailable_source_bridge_status(self) -> None:
+        status = {
+            "status": "passing",
+            "loop_running": True,
+            "source_status_stale": False,
+            "source_status_file_status": "loaded",
+            "bridge_summary": {
+                "available": False,
+                "status_file_status": "invalid_json",
+            },
+        }
+
+        health = self.publisher.publisher_source_health(status)
+
+        self.assertEqual(
+            health,
+            {
+                "status": "degraded",
+                "ok": False,
+                "reasons": ["source_bridge_status_unavailable"],
+                "primary_reason": "source_bridge_status_unavailable",
+                "label": "Source bridge status is unavailable",
+            },
+        )
+
+    def test_publisher_source_health_routes_degraded_source_bridge_health(self) -> None:
+        status = {
+            "status": "passing",
+            "loop_running": True,
+            "source_status_stale": False,
+            "source_status_file_status": "loaded",
+            "bridge_summary": {
+                "available": True,
+                "status_file_status": "loaded",
+                "bridge_status_stale": False,
+                "bridge_status_timestamp_invalid": False,
+                "bridge_status_timestamp_future": False,
+                "bridge_health": {
+                    "status": "degraded",
+                    "ok": False,
+                    "reasons": ["ngrok_api_unreachable"],
+                    "primary_reason": "ngrok_api_unreachable",
+                    "label": "Bridge degraded",
+                },
+            },
+        }
+
+        health = self.publisher.publisher_source_health(status)
+
+        self.assertEqual(
+            health,
+            {
+                "status": "degraded",
+                "ok": False,
+                "reasons": ["source_bridge_degraded"],
+                "primary_reason": "source_bridge_degraded",
+                "label": "Source bridge is degraded",
             },
         )
 

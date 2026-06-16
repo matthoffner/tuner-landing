@@ -101,6 +101,11 @@ SECRET_ASSIGNMENT_PATTERN = re.compile(
 )
 SOURCE_HEALTH_LABELS = {
     "source_autonomy_policy_failed": "Autonomy policy failed",
+    "source_bridge_degraded": "Source bridge is degraded",
+    "source_bridge_status_stale": "Source bridge status is stale",
+    "source_bridge_status_timestamp_future": "Source bridge status is in the future",
+    "source_bridge_status_timestamp_invalid": "Source bridge status timestamp is invalid",
+    "source_bridge_status_unavailable": "Source bridge status is unavailable",
     "source_cockpit_attention": "Source cockpit needs attention",
     "source_status_unavailable": "Source status is unavailable",
     "source_status_timestamp_invalid": "Source status timestamp is invalid",
@@ -1080,6 +1085,8 @@ def source_health_label(reason: str | None) -> str:
 def publisher_source_health(status: dict[str, Any]) -> dict[str, Any]:
     reasons: list[str] = []
     cockpit_summary = as_dict(status.get("cockpit_summary"))
+    bridge_summary = as_dict(status.get("bridge_summary"))
+    bridge_health = as_dict(bridge_summary.get("bridge_health"))
     cockpit_attention_reasons = as_string_list(
         cockpit_summary.get("operator_attention_reasons")
     )
@@ -1102,6 +1109,32 @@ def publisher_source_health(status: dict[str, Any]) -> dict[str, Any]:
         reasons.append("source_autonomy_policy_failed")
     if status.get("status") in {"error", "failing"}:
         reasons.append("source_status_failing")
+    if (
+        bridge_summary.get("available") is True
+        and bridge_summary.get("bridge_status_timestamp_invalid") is True
+    ):
+        reasons.append("source_bridge_status_timestamp_invalid")
+    elif (
+        bridge_summary.get("available") is True
+        and bridge_summary.get("bridge_status_timestamp_future") is True
+    ):
+        reasons.append("source_bridge_status_timestamp_future")
+    elif (
+        bridge_summary.get("available") is True
+        and bridge_summary.get("bridge_status_stale") is True
+    ):
+        reasons.append("source_bridge_status_stale")
+    if bridge_summary.get("status_file_status") in {
+        "read_failed",
+        "invalid_json",
+        "not_object",
+    }:
+        reasons.append("source_bridge_status_unavailable")
+    if (
+        bridge_summary.get("available") is True
+        and bridge_health.get("ok") is False
+    ):
+        reasons.append("source_bridge_degraded")
     if (
         cockpit_summary.get("operator_attention") is True
         and "source_autonomy_policy_failed" not in reasons
