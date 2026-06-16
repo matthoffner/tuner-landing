@@ -4251,6 +4251,40 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertEqual(status, 1)
         self.assertTrue(loop.terminated)
 
+    def test_monitor_handles_loop_poll_failure_without_exception_text(self) -> None:
+        loop = PollRaisesProcess(pid=101)
+        publisher = FakeProcess(pid=202)
+        self.worker.CHILDREN.extend([publisher, loop])
+        output = io.StringIO()
+
+        with patch.object(self.worker.time, "sleep"), redirect_stdout(output):
+            status = self.worker.monitor_worker_children(loop, publisher, poll_interval=0)
+
+        self.assertEqual(status, 1)
+        self.assertTrue(publisher.terminated)
+        self.assertIn(
+            "could not poll autonomous loop pid=101: OSError; worker_exit_status=1",
+            output.getvalue(),
+        )
+        self.assertNotIn("secret-token", output.getvalue())
+
+    def test_monitor_handles_publisher_poll_failure_without_exception_text(self) -> None:
+        loop = FakeProcess(pid=101)
+        publisher = PollRaisesProcess(pid=202)
+        self.worker.CHILDREN.extend([publisher, loop])
+        output = io.StringIO()
+
+        with patch.object(self.worker.time, "sleep"), redirect_stdout(output):
+            status = self.worker.monitor_worker_children(loop, publisher, poll_interval=0)
+
+        self.assertEqual(status, 1)
+        self.assertTrue(loop.terminated)
+        self.assertIn(
+            "could not poll relay publisher pid=202: OSError; worker_exit_status=1",
+            output.getvalue(),
+        )
+        self.assertNotIn("secret-token", output.getvalue())
+
     def test_startup_publisher_exit_prevents_loop_launch(self) -> None:
         publisher = FakeProcess(pid=202, initial_status=4)
         output = io.StringIO()
@@ -4296,6 +4330,55 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             "relay publisher exited during startup status=4; worker_exit_status=4",
             output.getvalue(),
         )
+
+    def test_startup_publisher_poll_failure_prevents_loop_launch(
+        self,
+    ) -> None:
+        publisher = PollRaisesProcess(pid=202)
+        output = io.StringIO()
+
+        with patch.object(self.worker, "parse_args") as parse_args, patch.object(
+            self.worker,
+            "emit_environment_preflight",
+            return_value=[],
+        ), patch.object(self.worker, "configure_git_auth"), patch.object(
+            self.worker,
+            "configure_codex_auth",
+        ), patch.object(
+            self.worker,
+            "sync_repo",
+        ), patch.object(
+            self.worker,
+            "check_relay_publisher_preflight",
+        ), patch.object(
+            self.worker,
+            "start_publisher",
+            return_value=publisher,
+        ), patch.object(
+            self.worker,
+            "start_loop",
+        ) as start_loop, patch.object(
+            self.worker.time,
+            "sleep",
+        ), redirect_stdout(
+            output
+        ):
+            parse_args.return_value = type(
+                "Args",
+                (),
+                {"check_env": False, "format": "text"},
+            )()
+            self.worker.CHILDREN.append(publisher)
+
+            status = self.worker.main()
+
+        self.assertEqual(status, 1)
+        start_loop.assert_not_called()
+        self.assertIn(
+            "could not poll relay publisher pid=202: OSError; worker_exit_status=1",
+            output.getvalue(),
+        )
+        self.assertNotIn("secret-token", output.getvalue())
 
     def test_publisher_preflight_failure_prevents_child_startup(self) -> None:
         output = io.StringIO()

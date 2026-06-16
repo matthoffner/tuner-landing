@@ -35,6 +35,7 @@ STARTUP_CHILD_GRACE_SECONDS = 0.5
 PUBLISHER_PREFLIGHT_TIMEOUT_SECONDS = 15.0
 PUBLISHER_PREFLIGHT_MAX_OUTPUT_BYTES = 64 * 1024
 PUBLISHER_PREFLIGHT_DIAGNOSTIC_TOKEN_LIMIT = 12
+CHILD_POLL_FAILURE_EXIT_STATUS = 1
 CODEX_AUTH_ENV_NAMES = ("CODEX_AUTH_JSON_B64", "CODEX_ACCESS_TOKEN", "OPENAI_API_KEY")
 GIT_AUTH_ENV_NAMES = ("GITHUB_TOKEN", "GH_TOKEN")
 SECRET_ENV_NAMES = ("AUTOMOAT_RELAY_TOKEN", *GIT_AUTH_ENV_NAMES, *CODEX_AUTH_ENV_NAMES)
@@ -1795,9 +1796,11 @@ def child_startup_exit_status(
     """Return a child exit status if it dies during startup, otherwise None."""
     if grace_seconds > 0:
         time.sleep(grace_seconds)
-    status = process.poll()
+    status, poll_ok = safe_child_poll(process, label)
     if status is None:
         return None
+    if not poll_ok:
+        return CHILD_POLL_FAILURE_EXIT_STATUS
 
     worker_status = clean_exit_status if status == 0 and clean_exit_status is not None else status
     emit(
@@ -1805,6 +1808,20 @@ def child_startup_exit_status(
         f"worker_exit_status={worker_status}"
     )
     return worker_status
+
+
+def safe_child_poll(
+    process: subprocess.Popen[object],
+    label: str,
+) -> tuple[int | None, bool]:
+    try:
+        return process.poll(), True
+    except OSError as exc:
+        emit(
+            f"could not poll {label} pid={process.pid}: {type(exc).__name__}; "
+            f"worker_exit_status={CHILD_POLL_FAILURE_EXIT_STATUS}"
+        )
+        return CHILD_POLL_FAILURE_EXIT_STATUS, False
 
 
 def monitor_worker_children(
@@ -1818,18 +1835,23 @@ def monitor_worker_children(
             stop_children()
             return 0
 
-        loop_status = loop_process.poll()
+        loop_status, loop_poll_ok = safe_child_poll(loop_process, "autonomous loop")
         if loop_status is not None:
-            emit(f"autonomous loop exited status={loop_status}")
+            if loop_poll_ok:
+                emit(f"autonomous loop exited status={loop_status}")
             stop_children()
             return loop_status
 
-        publisher_status = publisher_process.poll()
+        publisher_status, publisher_poll_ok = safe_child_poll(
+            publisher_process,
+            "relay publisher",
+        )
         if publisher_status is not None:
-            emit(
-                "relay publisher exited unexpectedly "
-                f"status={publisher_status}; stopping autonomous loop"
-            )
+            if publisher_poll_ok:
+                emit(
+                    "relay publisher exited unexpectedly "
+                    f"status={publisher_status}; stopping autonomous loop"
+                )
             stop_children()
             return publisher_status if publisher_status != 0 else 1
 
