@@ -2586,6 +2586,33 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertNotIn("relay-token", log_output)
         self.assertNotIn("https://automoat-cockpit-relay.example", log_output)
 
+    def test_start_loop_sanitizes_subprocess_start_failures(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workdir = Path(temp_dir) / "runtime-repo"
+            env = {
+                "AUTOMOAT_WORKDIR": str(workdir),
+                "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+                "AUTOMOAT_RELAY_TOKEN": "relay-token",
+            }
+
+            with patch.dict(self.worker.os.environ, env, clear=True), patch.object(
+                self.worker.subprocess,
+                "Popen",
+                side_effect=OSError(f"relay-token {workdir}"),
+            ):
+                with self.assertRaisesRegex(
+                    RuntimeError,
+                    "could not start autonomous loop: OSError",
+                ) as context:
+                    self.worker.start_loop()
+
+        self.assertTrue(context.exception.__suppress_context__)
+        self.assertEqual(self.worker.CHILDREN, [])
+        message = str(context.exception)
+        self.assertNotIn("relay-token", message)
+        self.assertNotIn("automoat-cockpit-relay.example", message)
+        self.assertNotIn(str(workdir), message)
+
     def test_check_env_json_failure_does_not_print_invalid_url_values(self) -> None:
         env = {
             "AUTOMOAT_RELAY_URL": "https://relay-user:relay-secret@example.test",
@@ -4009,6 +4036,35 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertNotIn("relay-token", log_line)
         self.assertNotIn("https://automoat-cockpit-relay.example", log_line)
 
+    def test_start_publisher_sanitizes_subprocess_start_failures(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workdir = Path(temp_dir) / "runtime-repo"
+            bridge_status_file = workdir / ".automoat" / "state" / "bridge-status.json"
+            env = {
+                "AUTOMOAT_WORKDIR": str(workdir),
+                "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+                "AUTOMOAT_RELAY_TOKEN": "relay-token",
+                "AUTOMOAT_BRIDGE_STATUS_FILE": str(bridge_status_file),
+            }
+
+            with patch.dict(self.worker.os.environ, env, clear=True), patch.object(
+                self.worker.subprocess,
+                "Popen",
+                side_effect=OSError(f"relay-token {workdir}"),
+            ):
+                with self.assertRaisesRegex(
+                    RuntimeError,
+                    "could not start relay publisher: OSError",
+                ) as context:
+                    self.worker.start_publisher()
+
+        self.assertTrue(context.exception.__suppress_context__)
+        self.assertEqual(self.worker.CHILDREN, [])
+        message = str(context.exception)
+        self.assertNotIn("relay-token", message)
+        self.assertNotIn("automoat-cockpit-relay.example", message)
+        self.assertNotIn(str(workdir), message)
+
     def test_check_relay_publisher_preflight_runs_checked_out_contract(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             workdir = Path(temp_dir) / "runtime-repo"
@@ -4067,6 +4123,42 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertNotIn("https://automoat-cockpit-relay.example", output.getvalue())
         self.assertNotIn(str(workdir), output.getvalue())
 
+    def test_check_relay_publisher_preflight_sanitizes_start_failures(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workdir = Path(temp_dir) / "runtime-repo"
+            workdir.mkdir()
+            env = {
+                "AUTOMOAT_WORKDIR": str(workdir),
+                "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+                "AUTOMOAT_RELAY_TOKEN": "relay-token",
+                "AUTOMOAT_BRIDGE_STATUS_FILE": str(
+                    workdir / ".automoat" / "state" / "bridge-status.json"
+                ),
+            }
+            output = io.StringIO()
+
+            with patch.dict(self.worker.os.environ, env, clear=True), patch.object(
+                self.worker.subprocess,
+                "run",
+                side_effect=OSError(f"relay-token {workdir}"),
+            ), redirect_stdout(output):
+                with self.assertRaisesRegex(
+                    RuntimeError,
+                    "could not start: OSError",
+                ) as context:
+                    self.worker.check_relay_publisher_preflight()
+
+        self.assertTrue(context.exception.__suppress_context__)
+        combined_output = output.getvalue() + str(context.exception)
+        self.assertIn("checking checked-out relay publisher preflight", combined_output)
+        self.assertIn(
+            "--bridge-status-file .automoat/state/bridge-status.json",
+            combined_output,
+        )
+        self.assertNotIn("relay-token", combined_output)
+        self.assertNotIn("automoat-cockpit-relay.example", combined_output)
+        self.assertNotIn(str(workdir), combined_output)
+
     def test_run_times_out_bounded_preflight_commands(self) -> None:
         output = io.StringIO()
 
@@ -4080,6 +4172,34 @@ class RenderWorkerPreflightTest(unittest.TestCase):
 
         self.assertEqual(subprocess_run.call_args.kwargs["timeout"], 15)
         self.assertIn("$ slow", output.getvalue())
+
+    def test_run_sanitizes_subprocess_start_failures(self) -> None:
+        output = io.StringIO()
+
+        with patch.dict(
+            self.worker.os.environ,
+            {
+                "AUTOMOAT_RELAY_TOKEN": "relay-secret",
+                "GITHUB_TOKEN": "github-secret",
+            },
+            clear=True,
+        ), patch.object(
+            self.worker.subprocess,
+            "run",
+            side_effect=OSError("relay-secret /tmp/private-repo-token"),
+        ), redirect_stdout(output):
+            with self.assertRaisesRegex(
+                RuntimeError,
+                r"deploy --token \[redacted\] could not start: OSError",
+            ) as context:
+                self.worker.run(["deploy", "--token", "relay-secret"])
+
+        self.assertTrue(context.exception.__suppress_context__)
+        combined_output = output.getvalue() + str(context.exception)
+        self.assertIn("$ deploy --token [redacted]", combined_output)
+        self.assertNotIn("relay-secret", combined_output)
+        self.assertNotIn("github-secret", combined_output)
+        self.assertNotIn("private-repo-token", combined_output)
 
     def test_run_rejects_oversized_output_without_echoing_it(self) -> None:
         output = io.StringIO()

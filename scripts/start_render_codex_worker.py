@@ -1510,6 +1510,10 @@ def run(
             format_number(timeout_seconds) if timeout_seconds is not None else "unknown"
         )
         raise RuntimeError(f"{printable} timed out after {timeout_text}s") from exc
+    except OSError as exc:
+        raise RuntimeError(
+            f"{printable} could not start: {type(exc).__name__}"
+        ) from None
 
     if result.stdout:
         output_size = len(result.stdout.encode("utf-8", errors="replace"))
@@ -1662,6 +1666,10 @@ def run_relay_publisher_preflight_command(command: list[str], *, cwd: Path) -> s
         raise RuntimeError(
             f"{printable} timed out after {format_number(PUBLISHER_PREFLIGHT_TIMEOUT_SECONDS)}s"
         ) from exc
+    except OSError as exc:
+        raise RuntimeError(
+            f"{printable} could not start: {type(exc).__name__}"
+        ) from None
 
     output = result.stdout or ""
     output_size = len(output.encode("utf-8", errors="replace"))
@@ -1799,11 +1807,16 @@ def start_publisher() -> subprocess.Popen[object]:
     workdir, _codex_home = configured_worker_paths(os.environ)
     command = relay_publisher_command(os.environ)
     runtime_config = relay_publisher_runtime_config(os.environ)
-    process = subprocess.Popen(
-        command,
-        cwd=workdir,
-        env=os.environ.copy(),
-    )
+    try:
+        process = subprocess.Popen(
+            command,
+            cwd=workdir,
+            env=os.environ.copy(),
+        )
+    except OSError as exc:
+        raise RuntimeError(
+            f"could not start relay publisher: {type(exc).__name__}"
+        ) from None
     CHILDREN.append(process)
     runtime_fields = " ".join(
         f"publisher_{key}={value}" for key, value in runtime_config.items()
@@ -1823,7 +1836,12 @@ def start_loop() -> subprocess.Popen[object]:
         "--interval",
         runtime_config["interval"],
     ]
-    process = subprocess.Popen(command, cwd=workdir, env=os.environ.copy())
+    try:
+        process = subprocess.Popen(command, cwd=workdir, env=os.environ.copy())
+    except OSError as exc:
+        raise RuntimeError(
+            f"could not start autonomous loop: {type(exc).__name__}"
+        ) from None
     CHILDREN.append(process)
     runtime_fields = " ".join(
         f"loop_{key}={value}" for key, value in runtime_config.items()
