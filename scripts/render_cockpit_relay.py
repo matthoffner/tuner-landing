@@ -77,6 +77,10 @@ SENSITIVE_ASSIGNMENT_RE = re.compile(
     r"passwd|relay_token|secret|token|key"
     r")=([^\s,;|]+)"
 )
+BEARER_SECRET_RE = re.compile(
+    r"\b(authorization\s*[:=]\s*bearer)\s+[^\s,;|]+",
+    re.IGNORECASE,
+)
 
 
 class RelayPersistenceError(RuntimeError):
@@ -1285,6 +1289,29 @@ def utf8_tail(text: str, max_bytes: int) -> str:
     return encoded[-max_bytes:].decode("utf-8", errors="ignore")
 
 
+def sanitize_log_tail_for_relay(text: str, *, max_line_length: int = 1200) -> str:
+    sanitized_lines: list[str] = []
+    for line in text.splitlines():
+        sanitized = "".join(
+            " " if ord(character) < 32 or ord(character) == 127 else character
+            for character in line
+        )
+        sanitized = EMBEDDED_URL_RE.sub(
+            lambda match: sanitize_url_value(match.group(0)),
+            sanitized,
+        )
+        sanitized = BEARER_SECRET_RE.sub(r"\1 [redacted]", sanitized)
+        sanitized = SENSITIVE_ASSIGNMENT_RE.sub(
+            lambda match: f"{match.group(1)}=[redacted]",
+            sanitized,
+        )
+        sanitized_lines.append(sanitized[:max_line_length])
+    sanitized_text = "\n".join(sanitized_lines)
+    if text.endswith(("\n", "\r")) and sanitized_text:
+        sanitized_text += "\n"
+    return sanitized_text
+
+
 def snapshot() -> dict[str, Any]:
     with STATE_LOCK:
         return strict_json_clone(STATE)
@@ -1309,7 +1336,7 @@ def update_state(payload: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(log_tail, str):
         raise ValueError("log_tail must be a string")
     max_log_chars = int(CONFIG["max_log_chars"])
-    log_tail = utf8_tail(log_tail, max_log_chars)
+    log_tail = utf8_tail(sanitize_log_tail_for_relay(log_tail), max_log_chars)
 
     publisher = payload.get("publisher")
     if not isinstance(publisher, dict):

@@ -2542,6 +2542,53 @@ class RenderCockpitRelayTest(unittest.TestCase):
         self.assertEqual(state["log_tail"], "\U0001f6a6\U0001f6a6")
         self.assertLessEqual(len(state["log_tail"].encode("utf-8")), 8)
 
+    def test_update_state_sanitizes_log_tail_before_storage(self) -> None:
+        state = self.relay.update_state(
+            {
+                "status": {"status": "running", "loop_running": True},
+                "log_tail": (
+                    "posting https://user:url-secret@example.test/path"
+                    "?token=query-secret#frag\n"
+                    "Authorization: Bearer bearer-secret token=assignment-secret"
+                    "\x00done\n"
+                ),
+            }
+        )
+
+        self.assertIn(
+            "https://example.test/path?[redacted]#[redacted]",
+            state["log_tail"],
+        )
+        self.assertIn("Authorization: Bearer [redacted]", state["log_tail"])
+        self.assertIn("token=[redacted]", state["log_tail"])
+        self.assertIn(" done", state["log_tail"])
+        for secret in (
+            "url-secret",
+            "query-secret",
+            "bearer-secret",
+            "assignment-secret",
+        ):
+            self.assertNotIn(secret, state["log_tail"])
+
+    def test_update_state_sanitizes_log_tail_before_byte_trimming(self) -> None:
+        self.relay.CONFIG["max_log_chars"] = 96
+
+        state = self.relay.update_state(
+            {
+                "status": {"status": "running", "loop_running": True},
+                "log_tail": (
+                    "prefix " * 20
+                    + "https://user:url-secret@example.test/path?token=query-secret "
+                    + "relay_token=assignment-secret\n"
+                ),
+            }
+        )
+
+        self.assertLessEqual(len(state["log_tail"].encode("utf-8")), 96)
+        self.assertNotIn("url-secret", state["log_tail"])
+        self.assertNotIn("query-secret", state["log_tail"])
+        self.assertNotIn("assignment-secret", state["log_tail"])
+
     def test_update_state_rejects_oversized_publisher_without_mutating_snapshot(self) -> None:
         self.relay.CONFIG["max_publisher_bytes"] = 128
         before = self.relay.snapshot()
