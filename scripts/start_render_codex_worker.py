@@ -2665,7 +2665,13 @@ def sleep_outside_business_hours(
         if publisher_status is not None:
             if publisher_poll_ok:
                 emit(f"relay publisher exited unexpectedly status={publisher_status}")
-            return PUBLISHER_EXITED, publisher_status if publisher_status != 0 else 1
+            worker_exit_status = publisher_status if publisher_status != 0 else 1
+            record_render_worker_failure_status(
+                reason=PUBLISHER_EXITED,
+                worker_exit_status=worker_exit_status,
+                publisher_exit_status=publisher_status if publisher_poll_ok else None,
+            )
+            return PUBLISHER_EXITED, worker_exit_status
         time.sleep(min(poll_interval, max(0.0, deadline - time.monotonic())))
     if STOP_REQUESTED:
         stop_children()

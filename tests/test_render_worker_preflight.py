@@ -5892,6 +5892,10 @@ class RenderWorkerPreflightTest(unittest.TestCase):
 
         with (
             patch.object(self.worker, "seconds_until_next_business_start", return_value=60.0),
+            patch.object(
+                self.worker,
+                "record_render_worker_failure_status",
+            ) as record_failure_status,
             redirect_stdout(output),
         ):
             reason, status = self.worker.sleep_outside_business_hours(
@@ -5902,8 +5906,48 @@ class RenderWorkerPreflightTest(unittest.TestCase):
 
         self.assertEqual(reason, self.worker.PUBLISHER_EXITED)
         self.assertEqual(status, self.worker.CHILD_POLL_FAILURE_EXIT_STATUS)
+        record_failure_status.assert_called_once_with(
+            reason=self.worker.PUBLISHER_EXITED,
+            worker_exit_status=self.worker.CHILD_POLL_FAILURE_EXIT_STATUS,
+            publisher_exit_status=None,
+        )
         self.assertIn("could not poll relay publisher pid=202: OSError", output.getvalue())
         self.assertNotIn("secret-token", output.getvalue())
+
+    def test_business_hours_sleep_records_failure_status_when_publisher_exits(
+        self,
+    ) -> None:
+        publisher = FakeProcess(pid=202, initial_status=0)
+        state = {
+            "enabled": True,
+            "in_business_hours": False,
+            "local_time": "2026-06-15T17:01:00-05:00",
+            "next_start_at": "2026-06-16T09:00:00-05:00",
+        }
+        output = io.StringIO()
+
+        with (
+            patch.object(self.worker, "seconds_until_next_business_start", return_value=60.0),
+            patch.object(
+                self.worker,
+                "record_render_worker_failure_status",
+            ) as record_failure_status,
+            redirect_stdout(output),
+        ):
+            reason, status = self.worker.sleep_outside_business_hours(
+                publisher,
+                state,
+                poll_interval=0,
+            )
+
+        self.assertEqual(reason, self.worker.PUBLISHER_EXITED)
+        self.assertEqual(status, 1)
+        record_failure_status.assert_called_once_with(
+            reason=self.worker.PUBLISHER_EXITED,
+            worker_exit_status=1,
+            publisher_exit_status=0,
+        )
+        self.assertIn("relay publisher exited unexpectedly status=0", output.getvalue())
 
 
 class FakeProcess:
