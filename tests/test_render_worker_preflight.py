@@ -2618,6 +2618,10 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             {
                 "AUTOMOAT_RELAY_INTERVAL": "4",
                 "AUTOMOAT_RELAY_TIMEOUT": "9",
+                "AUTOMOAT_LOOP_STATUS_FILE": ".automoat/state/custom-status.json",
+                "AUTOMOAT_LOOP_PID_FILE": ".automoat/state/custom.pid",
+                "AUTOMOAT_LOOP_LOG_FILE": ".automoat/logs/custom-loop.log",
+                "AUTOMOAT_PUBLISHER_LOG_FILE": ".automoat/logs/custom-publisher.log",
                 "AUTOMOAT_BRIDGE_STATUS_STALE_AFTER_SECONDS": "240",
                 "AUTOMOAT_BRIDGE_STATUS_FILE": ".automoat/state/custom-bridge-status.json",
             }
@@ -2631,6 +2635,24 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertEqual(
             command[bridge_status_file_index + 1],
             ".automoat/state/custom-bridge-status.json",
+        )
+        self.assertIn("--status-file", command)
+        status_file_index = command.index("--status-file")
+        self.assertEqual(
+            command[status_file_index + 1],
+            ".automoat/state/custom-status.json",
+        )
+        self.assertIn("--pid-file", command)
+        pid_file_index = command.index("--pid-file")
+        self.assertEqual(command[pid_file_index + 1], ".automoat/state/custom.pid")
+        self.assertIn("--log-file", command)
+        log_file_index = command.index("--log-file")
+        self.assertEqual(command[log_file_index + 1], ".automoat/logs/custom-loop.log")
+        self.assertIn("--publisher-log", command)
+        publisher_log_index = command.index("--publisher-log")
+        self.assertEqual(
+            command[publisher_log_index + 1],
+            ".automoat/logs/custom-publisher.log",
         )
 
     def test_relay_publisher_preflight_command_extends_runtime_command(self) -> None:
@@ -2667,6 +2689,18 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                 "CODEX_ACCESS_TOKEN": "codex-token",
                 "AUTOMOAT_WORKDIR": str(workdir),
                 "CODEX_HOME": str(Path(temp_dir) / "codex-home"),
+                "AUTOMOAT_LOOP_STATUS_FILE": str(
+                    workdir / ".automoat" / "state" / "status.json"
+                ),
+                "AUTOMOAT_LOOP_PID_FILE": str(
+                    workdir / ".automoat" / "state" / "loop.pid"
+                ),
+                "AUTOMOAT_LOOP_LOG_FILE": str(
+                    workdir / ".automoat" / "logs" / "loop.log"
+                ),
+                "AUTOMOAT_PUBLISHER_LOG_FILE": str(
+                    workdir / ".automoat" / "logs" / "publisher.log"
+                ),
                 "AUTOMOAT_BRIDGE_STATUS_FILE": str(bridge_status_file),
                 "AUTOMOAT_BRIDGE_STATUS_STALE_AFTER_SECONDS": "240",
             }
@@ -2690,6 +2724,10 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             [
                 "AUTOMOAT_BRIDGE_STATUS_FILE",
                 "AUTOMOAT_BRIDGE_STATUS_STALE_AFTER_SECONDS",
+                "AUTOMOAT_LOOP_LOG_FILE",
+                "AUTOMOAT_LOOP_PID_FILE",
+                "AUTOMOAT_LOOP_STATUS_FILE",
+                "AUTOMOAT_PUBLISHER_LOG_FILE",
             ],
         )
         self.assertEqual(
@@ -2700,6 +2738,10 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             payload["config"]["bridge_status_file"],
             ".automoat/state/bridge-status.json",
         )
+        self.assertEqual(payload["config"]["status_file"], ".automoat/state/status.json")
+        self.assertEqual(payload["config"]["pid_file"], ".automoat/state/loop.pid")
+        self.assertEqual(payload["config"]["log_file"], ".automoat/logs/loop.log")
+        self.assertEqual(payload["config"]["publisher_log"], ".automoat/logs/publisher.log")
         self.assertNotIn(str(bridge_status_file), output.getvalue())
 
     def test_check_env_json_reports_in_workdir_bridge_status_file_label(self) -> None:
@@ -2873,6 +2915,53 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertEqual(
             payload["diagnostics"]["failed_configuration_keys"],
             ["AUTOMOAT_BRIDGE_STATUS_FILE"],
+        )
+        self.assertNotIn("secret-external", output.getvalue())
+        self.assertNotIn(str(outside_file), output.getvalue())
+        self.assertNotIn(str(workdir), output.getvalue())
+        self.assertNotIn("relay-token", output.getvalue())
+        self.assertNotIn("github-token", output.getvalue())
+        self.assertNotIn("codex-token", output.getvalue())
+
+    def test_check_env_json_routes_external_loop_status_file_without_path_echo(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            workdir = temp_path / "repo"
+            workdir.mkdir()
+            outside_file = temp_path / "secret-external" / "mvp-loop-status.json"
+            output = io.StringIO()
+
+            with redirect_stdout(output):
+                errors = self.worker.emit_environment_preflight(
+                    {
+                        "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+                        "AUTOMOAT_RELAY_TOKEN": "relay-token",
+                        "GITHUB_TOKEN": "github-token",
+                        "CODEX_ACCESS_TOKEN": "codex-token",
+                        "AUTOMOAT_WORKDIR": str(workdir),
+                        "CODEX_HOME": str(temp_path / "codex-home"),
+                        "AUTOMOAT_LOOP_STATUS_FILE": str(outside_file),
+                    },
+                    found_command,
+                    output_format="json",
+                )
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(
+            errors,
+            ["AUTOMOAT_LOOP_STATUS_FILE must stay inside AUTOMOAT_WORKDIR"],
+        )
+        self.assertEqual(payload["status"], "failed")
+        self.assertEqual(payload["diagnostics"]["error_categories"], ["invalid_file_path"])
+        self.assertEqual(
+            payload["diagnostics"]["failed_configuration_keys"],
+            ["AUTOMOAT_LOOP_STATUS_FILE"],
+        )
+        self.assertEqual(
+            payload["diagnostics"]["runtime_configured_keys"],
+            ["AUTOMOAT_LOOP_STATUS_FILE"],
         )
         self.assertNotIn("secret-external", output.getvalue())
         self.assertNotIn(str(outside_file), output.getvalue())
@@ -3690,6 +3779,14 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                 "6",
                 "--bridge-status-stale-after-seconds",
                 "660",
+                "--status-file",
+                ".automoat/state/mvp-loop-status.json",
+                "--pid-file",
+                ".automoat/state/mvp-loop.pid",
+                "--log-file",
+                ".automoat/logs/mvp-loop.log",
+                "--publisher-log",
+                ".automoat/logs/cockpit-relay-publisher.log",
                 "--bridge-status-file",
                 ".automoat/state/custom-bridge-status.json",
             ],

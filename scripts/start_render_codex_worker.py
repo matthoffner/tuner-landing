@@ -70,8 +70,21 @@ RUNTIME_CONFIG_LIMITS = {
     "AUTOMOAT_BRIDGE_STATUS_STALE_AFTER_SECONDS": 3600,
 }
 WORKER_PATH_ENV_NAMES = ("AUTOMOAT_WORKDIR", "CODEX_HOME")
-PUBLISHER_FILE_PATH_ENV_NAMES = ("AUTOMOAT_BRIDGE_STATUS_FILE",)
+DEFAULT_STATUS_FILE = ".automoat/state/mvp-loop-status.json"
+DEFAULT_PID_FILE = ".automoat/state/mvp-loop.pid"
+DEFAULT_LOG_FILE = ".automoat/logs/mvp-loop.log"
+DEFAULT_PUBLISHER_LOG = ".automoat/logs/cockpit-relay-publisher.log"
 DEFAULT_BRIDGE_STATUS_FILE = ".automoat/state/mvp-bridge-status.json"
+PUBLISHER_FILE_ENV_ARGS = (
+    ("AUTOMOAT_LOOP_STATUS_FILE", "--status-file", DEFAULT_STATUS_FILE),
+    ("AUTOMOAT_LOOP_PID_FILE", "--pid-file", DEFAULT_PID_FILE),
+    ("AUTOMOAT_LOOP_LOG_FILE", "--log-file", DEFAULT_LOG_FILE),
+    ("AUTOMOAT_PUBLISHER_LOG_FILE", "--publisher-log", DEFAULT_PUBLISHER_LOG),
+    ("AUTOMOAT_BRIDGE_STATUS_FILE", "--bridge-status-file", DEFAULT_BRIDGE_STATUS_FILE),
+)
+PUBLISHER_FILE_PATH_ENV_NAMES = tuple(
+    env_name for env_name, _option, _default in PUBLISHER_FILE_ENV_ARGS
+)
 MAX_GIT_BRANCH_CHARS = 240
 PORTABLE_GIT_BRANCH_PATTERN = re.compile(r"^[A-Za-z0-9._/-]+$")
 GIT_PSEUDO_REF_NAMES = {
@@ -205,10 +218,11 @@ def relay_publisher_runtime_config(
         option.lstrip("-").replace("-", "_"): env.get(env_name, default).strip() or default
         for env_name, option, default in PUBLISHER_RUNTIME_ENV_ARGS
     }
-    config["bridge_status_file"] = worker_file_label(
-        env.get("AUTOMOAT_BRIDGE_STATUS_FILE", DEFAULT_BRIDGE_STATUS_FILE),
-        env,
-    )
+    for env_name, option, default in PUBLISHER_FILE_ENV_ARGS:
+        config[option.lstrip("-").replace("-", "_")] = worker_file_label(
+            env.get(env_name, default).strip() or default,
+            env,
+        )
     return config
 
 
@@ -218,13 +232,8 @@ def relay_publisher_command(
     command = [sys.executable, "scripts/publish_cockpit_to_relay.py"]
     for env_name, option, default in PUBLISHER_RUNTIME_ENV_ARGS:
         command.extend([option, env.get(env_name, default).strip() or default])
-    command.extend(
-        [
-            "--bridge-status-file",
-            env.get("AUTOMOAT_BRIDGE_STATUS_FILE", DEFAULT_BRIDGE_STATUS_FILE).strip()
-            or DEFAULT_BRIDGE_STATUS_FILE,
-        ]
-    )
+    for env_name, option, default in PUBLISHER_FILE_ENV_ARGS:
+        command.extend([option, env.get(env_name, default).strip() or default])
     return command
 
 
@@ -232,6 +241,18 @@ def relay_publisher_preflight_command(
     env: os._Environ[str] | dict[str, str],
 ) -> list[str]:
     return [*relay_publisher_command(env), "--check-env", "--format", "json"]
+
+
+def relay_publisher_file_labels(
+    env: os._Environ[str] | dict[str, str],
+) -> dict[str, str]:
+    return {
+        option.lstrip("-").replace("-", "_"): worker_file_label(
+            env.get(env_name, default).strip() or default,
+            env,
+        )
+        for env_name, option, default in PUBLISHER_FILE_ENV_ARGS
+    }
 
 
 def autonomous_loop_runtime_config(
@@ -1301,10 +1322,7 @@ def environment_preflight_summary(
             "AUTOMOAT_STATUS_STALE_AFTER_SECONDS",
             "660",
         ),
-        "bridge_status_file": worker_file_label(
-            env.get("AUTOMOAT_BRIDGE_STATUS_FILE", DEFAULT_BRIDGE_STATUS_FILE),
-            env,
-        ),
+        **relay_publisher_file_labels(env),
         "bridge_status_stale_after_seconds": env.get(
             "AUTOMOAT_BRIDGE_STATUS_STALE_AFTER_SECONDS",
             "660",
@@ -1404,10 +1422,7 @@ def emit_environment_preflight(
         codex_config_value(env, "AUTOMOAT_CODEX_REASONING_EFFORT"),
         env,
     )
-    bridge_status_file = worker_file_label(
-        env.get("AUTOMOAT_BRIDGE_STATUS_FILE", DEFAULT_BRIDGE_STATUS_FILE),
-        env,
-    )
+    file_labels = relay_publisher_file_labels(env)
     emit(
         "environment preflight passed: "
         f"relay_url={relay_url_label} "
@@ -1443,7 +1458,11 @@ def emit_environment_preflight(
         f"relay_tail_lines={env.get('AUTOMOAT_RELAY_TAIL_LINES', '180')} "
         f"relay_max_log_bytes={env.get('AUTOMOAT_RELAY_MAX_LOG_BYTES', str(256 * 1024))} "
         f"status_stale_after_seconds={env.get('AUTOMOAT_STATUS_STALE_AFTER_SECONDS', '660')} "
-        f"bridge_status_file={bridge_status_file} "
+        f"status_file={file_labels['status_file']} "
+        f"pid_file={file_labels['pid_file']} "
+        f"log_file={file_labels['log_file']} "
+        f"publisher_log={file_labels['publisher_log']} "
+        f"bridge_status_file={file_labels['bridge_status_file']} "
         f"bridge_status_stale_after_seconds="
         f"{env.get('AUTOMOAT_BRIDGE_STATUS_STALE_AFTER_SECONDS', '660')} "
         f"codex_model={codex_model_label} "
@@ -1582,11 +1601,12 @@ def publisher_preflight_diagnostic_tokens(diagnostics: Any, key: str) -> list[st
 def publisher_preflight_command_log_text(command: list[str]) -> str:
     safe_parts: list[str] = []
     skip_next = False
+    file_options = {option for _env_name, option, _default in PUBLISHER_FILE_ENV_ARGS}
     for index, part in enumerate(command):
         if skip_next:
             skip_next = False
             continue
-        if part == "--bridge-status-file" and index + 1 < len(command):
+        if part in file_options and index + 1 < len(command):
             safe_parts.extend([part, worker_file_label(command[index + 1], os.environ)])
             skip_next = True
             continue
