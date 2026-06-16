@@ -966,6 +966,106 @@ def source_coordination_summary(status: dict[str, Any]) -> dict[str, Any]:
     return summary
 
 
+def source_failure_summary(status: dict[str, Any]) -> dict[str, Any]:
+    source_summary = status.get("cockpit_summary")
+    if not isinstance(source_summary, dict):
+        return {"available": False}
+    failure = source_summary.get("failure_summary")
+    if not isinstance(failure, dict):
+        return {"available": False}
+
+    summary: dict[str, Any] = {"available": failure.get("available") is True}
+    text_fields = {
+        "phase": failure.get("phase"),
+        "category": failure.get("category"),
+        "route_hint": failure.get("route_hint"),
+        "message": failure.get("message"),
+        "failure_reason": failure.get("failure_reason"),
+        "summary": failure.get("summary"),
+        "decision_reason": failure.get("decision_reason"),
+        "current_focus": failure.get("current_focus"),
+        "import_pipeline_status": failure.get("import_pipeline_status"),
+        "readiness_status": failure.get("readiness_status"),
+        "artifact_health_status": failure.get("artifact_health_status"),
+        "command": failure.get("command"),
+    }
+    for key, value in text_fields.items():
+        compact_value = compact_policy_detail(value, max_length=240)
+        if compact_value is not None:
+            summary[key] = compact_value
+
+    path_fields = {
+        "import_pipeline_summary_path": failure.get("import_pipeline_summary_path"),
+        "source_path": failure.get("source_path"),
+        "target_path": failure.get("target_path"),
+    }
+    for key, value in path_fields.items():
+        compact_value = compact_path_diagnostic(value, max_length=240)
+        if compact_value is not None:
+            while "<external><external>/" in compact_value:
+                compact_value = compact_value.replace(
+                    "<external><external>/",
+                    "<external>/",
+                )
+            compact_value = compact_policy_detail(compact_value, max_length=240)
+        if compact_value is not None:
+            summary[key] = compact_value
+
+    list_fields = {
+        "readiness_blockers": failure.get("readiness_blockers"),
+        "degraded_artifacts": failure.get("degraded_artifacts"),
+    }
+    for key, value in list_fields.items():
+        if not isinstance(value, list):
+            continue
+        compact_values = [
+            compact_value
+            for compact_value in (
+                compact_policy_detail(item, max_length=200)
+                for item in value[:5]
+            )
+            if compact_value is not None
+        ]
+        if compact_values:
+            summary[key] = compact_values
+            summary[f"{key}_count"] = len(value)
+
+    int_fields = {
+        "synthetic_row_count": failure.get("synthetic_row_count"),
+        "raw_dallas_csv_changed_path_count": failure.get(
+            "raw_dallas_csv_changed_path_count"
+        ),
+        "productive_changed_path_count": failure.get("productive_changed_path_count"),
+        "readiness_blocker_count": failure.get("readiness_blocker_count"),
+        "degraded_artifact_count": failure.get("degraded_artifact_count"),
+        "sync_exit_status": failure.get("sync_exit_status"),
+    }
+    for key, value in int_fields.items():
+        compact_value = compact_int(value)
+        if compact_value is not None:
+            summary[key] = compact_value
+
+    ready_for_next_import_records = failure.get("ready_for_next_import_records")
+    if isinstance(ready_for_next_import_records, bool):
+        summary["ready_for_next_import_records"] = ready_for_next_import_records
+
+    artifact_statuses = failure.get("artifact_statuses")
+    if isinstance(artifact_statuses, dict):
+        compact_statuses: dict[str, str] = {}
+        for key, value in sorted(artifact_statuses.items()):
+            compact_key = compact_policy_detail(key, max_length=80)
+            compact_value = compact_policy_detail(value, max_length=80)
+            if compact_key is not None and compact_value is not None:
+                compact_statuses[compact_key] = compact_value
+            if len(compact_statuses) >= 8:
+                break
+        if compact_statuses:
+            summary["artifact_statuses"] = compact_statuses
+
+    summary["available"] = any(key != "available" for key in summary)
+    return summary
+
+
 def sanitize_cockpit_summary_for_relay_response(summary: Any) -> dict[str, Any] | None:
     if not isinstance(summary, dict):
         return None
@@ -1094,6 +1194,10 @@ def sanitize_cockpit_summary_for_relay_response(summary: Any) -> dict[str, Any] 
     if coordination["available"]:
         sanitized["coordination"] = coordination
 
+    failure = source_failure_summary({"cockpit_summary": summary})
+    if failure["available"]:
+        sanitized["failure_summary"] = failure
+
     return sanitized
 
 
@@ -1161,6 +1265,7 @@ def cockpit_health(
     source_policy = source_policy_summary(status)
     source_readiness = source_readiness_summary(status)
     source_coordination = source_coordination_summary(status)
+    source_failure = source_failure_summary(status)
     source_health_reasons = source_health.get("reasons")
     if not isinstance(source_health_reasons, list):
         source_health_reasons = []
@@ -1300,6 +1405,7 @@ def cockpit_health(
         "source_policy": source_policy,
         "source_readiness": source_readiness,
         "source_coordination": source_coordination,
+        "source_failure": source_failure,
         "source_health": source_health,
         "publisher_identity": publisher_identity(state),
         "publisher_runtime_config": publisher_runtime_config(state),

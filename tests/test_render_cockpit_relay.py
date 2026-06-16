@@ -1859,6 +1859,170 @@ class RenderCockpitRelayTest(unittest.TestCase):
                     expected_reason,
                 )
 
+    def test_status_and_health_include_source_failure_summary(self) -> None:
+        self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
+        self.relay.update_state(
+            {
+                "pushed_at": "2026-06-14T19:59:30Z",
+                "status": {
+                    "status": "failing",
+                    "loop_running": True,
+                    "cockpit_summary": {
+                        "operator_attention": True,
+                        "operator_attention_primary_reason": "status_failing",
+                        "operator_attention_label": "Loop status is failing",
+                        "operator_attention_reasons": ["status_failing"],
+                        "failure_summary": {
+                            "available": True,
+                            "phase": "landing_sync_failed token=phase-secret",
+                            "category": "landing_sync token=category-secret",
+                            "route_hint": "landing_index_sync",
+                            "message": (
+                                "sync failed authorization: Bearer message-secret "
+                                "https://failure.example/debug"
+                                "?token=url-secret#trace"
+                            ),
+                            "failure_reason": (
+                                "index sync rejected token=reason-secret"
+                            ),
+                            "summary": "landing check token=summary-secret",
+                            "decision_reason": (
+                                "dallas_ready_no_thin_groups "
+                                "token=decision-secret"
+                            ),
+                            "current_focus": (
+                                "autonomy_visibility_or_real_ingest "
+                                "token=focus-secret"
+                            ),
+                            "synthetic_row_count": "12",
+                            "raw_dallas_csv_changed_path_count": "9",
+                            "productive_changed_path_count": "3",
+                            "import_pipeline_status": (
+                                "loaded token=pipeline-secret"
+                            ),
+                            "readiness_status": "ready token=readiness-secret",
+                            "readiness_blocker_count": "2",
+                            "readiness_blockers": [
+                                "first blocker token=blocker-secret",
+                                (
+                                    "see https://blocker.example/path"
+                                    "?token=blocker-url-secret#debug"
+                                ),
+                            ],
+                            "ready_for_next_import_records": True,
+                            "artifact_health_status": (
+                                "degraded token=artifact-secret"
+                            ),
+                            "degraded_artifact_count": "2",
+                            "degraded_artifacts": [
+                                "landing token=degraded-secret",
+                            ],
+                            "artifact_statuses": {
+                                "landing token=artifact-key-secret": (
+                                    "failed token=artifact-status-secret"
+                                ),
+                            },
+                            "import_pipeline_summary_path": (
+                                "/tmp/customer/pipeline/summary.json "
+                                "token=summary-path-secret"
+                            ),
+                            "source_path": (
+                                "/tmp/customer/generated/landing.html "
+                                "token=source-path-secret"
+                            ),
+                            "target_path": (
+                                "/tmp/customer/index.html "
+                                "token=target-path-secret"
+                            ),
+                            "sync_exit_status": "2",
+                            "ignored_debug": "token=ignored-secret",
+                        },
+                    },
+                },
+                "log_tail": "source failure surfaced\n",
+            }
+        )
+        self.relay.utc_now = lambda: "2026-06-14T20:00:00Z"
+
+        health = self.relay.health_payload()
+        status = self.relay.relay_status_payload()
+
+        expected_failure = {
+            "available": True,
+            "phase": "landing_sync_failed token=[redacted]",
+            "category": "landing_sync token=[redacted]",
+            "route_hint": "landing_index_sync",
+            "message": (
+                "sync failed authorization: Bearer [redacted] "
+                "https://failure.example/debug?[redacted]#[redacted]"
+            ),
+            "failure_reason": "index sync rejected token=[redacted]",
+            "summary": "landing check token=[redacted]",
+            "decision_reason": "dallas_ready_no_thin_groups token=[redacted]",
+            "current_focus": "autonomy_visibility_or_real_ingest token=[redacted]",
+            "import_pipeline_status": "loaded token=[redacted]",
+            "readiness_status": "ready token=[redacted]",
+            "artifact_health_status": "degraded token=[redacted]",
+            "import_pipeline_summary_path": "<external>/summary.json token=[redacted]",
+            "source_path": "<external>/landing.html token=[redacted]",
+            "target_path": "<external>/index.html token=[redacted]",
+            "readiness_blockers": [
+                "first blocker token=[redacted]",
+                "see https://blocker.example/path?[redacted]#[redacted]",
+            ],
+            "readiness_blockers_count": 2,
+            "degraded_artifacts": ["landing token=[redacted]"],
+            "degraded_artifacts_count": 1,
+            "synthetic_row_count": 12,
+            "raw_dallas_csv_changed_path_count": 9,
+            "productive_changed_path_count": 3,
+            "readiness_blocker_count": 2,
+            "degraded_artifact_count": 2,
+            "sync_exit_status": 2,
+            "ready_for_next_import_records": True,
+            "artifact_statuses": {
+                "landing token=[redacted]": "failed token=[redacted]",
+            },
+        }
+        self.assertEqual(
+            health["cockpit_health"]["source_failure"],
+            expected_failure,
+        )
+        self.assertEqual(
+            status["cockpit_health"]["source_failure"],
+            expected_failure,
+        )
+        self.assertEqual(
+            status["cockpit_summary"]["failure_summary"],
+            expected_failure,
+        )
+        self.assertIn("source_status_failing", status["cockpit_health"]["reasons"])
+        response_text = json.dumps({"health": health, "status": status}, sort_keys=True)
+        for unsafe_text in (
+            "phase-secret",
+            "category-secret",
+            "message-secret",
+            "url-secret",
+            "reason-secret",
+            "summary-secret",
+            "decision-secret",
+            "focus-secret",
+            "pipeline-secret",
+            "readiness-secret",
+            "blocker-secret",
+            "blocker-url-secret",
+            "artifact-secret",
+            "degraded-secret",
+            "artifact-key-secret",
+            "artifact-status-secret",
+            "summary-path-secret",
+            "source-path-secret",
+            "target-path-secret",
+            "ignored-secret",
+            "/tmp/customer",
+        ):
+            self.assertNotIn(unsafe_text, response_text)
+
     def test_status_and_health_promote_autonomy_policy_attention(self) -> None:
         self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
         self.relay.update_state(
