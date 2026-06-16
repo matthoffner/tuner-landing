@@ -1115,6 +1115,7 @@ def cockpit_health(
         "read_failed",
         "invalid_json",
         "not_object",
+        "too_large",
     }:
         reasons.append("source_status_unavailable")
     if status.get("loop_running") is False:
@@ -1145,6 +1146,7 @@ def cockpit_health(
         "read_failed",
         "invalid_json",
         "not_object",
+        "too_large",
     }:
         reasons.append("source_bridge_status_unavailable")
     if (

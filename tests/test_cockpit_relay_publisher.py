@@ -536,6 +536,33 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertIn("invalid JSON constant Infinity", summary["status_file_error"])
         self.assertNotIn('"interval"', summary_text)
 
+    def test_read_bridge_summary_marks_oversized_status_file_unavailable(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            bridge_status_file = Path(tmp) / "mvp-bridge-status.json"
+            bridge_status_file.write_text(
+                json.dumps({"status": "running", "debug": "x" * 80}) + "\n",
+                encoding="utf-8",
+            )
+            self.publisher.MAX_LOCAL_BRIDGE_STATUS_JSON_BYTES = 32
+
+            summary = self.publisher.read_bridge_summary(bridge_status_file)
+            health = self.publisher.publisher_source_health(
+                {
+                    "status": "passing",
+                    "loop_running": True,
+                    "source_status_stale": False,
+                    "source_status_file_status": "loaded",
+                    "bridge_summary": summary,
+                }
+            )
+            summary_text = json.dumps(summary, sort_keys=True)
+
+        self.assertFalse(summary["available"])
+        self.assertEqual(summary["status_file_status"], "too_large")
+        self.assertIn("max JSON bytes", summary["status_file_error"])
+        self.assertEqual(health["reasons"], ["source_bridge_status_unavailable"])
+        self.assertNotIn("x" * 40, summary_text)
+
     def test_read_bridge_summary_sanitizes_url_fields_for_remote_snapshots(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
@@ -1934,6 +1961,30 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertIn("invalid JSON constant NaN", status["source_status_file_error"])
         self.assertTrue(status["source_status_stale"])
         self.assertNotIn("passed_checks", status_text)
+
+    def test_read_status_marks_oversized_status_file_unavailable(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            status_file = tmp_path / "status.json"
+            status_file.write_text(
+                json.dumps({"status": "passing", "debug": "x" * 80}) + "\n",
+                encoding="utf-8",
+            )
+            self.publisher.MAX_LOCAL_STATUS_JSON_BYTES = 32
+
+            status = self.publisher.read_status(
+                status_file,
+                tmp_path / "missing.pid",
+                status_stale_after_seconds=120,
+            )
+            health = self.publisher.publisher_source_health(status)
+            status_text = json.dumps(status, sort_keys=True)
+
+        self.assertEqual(status["status"], "waiting")
+        self.assertEqual(status["source_status_file_status"], "too_large")
+        self.assertIn("max JSON bytes", status["source_status_file_error"])
+        self.assertIn("source_status_unavailable", health["reasons"])
+        self.assertNotIn("x" * 40, status_text)
 
     def test_read_status_routes_malformed_status_value_without_crashing(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

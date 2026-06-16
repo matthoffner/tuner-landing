@@ -35,6 +35,8 @@ DEFAULT_BRIDGE_STATUS_STALE_AFTER_SECONDS = 660
 MAX_RELAY_URL_CHARS = 500
 MAX_RELAY_TOKEN_CHARS = 8192
 MAX_RELAY_RESPONSE_BYTES = 64 * 1024
+MAX_LOCAL_STATUS_JSON_BYTES = 128 * 1024
+MAX_LOCAL_BRIDGE_STATUS_JSON_BYTES = 128 * 1024
 PUBLISHER_RUNTIME_DEFAULTS = {
     "interval": 3.0,
     "timeout": 8.0,
@@ -171,6 +173,30 @@ def repo_relative(path: Path) -> str:
     return relative_text if relative_text else "."
 
 
+def read_json_limited(path: Path, max_bytes: int) -> tuple[Any | None, str | None, str | None]:
+    try:
+        with path.open("rb") as handle:
+            payload_bytes = handle.read(max_bytes + 1)
+    except OSError as exc:
+        return None, "read_failed", compact_path_error(exc, path)
+    if len(payload_bytes) > max_bytes:
+        return (
+            None,
+            "too_large",
+            f"file exceeds max JSON bytes ({len(payload_bytes)} > {max_bytes})",
+        )
+    try:
+        payload_text = payload_bytes.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        return None, "invalid_json", f"invalid UTF-8 at byte {exc.start}"
+    try:
+        return json.loads(payload_text, parse_constant=reject_json_constant), None, None
+    except json.JSONDecodeError as exc:
+        return None, "invalid_json", f"line {exc.lineno} column {exc.colno}: {exc.msg}"
+    except ValueError as exc:
+        return None, "invalid_json", compact_text(str(exc)) or type(exc).__name__
+
+
 def read_json_with_status(path: Path) -> tuple[dict[str, Any] | None, dict[str, Any]]:
     metadata: dict[str, Any] = {
         "source_status_file": repo_relative(path),
@@ -179,22 +205,10 @@ def read_json_with_status(path: Path) -> tuple[dict[str, Any] | None, dict[str, 
     if not path.exists():
         metadata["source_status_file_status"] = "missing"
         return None, metadata
-    try:
-        with path.open("r", encoding="utf-8") as handle:
-            payload = json.load(handle, parse_constant=reject_json_constant)
-    except OSError as exc:
-        metadata["source_status_file_status"] = "read_failed"
-        metadata["source_status_file_error"] = compact_path_error(exc, path)
-        return None, metadata
-    except json.JSONDecodeError as exc:
-        metadata["source_status_file_status"] = "invalid_json"
-        metadata["source_status_file_error"] = (
-            f"line {exc.lineno} column {exc.colno}: {exc.msg}"
-        )
-        return None, metadata
-    except ValueError as exc:
-        metadata["source_status_file_status"] = "invalid_json"
-        metadata["source_status_file_error"] = compact_text(str(exc)) or type(exc).__name__
+    payload, status, error = read_json_limited(path, MAX_LOCAL_STATUS_JSON_BYTES)
+    if status is not None:
+        metadata["source_status_file_status"] = status
+        metadata["source_status_file_error"] = error or status
         return None, metadata
     if not isinstance(payload, dict):
         metadata["source_status_file_status"] = "not_object"
@@ -502,31 +516,13 @@ def read_bridge_summary(
             "status_file": status_file,
             "status_file_status": "missing",
         }
-    try:
-        payload = json.loads(
-            path.read_text(encoding="utf-8"),
-            parse_constant=reject_json_constant,
-        )
-    except OSError as exc:
+    payload, status, error = read_json_limited(path, MAX_LOCAL_BRIDGE_STATUS_JSON_BYTES)
+    if status is not None:
         return {
             "available": False,
             "status_file": status_file,
-            "status_file_status": "read_failed",
-            "status_file_error": compact_path_error(exc, path),
-        }
-    except json.JSONDecodeError as exc:
-        return {
-            "available": False,
-            "status_file": status_file,
-            "status_file_status": "invalid_json",
-            "status_file_error": f"line {exc.lineno} column {exc.colno}: {exc.msg}",
-        }
-    except ValueError as exc:
-        return {
-            "available": False,
-            "status_file": status_file,
-            "status_file_status": "invalid_json",
-            "status_file_error": compact_text(str(exc)) or type(exc).__name__,
+            "status_file_status": status,
+            "status_file_error": error or status,
         }
     if not isinstance(payload, dict):
         return {
@@ -1196,6 +1192,7 @@ def publisher_source_health(status: dict[str, Any]) -> dict[str, Any]:
         "read_failed",
         "invalid_json",
         "not_object",
+        "too_large",
     }:
         reasons.append("source_status_unavailable")
     if status.get("source_status_timestamp_invalid") is True:
@@ -1233,6 +1230,7 @@ def publisher_source_health(status: dict[str, Any]) -> dict[str, Any]:
         "read_failed",
         "invalid_json",
         "not_object",
+        "too_large",
     }:
         reasons.append("source_bridge_status_unavailable")
     bridge_status_value, bridge_status_value_invalid = normalize_source_status_value(

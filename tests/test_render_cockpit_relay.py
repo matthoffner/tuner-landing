@@ -1117,6 +1117,45 @@ class RenderCockpitRelayTest(unittest.TestCase):
             ["source_bridge_status_unavailable"],
         )
 
+    def test_status_and_health_route_oversized_source_bridge_status_file(self) -> None:
+        self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
+        self.relay.update_state(
+            {
+                "pushed_at": "2026-06-14T19:59:30Z",
+                "status": {
+                    "status": "running",
+                    "loop_running": True,
+                    "bridge_summary": {
+                        "available": False,
+                        "status_file": ".automoat/state/mvp-bridge-status.json",
+                        "status_file_status": "too_large",
+                        "status_file_error": (
+                            "file exceeds max JSON bytes (33 > 32)"
+                        ),
+                    },
+                },
+                "log_tail": "bridge status file is oversized\n",
+            }
+        )
+        self.relay.utc_now = lambda: "2026-06-14T20:00:00Z"
+
+        health = self.relay.health_payload()
+        status = self.relay.relay_status_payload()
+
+        expected_bridge = {
+            "available": False,
+            "status_file": ".automoat/state/mvp-bridge-status.json",
+            "status_file_status": "too_large",
+            "status_file_error": "file exceeds max JSON bytes (33 > 32)",
+        }
+        self.assertFalse(health["cockpit_ok"])
+        self.assertEqual(
+            health["cockpit_health"]["reasons"],
+            ["source_bridge_status_unavailable"],
+        )
+        self.assertEqual(health["cockpit_health"]["source_bridge"], expected_bridge)
+        self.assertEqual(status["bridge_summary"], expected_bridge)
+
     def test_status_and_health_report_source_cockpit_attention(self) -> None:
         self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
         self.relay.update_state(
@@ -1881,6 +1920,46 @@ class RenderCockpitRelayTest(unittest.TestCase):
         self.assertEqual(
             status["cockpit_health"]["reasons"],
             health["cockpit_health"]["reasons"],
+        )
+
+    def test_status_and_health_route_oversized_source_status_file(self) -> None:
+        self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
+        self.relay.update_state(
+            {
+                "pushed_at": "2026-06-14T19:59:30Z",
+                "status": {
+                    "status": "waiting",
+                    "loop_running": False,
+                    "source_status_stale": True,
+                    "source_status_file": ".automoat/state/mvp-loop-status.json",
+                    "source_status_file_status": "too_large",
+                    "source_status_file_error": (
+                        "file exceeds max JSON bytes (33 > 32)"
+                    ),
+                },
+                "log_tail": "loop status file is oversized\n",
+            }
+        )
+        self.relay.utc_now = lambda: "2026-06-14T20:00:00Z"
+
+        health = self.relay.health_payload()
+        status = self.relay.relay_status_payload()
+
+        self.assertFalse(health["cockpit_ok"])
+        self.assertEqual(
+            health["cockpit_health"]["reasons"],
+            [
+                "source_status_stale",
+                "source_status_unavailable",
+                "source_loop_not_running",
+            ],
+        )
+        self.assertEqual(status["source_status_file_status"], "too_large")
+        self.assertEqual(
+            health["cockpit_health"]["source_status_diagnostics"][
+                "source_status_file_status"
+            ],
+            "too_large",
         )
 
     def test_status_and_health_report_failing_source_snapshot(self) -> None:
