@@ -2066,6 +2066,22 @@ def relay_response_ok(response: Any) -> bool:
     return isinstance(response, dict) and response.get("ok") is True
 
 
+def publish_error_kind(exc: BaseException) -> str:
+    if isinstance(exc, URLError):
+        return "url_error"
+    if isinstance(exc, json.JSONDecodeError):
+        return "invalid_relay_json"
+    if isinstance(exc, ValueError) and str(exc).startswith("invalid JSON constant "):
+        return "invalid_relay_json"
+    if isinstance(exc, ValueError):
+        return "invalid_relay_response"
+    if isinstance(exc, subprocess.SubprocessError):
+        return "local_command_error"
+    if isinstance(exc, OSError):
+        return "transport_error"
+    return type(exc).__name__
+
+
 def format_number(value: float | int) -> str:
     parsed = float(value)
     return str(int(parsed)) if parsed.is_integer() else str(parsed)
@@ -2113,6 +2129,7 @@ def publish_once_result(args: argparse.Namespace) -> dict[str, Any]:
         http_fields = http_error_summary(exc)
         emit(
             "publish failed "
+            "failure_kind=http_error "
             f"http_status={http_fields['http_status']} "
             f"http_reason={http_fields['http_reason']} "
             f"http_body_bytes={http_fields['http_body_bytes']} "
@@ -2132,6 +2149,7 @@ def publish_once_result(args: argparse.Namespace) -> dict[str, Any]:
     ) as exc:
         emit(
             "publish failed "
+            f"failure_kind={publish_error_kind(exc)} "
             f"error={sanitize_error_for_log(exc)} "
             f"{source_status_log_suffix(source_fields)}",
             log_path=args.publisher_log,
@@ -2143,6 +2161,7 @@ def publish_once_result(args: argparse.Namespace) -> dict[str, Any]:
     if not relay_response_ok(response):
         emit(
             "publish failed relay_ok=False "
+            "failure_kind=relay_response_not_ok "
             f"reason={relay_response_failure_reason(response)} "
             f"{source_status_log_suffix(source_fields)}",
             log_path=args.publisher_log,

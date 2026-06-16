@@ -4058,6 +4058,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             {"published": False, "source_status_stale": False},
         )
         self.assertIn("publish failed relay_ok=False", log_text)
+        self.assertIn("failure_kind=relay_response_not_ok", log_text)
         self.assertIn("reason=relay_response_not_ok", log_text)
         self.assertNotIn("published relay snapshot ok=token=", log_text)
         self.assertNotIn("relay-secret", log_text)
@@ -4607,6 +4608,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             {"published": False, "source_status_stale": False},
         )
         self.assertIn("publish failed relay_ok=False", log_text)
+        self.assertIn("failure_kind=relay_response_not_ok", log_text)
         self.assertIn(
             "reason=relay_backpressure "
             "callback=https://relay.example/fail?[redacted]#[redacted] "
@@ -4647,6 +4649,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             {"published": False, "source_status_stale": False},
         )
         self.assertIn("publish failed relay_ok=False", log_text)
+        self.assertIn("failure_kind=relay_response_not_ok", log_text)
         self.assertIn("reason=relay_response_not_object", log_text)
         self.assertIn("source_status=running", log_text)
         self.assertNotIn("relay-secret", log_text)
@@ -4682,6 +4685,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             {"published": False, "source_status_stale": False},
         )
         self.assertIn("publish failed relay_ok=False", log_text)
+        self.assertIn("failure_kind=relay_response_not_ok", log_text)
         self.assertIn("reason=relay_response_error_not_scalar", log_text)
         self.assertNotIn("relay-secret", log_text)
         self.assertNotIn("url-secret", log_text)
@@ -4725,7 +4729,11 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             result,
             {"published": False, "source_status_stale": False},
         )
-        self.assertIn("publish failed error=invalid JSON constant NaN", log_text)
+        self.assertIn(
+            "publish failed failure_kind=invalid_relay_json "
+            "error=invalid JSON constant NaN",
+            log_text,
+        )
         self.assertIn("source_status=running", log_text)
         self.assertIn("source_status_file_status=loaded", log_text)
         self.assertNotIn("published relay snapshot ok=True", log_text)
@@ -4775,6 +4783,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             {"published": False, "source_status_stale": False},
         )
         self.assertIn("publish failed relay_ok=False", log_text)
+        self.assertIn("failure_kind=relay_response_not_ok", log_text)
         self.assertIn("reason=relay_response_body_too_large", log_text)
         self.assertIn("source_status=running", log_text)
         self.assertIn("source_status_file_status=loaded", log_text)
@@ -4815,7 +4824,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             result,
             {"published": False, "source_status_stale": False},
         )
-        self.assertIn("publish failed http_status=401", log_text)
+        self.assertIn("publish failed failure_kind=http_error http_status=401", log_text)
         self.assertIn("http_reason=Unauthorized", log_text)
         self.assertIn(f"http_body_bytes={len(error_body)}", log_text)
         self.assertIn("source_status=running", log_text)
@@ -4856,7 +4865,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             result,
             {"published": False, "source_status_stale": False},
         )
-        self.assertIn("publish failed error=", log_text)
+        self.assertIn("publish failed failure_kind=url_error error=", log_text)
         self.assertIn(
             "https://automoat-cockpit-relay.example/ingest?[redacted]#[redacted]",
             log_text,
