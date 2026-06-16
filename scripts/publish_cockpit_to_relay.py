@@ -701,6 +701,81 @@ def coordination_summary(status: dict[str, Any]) -> dict[str, Any]:
     return summary
 
 
+def failure_summary(status: dict[str, Any]) -> dict[str, Any]:
+    failure = as_dict(status.get("failure"))
+    if not failure:
+        return {"available": False}
+
+    summary: dict[str, Any] = {"available": True}
+    text_fields = {
+        "phase": failure.get("phase"),
+        "category": failure.get("category"),
+        "route_hint": failure.get("route_hint"),
+        "message": failure.get("message"),
+        "failure_reason": failure.get("failure_reason"),
+        "summary": failure.get("summary"),
+        "decision_reason": failure.get("decision_reason"),
+        "current_focus": failure.get("current_focus"),
+        "import_pipeline_status": failure.get("import_pipeline_status"),
+        "import_pipeline_summary_path": failure.get("import_pipeline_summary_path"),
+        "readiness_status": failure.get("readiness_status"),
+        "artifact_health_status": failure.get("artifact_health_status"),
+        "source_path": failure.get("source_path"),
+        "target_path": failure.get("target_path"),
+        "command": failure.get("command"),
+    }
+    for key, value in text_fields.items():
+        compact_value = compact_policy_detail(value)
+        if compact_value is not None:
+            summary[key] = compact_value
+
+    list_fields = {
+        "readiness_blockers": failure.get("readiness_blockers"),
+        "degraded_artifacts": failure.get("degraded_artifacts"),
+    }
+    for key, value in list_fields.items():
+        compact_value = compact_policy_detail_list(value)
+        if compact_value:
+            summary[key] = compact_value
+
+    count_fields = {
+        "synthetic_row_count": failure.get("synthetic_row_count"),
+        "raw_dallas_csv_changed_path_count": failure.get(
+            "raw_dallas_csv_changed_path_count"
+        ),
+        "productive_changed_path_count": failure.get("productive_changed_path_count"),
+        "readiness_blocker_count": failure.get("readiness_blocker_count"),
+        "degraded_artifact_count": failure.get("degraded_artifact_count"),
+        "sync_exit_status": failure.get("sync_exit_status"),
+    }
+    for key, value in count_fields.items():
+        compact_value = compact_int(value)
+        if compact_value is not None:
+            summary[key] = compact_value
+
+    ready_for_next_import_records = failure.get("ready_for_next_import_records")
+    if isinstance(ready_for_next_import_records, bool):
+        summary["ready_for_next_import_records"] = ready_for_next_import_records
+
+    raw_artifact_statuses = as_dict(failure.get("artifact_statuses"))
+    artifact_statuses: dict[str, str] = {}
+    for key, value in sorted(
+        raw_artifact_statuses.items(),
+        key=lambda item: str(item[0]),
+    ):
+        compact_key = compact_policy_detail(key, max_length=80)
+        compact_value = compact_policy_detail(value, max_length=80)
+        if compact_key is None or compact_value is None:
+            continue
+        artifact_statuses[compact_key] = compact_value
+        if len(artifact_statuses) >= 8:
+            break
+    if artifact_statuses:
+        summary["artifact_statuses"] = artifact_statuses
+
+    return summary
+
+
 def artifact_status_summary(value: object) -> dict[str, str]:
     statuses = value if isinstance(value, dict) else {}
     summary: dict[str, str] = {}
@@ -1000,6 +1075,7 @@ def publisher_cockpit_summary(status: dict[str, Any]) -> dict[str, Any]:
         "ready_for_next_import_records": readiness.get("ready_for_next_import_records"),
         "import_handoff": import_handoff_summary(import_pipeline),
         "coordination": coordination_summary(status),
+        "failure_summary": failure_summary(status),
         "current_focus": compact_policy_detail(
             autonomy_policy.get("current_focus"),
             max_length=120,
@@ -1459,6 +1535,9 @@ def source_status_log_fields(payload: dict[str, Any]) -> dict[str, Any]:
         coordination = status.get("coordination")
     if not isinstance(coordination, dict):
         coordination = {}
+    failure = cockpit_summary.get("failure_summary")
+    if not isinstance(failure, dict):
+        failure = {}
     publisher = payload.get("publisher")
     if not isinstance(publisher, dict):
         publisher = {}
@@ -1588,6 +1667,22 @@ def source_status_log_fields(payload: dict[str, Any]) -> dict[str, Any]:
             coordination.get("latest_handoff_status"),
             max_length=240,
         ),
+        "source_failure_category": compact_policy_detail(
+            failure.get("category"),
+            max_length=120,
+        ),
+        "source_failure_route_hint": compact_policy_detail(
+            failure.get("route_hint"),
+            max_length=120,
+        ),
+        "source_failure_phase": compact_policy_detail(
+            failure.get("phase"),
+            max_length=120,
+        ),
+        "source_failure_message": compact_policy_detail(
+            failure.get("message"),
+            max_length=160,
+        ),
         "publisher_host": compact_policy_detail(publisher.get("host"), max_length=120),
         "publisher_pid": compact_int(publisher.get("pid")),
         "publisher_started_at": compact_policy_detail(
@@ -1636,6 +1731,10 @@ SOURCE_STATUS_LOG_FIELD_NAMES = (
     "source_policy_synthetic_row_count",
     "source_coordination_handoff_path",
     "source_coordination_handoff_status",
+    "source_failure_category",
+    "source_failure_route_hint",
+    "source_failure_phase",
+    "source_failure_message",
     "publisher_host",
     "publisher_pid",
     "publisher_started_at",

@@ -1150,6 +1150,108 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             ["generated/raw/dallas-electrician-import-sample-v2/permits.csv"],
         )
         self.assertEqual(summary["policy_raw_dallas_csv_changed_path_count"], 1)
+        self.assertEqual(summary["failure_summary"], {"available": False})
+
+    def test_read_status_summarizes_top_level_failure_for_relay(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            status_file = tmp_path / "status.json"
+            status_file.write_text(
+                json.dumps(
+                    {
+                        "status": "failing",
+                        "phase": "import_readiness_failed",
+                        "mode": "autonomous_codex",
+                        "updated_at": "2026-06-14T19:30:00Z",
+                        "artifacts": {
+                            "artifact_health": {"status": "loaded"},
+                            "import_pipeline": {
+                                "execution_readiness": {
+                                    "status": "blocked",
+                                    "ready_for_next_import_records": False,
+                                    "blockers": ["correction_ledger_incomplete"],
+                                }
+                            },
+                        },
+                        "failure": {
+                            "phase": "import_readiness_failed",
+                            "category": "import_readiness",
+                            "route_hint": "dallas_import_readiness",
+                            "message": (
+                                "failed token=message-secret "
+                                "https://user:pass@example.local/status"
+                                "?token=url-secret#debug"
+                            ),
+                            "import_pipeline_status": "loaded",
+                            "import_pipeline_summary_path": (
+                                "generated/pipeline/"
+                                "dallas-import-pipeline-summary-v1/summary.json"
+                            ),
+                            "readiness_status": "blocked",
+                            "ready_for_next_import_records": False,
+                            "readiness_blocker_count": 2,
+                            "readiness_blockers": [
+                                "correction_ledger_incomplete token=blocker-secret",
+                                (
+                                    "see https://blocker.example/path"
+                                    "?token=blocker-url-secret#debug"
+                                ),
+                            ],
+                            "debug_blob": "relay_token=hidden-debug",
+                        },
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            self.publisher.utc_now = lambda: "2026-06-14T19:31:00Z"
+            self.publisher.local_loop_pid = lambda _pid_file: 4242
+
+            status = self.publisher.read_status(
+                status_file,
+                tmp_path / "loop.pid",
+                status_stale_after_seconds=120,
+                bridge_status_file=tmp_path / "missing-bridge-status.json",
+            )
+            remote_status = self.publisher.source_status_for_relay(status)
+
+        failure = status["cockpit_summary"]["failure_summary"]
+        failure_text = json.dumps(failure, sort_keys=True)
+        self.assertEqual(
+            failure,
+            {
+                "available": True,
+                "phase": "import_readiness_failed",
+                "category": "import_readiness",
+                "route_hint": "dallas_import_readiness",
+                "message": (
+                    "failed token=[redacted] "
+                    "https://example.local/status?[redacted]#[redacted]"
+                ),
+                "import_pipeline_status": "loaded",
+                "import_pipeline_summary_path": (
+                    "generated/pipeline/"
+                    "dallas-import-pipeline-summary-v1/summary.json"
+                ),
+                "readiness_status": "blocked",
+                "readiness_blockers": [
+                    "correction_ledger_incomplete token=[redacted]",
+                    "see https://blocker.example/path?[redacted]#[redacted]",
+                ],
+                "readiness_blocker_count": 2,
+                "ready_for_next_import_records": False,
+            },
+        )
+        self.assertEqual(
+            remote_status["cockpit_summary"]["failure_summary"],
+            failure,
+        )
+        self.assertNotIn("message-secret", failure_text)
+        self.assertNotIn("user:pass", failure_text)
+        self.assertNotIn("url-secret", failure_text)
+        self.assertNotIn("blocker-secret", failure_text)
+        self.assertNotIn("blocker-url-secret", failure_text)
+        self.assertNotIn("hidden-debug", failure_text)
 
     def test_read_status_sanitizes_top_level_cockpit_summary_fields(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -3477,6 +3579,13 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                         "policy_raw_dallas_csv_changed_path_count": 2,
                         "policy_productive_changed_path_count": 1,
                         "policy_synthetic_row_count": 3,
+                        "failure_summary": {
+                            "available": True,
+                            "phase": "artifact_health_failed",
+                            "category": "artifact_health",
+                            "route_hint": "cockpit_artifact_health",
+                            "message": "artifact health degraded",
+                        },
                         "coordination": {
                             "handoff_path": ".pixelbox/handoff.md",
                             "latest_handoff_status": "worker handoff ready",
@@ -3554,6 +3663,10 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             "source_coordination_handoff_status=worker handoff ready",
             log_text,
         )
+        self.assertIn("source_failure_category=artifact_health", log_text)
+        self.assertIn("source_failure_route_hint=cockpit_artifact_health", log_text)
+        self.assertIn("source_failure_phase=artifact_health_failed", log_text)
+        self.assertIn("source_failure_message=artifact health degraded", log_text)
         self.assertIn("publisher_host=worker-1", log_text)
         self.assertIn("publisher_pid=4321", log_text)
         self.assertIn("publisher_started_at=2026-06-14T20:10:00Z", log_text)
@@ -3618,6 +3731,19 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                         "policy_raw_dallas_csv_changed_path_count": "9",
                         "policy_productive_changed_path_count": "3",
                         "policy_synthetic_row_count": "12",
+                        "failure_summary": {
+                            "available": True,
+                            "phase": (
+                                "landing_sync_failed token=failure-phase-secret"
+                            ),
+                            "category": "landing_sync token=failure-category-secret",
+                            "route_hint": "route token=failure-route-secret",
+                            "message": (
+                                "sync failed authorization: Bearer failure-message-secret "
+                                "https://failure.example/debug"
+                                "?token=failure-url-secret#trace"
+                            ),
+                        },
                         "coordination": {
                             "handoff_path": (
                                 ".pixelbox/handoff.md token=coord-path-secret"
@@ -3711,6 +3837,20 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertIn("source_policy_productive_path_count=3", log_text)
         self.assertIn("source_policy_synthetic_row_count=12", log_text)
         self.assertIn(
+            "source_failure_category=landing_sync token=[redacted]",
+            log_text,
+        )
+        self.assertIn("source_failure_route_hint=route token=[redacted]", log_text)
+        self.assertIn(
+            "source_failure_phase=landing_sync_failed token=[redacted]",
+            log_text,
+        )
+        self.assertIn(
+            "source_failure_message=sync failed authorization: Bearer [redacted] "
+            "https://failure.example/debug?[redacted]#[redacted]",
+            log_text,
+        )
+        self.assertIn(
             "source_coordination_handoff_path=.pixelbox/handoff.md token=[redacted]",
             log_text,
         )
@@ -3728,6 +3868,11 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertNotIn("host-secret", log_text)
         self.assertNotIn("label-secret", log_text)
         self.assertNotIn("head-secret", log_text)
+        self.assertNotIn("failure-phase-secret", log_text)
+        self.assertNotIn("failure-category-secret", log_text)
+        self.assertNotIn("failure-route-secret", log_text)
+        self.assertNotIn("failure-message-secret", log_text)
+        self.assertNotIn("failure-url-secret", log_text)
         self.assertNotIn("bridge-status-secret", log_text)
         self.assertNotIn("bridge-user", log_text)
         self.assertNotIn("bridge-pass", log_text)
