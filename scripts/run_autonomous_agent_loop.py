@@ -894,6 +894,37 @@ def status_failure_snapshot(
                 ),
             }
         )
+    elif phase == "codex_exec_failed":
+        codex_step = next(
+            (
+                step
+                for step in reversed(steps)
+                if step.get("name") == "codex autonomous bounded improvement"
+            ),
+            None,
+        )
+        if not isinstance(codex_step, dict):
+            codex_step = {}
+        command = codex_step.get("command")
+        command_label = None
+        if isinstance(command, list) and all(isinstance(part, str) for part in command):
+            command_label = command_log_text(command)
+        termination_reason = sanitized_policy_scalar(codex_step.get("termination_reason"))
+        timed_out = bool(codex_step.get("timed_out"))
+        route_hint = "codex_exec_timeout" if timed_out else "codex_exec_failed"
+        if termination_reason == "stop_requested":
+            route_hint = "codex_exec_stop_requested"
+        failure.update(
+            {
+                "category": "codex_exec",
+                "route_hint": route_hint,
+                "codex_exit_status": compact_exit_status(codex_step.get("exit_status")),
+                "timed_out": timed_out,
+                "termination_reason": termination_reason,
+                "killed_after_terminate": bool(codex_step.get("killed_after_terminate")),
+                "command": sanitized_policy_scalar(command_label),
+            }
+        )
     elif phase == "import_readiness_failed":
         import_pipeline = import_pipeline_snapshot()
         readiness = import_pipeline.get("execution_readiness", {})
@@ -983,6 +1014,26 @@ def status_failure_snapshot(
     else:
         failure["category"] = sanitized_policy_scalar(phase)
     return failure
+
+
+def compact_exit_status(value: Any) -> int | None:
+    """Return a JSON-safe process exit status while preserving signal exits."""
+    if isinstance(value, bool):
+        return int(value)
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float) and math.isfinite(value):
+        return int(value)
+    if isinstance(value, str):
+        stripped = value.strip()
+        if stripped.startswith("-"):
+            sign = -1
+            stripped = stripped[1:]
+        else:
+            sign = 1
+        if stripped.isdigit():
+            return sign * int(stripped)
+    return None
 
 
 def compact_policy_count(value: Any) -> int:

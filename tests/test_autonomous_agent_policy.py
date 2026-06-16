@@ -510,6 +510,63 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
         self.assertNotIn("command-secret", failure_json)
         self.assertNotIn("message-secret", failure_json)
 
+    def test_status_payload_promotes_codex_exec_failure_summary(self) -> None:
+        self.loop.utc_now = lambda: "2026-06-16T02:10:00Z"
+        self.loop.inspect_artifacts = lambda: {"artifact_health": {"status": "loaded"}}
+        self.loop.autonomy_policy_snapshot = lambda: {
+            "current_focus": "autonomy_visibility_or_real_ingest"
+        }
+        self.loop.git_state = lambda: {"dirty_count_excluding_preview": 0}
+        self.loop.coordination_snapshot = lambda: {
+            "handoff_path": ".pixelbox/handoff.md",
+            "latest_handoff_status": "codex timed out",
+        }
+        codex_step = {
+            "name": "codex autonomous bounded improvement",
+            "command": [
+                "codex",
+                "exec",
+                "--dangerously-bypass-approvals-and-sandbox",
+                "line 1\nrelay_token=prompt-secret",
+            ],
+            "exit_status": "124",
+            "seconds": 7200.0,
+            "timed_out": True,
+            "termination_reason": "timeout",
+            "killed_after_terminate": True,
+        }
+
+        payload = self.loop.status_payload(
+            "run-1",
+            3,
+            "failing",
+            "codex_exec_failed",
+            "2026-06-16T02:09:00Z",
+            [codex_step],
+            "codex exited with 124 token=message-secret",
+        )
+
+        self.assertEqual(
+            payload["failure"],
+            {
+                "phase": "codex_exec_failed",
+                "message": "codex exited with 124 token=<redacted>",
+                "category": "codex_exec",
+                "route_hint": "codex_exec_timeout",
+                "codex_exit_status": 124,
+                "timed_out": True,
+                "termination_reason": "timeout",
+                "killed_after_terminate": True,
+                "command": (
+                    "codex exec --dangerously-bypass-approvals-and-sandbox "
+                    "'<prompt chars=32 lines=2>'"
+                ),
+            },
+        )
+        failure_json = json.dumps(payload["failure"], sort_keys=True)
+        self.assertNotIn("prompt-secret", failure_json)
+        self.assertNotIn("message-secret", failure_json)
+
     def test_docs_and_status_files_do_not_make_synthetic_rows_productive(self) -> None:
         paths = [
             "README.md",
