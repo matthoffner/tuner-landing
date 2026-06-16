@@ -1019,6 +1019,66 @@ class MvpCockpitServerTest(unittest.TestCase):
         self.assertFalse(status["bridge_summary"]["available"])
         self.assertEqual(status["bridge_summary"]["status_file_status"], "missing")
 
+    def test_read_status_summarizes_coordination_handoff_health(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            self.cockpit.STATUS_FILE = tmp_path / "status.json"
+            self.cockpit.PID_FILE = tmp_path / "mvp-loop.pid"
+            self.cockpit.BRIDGE_STATUS_FILE = tmp_path / "mvp-bridge-status.json"
+            self.cockpit.LOOP_PROCESS = None
+            self.cockpit.STATUS_FILE.write_text(
+                json.dumps(
+                    {
+                        "status": "running",
+                        "updated_at": "2026-06-16T17:45:00Z",
+                        "artifacts": {
+                            "artifact_health": {"status": "loaded"},
+                            "import_pipeline": {
+                                "execution_readiness": {"status": "ready"}
+                            },
+                        },
+                        "coordination": {
+                            "handoff_path": ".pixelbox/handoff.md",
+                            "handoff_file_status": "loaded token=handoff-secret",
+                            "latest_section_found": True,
+                            "latest_status_found": False,
+                            "handoff_age_seconds": 91,
+                            "latest_handoff_status": (
+                                "reviewing https://user:secret@example.local/"
+                                "handoff?token=url-secret#debug"
+                            ),
+                            "handoff_error": "/tmp/private/handoff.md token=path-secret",
+                        },
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            status = self.cockpit.read_status()
+
+        coordination = status["cockpit_summary"]["coordination"]
+        self.assertEqual(
+            coordination,
+            {
+                "available": True,
+                "handoff_path": ".pixelbox/handoff.md",
+                "handoff_file_status": "loaded token=[redacted]",
+                "latest_section_found": True,
+                "latest_status_found": False,
+                "handoff_age_seconds": 91,
+                "latest_handoff_status": (
+                    "reviewing https://example.local/handoff?[redacted]#[redacted]"
+                ),
+                "handoff_error": "/tmp/private/handoff.md token=[redacted]",
+            },
+        )
+        summary_text = json.dumps(status["cockpit_summary"], sort_keys=True)
+        self.assertNotIn("handoff-secret", summary_text)
+        self.assertNotIn("user:secret", summary_text)
+        self.assertNotIn("url-secret", summary_text)
+        self.assertNotIn("path-secret", summary_text)
+
     def test_read_status_rejects_nonstandard_json_constants(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
@@ -1149,6 +1209,11 @@ class MvpCockpitServerTest(unittest.TestCase):
         self.assertIn("coverage_latest_thin_counts", markup)
         self.assertIn("latestThinCounts", markup)
         self.assertIn("import_handoff", markup)
+        self.assertIn("coordination", markup)
+        self.assertIn("handoff_file_status", markup)
+        self.assertIn("handoff_age_seconds", markup)
+        self.assertIn("latest_handoff_status", markup)
+        self.assertIn("handoff_error", markup)
         self.assertIn("next_append_rows", markup)
         self.assertIn("append_preflight_checks", markup)
         self.assertIn("append_sequence", markup)

@@ -532,6 +532,32 @@ def import_handoff_summary(import_pipeline: dict[str, object]) -> dict[str, obje
     return summary
 
 
+def coordination_summary(status: dict[str, object]) -> dict[str, object]:
+    coordination = as_dict(status.get("coordination"))
+    if not coordination:
+        return {"available": False}
+
+    summary: dict[str, object] = {"available": True}
+    text_fields = {
+        "handoff_path": coordination.get("handoff_path"),
+        "handoff_file_status": coordination.get("handoff_file_status"),
+        "latest_handoff_status": coordination.get("latest_handoff_status"),
+        "handoff_error": coordination.get("handoff_error"),
+    }
+    for key, value in text_fields.items():
+        compact_value = compact_policy_detail(value)
+        if compact_value is not None:
+            summary[key] = compact_value
+    for key in ("latest_section_found", "latest_status_found"):
+        value = coordination.get(key)
+        if isinstance(value, bool):
+            summary[key] = value
+    age_seconds = compact_int(coordination.get("handoff_age_seconds"))
+    if age_seconds is not None:
+        summary["handoff_age_seconds"] = age_seconds
+    return summary
+
+
 def cockpit_summary(status: dict[str, object]) -> dict[str, object]:
     artifacts = as_dict(status.get("artifacts"))
     artifact_health = as_dict(artifacts.get("artifact_health"))
@@ -769,6 +795,7 @@ def cockpit_summary(status: dict[str, object]) -> dict[str, object]:
         "readiness_blocker_count": readiness_blocker_count,
         "ready_for_next_import_records": readiness.get("ready_for_next_import_records"),
         "import_handoff": import_handoff_summary(import_pipeline),
+        "coordination": coordination_summary(status),
         "current_focus": autonomy_policy.get("current_focus") or "mvp_loop",
         "policy_reason": autonomy_policy.get("decision_reason"),
         "policy_failure_reason": policy_failure_reason,
@@ -1232,6 +1259,7 @@ def cockpit_html() -> str:
         const response = await fetch("/api/status", {{ cache: "no-store" }});
         const status = await response.json();
         const cockpit = status.cockpit_summary || {{}};
+        const coordination = cockpit.coordination || {{}};
         const bridge = status.bridge_summary || {{}};
         const bridgeCompact = bridge.bridge_health || {{}};
         const bridgeReasons = Array.isArray(bridgeCompact.reasons) ? bridgeCompact.reasons : [];
@@ -1300,6 +1328,10 @@ def cockpit_html() -> str:
           typeof cockpit.readiness_blocker_count === "number" ? `readiness blockers: ${{cockpit.readiness_blocker_count}}` : "",
           typeof cockpit.thin_group_category_count === "number" ? `thin categories: ${{cockpit.thin_group_category_count}}` : "",
           latestThinCountText ? `latest thin counts: ${{latestThinCountText}}` : "",
+          coordination.available && coordination.handoff_file_status ? `handoff: ${{coordination.handoff_file_status}}` : "",
+          typeof coordination.handoff_age_seconds === "number" ? `handoff age: ${{coordination.handoff_age_seconds}}s` : "",
+          coordination.latest_handoff_status ? `handoff status: ${{coordination.latest_handoff_status}}` : "",
+          coordination.handoff_error ? `handoff error: ${{coordination.handoff_error}}` : "",
           policyRawPaths.length ? `raw csv (${{policyRawPathCount}}): ${{policyRawPaths.join(", ")}}` : "",
           policyProductivePaths.length ? `productive (${{policyProductivePathCount}}): ${{policyProductivePaths.join(", ")}}` : "",
           policySamples.length ? `synthetic rows (${{policySyntheticRowCount}}): ${{policySamples.join(" | ")}}` : "",
