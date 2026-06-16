@@ -166,6 +166,27 @@ RELAY_PUBLISHER_UNAVAILABLE = "relay_publisher_unavailable"
 ENVIRONMENT_PREFLIGHT_FAILED = "environment_preflight_failed"
 
 
+class PublisherPreflightError(RuntimeError):
+    """A bounded, secret-safe relay publisher preflight failure."""
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        status_label: str | None = None,
+        exit_status: int | None = None,
+        error_count: int | None = None,
+        error_categories: list[str] | None = None,
+        failed_configuration_keys: list[str] | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.status_label = status_label
+        self.exit_status = exit_status
+        self.error_count = error_count
+        self.error_categories = error_categories or []
+        self.failed_configuration_keys = failed_configuration_keys or []
+
+
 def emit(message: str) -> None:
     print(f"[render-worker] {message}", flush=True)
 
@@ -1836,9 +1857,11 @@ def validate_publisher_preflight_output(output: str) -> None:
     if status == "passed":
         errors = payload.get("errors")
         if isinstance(errors, list) and errors:
-            raise RuntimeError(
+            raise PublisherPreflightError(
                 "relay publisher preflight reported inconsistent status=passed "
-                f"error_count={len(errors)}"
+                f"error_count={len(errors)}",
+                status_label="passed",
+                error_count=len(errors),
             )
         return
 
@@ -1853,16 +1876,22 @@ def validate_publisher_preflight_output(output: str) -> None:
         error_count = len(errors) if isinstance(errors, list) else "unknown"
         category_text = ",".join(categories)
         failed_key_text = ",".join(failed_keys)
-        raise RuntimeError(
+        raise PublisherPreflightError(
             "relay publisher preflight reported status=failed "
             f"error_count={error_count} "
             f"error_categories={category_text or 'unknown'} "
-            f"failed_configuration_keys={failed_key_text or 'unknown'}"
+            f"failed_configuration_keys={failed_key_text or 'unknown'}",
+            status_label="failed",
+            error_count=error_count if isinstance(error_count, int) else None,
+            error_categories=categories,
+            failed_configuration_keys=failed_keys,
         )
 
-    raise RuntimeError(
+    status_label = publisher_preflight_status_label(status)
+    raise PublisherPreflightError(
         "relay publisher preflight reported "
-        f"status={publisher_preflight_status_label(status)}"
+        f"status={status_label}",
+        status_label=status_label,
     )
 
 
@@ -1963,15 +1992,27 @@ def run_relay_publisher_preflight_command(command: list[str], *, cwd: Path) -> s
         validate_publisher_preflight_output(output)
     except RuntimeError as exc:
         if result.returncode != 0:
+            if isinstance(exc, PublisherPreflightError):
+                raise PublisherPreflightError(
+                    f"{printable} failed with status {result.returncode}; "
+                    f"{exc}",
+                    status_label=exc.status_label,
+                    exit_status=result.returncode,
+                    error_count=exc.error_count,
+                    error_categories=exc.error_categories,
+                    failed_configuration_keys=exc.failed_configuration_keys,
+                ) from exc
             raise RuntimeError(
                 f"{printable} failed with status {result.returncode}; "
                 f"{exc}"
             ) from exc
         raise
     if result.returncode != 0:
-        raise RuntimeError(
+        raise PublisherPreflightError(
             f"{printable} failed with status {result.returncode}; "
-            "relay publisher preflight reported status=passed but exited nonzero"
+            "relay publisher preflight reported status=passed but exited nonzero",
+            status_label="passed",
+            exit_status=result.returncode,
         )
     return output
 
@@ -2214,12 +2255,47 @@ def compact_worker_exit_status(value: object) -> int | None:
     return None
 
 
+def publisher_preflight_failure_details(exc: BaseException) -> dict[str, object]:
+    if not isinstance(exc, PublisherPreflightError):
+        return {}
+    return compact_publisher_preflight_details(
+        {
+            "status": exc.status_label,
+            "exit_status": exc.exit_status,
+            "error_count": exc.error_count,
+            "error_categories": exc.error_categories,
+            "failed_configuration_keys": exc.failed_configuration_keys,
+        }
+    )
+
+
+def compact_publisher_preflight_details(details: dict[str, object]) -> dict[str, object]:
+    compact: dict[str, object] = {}
+    status = details.get("status")
+    if isinstance(status, str) and status.strip():
+        compact["status"] = publisher_preflight_status_label(status)
+    exit_status = compact_worker_exit_status(details.get("exit_status"))
+    if exit_status is not None:
+        compact["exit_status"] = exit_status
+    error_count = compact_worker_exit_status(details.get("error_count"))
+    if error_count is not None:
+        compact["error_count"] = error_count
+    error_categories = publisher_preflight_diagnostic_tokens(details, "error_categories")
+    if error_categories:
+        compact["error_categories"] = error_categories
+    failed_keys = publisher_preflight_diagnostic_tokens(details, "failed_configuration_keys")
+    if failed_keys:
+        compact["failed_configuration_keys"] = failed_keys
+    return compact
+
+
 def write_render_worker_failure_status(
     *,
     reason: str,
     worker_exit_status: int,
     publisher_exit_status: int | None = None,
     message: str | None = None,
+    details: dict[str, object] | None = None,
 ) -> None:
     """Write a compact cockpit status when the Render supervisor cannot continue."""
     status_path = cockpit_status_file()
@@ -2239,6 +2315,9 @@ def write_render_worker_failure_status(
         failure["message"] = sanitize_worker_log_text(message)[
             :MAX_BUSINESS_HOURS_CONFIG_VALUE_CHARS
         ]
+    compact_details = compact_publisher_preflight_details(details or {})
+    if compact_details:
+        failure["publisher_preflight"] = compact_details
     payload = {
         "run_id": "render-worker-supervisor",
         "iteration": 0,
@@ -2270,6 +2349,7 @@ def record_render_worker_failure_status(
     worker_exit_status: int,
     publisher_exit_status: int | None = None,
     message: str | None = None,
+    details: dict[str, object] | None = None,
 ) -> None:
     try:
         write_render_worker_failure_status(
@@ -2277,6 +2357,7 @@ def record_render_worker_failure_status(
             worker_exit_status=worker_exit_status,
             publisher_exit_status=publisher_exit_status,
             message=message,
+            details=details,
         )
     except OSError as exc:
         emit(f"could not write render worker failure status: {type(exc).__name__}")
@@ -2653,11 +2734,15 @@ def main() -> int:
     try:
         check_relay_publisher_preflight()
     except RuntimeError as exc:
-        record_render_worker_failure_status(
-            reason="relay_publisher_preflight_failed",
-            worker_exit_status=1,
-            message=str(exc),
-        )
+        failure_kwargs: dict[str, object] = {
+            "reason": "relay_publisher_preflight_failed",
+            "worker_exit_status": 1,
+            "message": str(exc),
+        }
+        preflight_details = publisher_preflight_failure_details(exc)
+        if preflight_details:
+            failure_kwargs["details"] = preflight_details
+        record_render_worker_failure_status(**failure_kwargs)
         return 1
     try:
         publisher = start_publisher()

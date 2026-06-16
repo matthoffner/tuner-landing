@@ -3614,6 +3614,17 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                     worker_exit_status=1,
                     publisher_exit_status=0,
                     message="publisher failed token=relay-secret",
+                    details={
+                        "status": "failed",
+                        "exit_status": 2,
+                        "error_count": 1,
+                        "error_categories": ["invalid_relay_url", "token=relay-secret"],
+                        "failed_configuration_keys": [
+                            "AUTOMOAT_RELAY_URL|--relay-url",
+                            "https://relay-secret.example/status",
+                        ],
+                        "message": "token=relay-secret",
+                    },
                 )
 
             status_text = self.worker.cockpit_status_file().read_text(encoding="utf-8")
@@ -3629,6 +3640,13 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                 "failure_reason": "relay_publisher_startup_exit token=[redacted]",
                 "message": "publisher failed token=[redacted]",
                 "publisher_exit_status": 0,
+                "publisher_preflight": {
+                    "error_categories": ["invalid_relay_url"],
+                    "error_count": 1,
+                    "exit_status": 2,
+                    "failed_configuration_keys": ["AUTOMOAT_RELAY_URL|--relay-url"],
+                    "status": "failed",
+                },
                 "route_hint": self.worker.RELAY_PUBLISHER_UNAVAILABLE,
                 "worker_exit_status": 1,
             },
@@ -4850,6 +4868,17 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertNotIn("relay-token", str(context.exception))
         self.assertNotIn("automoat-cockpit-relay.example", str(context.exception))
         self.assertNotIn(str(workdir), str(context.exception))
+        self.assertIsInstance(context.exception, self.worker.PublisherPreflightError)
+        self.assertEqual(
+            self.worker.publisher_preflight_failure_details(context.exception),
+            {
+                "status": "failed",
+                "exit_status": 2,
+                "error_count": 1,
+                "error_categories": ["invalid_relay_url"],
+                "failed_configuration_keys": ["AUTOMOAT_RELAY_URL|--relay-url"],
+            },
+        )
 
     def test_validate_publisher_preflight_output_omits_suspicious_diagnostics(self) -> None:
         failed_payload = json.dumps(
@@ -5189,6 +5218,60 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             reason="relay_publisher_preflight_failed",
             worker_exit_status=1,
             message="publisher preflight failed with status 2",
+        )
+
+    def test_publisher_preflight_failure_records_structured_diagnostics(self) -> None:
+        preflight_error = self.worker.PublisherPreflightError(
+            "publisher preflight failed with status 2",
+            status_label="failed",
+            exit_status=2,
+            error_count=1,
+            error_categories=["invalid_relay_url"],
+            failed_configuration_keys=["AUTOMOAT_RELAY_URL|--relay-url"],
+        )
+
+        with patch.object(self.worker, "parse_args") as parse_args, patch.object(
+            self.worker,
+            "emit_environment_preflight",
+            return_value=[],
+        ), patch.object(self.worker, "configure_git_auth"), patch.object(
+            self.worker,
+            "configure_codex_auth",
+        ), patch.object(
+            self.worker,
+            "sync_repo",
+        ), patch.object(
+            self.worker,
+            "check_relay_publisher_preflight",
+            side_effect=preflight_error,
+        ), patch.object(
+            self.worker,
+            "start_publisher",
+        ) as start_publisher, patch.object(
+            self.worker,
+            "record_render_worker_failure_status",
+        ) as record_failure_status:
+            parse_args.return_value = type(
+                "Args",
+                (),
+                {"check_env": False, "format": "text"},
+            )()
+
+            status = self.worker.main()
+
+        self.assertEqual(status, 1)
+        start_publisher.assert_not_called()
+        record_failure_status.assert_called_once_with(
+            reason="relay_publisher_preflight_failed",
+            worker_exit_status=1,
+            message="publisher preflight failed with status 2",
+            details={
+                "status": "failed",
+                "exit_status": 2,
+                "error_count": 1,
+                "error_categories": ["invalid_relay_url"],
+                "failed_configuration_keys": ["AUTOMOAT_RELAY_URL|--relay-url"],
+            },
         )
 
     def test_environment_preflight_failure_records_worker_status(self) -> None:
