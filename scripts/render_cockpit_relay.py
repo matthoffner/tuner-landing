@@ -1341,7 +1341,7 @@ def sanitize_cockpit_summary_for_relay_response(summary: Any) -> dict[str, Any] 
 
 
 def sanitize_status_for_relay_response(status: dict[str, Any]) -> dict[str, Any]:
-    response_status = dict(status)
+    response_status: dict[str, Any] = {}
 
     text_fields = (
         "status",
@@ -1352,59 +1352,80 @@ def sanitize_status_for_relay_response(status: dict[str, Any]) -> dict[str, Any]
         "source_status_file_status",
     )
     for key in text_fields:
-        if key not in response_status:
+        if key not in status:
             continue
-        compact_value = compact_policy_detail(response_status.get(key), max_length=240)
+        compact_value = compact_policy_detail(status.get(key), max_length=240)
         if compact_value is None:
-            response_status.pop(key, None)
+            continue
         else:
             response_status[key] = compact_value
 
     path_fields = ("source_status_file",)
     for key in path_fields:
-        if key not in response_status:
+        if key not in status:
             continue
-        compact_value = compact_path_label(response_status.get(key), max_length=240)
+        compact_value = compact_path_label(status.get(key), max_length=240)
         if compact_value is None:
-            response_status.pop(key, None)
+            continue
         else:
             response_status[key] = compact_value
 
     path_error_fields = ("source_status_file_error",)
     for key in path_error_fields:
-        if key not in response_status:
+        if key not in status:
             continue
-        compact_value = compact_path_diagnostic(response_status.get(key), max_length=240)
+        compact_value = compact_path_diagnostic(status.get(key), max_length=240)
         if compact_value is None:
-            response_status.pop(key, None)
+            continue
         else:
             response_status[key] = compact_value
 
-    int_fields = ("source_status_remote_omitted_field_count",)
+    int_fields = (
+        "iteration",
+        "loop_pid",
+        "source_status_age_seconds",
+        "source_status_stale_after_seconds",
+        "source_status_remote_omitted_field_count",
+    )
     for key in int_fields:
-        if key not in response_status:
+        if key not in status:
             continue
-        compact_value = compact_int(response_status.get(key))
+        if status.get(key) is None and key != "source_status_remote_omitted_field_count":
+            response_status[key] = None
+            continue
+        compact_value = compact_int(status.get(key))
         if compact_value is None:
-            response_status.pop(key, None)
+            continue
         else:
             response_status[key] = compact_value
 
-    bridge_summary = response_status.get("bridge_summary")
+    bool_fields = (
+        "loop_running",
+        "source_status_value_invalid",
+        "source_status_stale",
+        "source_status_timestamp_invalid",
+        "source_status_timestamp_future",
+    )
+    for key in bool_fields:
+        value = status.get(key)
+        if isinstance(value, bool):
+            response_status[key] = value
+
+    bridge_summary = status.get("bridge_summary")
     if isinstance(bridge_summary, dict):
-        response_status["bridge_summary"] = source_bridge_summary(response_status)
+        response_status["bridge_summary"] = source_bridge_summary(status)
 
     cockpit_summary = sanitize_cockpit_summary_for_relay_response(
-        response_status.get("cockpit_summary")
+        status.get("cockpit_summary")
     )
     if cockpit_summary is not None:
         response_status["cockpit_summary"] = cockpit_summary
 
-    business_hours = source_business_hours_summary(response_status)
+    business_hours_source = dict(status)
+    business_hours_source["cockpit_summary"] = response_status.get("cockpit_summary")
+    business_hours = source_business_hours_summary(business_hours_source)
     if business_hours["available"]:
         response_status["business_hours"] = business_hours
-    elif "business_hours" in response_status:
-        response_status.pop("business_hours", None)
 
     return response_status
 
@@ -1438,6 +1459,11 @@ def cockpit_health(
         source_attention_reason_values = [
             str(reason) for reason in source_attention_reasons if reason
         ]
+    source_attention_reason_count = compact_int(
+        source_summary.get("operator_attention_reasons_count")
+    )
+    if source_attention_reason_count is None:
+        source_attention_reason_count = len(source_attention_reason_values)
     source_attention_reason_samples = [
         compact_reason
         for compact_reason in (
@@ -1566,7 +1592,7 @@ def cockpit_health(
         "primary_reason": primary_reason,
         "label": label,
         "source_cockpit_attention_reasons": source_attention_reason_samples,
-        "source_cockpit_attention_reasons_count": len(source_attention_reason_values),
+        "source_cockpit_attention_reasons_count": source_attention_reason_count,
         "source_cockpit_attention_primary_reason": source_attention_primary_reason,
         "source_cockpit_attention_label": source_attention_label,
         "source_status_diagnostics": source_status_diagnostics(status),
@@ -1788,6 +1814,7 @@ def health_payload() -> dict[str, Any]:
     status = state.get("status")
     if not isinstance(status, dict):
         status = {"status": "relay_waiting", "loop_running": False}
+    status = sanitize_status_for_relay_response(status)
     freshness = snapshot_freshness(state)
     health = cockpit_health(state, status, freshness)
     return {

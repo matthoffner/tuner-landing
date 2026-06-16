@@ -2807,6 +2807,58 @@ class RenderCockpitRelayTest(unittest.TestCase):
             response_text,
         )
 
+    def test_status_and_health_drop_unknown_source_status_fields(self) -> None:
+        self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
+        self.relay.update_state(
+            {
+                "pushed_at": "2026-06-14T19:59:30Z",
+                "status": {
+                    "status": "running token=status-secret",
+                    "loop_running": True,
+                    "loop_pid": "4321",
+                    "source_status_stale": "true",
+                    "source_status_file_status": "loaded token=file-secret",
+                    "source_status_remote_omitted_field_count": "2",
+                    "unexpected_local_debug": "token=debug-secret",
+                    "raw_status_payload": {
+                        "url": "https://private.example/path?token=url-secret"
+                    },
+                },
+                "log_tail": "publisher included local-only status keys\n",
+            }
+        )
+        self.relay.utc_now = lambda: "2026-06-14T20:00:00Z"
+
+        health = self.relay.health_payload()
+        status = self.relay.relay_status_payload()
+
+        self.assertEqual(status["loop_pid"], 4321)
+        self.assertNotIn("source_status_stale", status)
+        self.assertNotIn("unexpected_local_debug", status)
+        self.assertNotIn("raw_status_payload", status)
+        expected_diagnostics = {
+            "source_status": "running token=[redacted]",
+            "source_status_file_status": "loaded token=[redacted]",
+            "source_status_remote_omitted_field_count": 2,
+        }
+        self.assertEqual(
+            health["cockpit_health"]["source_status_diagnostics"],
+            expected_diagnostics,
+        )
+        self.assertEqual(
+            status["cockpit_health"]["source_status_diagnostics"],
+            expected_diagnostics,
+        )
+        response_text = json.dumps({"health": health, "status": status}, sort_keys=True)
+        for secret in (
+            "status-secret",
+            "file-secret",
+            "debug-secret",
+            "private.example",
+            "url-secret",
+        ):
+            self.assertNotIn(secret, response_text)
+
     def test_status_and_health_route_oversized_source_status_file(self) -> None:
         self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
         self.relay.update_state(
