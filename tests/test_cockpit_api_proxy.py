@@ -489,6 +489,7 @@ class CockpitApiProxyTest(unittest.TestCase):
             const {
               invalidUpstreamKeysHeader,
               MAX_UPSTREAM_TIMEOUT_MS,
+              MAX_UPSTREAM_TIMEOUT_VALUE_CHARS,
               upstreams,
             } = require("./api/cockpit-upstreams");
             const valid = upstreams({
@@ -561,6 +562,24 @@ class CockpitApiProxyTest(unittest.TestCase):
               kind: "timeout",
               error: "AUTOMOAT_COCKPIT_UPSTREAM_TIMEOUT_MS must be a single-line value without control characters",
             }]);
+
+            const oversized = upstreams({
+              relayPath: "/api/status",
+              bridgePath: "/api/status",
+              env: {
+                AUTOMOAT_RELAY_URL: "https://automoat-cockpit-relay.example",
+                AUTOMOAT_COCKPIT_UPSTREAM_TIMEOUT_MS: "9".repeat(MAX_UPSTREAM_TIMEOUT_VALUE_CHARS + 1),
+              },
+            });
+            assert.strictEqual(oversized.timeoutMs, 8000);
+            assert.deepStrictEqual(oversized.invalid, [{
+              kind: "timeout",
+              error: `AUTOMOAT_COCKPIT_UPSTREAM_TIMEOUT_MS must be ${MAX_UPSTREAM_TIMEOUT_VALUE_CHARS} characters or fewer`,
+            }]);
+            assert.strictEqual(
+              invalidUpstreamKeysHeader(oversized.invalid),
+              "AUTOMOAT_COCKPIT_UPSTREAM_TIMEOUT_MS",
+            );
             """
         )
 
