@@ -1244,6 +1244,13 @@ def encoded_json_size(payload: Any) -> int:
     )
 
 
+def utf8_tail(text: str, max_bytes: int) -> str:
+    encoded = text.encode("utf-8")
+    if len(encoded) <= max_bytes:
+        return text
+    return encoded[-max_bytes:].decode("utf-8", errors="ignore")
+
+
 def snapshot() -> dict[str, Any]:
     with STATE_LOCK:
         return strict_json_clone(STATE)
@@ -1268,8 +1275,7 @@ def update_state(payload: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(log_tail, str):
         raise ValueError("log_tail must be a string")
     max_log_chars = int(CONFIG["max_log_chars"])
-    if len(log_tail) > max_log_chars:
-        log_tail = log_tail[-max_log_chars:]
+    log_tail = utf8_tail(log_tail, max_log_chars)
 
     publisher = payload.get("publisher")
     if not isinstance(publisher, dict):

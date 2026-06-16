@@ -2344,6 +2344,19 @@ class RenderCockpitRelayTest(unittest.TestCase):
 
         self.assertEqual(self.relay.snapshot(), before)
 
+    def test_update_state_trims_log_tail_by_utf8_bytes(self) -> None:
+        self.relay.CONFIG["max_log_chars"] = 8
+
+        state = self.relay.update_state(
+            {
+                "status": {"status": "running", "loop_running": True},
+                "log_tail": "ready\n\U0001f6a6\U0001f6a6\U0001f6a6",
+            }
+        )
+
+        self.assertEqual(state["log_tail"], "\U0001f6a6\U0001f6a6")
+        self.assertLessEqual(len(state["log_tail"].encode("utf-8")), 8)
+
     def test_update_state_rejects_oversized_publisher_without_mutating_snapshot(self) -> None:
         self.relay.CONFIG["max_publisher_bytes"] = 128
         before = self.relay.snapshot()
