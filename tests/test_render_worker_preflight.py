@@ -3588,6 +3588,52 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertIn('"status": "paused"', status)
         self.assertIn("business-hours pause:", log)
 
+    def test_business_hours_pause_status_uses_supplied_runtime_workdir_env_value(
+        self,
+    ) -> None:
+        class GitResult:
+            def __init__(self, stdout: str) -> None:
+                self.stdout = stdout
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            default_workdir = Path(temp_dir) / "default-repo"
+            runtime_workdir = Path(temp_dir) / "runtime-repo"
+            default_workdir.mkdir()
+            runtime_workdir.mkdir()
+            self.worker.WORKDIR = default_workdir
+            state = self.worker.current_business_hours_state(
+                {},
+                now=datetime(2026, 6, 15, 23, 0, tzinfo=timezone.utc),
+            )
+
+            with patch.dict(
+                self.worker.os.environ,
+                {"AUTOMOAT_WORKDIR": str(runtime_workdir)},
+                clear=True,
+            ), patch.object(
+                self.worker.subprocess,
+                "run",
+                side_effect=[GitResult("runtime-main\n"), GitResult("abc123\n")],
+            ) as run:
+                self.worker.write_business_hours_pause_status(state)
+
+            status_path = runtime_workdir / ".automoat" / "state" / "mvp-loop-status.json"
+            log_path = runtime_workdir / ".automoat" / "logs" / "mvp-loop.log"
+            default_status_path = (
+                default_workdir / ".automoat" / "state" / "mvp-loop-status.json"
+            )
+            status = status_path.read_text(encoding="utf-8")
+            status_exists = status_path.exists()
+            log_exists = log_path.exists()
+            default_status_exists = default_status_path.exists()
+
+        self.assertTrue(status_exists)
+        self.assertTrue(log_exists)
+        self.assertFalse(default_status_exists)
+        self.assertIn('"branch": "runtime-main"', status)
+        self.assertEqual(run.call_args_list[0].kwargs["cwd"], runtime_workdir)
+        self.assertEqual(run.call_args_list[1].kwargs["cwd"], runtime_workdir)
+
     def test_rejects_bad_codex_config_values_before_writing_config(self) -> None:
         base_env = {
             "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",

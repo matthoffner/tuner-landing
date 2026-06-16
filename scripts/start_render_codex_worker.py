@@ -2075,9 +2075,10 @@ def check_relay_publisher_preflight() -> None:
 
 
 def git_text(args: list[str]) -> str:
+    workdir, _codex_home = configured_worker_paths(os.environ)
     result = subprocess.run(
         ["git", *args],
-        cwd=WORKDIR,
+        cwd=workdir,
         stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL,
         text=True,
@@ -2164,11 +2165,13 @@ def seconds_until_next_business_start(state: dict[str, object]) -> float:
 
 
 def cockpit_log_file() -> Path:
-    return WORKDIR / ".automoat" / "logs" / "mvp-loop.log"
+    workdir, _codex_home = configured_worker_paths(os.environ)
+    return workdir / ".automoat" / "logs" / "mvp-loop.log"
 
 
 def cockpit_status_file() -> Path:
-    return WORKDIR / ".automoat" / "state" / "mvp-loop-status.json"
+    workdir, _codex_home = configured_worker_paths(os.environ)
+    return workdir / ".automoat" / "state" / "mvp-loop-status.json"
 
 
 def append_cockpit_log(message: str) -> None:
