@@ -238,6 +238,98 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertNotIn("relay-token-local-file", payload_text)
         self.assertNotIn("branch-secret", payload_text)
 
+    def test_build_payload_omits_raw_status_detail_before_relay_publish(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            status_file = tmp_path / "status.json"
+            pid_file = tmp_path / "custom.pid"
+            log_file = tmp_path / "custom.log"
+            publisher_log = tmp_path / "publisher.log"
+            bridge_status_file = tmp_path / "missing-bridge-status.json"
+            status_file.write_text(
+                json.dumps(
+                    {
+                        "status": "passing",
+                        "phase": "policy check token=phase-secret",
+                        "mode": "autonomous_codex",
+                        "updated_at": "2026-06-14T19:30:00Z",
+                        "iteration": 9,
+                        "steps": [
+                            {
+                                "name": "autonomy policy check",
+                                "exit_status": 1,
+                                "failure_reason": "token=step-secret",
+                            }
+                        ],
+                        "artifacts": {
+                            "artifact_health": {
+                                "status": "loaded",
+                                "summary": "all loaded token=artifact-secret",
+                            },
+                            "import_pipeline": {
+                                "execution_readiness": {
+                                    "status": "ready",
+                                    "blockers": [],
+                                }
+                            },
+                        },
+                        "autonomy_policy": {
+                            "current_focus": "autonomy_visibility_or_real_ingest",
+                            "decision_reason": "dallas_ready_no_thin_groups",
+                        },
+                        "debug_blob": {
+                            "relay_token": "debug-secret",
+                            "path": "/tmp/local-debug-path",
+                        },
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            log_file.write_text("ready token=tail-secret\n", encoding="utf-8")
+            args = Namespace(
+                status_file=status_file,
+                pid_file=pid_file,
+                log_file=log_file,
+                publisher_log=publisher_log,
+                bridge_status_file=bridge_status_file,
+                interval=4.5,
+                timeout=11.25,
+                tail_lines=2,
+                max_log_bytes=1024,
+                max_consecutive_failures=5,
+                max_consecutive_stale_statuses=6,
+                status_stale_after_seconds=120,
+                bridge_status_stale_after_seconds=120,
+            )
+            self.publisher.utc_now = lambda: "2026-06-14T19:31:00Z"
+            self.publisher.local_loop_pid = lambda _pid_file: 4242
+
+            payload = self.publisher.build_payload(args)
+            payload_text = json.dumps(payload, sort_keys=True)
+
+        self.assertEqual(payload["status"]["status"], "passing")
+        self.assertEqual(payload["status"]["phase"], "policy check token=[redacted]")
+        self.assertEqual(payload["status"]["iteration"], 9)
+        self.assertTrue(payload["status"]["loop_running"])
+        self.assertEqual(payload["status"]["loop_pid"], 4242)
+        self.assertEqual(
+            payload["status"]["source_status_remote_omitted_field_count"],
+            4,
+        )
+        self.assertIn("cockpit_summary", payload["status"])
+        self.assertIn("bridge_summary", payload["status"])
+        self.assertNotIn("steps", payload["status"])
+        self.assertNotIn("artifacts", payload["status"])
+        self.assertNotIn("autonomy_policy", payload["status"])
+        self.assertNotIn("debug_blob", payload["status"])
+        self.assertNotIn("phase-secret", payload_text)
+        self.assertNotIn("step-secret", payload_text)
+        self.assertNotIn("artifact-secret", payload_text)
+        self.assertNotIn("debug-secret", payload_text)
+        self.assertNotIn("tail-secret", payload_text)
+        self.assertNotIn("local-debug-path", payload_text)
+
     def test_build_payload_sanitizes_log_tail_before_relay_publish(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)

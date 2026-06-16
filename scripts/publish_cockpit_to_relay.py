@@ -1293,6 +1293,90 @@ def publisher_runtime_config(args: argparse.Namespace) -> dict[str, Any]:
     }
 
 
+REMOTE_STATUS_ALLOWED_KEYS = {
+    "status",
+    "phase",
+    "mode",
+    "updated_at",
+    "iteration",
+    "loop_running",
+    "loop_pid",
+    "publisher_updated_at",
+    "source_status_value_invalid",
+    "source_status_file",
+    "source_status_file_status",
+    "source_status_file_error",
+    "source_status_age_seconds",
+    "source_status_stale_after_seconds",
+    "source_status_stale",
+    "source_status_timestamp_invalid",
+    "source_status_timestamp_future",
+    "cockpit_summary",
+    "bridge_summary",
+}
+
+
+def source_status_for_relay(status: dict[str, Any]) -> dict[str, Any]:
+    remote_status: dict[str, Any] = {}
+    text_fields = {
+        "status",
+        "phase",
+        "mode",
+        "updated_at",
+        "publisher_updated_at",
+        "source_status_file",
+        "source_status_file_status",
+        "source_status_file_error",
+    }
+    for key in text_fields:
+        if key.endswith("_error"):
+            compact_value = compact_path_diagnostic(status.get(key))
+        else:
+            compact_value = compact_policy_detail(status.get(key))
+        if compact_value is not None:
+            remote_status[key] = compact_value
+
+    int_fields = {
+        "iteration",
+        "loop_pid",
+        "source_status_age_seconds",
+        "source_status_stale_after_seconds",
+    }
+    for key in int_fields:
+        value = status.get(key)
+        if value is None and key in status:
+            remote_status[key] = None
+            continue
+        compact_value = compact_int(value)
+        if compact_value is not None:
+            remote_status[key] = compact_value
+
+    bool_fields = {
+        "loop_running",
+        "source_status_value_invalid",
+        "source_status_stale",
+        "source_status_timestamp_invalid",
+        "source_status_timestamp_future",
+    }
+    for key in bool_fields:
+        value = status.get(key)
+        if isinstance(value, bool):
+            remote_status[key] = value
+
+    cockpit_summary = status.get("cockpit_summary")
+    if isinstance(cockpit_summary, dict):
+        remote_status["cockpit_summary"] = cockpit_summary
+
+    bridge_summary = status.get("bridge_summary")
+    if isinstance(bridge_summary, dict):
+        remote_status["bridge_summary"] = bridge_summary
+
+    omitted_count = sum(1 for key in status if key not in REMOTE_STATUS_ALLOWED_KEYS)
+    if omitted_count:
+        remote_status["source_status_remote_omitted_field_count"] = omitted_count
+    return remote_status
+
+
 def build_payload(args: argparse.Namespace) -> dict[str, Any]:
     status = read_status(
         args.status_file,
@@ -1305,9 +1389,10 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
             DEFAULT_BRIDGE_STATUS_STALE_AFTER_SECONDS,
         ),
     )
+    remote_status = source_status_for_relay(status)
     return {
         "pushed_at": utc_now(),
-        "status": status,
+        "status": remote_status,
         "log_tail": sanitize_log_tail_for_relay(
             tail_text(args.log_file, args.tail_lines, args.max_log_bytes)
         ),
@@ -1323,7 +1408,7 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
             "bridge_status_file": repo_relative(
                 getattr(args, "bridge_status_file", BRIDGE_STATUS_FILE)
             ),
-            "source_health": publisher_source_health(status),
+            "source_health": publisher_source_health(remote_status),
             "runtime_config": publisher_runtime_config(args),
             "git": publisher_git_summary(git_snapshot()),
         },
