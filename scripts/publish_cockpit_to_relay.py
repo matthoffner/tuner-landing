@@ -659,6 +659,23 @@ def import_handoff_summary(import_pipeline: dict[str, Any]) -> dict[str, Any]:
     return summary
 
 
+def coordination_summary(status: dict[str, Any]) -> dict[str, Any]:
+    coordination = as_dict(status.get("coordination"))
+    if not coordination:
+        return {"available": False}
+
+    summary: dict[str, Any] = {"available": True}
+    fields = {
+        "handoff_path": coordination.get("handoff_path"),
+        "latest_handoff_status": coordination.get("latest_handoff_status"),
+    }
+    for key, value in fields.items():
+        compact_value = compact_policy_detail(value)
+        if compact_value is not None:
+            summary[key] = compact_value
+    return summary
+
+
 def artifact_status_summary(value: object) -> dict[str, str]:
     statuses = value if isinstance(value, dict) else {}
     summary: dict[str, str] = {}
@@ -942,6 +959,7 @@ def publisher_cockpit_summary(status: dict[str, Any]) -> dict[str, Any]:
         "readiness_blocker_count": readiness_blocker_count,
         "ready_for_next_import_records": readiness.get("ready_for_next_import_records"),
         "import_handoff": import_handoff_summary(import_pipeline),
+        "coordination": coordination_summary(status),
         "current_focus": autonomy_policy.get("current_focus") or "mvp_loop",
         "policy_reason": autonomy_policy.get("decision_reason"),
         "policy_failure_reason": policy_failure_reason,
@@ -1283,6 +1301,11 @@ def source_status_log_fields(payload: dict[str, Any]) -> dict[str, Any]:
     bridge_health = bridge_summary.get("bridge_health")
     if not isinstance(bridge_health, dict):
         bridge_health = {}
+    coordination = cockpit_summary.get("coordination")
+    if not isinstance(coordination, dict):
+        coordination = status.get("coordination")
+    if not isinstance(coordination, dict):
+        coordination = {}
     publisher = payload.get("publisher")
     if not isinstance(publisher, dict):
         publisher = {}
@@ -1393,6 +1416,14 @@ def source_status_log_fields(payload: dict[str, Any]) -> dict[str, Any]:
         "source_policy_synthetic_row_count": compact_int(
             cockpit_summary.get("policy_synthetic_row_count")
         ),
+        "source_coordination_handoff_path": compact_policy_detail(
+            coordination.get("handoff_path"),
+            max_length=160,
+        ),
+        "source_coordination_handoff_status": compact_policy_detail(
+            coordination.get("latest_handoff_status"),
+            max_length=240,
+        ),
         "publisher_host": compact_policy_detail(publisher.get("host"), max_length=120),
         "publisher_pid": compact_int(publisher.get("pid")),
         "publisher_started_at": compact_policy_detail(
@@ -1436,6 +1467,8 @@ SOURCE_STATUS_LOG_FIELD_NAMES = (
     "source_policy_raw_path_count",
     "source_policy_productive_path_count",
     "source_policy_synthetic_row_count",
+    "source_coordination_handoff_path",
+    "source_coordination_handoff_status",
     "publisher_host",
     "publisher_pid",
     "publisher_started_at",

@@ -822,6 +822,14 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                             "thin_group_category_count": 0,
                             "thin_group_categories": [],
                         },
+                        "coordination": {
+                            "handoff_path": ".pixelbox/handoff.md",
+                            "latest_handoff_status": (
+                                "relay publishing token=handoff-secret "
+                                "https://user:secret@example.local/status"
+                                "?token=url-secret#debug"
+                            ),
+                        },
                     }
                 )
                 + "\n",
@@ -923,6 +931,19 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         )
         self.assertNotIn("raw-secret", json.dumps(summary["import_handoff"]))
         self.assertNotIn("user:secret", json.dumps(summary["import_handoff"]))
+        self.assertEqual(
+            summary["coordination"],
+            {
+                "available": True,
+                "handoff_path": ".pixelbox/handoff.md",
+                "latest_handoff_status": (
+                    "relay publishing token=[redacted] "
+                    "https://example.local/status?[redacted]#[redacted]"
+                ),
+            },
+        )
+        self.assertNotIn("handoff-secret", json.dumps(summary))
+        self.assertNotIn("url-secret", json.dumps(summary))
         self.assertEqual(summary["current_focus"], "autonomy_visibility_or_real_ingest")
         self.assertEqual(summary["policy_reason"], "dallas_ready_no_thin_groups")
         self.assertTrue(summary["dallas_pipeline_ready"])
@@ -3058,6 +3079,10 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                         "policy_raw_dallas_csv_changed_path_count": 2,
                         "policy_productive_changed_path_count": 1,
                         "policy_synthetic_row_count": 3,
+                        "coordination": {
+                            "handoff_path": ".pixelbox/handoff.md",
+                            "latest_handoff_status": "worker handoff ready",
+                        },
                     },
                 },
                 "log_tail": "loop log\n",
@@ -3118,6 +3143,11 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertIn("source_policy_raw_path_count=2", log_text)
         self.assertIn("source_policy_productive_path_count=1", log_text)
         self.assertIn("source_policy_synthetic_row_count=3", log_text)
+        self.assertIn("source_coordination_handoff_path=.pixelbox/handoff.md", log_text)
+        self.assertIn(
+            "source_coordination_handoff_status=worker handoff ready",
+            log_text,
+        )
         self.assertIn("publisher_host=worker-1", log_text)
         self.assertIn("publisher_pid=4321", log_text)
         self.assertIn("publisher_started_at=2026-06-14T20:10:00Z", log_text)
@@ -3174,6 +3204,15 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                         "policy_raw_dallas_csv_changed_path_count": "9",
                         "policy_productive_changed_path_count": "3",
                         "policy_synthetic_row_count": "12",
+                        "coordination": {
+                            "handoff_path": (
+                                ".pixelbox/handoff.md token=coord-path-secret"
+                            ),
+                            "latest_handoff_status": (
+                                "running authorization: Bearer coord-status-secret "
+                                "https://coord.example/status?token=coord-url-secret#debug"
+                            ),
+                        },
                     },
                 },
                 "publisher": {
@@ -3247,6 +3286,15 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertIn("source_policy_raw_path_count=9", log_text)
         self.assertIn("source_policy_productive_path_count=3", log_text)
         self.assertIn("source_policy_synthetic_row_count=12", log_text)
+        self.assertIn(
+            "source_coordination_handoff_path=.pixelbox/handoff.md token=[redacted]",
+            log_text,
+        )
+        self.assertIn(
+            "source_coordination_handoff_status=running authorization: Bearer "
+            "[redacted] https://coord.example/status?[redacted]#[redacted]",
+            log_text,
+        )
         self.assertIn("publisher_git_head=abc1234 token=[redacted]", log_text)
         self.assertNotIn("status-secret", log_text)
         self.assertNotIn("file-secret", log_text)
@@ -3267,6 +3315,9 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertNotIn("reason-secret", log_text)
         self.assertNotIn("policy-url-secret", log_text)
         self.assertNotIn("route-secret", log_text)
+        self.assertNotIn("coord-path-secret", log_text)
+        self.assertNotIn("coord-status-secret", log_text)
+        self.assertNotIn("coord-url-secret", log_text)
 
     def test_publish_once_logs_relay_ok_false_as_failure(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
