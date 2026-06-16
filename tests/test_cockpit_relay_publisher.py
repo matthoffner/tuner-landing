@@ -3263,6 +3263,72 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertNotIn("payload-secret", log_text)
         self.assertNotIn("published relay snapshot ok=False", log_text)
 
+    def test_publish_once_handles_non_object_relay_response_as_failure(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            publisher_log = Path(tmp) / "publisher.log"
+            args = Namespace(publisher_log=publisher_log)
+            payload = {
+                "status": {
+                    "status": "running",
+                    "loop_running": True,
+                    "source_status_stale": False,
+                    "source_status_age_seconds": 10,
+                    "source_status_file_status": "loaded",
+                },
+                "log_tail": "loop log\n",
+            }
+            self.publisher.build_payload = lambda _args: payload
+            self.publisher.post_payload = lambda _args, _body: [
+                "token=relay-secret",
+            ]
+
+            result = self.publisher.publish_once_result(args)
+            log_text = publisher_log.read_text(encoding="utf-8")
+
+        self.assertEqual(
+            result,
+            {"published": False, "source_status_stale": False},
+        )
+        self.assertIn("publish failed relay_ok=False", log_text)
+        self.assertIn("reason=relay_response_not_object", log_text)
+        self.assertIn("source_status=running", log_text)
+        self.assertNotIn("relay-secret", log_text)
+
+    def test_publish_once_omits_nested_relay_error_payload_details(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            publisher_log = Path(tmp) / "publisher.log"
+            args = Namespace(publisher_log=publisher_log)
+            payload = {
+                "status": {
+                    "status": "running",
+                    "loop_running": True,
+                    "source_status_stale": False,
+                    "source_status_age_seconds": 10,
+                    "source_status_file_status": "loaded",
+                },
+                "log_tail": "loop log\n",
+            }
+            self.publisher.build_payload = lambda _args: payload
+            self.publisher.post_payload = lambda _args, _body: {
+                "ok": False,
+                "error": {
+                    "token": "relay-secret",
+                    "detail": "https://relay.example/fail?token=url-secret#debug",
+                },
+            }
+
+            result = self.publisher.publish_once_result(args)
+            log_text = publisher_log.read_text(encoding="utf-8")
+
+        self.assertEqual(
+            result,
+            {"published": False, "source_status_stale": False},
+        )
+        self.assertIn("publish failed relay_ok=False", log_text)
+        self.assertIn("reason=relay_response_error_not_scalar", log_text)
+        self.assertNotIn("relay-secret", log_text)
+        self.assertNotIn("url-secret", log_text)
+
     def test_publish_once_rejects_nonstandard_relay_response_json_constants(self) -> None:
         class FakeResponse:
             def __enter__(self) -> "FakeResponse":

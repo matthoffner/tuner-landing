@@ -1419,9 +1419,18 @@ def source_status_log_suffix(source_fields: dict[str, Any]) -> str:
     )
 
 
-def relay_response_failure_reason(response: dict[str, Any]) -> str:
-    reason = response.get("error") or response.get("message") or "relay_response_not_ok"
-    return sanitize_error_for_log(RuntimeError(str(reason)))[:200]
+def relay_response_failure_reason(response: Any) -> str:
+    if not isinstance(response, dict):
+        return "relay_response_not_object"
+    for key in ("error", "message"):
+        reason = response.get(key)
+        if reason is None:
+            continue
+        if isinstance(reason, str | int | float | bool):
+            sanitized = sanitize_error_for_log(RuntimeError(str(reason)))[:200]
+            return sanitized or f"relay_response_{key}_empty"
+        return f"relay_response_{key}_not_scalar"
+    return "relay_response_not_ok"
 
 
 def format_number(value: float | int) -> str:
@@ -1498,7 +1507,7 @@ def publish_once_result(args: argparse.Namespace) -> dict[str, Any]:
             "published": False,
             "source_status_stale": source_fields.get("source_status_stale"),
         }
-    if not response.get("ok"):
+    if not isinstance(response, dict) or not response.get("ok"):
         emit(
             "publish failed relay_ok=False "
             f"reason={relay_response_failure_reason(response)} "
