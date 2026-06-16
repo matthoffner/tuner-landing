@@ -439,6 +439,25 @@ def compact_policy_detail_list(
     return compacted
 
 
+def compact_path_detail_list(
+    value: Any,
+    *,
+    max_items: int = POLICY_RAW_PATH_SAMPLE_LIMIT,
+    max_length: int = 160,
+) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    compacted: list[str] = []
+    for item in value:
+        path_label = compact_path_label(item, max_length=max_length)
+        compacted_item = compact_policy_detail(path_label, max_length=max_length)
+        if compacted_item is not None:
+            compacted.append(compacted_item)
+        if len(compacted) >= max_items:
+            break
+    return compacted
+
+
 def compact_int(value: Any) -> int | None:
     if isinstance(value, bool):
         return None
@@ -1028,7 +1047,7 @@ def publisher_cockpit_summary(status: dict[str, Any]) -> dict[str, Any]:
         else None
     )
     policy_raw_csv_paths = (
-        compact_policy_detail_list(
+        compact_path_detail_list(
             first_string_list(
                 policy_step.get("raw_dallas_csv_changed_paths"),
                 policy_diagnostics.get("raw_dallas_csv_changed_path_samples"),
@@ -1046,7 +1065,7 @@ def publisher_cockpit_summary(status: dict[str, Any]) -> dict[str, Any]:
         else 0
     )
     policy_productive_paths = (
-        compact_policy_detail_list(
+        compact_path_detail_list(
             first_string_list(
                 policy_step.get("productive_changed_paths"),
                 policy_diagnostics.get("productive_changed_path_samples"),

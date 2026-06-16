@@ -255,6 +255,23 @@ def compact_path_label(value: Any, *, max_length: int = 240) -> str | None:
     return text
 
 
+def compact_path_detail_list(
+    value: Any,
+    *,
+    max_items: int = 5,
+    max_length: int = 240,
+) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    compacted: list[str] = []
+    for item in value[:max_items]:
+        path_label = compact_path_label(item, max_length=max_length)
+        compacted_item = compact_policy_detail(path_label, max_length=max_length)
+        if compacted_item is not None:
+            compacted.append(compacted_item)
+    return compacted
+
+
 def compact_path_diagnostic(value: Any, *, max_length: int = 240) -> str | None:
     text = compact_text(value, max_length=max_length * 2)
     if text is None:
@@ -748,12 +765,6 @@ def source_policy_summary(status: dict[str, Any]) -> dict[str, Any]:
 
     list_fields = {
         "operator_attention_reasons": source_summary.get("operator_attention_reasons"),
-        "raw_dallas_csv_changed_paths": source_summary.get(
-            "policy_raw_dallas_csv_changed_paths"
-        ),
-        "productive_changed_paths": source_summary.get(
-            "policy_productive_changed_paths"
-        ),
         "synthetic_row_samples": source_summary.get("policy_synthetic_row_samples"),
     }
     for key, value in list_fields.items():
@@ -767,6 +778,22 @@ def source_policy_summary(status: dict[str, Any]) -> dict[str, Any]:
             )
             if compact_value is not None
         ]
+        if compact_values:
+            summary[key] = compact_values
+            summary[f"{key}_count"] = len(value)
+
+    path_list_fields = {
+        "raw_dallas_csv_changed_paths": source_summary.get(
+            "policy_raw_dallas_csv_changed_paths"
+        ),
+        "productive_changed_paths": source_summary.get(
+            "policy_productive_changed_paths"
+        ),
+    }
+    for key, value in path_list_fields.items():
+        if not isinstance(value, list):
+            continue
+        compact_values = compact_path_detail_list(value, max_items=5, max_length=240)
         if compact_values:
             summary[key] = compact_values
             summary[f"{key}_count"] = len(value)
@@ -1236,12 +1263,6 @@ def sanitize_cockpit_summary_for_relay_response(summary: Any) -> dict[str, Any] 
         "readiness_blockers": summary.get("readiness_blockers"),
         "thin_group_categories": summary.get("thin_group_categories"),
         "artifact_problem_artifacts": summary.get("artifact_problem_artifacts"),
-        "policy_raw_dallas_csv_changed_paths": summary.get(
-            "policy_raw_dallas_csv_changed_paths"
-        ),
-        "policy_productive_changed_paths": summary.get(
-            "policy_productive_changed_paths"
-        ),
         "policy_synthetic_row_samples": summary.get("policy_synthetic_row_samples"),
     }
     for key, value in list_fields.items():
@@ -1255,6 +1276,22 @@ def sanitize_cockpit_summary_for_relay_response(summary: Any) -> dict[str, Any] 
             )
             if compact_value is not None
         ]
+        if compact_values:
+            sanitized[key] = compact_values
+        sanitized[f"{key}_count"] = len(value)
+
+    path_list_fields = {
+        "policy_raw_dallas_csv_changed_paths": summary.get(
+            "policy_raw_dallas_csv_changed_paths"
+        ),
+        "policy_productive_changed_paths": summary.get(
+            "policy_productive_changed_paths"
+        ),
+    }
+    for key, value in path_list_fields.items():
+        if not isinstance(value, list):
+            continue
+        compact_values = compact_path_detail_list(value, max_items=5, max_length=240)
         if compact_values:
             sanitized[key] = compact_values
         sanitized[f"{key}_count"] = len(value)

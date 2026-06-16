@@ -2411,16 +2411,18 @@ class RenderCockpitRelayTest(unittest.TestCase):
                         "policy_preview_json_changed": False,
                         "policy_raw_dallas_csv_changed_paths": [
                             "generated/raw/dallas-electrician-import-sample-v2/permits.csv",
+                            "/tmp/automoat-private/raw-secret/permits.csv",
                         ],
                         "policy_raw_dallas_csv_changed_path_count": 7,
                         "policy_productive_changed_paths": [
                             "scripts/run_autonomous_agent_loop.py",
+                            "/tmp/automoat-private/productive-secret/worker.py",
                             (
                                 "https://source.example/productive?"
                                 "token=productive-secret#debug"
                             ),
                         ],
-                        "policy_productive_changed_path_count": 2,
+                        "policy_productive_changed_path_count": 3,
                         "policy_synthetic_row_samples": [
                             (
                                 "generated/raw/dallas-electrician-import-sample-v2/permits.csv:538 "
@@ -2490,13 +2492,15 @@ class RenderCockpitRelayTest(unittest.TestCase):
             "operator_attention_reasons_count": 2,
             "raw_dallas_csv_changed_paths": [
                 "generated/raw/dallas-electrician-import-sample-v2/permits.csv",
+                "<external>/permits.csv",
             ],
             "raw_dallas_csv_changed_paths_count": 7,
             "productive_changed_paths": [
                 "scripts/run_autonomous_agent_loop.py",
+                "<external>/worker.py",
                 "https://source.example/productive?[redacted]#[redacted]",
             ],
-            "productive_changed_paths_count": 2,
+            "productive_changed_paths_count": 3,
             "synthetic_row_samples": [
                 (
                     "generated/raw/dallas-electrician-import-sample-v2/permits.csv:538 "
@@ -2529,6 +2533,7 @@ class RenderCockpitRelayTest(unittest.TestCase):
         self.assertNotIn("row-secret", health_text)
         self.assertNotIn("another-secret", health_text)
         self.assertNotIn("productive-secret", health_text)
+        self.assertNotIn("/tmp/automoat-private", health_text)
         self.assertNotIn("summary-secret", health_text)
 
     def test_status_and_health_report_unavailable_source_status_file(self) -> None:

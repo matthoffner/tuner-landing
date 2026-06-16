@@ -1810,15 +1810,17 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                                     "route_hint": (
                                         "dallas_raw_fixture_without_productive_companion"
                                     ),
-                                    "raw_dallas_csv_changed_path_count": 2,
-                                    "productive_changed_path_count": 1,
+                                    "raw_dallas_csv_changed_path_count": 3,
+                                    "productive_changed_path_count": 2,
                                     "synthetic_row_count": 3,
                                     "raw_dallas_csv_changed_path_samples": [
                                         "generated/raw/dallas-electrician-import-sample-v2/permits.csv",
                                         "https://source.example/raw.csv?token=raw-secret#debug",
+                                        f"{tmp_path}/private/raw.csv",
                                     ],
                                     "productive_changed_path_samples": [
                                         "scripts/run_autonomous_agent_loop.py",
+                                        f"{tmp_path}/private/worker.py",
                                     ],
                                     "synthetic_row_samples": [
                                         "ELZ-2026-9999,https://row.example/dallas?token=row-secret#debug",
@@ -1860,14 +1862,15 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             [
                 "generated/raw/dallas-electrician-import-sample-v2/permits.csv",
                 "https://source.example/raw.csv?[redacted]#[redacted]",
+                "<external>/raw.csv",
             ],
         )
-        self.assertEqual(summary["policy_raw_dallas_csv_changed_path_count"], 2)
+        self.assertEqual(summary["policy_raw_dallas_csv_changed_path_count"], 3)
         self.assertEqual(
             summary["policy_productive_changed_paths"],
-            ["scripts/run_autonomous_agent_loop.py"],
+            ["scripts/run_autonomous_agent_loop.py", "<external>/worker.py"],
         )
-        self.assertEqual(summary["policy_productive_changed_path_count"], 1)
+        self.assertEqual(summary["policy_productive_changed_path_count"], 2)
         self.assertEqual(
             summary["policy_synthetic_row_samples"],
             [
@@ -1877,6 +1880,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         )
         self.assertEqual(summary["policy_synthetic_row_count"], 3)
         summary_text = json.dumps(summary, sort_keys=True)
+        self.assertNotIn(str(tmp_path), summary_text)
         self.assertNotIn("raw-secret", summary_text)
         self.assertNotIn("row-secret", summary_text)
         self.assertNotIn("sample-secret", summary_text)
