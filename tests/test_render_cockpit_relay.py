@@ -1473,8 +1473,8 @@ class RenderCockpitRelayTest(unittest.TestCase):
                                     "file_name": "permits.csv",
                                     "status": "ready",
                                     "file_path": (
-                                        "generated/raw/dallas-electrician-import-sample-v2/"
-                                        "permits.csv"
+                                        "/tmp/customer/dallas/raw/"
+                                        "permits.csv token=file-path-secret"
                                     ),
                                     "csv_row_number": "538",
                                     "template_line": (
@@ -1518,7 +1518,7 @@ class RenderCockpitRelayTest(unittest.TestCase):
                             ],
                             "ready_for_append": False,
                             "raw_dir": (
-                                "generated/raw/dallas-electrician-import-sample-v2"
+                                "/tmp/customer/dallas/raw token=raw-dir-secret"
                             ),
                             "after_edit_command": (
                                 "python3 scripts/run_dallas_import_pipeline.py "
@@ -1586,7 +1586,7 @@ class RenderCockpitRelayTest(unittest.TestCase):
             "import_handoff": {
                 "available": True,
                 "append_preflight_status": "blocked",
-                "raw_dir": "generated/raw/dallas-electrician-import-sample-v2",
+                "raw_dir": "<external>/raw token=[redacted]",
                 "after_edit_command": (
                     "python3 scripts/run_dallas_import_pipeline.py "
                     "--require-ready token=[redacted]"
@@ -1618,10 +1618,7 @@ class RenderCockpitRelayTest(unittest.TestCase):
                     {
                         "file_name": "permits.csv",
                         "status": "ready",
-                        "file_path": (
-                            "generated/raw/dallas-electrician-import-sample-v2/"
-                            "permits.csv"
-                        ),
+                        "file_path": "<external>/permits.csv token=[redacted]",
                         "template_line": "ELZ-2026-0737 token=[redacted]",
                         "csv_row_number": 538,
                     },
@@ -1710,9 +1707,12 @@ class RenderCockpitRelayTest(unittest.TestCase):
         self.assertNotIn("check-secret", health_text)
         self.assertNotIn("command-secret", health_text)
         self.assertNotIn("url-secret", health_text)
+        self.assertNotIn("file-path-secret", health_text)
+        self.assertNotIn("raw-dir-secret", health_text)
         self.assertNotIn("permit-line-secret", health_text)
         self.assertNotIn("inspection-line-secret", health_text)
         self.assertNotIn("extra-line-secret", health_text)
+        self.assertNotIn("/tmp/customer", health_text)
         self.assertNotIn("extra.csv", health_text)
 
     def test_status_and_health_include_source_coordination_summary(self) -> None:

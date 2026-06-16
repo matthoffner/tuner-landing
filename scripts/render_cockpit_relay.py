@@ -744,7 +744,6 @@ def source_import_handoff_summary(source_summary: dict[str, Any]) -> dict[str, A
     summary: dict[str, Any] = {"available": handoff.get("available") is True}
     text_fields = {
         "append_preflight_status": handoff.get("append_preflight_status"),
-        "raw_dir": handoff.get("raw_dir"),
         "after_edit_command": handoff.get("after_edit_command"),
         "readiness_check_command": handoff.get("readiness_check_command"),
         "raw_handoff_verification_json_command": handoff.get(
@@ -755,6 +754,12 @@ def source_import_handoff_summary(source_summary: dict[str, Any]) -> dict[str, A
         compact_value = compact_policy_detail(value, max_length=240)
         if compact_value is not None:
             summary[key] = compact_value
+
+    raw_dir = compact_path_label(handoff.get("raw_dir"), max_length=240)
+    if raw_dir is not None:
+        raw_dir = compact_policy_detail(raw_dir, max_length=240)
+    if raw_dir is not None:
+        summary["raw_dir"] = raw_dir
 
     ready_for_append = handoff.get("ready_for_append")
     if isinstance(ready_for_append, bool):
@@ -801,10 +806,15 @@ def source_import_handoff_summary(source_summary: dict[str, Any]) -> dict[str, A
             if not isinstance(item, dict):
                 continue
             compact_item: dict[str, Any] = {}
-            for key in ("file_name", "status", "file_path", "template_line"):
+            for key in ("file_name", "status", "template_line"):
                 compact_value = compact_policy_detail(item.get(key), max_length=240)
                 if compact_value is not None:
                     compact_item[key] = compact_value
+            file_path = compact_path_label(item.get("file_path"), max_length=240)
+            if file_path is not None:
+                file_path = compact_policy_detail(file_path, max_length=240)
+            if file_path is not None:
+                compact_item["file_path"] = file_path
             row_number = compact_int(item.get("csv_row_number"))
             if row_number is not None:
                 compact_item["csv_row_number"] = row_number
