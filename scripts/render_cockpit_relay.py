@@ -661,12 +661,19 @@ def source_bridge_summary(status: dict[str, Any]) -> dict[str, Any]:
 
 
 def source_business_hours_summary(status: dict[str, Any]) -> dict[str, Any]:
+    source_summary = status.get("cockpit_summary")
+    if not isinstance(source_summary, dict):
+        source_summary = {}
+    pause_flag = source_summary.get("business_hours_pause")
+    if not isinstance(pause_flag, bool):
+        pause_flag = None
+
     business_hours = status.get("business_hours")
     if not isinstance(business_hours, dict):
-        source_summary = status.get("cockpit_summary")
-        if isinstance(source_summary, dict):
-            business_hours = source_summary.get("business_hours")
+        business_hours = source_summary.get("business_hours")
     if not isinstance(business_hours, dict) or not business_hours:
+        if pause_flag is not None:
+            return {"available": True, "active_pause": pause_flag}
         return {"available": False}
 
     summary: dict[str, Any] = {"available": True}
@@ -687,7 +694,11 @@ def source_business_hours_summary(status: dict[str, Any]) -> dict[str, Any]:
         if compact_value is not None:
             summary[key] = compact_value
     if "active_pause" not in summary:
-        summary["active_pause"] = summary.get("in_business_hours") is False
+        summary["active_pause"] = (
+            pause_flag
+            if pause_flag is not None
+            else summary.get("in_business_hours") is False
+        )
     return summary
 
 
@@ -1183,6 +1194,7 @@ def sanitize_cockpit_summary_for_relay_response(summary: Any) -> dict[str, Any] 
             "policy_allows_synthetic_append"
         ),
         "policy_override": summary.get("policy_override"),
+        "business_hours_pause": summary.get("business_hours_pause"),
     }
     for key, value in bool_fields.items():
         if isinstance(value, bool):

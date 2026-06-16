@@ -614,6 +614,58 @@ class RenderCockpitRelayTest(unittest.TestCase):
         self.assertNotIn("source_loop_not_running", health["cockpit_health"]["reasons"])
         self.assertEqual(status["cockpit_health"]["reasons"], health["cockpit_health"]["reasons"])
 
+    def test_status_and_health_use_compact_business_hours_pause_flag(self) -> None:
+        self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
+        self.relay.update_state(
+            {
+                "pushed_at": "2026-06-14T19:59:30Z",
+                "status": {
+                    "status": "paused",
+                    "phase": "outside_business_hours",
+                    "loop_running": False,
+                    "source_status_stale": False,
+                    "cockpit_summary": {
+                        "status": "paused",
+                        "phase": "outside_business_hours",
+                        "operator_attention": False,
+                        "operator_attention_reasons": [],
+                        "operator_attention_label": "Clear",
+                        "business_hours_pause": True,
+                    },
+                },
+                "publisher": {
+                    "source_health": {
+                        "status": "live",
+                        "ok": True,
+                        "reasons": [],
+                        "primary_reason": None,
+                        "label": "Scheduled pause",
+                    },
+                },
+                "log_tail": "worker paused outside business hours\n",
+            }
+        )
+        self.relay.utc_now = lambda: "2026-06-14T20:00:00Z"
+
+        health = self.relay.health_payload()
+        status = self.relay.relay_status_payload()
+
+        self.assertTrue(health["cockpit_ok"])
+        self.assertEqual(health["cockpit_status"], "live")
+        self.assertEqual(health["cockpit_health"]["reasons"], [])
+        self.assertEqual(health["cockpit_health_label"], "Scheduled pause")
+        self.assertTrue(health["cockpit_health"]["source_business_hours_pause"])
+        self.assertEqual(
+            health["cockpit_health"]["source_business_hours"],
+            {"available": True, "active_pause": True},
+        )
+        self.assertEqual(status["cockpit_health_label"], "Scheduled pause")
+        self.assertTrue(status["cockpit_summary"]["business_hours_pause"])
+        self.assertEqual(
+            status["cockpit_summary"]["business_hours"],
+            {"available": True, "active_pause": True},
+        )
+
     def test_status_and_health_sanitize_nested_health_diagnostics(self) -> None:
         self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
         self.relay.update_state(
