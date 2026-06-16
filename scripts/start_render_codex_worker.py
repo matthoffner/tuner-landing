@@ -1573,7 +1573,24 @@ def validate_publisher_preflight_output(output: str) -> None:
             f"failed_configuration_keys={failed_key_text or 'unknown'}"
         )
 
-    raise RuntimeError(f"relay publisher preflight reported status={status or 'missing'}")
+    raise RuntimeError(
+        "relay publisher preflight reported "
+        f"status={publisher_preflight_status_label(status)}"
+    )
+
+
+def publisher_preflight_status_label(status: Any) -> str:
+    if status is None:
+        return "missing"
+    if not isinstance(status, str):
+        return f"invalid_{type(status).__name__}"
+    if not status.strip():
+        return "missing"
+    if len(status) > 80:
+        return "invalid"
+    if all(character.isalnum() or character in "_-" for character in status):
+        return status
+    return "invalid"
 
 
 def publisher_preflight_diagnostic_tokens(diagnostics: Any, key: str) -> list[str]:

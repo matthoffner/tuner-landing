@@ -4307,6 +4307,41 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertNotIn("relay.example", message)
         self.assertNotIn("token=secret", message)
 
+    def test_validate_publisher_preflight_output_sanitizes_unexpected_status(
+        self,
+    ) -> None:
+        suspicious_payload = json.dumps(
+            {
+                "status": (
+                    "failed token=relay-secret "
+                    "https://relay.example/debug?token=url-secret#trace"
+                ),
+                "errors": ["token=error-secret"],
+            }
+        )
+
+        with self.assertRaises(RuntimeError) as context:
+            self.worker.validate_publisher_preflight_output(suspicious_payload)
+
+        message = str(context.exception)
+        self.assertEqual(
+            message,
+            "relay publisher preflight reported status=invalid",
+        )
+        self.assertNotIn("relay-secret", message)
+        self.assertNotIn("relay.example", message)
+        self.assertNotIn("url-secret", message)
+        self.assertNotIn("error-secret", message)
+
+    def test_validate_publisher_preflight_output_labels_non_string_status(self) -> None:
+        with self.assertRaisesRegex(
+            RuntimeError,
+            "relay publisher preflight reported status=invalid_dict",
+        ):
+            self.worker.validate_publisher_preflight_output(
+                json.dumps({"status": {"token": "relay-secret"}})
+            )
+
     def test_check_relay_publisher_preflight_rejects_non_standard_json_constants(
         self,
     ) -> None:
