@@ -1715,6 +1715,83 @@ class RenderCockpitRelayTest(unittest.TestCase):
         self.assertNotIn("extra-line-secret", health_text)
         self.assertNotIn("extra.csv", health_text)
 
+    def test_status_and_health_include_source_coordination_summary(self) -> None:
+        self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
+        self.relay.update_state(
+            {
+                "pushed_at": "2026-06-14T19:59:30Z",
+                "status": {
+                    "status": "running",
+                    "loop_running": True,
+                    "cockpit_summary": {
+                        "operator_attention": False,
+                        "coordination": {
+                            "handoff_path": (
+                                ".pixelbox/handoff.md token=path-secret"
+                            ),
+                            "handoff_file_status": (
+                                "loaded token=status-secret"
+                            ),
+                            "latest_handoff_status": (
+                                "publishing Authorization: Bearer bearer-secret "
+                                "https://relay.example/handoff?token=url-secret#debug"
+                            ),
+                            "latest_section_found": True,
+                            "latest_status_found": False,
+                            "handoff_age_seconds": "75",
+                            "handoff_error": (
+                                "/tmp/customer/.pixelbox/handoff.md "
+                                "token=error-secret"
+                            ),
+                            "ignored": "token=ignored-secret",
+                        },
+                    },
+                },
+                "log_tail": "running\n",
+            }
+        )
+        self.relay.utc_now = lambda: "2026-06-14T20:00:00Z"
+
+        health = self.relay.health_payload()
+        status = self.relay.relay_status_payload()
+
+        expected_coordination = {
+            "available": True,
+            "handoff_path": ".pixelbox/handoff.md token=[redacted]",
+            "handoff_file_status": "loaded token=[redacted]",
+            "latest_handoff_status": (
+                "publishing Authorization: Bearer [redacted] "
+                "https://relay.example/handoff?[redacted]#[redacted]"
+            ),
+            "latest_section_found": True,
+            "latest_status_found": False,
+            "handoff_age_seconds": 75,
+            "handoff_error": "<external>/handoff.md token=[redacted]",
+        }
+        self.assertEqual(
+            status["cockpit_summary"]["coordination"],
+            expected_coordination,
+        )
+        self.assertEqual(
+            status["cockpit_health"]["source_coordination"],
+            expected_coordination,
+        )
+        self.assertEqual(
+            health["cockpit_health"]["source_coordination"],
+            expected_coordination,
+        )
+        response_text = json.dumps({"health": health, "status": status}, sort_keys=True)
+        for unsafe_text in (
+            "path-secret",
+            "status-secret",
+            "bearer-secret",
+            "url-secret",
+            "error-secret",
+            "ignored-secret",
+            "/tmp/customer",
+        ):
+            self.assertNotIn(unsafe_text, response_text)
+
     def test_status_and_health_promote_autonomy_policy_attention(self) -> None:
         self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
         self.relay.update_state(

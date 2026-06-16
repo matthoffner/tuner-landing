@@ -270,6 +270,7 @@ def compact_policy_detail(value: Any, *, max_length: int = 240) -> str | None:
     if text is None:
         return None
     text = EMBEDDED_URL_RE.sub(lambda match: sanitize_url_value(match.group(0)), text)
+    text = BEARER_SECRET_RE.sub(r"\1 [redacted]", text)
     text = SENSITIVE_ASSIGNMENT_RE.sub(
         lambda match: f"{match.group(1)}=[redacted]",
         text,
@@ -910,6 +911,49 @@ def source_readiness_summary(status: dict[str, Any]) -> dict[str, Any]:
     return summary
 
 
+def source_coordination_summary(status: dict[str, Any]) -> dict[str, Any]:
+    source_summary = status.get("cockpit_summary")
+    if not isinstance(source_summary, dict):
+        return {"available": False}
+    coordination = source_summary.get("coordination")
+    if not isinstance(coordination, dict):
+        return {"available": False}
+
+    summary: dict[str, Any] = {"available": False}
+    text_fields = {
+        "handoff_path": coordination.get("handoff_path"),
+        "handoff_file_status": coordination.get("handoff_file_status"),
+        "latest_handoff_status": coordination.get("latest_handoff_status"),
+    }
+    for key, value in text_fields.items():
+        compact_value = compact_policy_detail(value, max_length=200)
+        if compact_value is not None:
+            summary[key] = compact_value
+
+    handoff_error = compact_path_diagnostic(coordination.get("handoff_error"))
+    if handoff_error is not None:
+        while "<external><external>/" in handoff_error:
+            handoff_error = handoff_error.replace(
+                "<external><external>/",
+                "<external>/",
+            )
+        handoff_error = compact_policy_detail(handoff_error, max_length=240)
+    if handoff_error is not None:
+        summary["handoff_error"] = handoff_error
+
+    for key in ("latest_section_found", "latest_status_found"):
+        value = coordination.get(key)
+        if isinstance(value, bool):
+            summary[key] = value
+
+    handoff_age_seconds = compact_int(coordination.get("handoff_age_seconds"))
+    if handoff_age_seconds is not None:
+        summary["handoff_age_seconds"] = handoff_age_seconds
+
+    summary["available"] = any(key != "available" for key in summary)
+    return summary
+
+
 def sanitize_cockpit_summary_for_relay_response(summary: Any) -> dict[str, Any] | None:
     if not isinstance(summary, dict):
         return None
@@ -1034,6 +1078,10 @@ def sanitize_cockpit_summary_for_relay_response(summary: Any) -> dict[str, Any] 
     if import_handoff["available"]:
         sanitized["import_handoff"] = import_handoff
 
+    coordination = source_coordination_summary({"cockpit_summary": summary})
+    if coordination["available"]:
+        sanitized["coordination"] = coordination
+
     return sanitized
 
 
@@ -1100,6 +1148,7 @@ def cockpit_health(
     source_bridge = source_bridge_summary(status)
     source_policy = source_policy_summary(status)
     source_readiness = source_readiness_summary(status)
+    source_coordination = source_coordination_summary(status)
     source_health_reasons = source_health.get("reasons")
     if not isinstance(source_health_reasons, list):
         source_health_reasons = []
@@ -1227,6 +1276,7 @@ def cockpit_health(
         "source_bridge": source_bridge,
         "source_policy": source_policy,
         "source_readiness": source_readiness,
+        "source_coordination": source_coordination,
         "source_health": source_health,
         "publisher_identity": publisher_identity(state),
         "publisher_runtime_config": publisher_runtime_config(state),
