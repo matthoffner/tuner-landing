@@ -3452,6 +3452,13 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                     "AUTOMOAT_BUSINESS_HOURS_ENABLED must be true/false, yes/no, "
                     "on/off, or 1/0"
                 ),
+                "AUTOMOAT_BUSINESS_HOURS_TIMEZONE must be a valid IANA timezone",
+                "AUTOMOAT_BUSINESS_HOURS_START must be before AUTOMOAT_BUSINESS_HOURS_END",
+                (
+                    "AUTOMOAT_BUSINESS_HOURS_DAYS must use day names like "
+                    "mon-fri or mon,wed,fri"
+                ),
+                "AUTOMOAT_BUSINESS_HOURS_IDLE_SLEEP must be greater than 0",
             ],
         )
 

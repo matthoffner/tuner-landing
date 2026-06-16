@@ -646,7 +646,6 @@ def validate_business_hours_environment(
         errors.append(
             "AUTOMOAT_BUSINESS_HOURS_ENABLED must be true/false, yes/no, on/off, or 1/0"
         )
-        return
     if enabled_value in BUSINESS_HOURS_FALSE_VALUES:
         return
 
