@@ -3,7 +3,9 @@
 
 from __future__ import annotations
 
+import contextlib
 import importlib.util
+import io
 import os
 from pathlib import Path
 from types import SimpleNamespace
@@ -246,6 +248,64 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
         self.assertIn("git checkout", log_text)
         self.assertIn("<arg chars=254>", log_text)
         self.assertNotIn("secret-branch", log_text)
+
+    def test_runtime_configuration_rejects_unbounded_loop_values(self) -> None:
+        args = SimpleNamespace(
+            iterations=-1,
+            interval=float("nan"),
+            codex_timeout=float("inf"),
+        )
+
+        errors = self.loop.runtime_configuration_errors(args)
+
+        self.assertEqual(
+            errors,
+            [
+                "--iterations must be greater than or equal to 0",
+                "--interval must be finite",
+                "--codex-timeout must be finite",
+            ],
+        )
+
+    def test_runtime_configuration_rejects_oversized_loop_values(self) -> None:
+        args = SimpleNamespace(
+            iterations=self.loop.MAX_AGENT_ITERATIONS + 1,
+            interval=self.loop.MAX_AGENT_INTERVAL_SECONDS + 1,
+            codex_timeout=self.loop.MAX_CODEX_TIMEOUT_SECONDS + 1,
+        )
+
+        errors = self.loop.runtime_configuration_errors(args)
+
+        self.assertEqual(
+            errors,
+            [
+                "--iterations must be less than or equal to 1000",
+                "--interval must be less than or equal to 3600",
+                "--codex-timeout must be less than or equal to 7200",
+            ],
+        )
+
+    def test_main_rejects_invalid_runtime_configuration_before_startup(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            self.loop.parse_args = lambda: SimpleNamespace(
+                iterations=1,
+                interval=0,
+                codex_timeout=0,
+                log_file=Path(tmp) / "loop.log",
+                prompt_file=None,
+            )
+
+            stderr = io.StringIO()
+            with contextlib.redirect_stderr(stderr):
+                result = self.loop.main()
+            log_exists = (Path(tmp) / "loop.log").exists()
+
+        self.assertEqual(result, 2)
+        self.assertIn(
+            "configuration error: --codex-timeout must be greater than 0",
+            stderr.getvalue(),
+        )
+        self.assertFalse(log_exists)
 
     def test_dirty_paths_excluding_preview_filters_pixelbox_preview(self) -> None:
         self.loop.git_status_lines = lambda: [

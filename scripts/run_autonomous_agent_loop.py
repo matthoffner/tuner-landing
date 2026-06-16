@@ -7,6 +7,7 @@ import argparse
 import csv
 import io
 import json
+import math
 import os
 import re
 import selectors
@@ -97,6 +98,9 @@ MAX_POLICY_LIST_ITEMS = 8
 MAX_ARTIFACT_HEALTH_DETAILS = 8
 MAX_ARTIFACT_HEALTH_DETAIL_CHARS = 240
 MAX_COMMAND_LOG_ARG_CHARS = 160
+MAX_AGENT_ITERATIONS = 1000
+MAX_AGENT_INTERVAL_SECONDS = 3600
+MAX_CODEX_TIMEOUT_SECONDS = 7200
 PIPELINE_SUMMARY_OBJECT_SECTIONS = (
     "execution_readiness",
     "contract",
@@ -1389,8 +1393,41 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def runtime_configuration_errors(args: argparse.Namespace) -> list[str]:
+    """Return routeable runtime configuration errors before the loop starts."""
+    errors: list[str] = []
+    if args.iterations < 0:
+        errors.append("--iterations must be greater than or equal to 0")
+    elif args.iterations > MAX_AGENT_ITERATIONS:
+        errors.append(f"--iterations must be less than or equal to {MAX_AGENT_ITERATIONS}")
+
+    if not math.isfinite(args.interval):
+        errors.append("--interval must be finite")
+    elif args.interval < 0:
+        errors.append("--interval must be greater than or equal to 0")
+    elif args.interval > MAX_AGENT_INTERVAL_SECONDS:
+        errors.append(
+            f"--interval must be less than or equal to {MAX_AGENT_INTERVAL_SECONDS}"
+        )
+
+    if not math.isfinite(args.codex_timeout):
+        errors.append("--codex-timeout must be finite")
+    elif args.codex_timeout <= 0:
+        errors.append("--codex-timeout must be greater than 0")
+    elif args.codex_timeout > MAX_CODEX_TIMEOUT_SECONDS:
+        errors.append(
+            f"--codex-timeout must be less than or equal to {MAX_CODEX_TIMEOUT_SECONDS}"
+        )
+    return errors
+
+
 def main() -> int:
     args = parse_args()
+    configuration_errors = runtime_configuration_errors(args)
+    if configuration_errors:
+        for error in configuration_errors:
+            print(f"configuration error: {error}", file=sys.stderr)
+        return 2
     signal.signal(signal.SIGTERM, request_stop)
     signal.signal(signal.SIGINT, request_stop)
     LOG_DIR.mkdir(parents=True, exist_ok=True)
