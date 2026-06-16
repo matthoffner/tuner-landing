@@ -31,6 +31,7 @@ DEFAULT_MAX_CONSECUTIVE_FAILURES = 3
 DEFAULT_MAX_CONSECUTIVE_STALE_STATUSES = 0
 DEFAULT_STATUS_STALE_AFTER_SECONDS = 660
 DEFAULT_BRIDGE_STATUS_STALE_AFTER_SECONDS = 660
+MAX_RELAY_TOKEN_CHARS = 8192
 PUBLISHER_RUNTIME_DEFAULTS = {
     "interval": 3.0,
     "timeout": 8.0,
@@ -1577,6 +1578,8 @@ def validate_publisher_configuration(args: argparse.Namespace) -> list[str]:
     token = token_value.strip()
     if not token:
         errors.append("AUTOMOAT_RELAY_TOKEN or --token is required")
+    elif len(token_value) > MAX_RELAY_TOKEN_CHARS:
+        errors.append(f"--token must be {MAX_RELAY_TOKEN_CHARS} characters or fewer")
     elif any(
         character in "\r\n" or ord(character) < 32 or ord(character) == 127
         for character in token_value

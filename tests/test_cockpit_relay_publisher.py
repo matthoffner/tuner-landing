@@ -1737,6 +1737,36 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         )
         self.assertIn("--publisher-log must be a file path, not a directory", errors)
 
+    def test_validate_publisher_configuration_rejects_oversized_relay_token(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            args = Namespace(
+                relay_url="https://automoat-cockpit-relay.example",
+                token="t" * (self.publisher.MAX_RELAY_TOKEN_CHARS + 1),
+                interval=3,
+                timeout=8,
+                tail_lines=180,
+                max_log_bytes=256 * 1024,
+                max_consecutive_failures=3,
+                max_consecutive_stale_statuses=0,
+                status_stale_after_seconds=660,
+                bridge_status_stale_after_seconds=660,
+                status_file=tmp_path / "status.json",
+                pid_file=tmp_path / "loop.pid",
+                log_file=tmp_path / "loop.log",
+                publisher_log=tmp_path / "publisher.log",
+            )
+
+            errors = self.publisher.validate_publisher_configuration(args)
+
+        self.assertEqual(
+            errors,
+            [
+                "--token must be "
+                f"{self.publisher.MAX_RELAY_TOKEN_CHARS} characters or fewer"
+            ],
+        )
+
     def test_validate_publisher_configuration_accepts_documented_runtime_limits(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
@@ -2381,6 +2411,10 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 "relay-token\nsecond-line": (
                     "--token must be a single-line value without control characters"
                 ),
+                "relay-token-" + ("x" * self.publisher.MAX_RELAY_TOKEN_CHARS): (
+                    "--token must be "
+                    f"{self.publisher.MAX_RELAY_TOKEN_CHARS} characters or fewer"
+                ),
             }
             for token, expected_error in cases.items():
                 with self.subTest(token=repr(token)):
@@ -2408,6 +2442,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                     self.assertIn("publisher environment preflight failed", output.getvalue())
                     self.assertIn(expected_error, output.getvalue())
                     self.assertNotIn("relay-token", output.getvalue())
+                    self.assertNotIn("xxxx", output.getvalue())
 
     def test_check_env_json_reports_secret_safe_success_summary(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -2582,6 +2617,38 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertNotIn("relay-pass", output.getvalue())
         self.assertNotIn("relay-token", output.getvalue())
         self.assertNotIn("second-line", output.getvalue())
+
+    def test_check_env_json_rejects_oversized_relay_token_without_echo(self) -> None:
+        secret_blob = "relay-token-" + ("oversized-secret" * 600)
+        env = {
+            "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+            "AUTOMOAT_RELAY_TOKEN": secret_blob,
+        }
+        output = io.StringIO()
+        self.publisher.publish_once = lambda _args: self.fail("publish_once should not run")
+        with patch.dict(os.environ, env, clear=True), patch.object(
+            sys,
+            "argv",
+            [
+                "publish_cockpit_to_relay.py",
+                "--check-env",
+                "--format",
+                "json",
+            ],
+        ), redirect_stdout(output):
+            status = self.publisher.main()
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(status, 2)
+        self.assertEqual(payload["status"], "failed")
+        self.assertEqual(payload["diagnostics"]["error_categories"], ["invalid_secret"])
+        self.assertEqual(
+            payload["diagnostics"]["failed_configuration_keys"],
+            ["AUTOMOAT_RELAY_TOKEN|--token"],
+        )
+        self.assertTrue(payload["diagnostics"]["relay_token_configured"])
+        self.assertNotIn("relay-token", output.getvalue())
+        self.assertNotIn("oversized-secret", output.getvalue())
 
     def test_check_env_json_rejects_non_finite_runtime_floats(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
