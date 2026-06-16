@@ -1441,11 +1441,13 @@ def prompt_file_configuration_errors(prompt_file: Path | None) -> list[str]:
             f"--prompt-file must be less than or equal to {MAX_PROMPT_FILE_BYTES} bytes"
         ]
     try:
-        prompt_file.read_text(encoding="utf-8")
+        prompt_text = prompt_file.read_text(encoding="utf-8")
     except UnicodeDecodeError:
         return ["--prompt-file must be UTF-8 text"]
     except OSError:
         return ["--prompt-file could not be read"]
+    if not prompt_text.strip():
+        return ["--prompt-file must contain non-empty prompt text"]
     return []
 
 

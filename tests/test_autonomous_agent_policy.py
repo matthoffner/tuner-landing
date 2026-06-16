@@ -296,6 +296,8 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
             )
             invalid_utf8_prompt = Path(tmp) / "invalid-utf8-prompt.txt"
             invalid_utf8_prompt.write_bytes(b"\xff")
+            empty_prompt = Path(tmp) / "empty-prompt.txt"
+            empty_prompt.write_text(" \n\t", encoding="utf-8")
 
             base_args = {
                 "iterations": 1,
@@ -332,6 +334,12 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
                     SimpleNamespace(**base_args, prompt_file=invalid_utf8_prompt)
                 ),
                 ["--prompt-file must be UTF-8 text"],
+            )
+            self.assertEqual(
+                self.loop.runtime_configuration_errors(
+                    SimpleNamespace(**base_args, prompt_file=empty_prompt)
+                ),
+                ["--prompt-file must contain non-empty prompt text"],
             )
 
     def test_main_rejects_invalid_runtime_configuration_before_startup(self) -> None:
