@@ -641,6 +641,22 @@ def productive_changed_paths(paths: list[str]) -> list[str]:
     return sorted(set(productive_paths))
 
 
+def non_productive_companion_paths(
+    paths: list[str],
+    raw_csv_paths: list[str],
+    productive_paths: list[str],
+) -> list[str]:
+    """Return changed non-preview paths ignored as productive companions."""
+    raw_csv_path_set = set(raw_csv_paths)
+    productive_path_set = set(productive_paths)
+    ignored_paths: list[str] = []
+    for path in paths:
+        if path in raw_csv_path_set or path in productive_path_set:
+            continue
+        ignored_paths.append(path)
+    return sorted(set(ignored_paths))
+
+
 def changed_dallas_raw_csv_paths(paths: list[str]) -> list[str]:
     """Return raw Dallas CSV fixture paths changed in the current diff."""
     return sorted(
@@ -1375,6 +1391,11 @@ def run_autonomy_policy_check(log_file: Path) -> dict[str, Any]:
     synthetic_rows = added_synthetic_dallas_rows()
     synthetic_row_samples = synthetic_dallas_row_samples(synthetic_rows)
     productive_paths = productive_changed_paths(paths)
+    ignored_companion_paths = non_productive_companion_paths(
+        paths,
+        raw_csv_paths,
+        productive_paths,
+    )
     productive_change = bool(productive_paths)
     policy_snapshot = autonomy_policy_snapshot()
     policy_allows_synthetic_append = (
@@ -1430,6 +1451,7 @@ def run_autonomy_policy_check(log_file: Path) -> dict[str, Any]:
             f"raw_dallas_csv_paths={len(raw_csv_paths)} "
             f"productive_change={productive_change} "
             f"productive_paths={len(productive_paths)} "
+            f"ignored_companion_paths={len(ignored_companion_paths)} "
             f"policy_allows_synthetic_append={policy_allows_synthetic_append} "
             f"override={allow_override}",
         )
@@ -1448,6 +1470,7 @@ def run_autonomy_policy_check(log_file: Path) -> dict[str, Any]:
         dirty_paths_excluding_preview=paths,
         raw_csv_paths=raw_csv_paths,
         productive_paths=productive_paths,
+        ignored_companion_paths=ignored_companion_paths,
         synthetic_row_samples=synthetic_row_samples,
     )
     policy_summary = autonomy_policy_summary(policy_diagnostics)
@@ -1464,6 +1487,7 @@ def run_autonomy_policy_check(log_file: Path) -> dict[str, Any]:
         "raw_dallas_csv_changed_paths": raw_csv_paths,
         "productive_change": productive_change,
         "productive_changed_paths": productive_paths,
+        "non_productive_companion_paths": ignored_companion_paths,
         "policy_allows_synthetic_append": policy_allows_synthetic_append,
         "policy_override": allow_override,
         "policy_snapshot": policy_snapshot,
@@ -1487,6 +1511,7 @@ def autonomy_policy_diagnostics(
     dirty_paths_excluding_preview: list[str] | None = None,
     raw_csv_paths: list[str] | None = None,
     productive_paths: list[str] | None = None,
+    ignored_companion_paths: list[str] | None = None,
     synthetic_row_samples: list[str] | None = None,
 ) -> dict[str, Any]:
     """Return compact routeable details for the policy step status payload."""
@@ -1502,6 +1527,7 @@ def autonomy_policy_diagnostics(
         "synthetic_row_count": synthetic_row_count,
         "raw_dallas_csv_changed_path_count": raw_csv_path_count,
         "productive_changed_path_count": productive_path_count,
+        "non_productive_companion_path_count": len(ignored_companion_paths or []),
         "policy_allows_synthetic_append": policy_allows_synthetic_append,
         "policy_override": allow_override,
         "dirty_path_samples": bounded_sanitized_policy_list(
@@ -1512,6 +1538,9 @@ def autonomy_policy_diagnostics(
         ),
         "productive_changed_path_samples": bounded_sanitized_policy_list(
             productive_paths or []
+        ),
+        "non_productive_companion_path_samples": bounded_sanitized_policy_list(
+            ignored_companion_paths or []
         ),
         "synthetic_row_samples": bounded_sanitized_policy_list(
             synthetic_row_samples or []

@@ -860,6 +860,10 @@ class MvpCockpitServerTest(unittest.TestCase):
                         "scripts/import_dallas_permit_extracts.py",
                         "tests/test_dallas_import_pipeline.py",
                     ],
+                    "non_productive_companion_paths": [
+                        "README.md",
+                        "https://source.example/ignored?token=ignored-secret#debug",
+                    ],
                     "policy_diagnostics": {
                         "status": "passed",
                         "route_hint": "ok",
@@ -867,6 +871,7 @@ class MvpCockpitServerTest(unittest.TestCase):
                         "current_focus": "autonomy_visibility_or_real_ingest",
                         "raw_dallas_csv_changed_path_count": 2,
                         "productive_changed_path_count": 2,
+                        "non_productive_companion_path_count": 2,
                         "synthetic_row_count": 0,
                         "preview_json_changed": False,
                         "policy_allows_synthetic_append": False,
@@ -922,11 +927,20 @@ class MvpCockpitServerTest(unittest.TestCase):
             ],
         )
         self.assertEqual(summary["policy_productive_changed_path_count"], 2)
+        self.assertEqual(
+            summary["policy_non_productive_companion_paths"],
+            [
+                "README.md",
+                "https://source.example/ignored?[redacted]#[redacted]",
+            ],
+        )
+        self.assertEqual(summary["policy_non_productive_companion_path_count"], 2)
         self.assertEqual(summary["policy_synthetic_row_count"], 0)
         self.assertFalse(summary["policy_preview_json_changed"])
         self.assertFalse(summary["policy_allows_synthetic_append"])
         self.assertFalse(summary["policy_override"])
         self.assertNotIn("raw-secret", json.dumps(summary))
+        self.assertNotIn("ignored-secret", json.dumps(summary))
 
     def test_read_bridge_summary_compacts_loaded_status(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

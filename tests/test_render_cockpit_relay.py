@@ -2423,6 +2423,15 @@ class RenderCockpitRelayTest(unittest.TestCase):
                             ),
                         ],
                         "policy_productive_changed_path_count": 3,
+                        "policy_non_productive_companion_paths": [
+                            "README.md",
+                            "/tmp/automoat-private/ignored-secret/NEXT_TASK.md",
+                            (
+                                "https://source.example/ignored?"
+                                "token=ignored-secret#debug"
+                            ),
+                        ],
+                        "policy_non_productive_companion_path_count": 3,
                         "policy_synthetic_row_samples": [
                             (
                                 "generated/raw/dallas-electrician-import-sample-v2/permits.csv:538 "
@@ -2501,6 +2510,12 @@ class RenderCockpitRelayTest(unittest.TestCase):
                 "https://source.example/productive?[redacted]#[redacted]",
             ],
             "productive_changed_paths_count": 3,
+            "non_productive_companion_paths": [
+                "README.md",
+                "<external>/NEXT_TASK.md",
+                "https://source.example/ignored?[redacted]#[redacted]",
+            ],
+            "non_productive_companion_paths_count": 3,
             "synthetic_row_samples": [
                 (
                     "generated/raw/dallas-electrician-import-sample-v2/permits.csv:538 "

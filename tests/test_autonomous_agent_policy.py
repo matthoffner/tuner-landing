@@ -1415,6 +1415,10 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
             ],
         )
         self.assertEqual(result["productive_changed_paths"], [])
+        self.assertEqual(
+            result["non_productive_companion_paths"],
+            ["NEXT_TASK.md", "README.md"],
+        )
         self.assertIn("policy_snapshot", result)
         self.assertEqual(
             result["policy_diagnostics"],
@@ -1428,6 +1432,7 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
                 "synthetic_row_count": 1,
                 "raw_dallas_csv_changed_path_count": 1,
                 "productive_changed_path_count": 0,
+                "non_productive_companion_path_count": 2,
                 "policy_allows_synthetic_append": False,
                 "policy_override": False,
                 "dirty_path_samples": [
@@ -1439,6 +1444,10 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
                     "generated/raw/dallas-electrician-import-sample-v2/permits.csv",
                 ],
                 "productive_changed_path_samples": [],
+                "non_productive_companion_path_samples": [
+                    "NEXT_TASK.md",
+                    "README.md",
+                ],
                 "synthetic_row_samples": [
                     "ELZ-2026-9999,100 Example Ave,Dallas,electrical,"
                     "residential,Electrical repair,Finaled,"
@@ -1649,6 +1658,10 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
             1,
         )
         self.assertEqual(
+            result["policy_diagnostics"]["non_productive_companion_path_count"],
+            0,
+        )
+        self.assertEqual(
             result["policy_summary"],
             "status=passed route=ok decision=dallas_ready_no_thin_groups "
             "focus=autonomy_visibility_or_real_ingest synthetic_rows=0 "
@@ -1680,6 +1693,10 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
             productive_paths=[
                 "tests/test_autonomous_agent_policy.py",
             ],
+            ignored_companion_paths=[
+                "README.md",
+                "https://user:pass@example.local/ignored?token=secret#debug",
+            ],
             synthetic_row_samples=[
                 "ELZ-2026-9999,https://user:pass@example.local/dallas/9999?api_key=hidden#debug",
             ],
@@ -1694,6 +1711,7 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
         self.assertEqual(diagnostics["synthetic_row_count"], 2)
         self.assertEqual(diagnostics["raw_dallas_csv_changed_path_count"], 3)
         self.assertEqual(diagnostics["productive_changed_path_count"], 4)
+        self.assertEqual(diagnostics["non_productive_companion_path_count"], 2)
         self.assertEqual(
             diagnostics["dirty_path_samples"][0],
             "scripts/run_autonomous_agent_loop.py",
@@ -1709,6 +1727,10 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
         self.assertEqual(
             diagnostics["productive_changed_path_samples"],
             ["tests/test_autonomous_agent_policy.py"],
+        )
+        self.assertEqual(
+            diagnostics["non_productive_companion_path_samples"],
+            ["README.md", "https://example.local/ignored"],
         )
         self.assertEqual(
             diagnostics["synthetic_row_samples"],

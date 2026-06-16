@@ -712,6 +712,27 @@ def cockpit_summary(status: dict[str, object]) -> dict[str, object]:
     )
     if policy_productive_path_count is None:
         policy_productive_path_count = 0
+    policy_ignored_companion_paths = (
+        compact_policy_detail_list(
+            first_string_list(
+                policy_step.get("non_productive_companion_paths"),
+                policy_diagnostics.get("non_productive_companion_path_samples"),
+            ),
+            max_items=POLICY_RAW_PATH_SAMPLE_LIMIT,
+        )
+        if policy_step
+        else []
+    )
+    policy_ignored_companion_path_count = (
+        first_compact_int(
+            policy_diagnostics.get("non_productive_companion_path_count"),
+            len(as_string_list(policy_step.get("non_productive_companion_paths"))),
+        )
+        if policy_step
+        else None
+    )
+    if policy_ignored_companion_path_count is None:
+        policy_ignored_companion_path_count = 0
     policy_synthetic_row_samples = (
         compact_policy_detail_list(
             first_string_list(
@@ -857,6 +878,10 @@ def cockpit_summary(status: dict[str, object]) -> dict[str, object]:
         "policy_raw_dallas_csv_changed_path_count": policy_raw_csv_path_count,
         "policy_productive_changed_paths": policy_productive_paths,
         "policy_productive_changed_path_count": policy_productive_path_count,
+        "policy_non_productive_companion_paths": policy_ignored_companion_paths,
+        "policy_non_productive_companion_path_count": (
+            policy_ignored_companion_path_count
+        ),
         "policy_synthetic_row_samples": policy_synthetic_row_samples,
         "policy_synthetic_row_count": policy_synthetic_row_count,
         "policy_allows_synthetic_append": policy_allows_synthetic_append,
@@ -1365,6 +1390,12 @@ def cockpit_html() -> str:
         const policyProductivePathCount = typeof cockpit.policy_productive_changed_path_count === "number"
           ? cockpit.policy_productive_changed_path_count
           : policyProductivePaths.length;
+        const policyIgnoredPaths = Array.isArray(cockpit.policy_non_productive_companion_paths)
+          ? cockpit.policy_non_productive_companion_paths
+          : [];
+        const policyIgnoredPathCount = typeof cockpit.policy_non_productive_companion_path_count === "number"
+          ? cockpit.policy_non_productive_companion_path_count
+          : policyIgnoredPaths.length;
         attention.title = [
           reasons.join(", "),
           cockpit.policy_failure_reason ? `policy: ${{cockpit.policy_failure_reason}}` : "",
@@ -1382,6 +1413,7 @@ def cockpit_html() -> str:
           coordination.handoff_error ? `handoff error: ${{coordination.handoff_error}}` : "",
           policyRawPaths.length ? `raw csv (${{policyRawPathCount}}): ${{policyRawPaths.join(", ")}}` : "",
           policyProductivePaths.length ? `productive (${{policyProductivePathCount}}): ${{policyProductivePaths.join(", ")}}` : "",
+          policyIgnoredPaths.length ? `ignored (${{policyIgnoredPathCount}}): ${{policyIgnoredPaths.join(", ")}}` : "",
           policySamples.length ? `synthetic rows (${{policySyntheticRowCount}}): ${{policySamples.join(" | ")}}` : "",
         ].filter(Boolean).join(" | ");
         const handoff = cockpit.import_handoff || {{}};

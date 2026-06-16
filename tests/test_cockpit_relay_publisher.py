@@ -1666,6 +1666,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                                     ),
                                     "raw_dallas_csv_changed_path_count": 9,
                                     "productive_changed_path_count": 3,
+                                    "non_productive_companion_path_count": 2,
                                     "synthetic_row_count": 12,
                                     "preview_json_changed": True,
                                     "policy_allows_synthetic_append": False,
@@ -1686,6 +1687,10 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                                     "scripts/run_autonomous_agent_loop.py",
                                     "tests/test_autonomous_agent_policy.py",
                                     "https://source.example/productive?token=productive-secret#debug",
+                                ],
+                                "non_productive_companion_paths": [
+                                    "README.md",
+                                    "https://source.example/ignored?token=ignored-secret#debug",
                                 ],
                                 "synthetic_row_samples": synthetic_rows,
                                 "synthetic_row_count": 12,
@@ -1753,6 +1758,14 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             "https://source.example/productive?[redacted]#[redacted]",
             summary["policy_productive_changed_paths"],
         )
+        self.assertEqual(
+            summary["policy_non_productive_companion_paths"],
+            [
+                "README.md",
+                "https://source.example/ignored?[redacted]#[redacted]",
+            ],
+        )
+        self.assertEqual(summary["policy_non_productive_companion_path_count"], 2)
         self.assertEqual(len(summary["policy_synthetic_row_samples"]), 5)
         self.assertEqual(summary["policy_synthetic_row_count"], 12)
         self.assertTrue(summary["policy_preview_json_changed"])
@@ -1784,6 +1797,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertNotIn("sample-secret", summary_text)
         self.assertNotIn("second-secret", summary_text)
         self.assertNotIn("productive-secret", summary_text)
+        self.assertNotIn("ignored-secret", summary_text)
         self.assertNotIn("overflow.csv", summary_text)
         self.assertNotIn("\n", summary["policy_failure_reason"])
 

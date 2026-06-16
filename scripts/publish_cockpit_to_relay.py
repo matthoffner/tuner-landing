@@ -1082,6 +1082,24 @@ def publisher_cockpit_summary(status: dict[str, Any]) -> dict[str, Any]:
         if policy_step
         else 0
     )
+    policy_ignored_companion_paths = (
+        compact_path_detail_list(
+            first_string_list(
+                policy_step.get("non_productive_companion_paths"),
+                policy_diagnostics.get("non_productive_companion_path_samples"),
+            )
+        )
+        if policy_step
+        else []
+    )
+    policy_ignored_companion_path_count = (
+        first_compact_int(
+            policy_diagnostics.get("non_productive_companion_path_count"),
+            len(as_string_list(policy_step.get("non_productive_companion_paths"))),
+        )
+        if policy_step
+        else 0
+    )
     policy_synthetic_row_samples = (
         compact_policy_detail_list(
             first_string_list(
@@ -1258,6 +1276,10 @@ def publisher_cockpit_summary(status: dict[str, Any]) -> dict[str, Any]:
         "policy_raw_dallas_csv_changed_path_count": policy_raw_csv_path_count,
         "policy_productive_changed_paths": policy_productive_paths,
         "policy_productive_changed_path_count": policy_productive_path_count,
+        "policy_non_productive_companion_paths": policy_ignored_companion_paths,
+        "policy_non_productive_companion_path_count": (
+            policy_ignored_companion_path_count
+        ),
         "policy_synthetic_row_samples": policy_synthetic_row_samples,
         "policy_synthetic_row_count": policy_synthetic_row_count,
         "policy_allows_synthetic_append": policy_allows_synthetic_append,
@@ -1876,6 +1898,9 @@ def source_status_log_fields(payload: dict[str, Any]) -> dict[str, Any]:
         "source_policy_productive_path_count": compact_int(
             cockpit_summary.get("policy_productive_changed_path_count")
         ),
+        "source_policy_non_productive_path_count": compact_int(
+            cockpit_summary.get("policy_non_productive_companion_path_count")
+        ),
         "source_policy_synthetic_row_count": compact_int(
             cockpit_summary.get("policy_synthetic_row_count")
         ),
@@ -2059,6 +2084,7 @@ SOURCE_STATUS_LOG_FIELD_NAMES = (
     "source_policy_override",
     "source_policy_raw_path_count",
     "source_policy_productive_path_count",
+    "source_policy_non_productive_path_count",
     "source_policy_synthetic_row_count",
     "source_coordination_handoff_path",
     "source_coordination_handoff_file_status",

@@ -789,6 +789,9 @@ def source_policy_summary(status: dict[str, Any]) -> dict[str, Any]:
         "productive_changed_paths": source_summary.get(
             "policy_productive_changed_paths"
         ),
+        "non_productive_companion_paths": source_summary.get(
+            "policy_non_productive_companion_paths"
+        ),
     }
     for key, value in path_list_fields.items():
         if not isinstance(value, list):
@@ -804,6 +807,9 @@ def source_policy_summary(status: dict[str, Any]) -> dict[str, Any]:
         ),
         "productive_changed_paths_count": source_summary.get(
             "policy_productive_changed_path_count"
+        ),
+        "non_productive_companion_paths_count": source_summary.get(
+            "policy_non_productive_companion_path_count"
         ),
     }
     for key, value in int_count_fields.items():
@@ -1245,6 +1251,9 @@ def sanitize_cockpit_summary_for_relay_response(summary: Any) -> dict[str, Any] 
         "policy_productive_changed_path_count": summary.get(
             "policy_productive_changed_path_count"
         ),
+        "policy_non_productive_companion_path_count": summary.get(
+            "policy_non_productive_companion_path_count"
+        ),
         "policy_synthetic_row_count": summary.get("policy_synthetic_row_count"),
     }
     for key, value in int_fields.items():
@@ -1286,6 +1295,9 @@ def sanitize_cockpit_summary_for_relay_response(summary: Any) -> dict[str, Any] 
         ),
         "policy_productive_changed_paths": summary.get(
             "policy_productive_changed_paths"
+        ),
+        "policy_non_productive_companion_paths": summary.get(
+            "policy_non_productive_companion_paths"
         ),
     }
     for key, value in path_list_fields.items():
