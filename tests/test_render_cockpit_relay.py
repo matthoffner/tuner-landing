@@ -2720,6 +2720,73 @@ class RenderCockpitRelayTest(unittest.TestCase):
         ):
             self.assertNotIn(secret, combined)
 
+    def test_status_and_health_include_remote_omitted_field_count_diagnostic(self) -> None:
+        self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
+        self.relay.update_state(
+            {
+                "pushed_at": "2026-06-14T19:59:30Z",
+                "status": {
+                    "status": "running",
+                    "loop_running": True,
+                    "source_status_remote_omitted_field_count": "4",
+                },
+                "log_tail": "publisher omitted local-only status keys\n",
+            }
+        )
+        self.relay.utc_now = lambda: "2026-06-14T20:00:00Z"
+
+        health = self.relay.health_payload()
+        status = self.relay.relay_status_payload()
+
+        expected_diagnostics = {
+            "source_status": "running",
+            "source_status_remote_omitted_field_count": 4,
+        }
+        self.assertEqual(
+            health["cockpit_health"]["source_status_diagnostics"],
+            expected_diagnostics,
+        )
+        self.assertEqual(
+            status["cockpit_health"]["source_status_diagnostics"],
+            expected_diagnostics,
+        )
+        self.assertEqual(status["source_status_remote_omitted_field_count"], 4)
+
+    def test_status_and_health_ignore_malformed_remote_omitted_field_count(self) -> None:
+        self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
+        self.relay.update_state(
+            {
+                "pushed_at": "2026-06-14T19:59:30Z",
+                "status": {
+                    "status": "running",
+                    "loop_running": True,
+                    "source_status_remote_omitted_field_count": (
+                        "token=omitted-count-secret"
+                    ),
+                },
+                "log_tail": "publisher sent malformed omitted count\n",
+            }
+        )
+        self.relay.utc_now = lambda: "2026-06-14T20:00:00Z"
+
+        health = self.relay.health_payload()
+        status = self.relay.relay_status_payload()
+
+        self.assertEqual(
+            health["cockpit_health"]["source_status_diagnostics"],
+            {"source_status": "running"},
+        )
+        self.assertEqual(
+            status["cockpit_health"]["source_status_diagnostics"],
+            {"source_status": "running"},
+        )
+        self.assertNotIn("source_status_remote_omitted_field_count", status)
+        response_text = json.dumps({"health": health, "status": status}, sort_keys=True)
+        self.assertNotIn(
+            "omitted-count-secret",
+            response_text,
+        )
+
     def test_status_and_health_route_oversized_source_status_file(self) -> None:
         self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
         self.relay.update_state(

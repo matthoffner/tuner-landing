@@ -534,6 +534,9 @@ def source_status_diagnostics(status: dict[str, Any]) -> dict[str, Any]:
         "source_status_stale_after_seconds": status.get(
             "source_status_stale_after_seconds"
         ),
+        "source_status_remote_omitted_field_count": status.get(
+            "source_status_remote_omitted_field_count"
+        ),
     }
     for key, value in int_fields.items():
         compact_value = compact_int(value)
@@ -1323,6 +1326,16 @@ def sanitize_status_for_relay_response(status: dict[str, Any]) -> dict[str, Any]
         if key not in response_status:
             continue
         compact_value = compact_path_diagnostic(response_status.get(key), max_length=240)
+        if compact_value is None:
+            response_status.pop(key, None)
+        else:
+            response_status[key] = compact_value
+
+    int_fields = ("source_status_remote_omitted_field_count",)
+    for key in int_fields:
+        if key not in response_status:
+            continue
+        compact_value = compact_int(response_status.get(key))
         if compact_value is None:
             response_status.pop(key, None)
         else:
