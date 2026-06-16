@@ -388,6 +388,15 @@ def compact_url(value: Any, *, max_length: int = 180) -> str | None:
     return sanitize_url_value(text)
 
 
+def compact_path_label(value: Any, *, max_length: int = 240) -> str | None:
+    text = compact_text(value, max_length=max_length)
+    if text is None:
+        return None
+    if text.startswith(("/", "~")):
+        return repo_relative(Path(text))[:max_length]
+    return text
+
+
 def compact_policy_detail(value: Any, *, max_length: int = 240) -> str | None:
     text = compact_text(value, max_length=max_length * 2)
     if text is None:
@@ -655,10 +664,15 @@ def import_handoff_summary(import_pipeline: dict[str, Any]) -> dict[str, Any]:
             if not isinstance(item, dict):
                 continue
             sequence_item: dict[str, Any] = {}
-            for key in ("file_name", "status", "file_path", "template_line"):
+            for key in ("file_name", "status", "template_line"):
                 compact_value = compact_policy_detail(item.get(key), max_length=240)
                 if compact_value is not None:
                     sequence_item[key] = compact_value
+            file_path = compact_path_label(item.get("file_path"), max_length=240)
+            if file_path is not None:
+                file_path = compact_policy_detail(file_path, max_length=240)
+            if file_path is not None:
+                sequence_item["file_path"] = file_path
             row_number = compact_int(item.get("csv_row_number"))
             if row_number is not None:
                 sequence_item["csv_row_number"] = row_number
@@ -683,8 +697,13 @@ def import_handoff_summary(import_pipeline: dict[str, Any]) -> dict[str, Any]:
     if isinstance(ready_for_append, bool):
         summary["ready_for_append"] = ready_for_append
 
+    raw_dir = compact_path_label(handoff.get("raw_dir"), max_length=240)
+    if raw_dir is not None:
+        raw_dir = compact_policy_detail(raw_dir, max_length=240)
+    if raw_dir is not None:
+        summary["raw_dir"] = raw_dir
+
     text_fields = {
-        "raw_dir": handoff.get("raw_dir"),
         "after_edit_command": handoff.get("after_edit_command"),
         "readiness_check_command": handoff.get("readiness_check_command"),
         "raw_handoff_verification_json_command": handoff.get(

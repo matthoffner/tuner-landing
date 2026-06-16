@@ -931,8 +931,8 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                                 },
                                 "next_import_record_handoff": {
                                     "raw_dir": (
-                                        "generated/raw/"
-                                        "dallas-electrician-import-sample-v2"
+                                        "/tmp/customer/dallas/raw "
+                                        "token=raw-dir-secret"
                                     ),
                                     "raw_file_next_append_rows": {
                                         "permits.csv": 538,
@@ -958,8 +958,8 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                                             "file_name": "inspections.csv",
                                             "status": "ready",
                                             "file_path": (
-                                                "https://user:secret@example.local/"
-                                                "inspections.csv?token=raw-secret#debug"
+                                                "/tmp/customer/dallas/raw/"
+                                                "inspections.csv token=raw-secret"
                                             ),
                                             "csv_row_number": "1085",
                                             "template_line": (
@@ -1089,9 +1089,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                     {
                         "file_name": "inspections.csv",
                         "status": "ready",
-                        "file_path": (
-                            "https://example.local/inspections.csv?[redacted]#[redacted]"
-                        ),
+                        "file_path": "<external>/inspections.csv token=[redacted]",
                         "template_line": (
                             "<required>,<required>,<required>,<required>,,,,"
                         ),
@@ -1100,7 +1098,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 ],
                 "append_sequence_count": 2,
                 "ready_for_append": True,
-                "raw_dir": "generated/raw/dallas-electrician-import-sample-v2",
+                "raw_dir": "<external>/raw token=[redacted]",
                 "after_edit_command": (
                     "python3 scripts/run_dallas_import_pipeline.py --require-ready"
                 ),
@@ -1115,7 +1113,8 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             },
         )
         self.assertNotIn("raw-secret", json.dumps(summary["import_handoff"]))
-        self.assertNotIn("user:secret", json.dumps(summary["import_handoff"]))
+        self.assertNotIn("raw-dir-secret", json.dumps(summary["import_handoff"]))
+        self.assertNotIn("/tmp/customer", json.dumps(summary["import_handoff"]))
         self.assertEqual(
             summary["coordination"],
             {
