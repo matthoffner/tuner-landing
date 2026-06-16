@@ -1265,6 +1265,11 @@ def source_status_log_fields(payload: dict[str, Any]) -> dict[str, Any]:
         "source_status_stale": status.get("source_status_stale")
         if isinstance(status.get("source_status_stale"), bool)
         else None,
+        "source_status_timestamp_invalid": status.get(
+            "source_status_timestamp_invalid"
+        )
+        if isinstance(status.get("source_status_timestamp_invalid"), bool)
+        else None,
         "source_status_timestamp_future": status.get("source_status_timestamp_future")
         if isinstance(status.get("source_status_timestamp_future"), bool)
         else None,
@@ -1368,6 +1373,7 @@ SOURCE_STATUS_LOG_FIELD_NAMES = (
     "source_status",
     "source_loop_running",
     "source_status_stale",
+    "source_status_timestamp_invalid",
     "source_status_timestamp_future",
     "source_status_age_seconds",
     "source_status_file_status",
