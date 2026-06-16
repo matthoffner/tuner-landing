@@ -2371,9 +2371,13 @@ def sleep_outside_business_hours(
     wait_seconds = min(max(idle_sleep, 1.0), max(seconds_until_next_business_start(state), 1.0))
     deadline = time.monotonic() + wait_seconds
     while not STOP_REQUESTED and time.monotonic() < deadline:
-        publisher_status = publisher_process.poll()
+        publisher_status, publisher_poll_ok = safe_child_poll(
+            publisher_process,
+            "relay publisher",
+        )
         if publisher_status is not None:
-            emit(f"relay publisher exited unexpectedly status={publisher_status}")
+            if publisher_poll_ok:
+                emit(f"relay publisher exited unexpectedly status={publisher_status}")
             return PUBLISHER_EXITED, publisher_status if publisher_status != 0 else 1
         time.sleep(min(poll_interval, max(0.0, deadline - time.monotonic())))
     if STOP_REQUESTED:

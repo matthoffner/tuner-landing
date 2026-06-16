@@ -5145,6 +5145,33 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertIn("could not poll autonomous loop pid=101: OSError", output.getvalue())
         self.assertNotIn("secret-token", output.getvalue())
 
+    def test_business_hours_sleep_handles_publisher_poll_failure_without_exception_text(
+        self,
+    ) -> None:
+        publisher = PollRaisesProcess(pid=202)
+        state = {
+            "enabled": True,
+            "in_business_hours": False,
+            "local_time": "2026-06-15T17:01:00-05:00",
+            "next_start_at": "2026-06-16T09:00:00-05:00",
+        }
+        output = io.StringIO()
+
+        with (
+            patch.object(self.worker, "seconds_until_next_business_start", return_value=60.0),
+            redirect_stdout(output),
+        ):
+            reason, status = self.worker.sleep_outside_business_hours(
+                publisher,
+                state,
+                poll_interval=0,
+            )
+
+        self.assertEqual(reason, self.worker.PUBLISHER_EXITED)
+        self.assertEqual(status, self.worker.CHILD_POLL_FAILURE_EXIT_STATUS)
+        self.assertIn("could not poll relay publisher pid=202: OSError", output.getvalue())
+        self.assertNotIn("secret-token", output.getvalue())
+
 
 class FakeProcess:
     def __init__(self, *, pid: int, initial_status: int | None = None) -> None:
