@@ -103,6 +103,7 @@ MAX_AGENT_ITERATIONS = 1000
 MAX_AGENT_INTERVAL_SECONDS = 3600
 MAX_CODEX_TIMEOUT_SECONDS = 7200
 MAX_PROMPT_FILE_BYTES = 128 * 1024
+MAX_HANDOFF_BYTES = 128 * 1024
 COMMAND_TERMINATE_GRACE_SECONDS = 5.0
 PIPELINE_SUMMARY_OBJECT_SECTIONS = (
     "execution_readiness",
@@ -264,17 +265,20 @@ def import_readiness_command() -> list[str]:
 
 
 def latest_handoff_status() -> str:
-    if not HANDOFF_PATH.exists():
+    lines, metadata = read_handoff_lines_limited(HANDOFF_PATH)
+    handoff_status = metadata["handoff_file_status"]
+    if handoff_status == "missing":
         return "handoff missing"
-    lines = HANDOFF_PATH.read_text(encoding="utf-8").splitlines()
+    if lines is None:
+        return "handoff unreadable"
     for index, line in enumerate(lines):
         if line.startswith("- status:"):
-            return line.replace("- status:", "", 1).strip()
+            return str(sanitized_policy_scalar(line.replace("- status:", "", 1).strip()))
         if line.strip() == "## Latest":
             continue
         if index > 24:
             break
-    return "handoff present"
+    return "handoff too large" if handoff_status == "too_large" else "handoff present"
 
 
 def handoff_read_error(exc: BaseException, path: Path) -> str:
@@ -300,32 +304,55 @@ def handoff_age_seconds(path: Path) -> int | None:
     return max(0, int(datetime.now(timezone.utc).timestamp() - modified_at))
 
 
-def handoff_line_snapshot(path: Path) -> dict[str, Any]:
+def read_handoff_lines_limited(path: Path) -> tuple[list[str] | None, dict[str, Any]]:
     if not path.exists():
-        return {
+        return None, {
             "handoff_file_status": "missing",
             "latest_section_found": False,
             "latest_status_found": False,
             "latest_handoff_status": "handoff missing",
         }
     try:
-        lines = path.read_text(encoding="utf-8").splitlines()
+        with path.open("rb") as handle:
+            payload_bytes = handle.read(MAX_HANDOFF_BYTES + 1)
     except OSError as exc:
-        return {
+        return None, {
             "handoff_file_status": "read_failed",
             "latest_section_found": False,
             "latest_status_found": False,
             "latest_handoff_status": "handoff unreadable",
             "handoff_error": handoff_read_error(exc, path),
         }
+
+    too_large = len(payload_bytes) > MAX_HANDOFF_BYTES
+    if too_large:
+        payload_bytes = payload_bytes[:MAX_HANDOFF_BYTES]
+    try:
+        text = payload_bytes.decode("utf-8")
     except UnicodeDecodeError as exc:
-        return {
+        return None, {
             "handoff_file_status": "invalid_encoding",
             "latest_section_found": False,
             "latest_status_found": False,
             "latest_handoff_status": "handoff unreadable",
             "handoff_error": sanitized_policy_detail(f"invalid UTF-8 at byte {exc.start}"),
         }
+
+    metadata: dict[str, Any] = {
+        "handoff_file_status": "too_large" if too_large else "loaded",
+    }
+    if too_large:
+        metadata["handoff_error"] = (
+            f"file exceeds max handoff bytes ({MAX_HANDOFF_BYTES + 1} > "
+            f"{MAX_HANDOFF_BYTES})"
+        )
+    return text.splitlines(), metadata
+
+
+def handoff_line_snapshot(path: Path) -> dict[str, Any]:
+    lines, metadata = read_handoff_lines_limited(path)
+    if lines is None:
+        return metadata
 
     latest_section_found = False
     for index, line in enumerate(lines):
@@ -334,7 +361,7 @@ def handoff_line_snapshot(path: Path) -> dict[str, Any]:
             continue
         if line.startswith("- status:"):
             return {
-                "handoff_file_status": "loaded",
+                **metadata,
                 "latest_section_found": latest_section_found,
                 "latest_status_found": True,
                 "latest_handoff_status": sanitized_policy_scalar(
@@ -344,11 +371,16 @@ def handoff_line_snapshot(path: Path) -> dict[str, Any]:
             }
         if index > 24:
             break
+    latest_handoff_status = (
+        "handoff too large"
+        if metadata["handoff_file_status"] == "too_large"
+        else "handoff present"
+    )
     return {
-        "handoff_file_status": "loaded",
+        **metadata,
         "latest_section_found": latest_section_found,
         "latest_status_found": False,
-        "latest_handoff_status": "handoff present",
+        "latest_handoff_status": latest_handoff_status,
         "handoff_age_seconds": handoff_age_seconds(path),
     }
 
