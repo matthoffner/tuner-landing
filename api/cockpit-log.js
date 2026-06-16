@@ -78,6 +78,7 @@ module.exports = async function handler(request, response) {
         timeoutMs,
         request.method,
         MAX_LOG_BODY_CHARS,
+        { bodyLimitMode: upstreamConfig.kind === "relay" ? "tail" : "error" },
       );
       if (!upstream.ok) {
         attempts.push({
@@ -103,6 +104,9 @@ module.exports = async function handler(request, response) {
           error: parsed.error,
         });
         continue;
+      }
+      if (upstream.truncated || parsed.truncated) {
+        response.setHeader("X-Automoat-Upstream-Body-Truncated", "true");
       }
       setUpstreamSelectionHeaders(response, upstreamConfig.kind, attempts.length, [
         ...attempts,

@@ -11,6 +11,7 @@ const EXPOSED_UPSTREAM_HEADERS = [
   "X-Automoat-Upstream-Status-Code",
   "X-Automoat-Upstream-Error",
   "X-Automoat-Upstream-Attempts",
+  "X-Automoat-Upstream-Body-Truncated",
   "X-Automoat-Upstream-Timeout-Ms",
   "X-Automoat-Upstream-Invalid-Config",
   "X-Automoat-Upstream-Invalid-Keys",
@@ -441,9 +442,71 @@ async function readBoundedUpstreamText(upstream, maxBodyChars) {
   return { ok: true, body };
 }
 
-async function fetchUpstreamText(upstreamConfig, timeoutMs, method = "GET", maxBodyChars = null) {
+async function readTailBoundedUpstreamText(upstream, maxBodyChars) {
+  if (
+    !Number.isInteger(maxBodyChars)
+    || maxBodyChars <= 0
+    || !upstream.body
+    || typeof upstream.body.getReader !== "function"
+  ) {
+    const body = await upstream.text();
+    return {
+      ok: true,
+      body: body.length > maxBodyChars ? body.slice(-maxBodyChars) : body,
+      truncated: Number.isInteger(maxBodyChars) && maxBodyChars > 0 && body.length > maxBodyChars,
+    };
+  }
+
+  const reader = upstream.body.getReader();
+  const decoder = new TextDecoder();
+  let body = "";
+  let truncated = false;
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) {
+        break;
+      }
+      body += typeof value === "string" ? value : decoder.decode(value, { stream: true });
+      if (body.length > maxBodyChars) {
+        truncated = true;
+        body = body.slice(-maxBodyChars);
+        if (typeof reader.cancel === "function") {
+          try {
+            await reader.cancel();
+          } catch (_error) {
+            // Keep the bounded tail sample even if the stream ignores cancellation.
+          }
+        }
+        break;
+      }
+    }
+
+    body += decoder.decode();
+    if (body.length > maxBodyChars) {
+      truncated = true;
+      body = body.slice(-maxBodyChars);
+    }
+  } finally {
+    if (typeof reader.releaseLock === "function") {
+      reader.releaseLock();
+    }
+  }
+
+  return { ok: true, body, truncated };
+}
+
+async function fetchUpstreamText(
+  upstreamConfig,
+  timeoutMs,
+  method = "GET",
+  maxBodyChars = null,
+  options = {},
+) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  const bodyLimitMode = options.bodyLimitMode || "error";
   try {
     const upstream = await fetch(upstreamConfig.url, {
       headers: upstreamConfig.headers,
@@ -459,7 +522,12 @@ async function fetchUpstreamText(upstreamConfig, timeoutMs, method = "GET", maxB
         error: "redirect_blocked",
       };
     }
-    if (method !== "HEAD" && Number.isInteger(maxBodyChars) && maxBodyChars > 0) {
+    if (
+      bodyLimitMode !== "tail"
+      && method !== "HEAD"
+      && Number.isInteger(maxBodyChars)
+      && maxBodyChars > 0
+    ) {
       const contentLength = Number(upstream.headers && upstream.headers.get("content-length"));
       if (Number.isInteger(contentLength) && contentLength > maxBodyChars) {
         return {
@@ -472,7 +540,9 @@ async function fetchUpstreamText(upstreamConfig, timeoutMs, method = "GET", maxB
     }
     const bodyResult = method === "HEAD"
       ? { ok: true, body: "" }
-      : await readBoundedUpstreamText(upstream, maxBodyChars);
+      : bodyLimitMode === "tail"
+        ? await readTailBoundedUpstreamText(upstream, maxBodyChars)
+        : await readBoundedUpstreamText(upstream, maxBodyChars);
     if (!bodyResult.ok) {
       return {
         ok: false,
@@ -485,6 +555,7 @@ async function fetchUpstreamText(upstreamConfig, timeoutMs, method = "GET", maxB
       ok: upstream.ok,
       status: upstream.status,
       body: bodyResult.body,
+      truncated: bodyResult.truncated === true,
     };
   } catch (error) {
     if (controller.signal.aborted) {
@@ -558,6 +629,7 @@ module.exports = {
   normalizeBaseUrl,
   normalizeUpstreamTimeoutMs,
   readBoundedUpstreamText,
+  readTailBoundedUpstreamText,
   relayHeaderConfig,
   relayHeaders,
   sendMethodNotAllowed,
