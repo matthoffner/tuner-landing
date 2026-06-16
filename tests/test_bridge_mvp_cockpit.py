@@ -8,6 +8,7 @@ import importlib.util
 import io
 import json
 from pathlib import Path
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -39,6 +40,38 @@ class FakeProcess:
 
     def terminate(self) -> None:
         self.terminated = True
+
+
+class BlockingStdout:
+    def read(self, *args, **kwargs):  # noqa: ANN002, ANN003 - mirrors file-like read.
+        raise AssertionError("startup output must be collected with communicate()")
+
+
+class SlowStartupProcess:
+    def __init__(self, pid: int = 12345, output: str = "startup log") -> None:
+        self.pid = pid
+        self.returncode = None
+        self.stdout = BlockingStdout()
+        self.output = output
+        self.terminated = False
+        self.killed = False
+        self.communicate_calls = 0
+
+    def poll(self) -> int | None:
+        return self.returncode
+
+    def terminate(self) -> None:
+        self.terminated = True
+
+    def kill(self) -> None:
+        self.killed = True
+        self.returncode = -9
+
+    def communicate(self, timeout: float | None = None):
+        self.communicate_calls += 1
+        if self.communicate_calls == 1:
+            raise subprocess.TimeoutExpired(["fake-child"], timeout)
+        return self.output, None
 
 
 class BridgeMvpCockpitTest(unittest.TestCase):
@@ -372,6 +405,98 @@ class BridgeMvpCockpitTest(unittest.TestCase):
         self.assertEqual(status_payload["bridge_health"]["status"], "degraded")
         self.assertEqual(status_payload["bridge_health"]["primary_reason"], "tunnel_exited")
         self.assertEqual(status_payload["bridge_health"]["label"], "Ngrok tunnel exited")
+
+    def test_viewer_start_failure_collects_output_without_blocking_on_stdout_read(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            self.isolate_state(Path(tmp))
+            viewer = SlowStartupProcess(output="viewer partial startup log")
+
+            with patch.object(self.bridge.shutil, "which", return_value="/usr/local/bin/ngrok"), patch.object(
+                self.bridge.subprocess,
+                "Popen",
+                return_value=viewer,
+            ), patch.object(
+                self.bridge,
+                "wait_for_read_only_server",
+                return_value=False,
+            ), patch.object(
+                sys,
+                "argv",
+                [
+                    "bridge_mvp_cockpit.py",
+                    "--port",
+                    "4181",
+                    "--ngrok-web-port",
+                    "4041",
+                    "--interval",
+                    "5",
+                ],
+            ):
+                status = self.bridge.main()
+
+            status_payload = json.loads(self.bridge.BRIDGE_STATUS.read_text(encoding="utf-8"))
+            log_text = self.bridge.BRIDGE_LOG.read_text(encoding="utf-8")
+
+        self.assertEqual(status, 1)
+        self.assertTrue(viewer.terminated)
+        self.assertTrue(viewer.killed)
+        self.assertEqual(viewer.communicate_calls, 2)
+        self.assertEqual(status_payload["status"], "error")
+        self.assertEqual(status_payload["error"], "read-only bridge viewer failed")
+        self.assertEqual(status_payload["bridge_health"]["primary_reason"], "viewer_start_failed")
+        self.assertIn("read-only bridge viewer did not start", log_text)
+        self.assertIn("viewer partial startup log", log_text)
+
+    def test_ngrok_url_failure_collects_output_without_blocking_on_stdout_read(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            self.isolate_state(Path(tmp))
+            viewer = FakeProcess(returncode=None)
+            tunnel = SlowStartupProcess(pid=23456, output="ngrok partial startup log")
+            processes = [viewer, tunnel]
+
+            def fake_popen(command, *args, **kwargs):  # noqa: ANN001 - mirrors subprocess signature.
+                return processes.pop(0)
+
+            with patch.object(self.bridge.shutil, "which", return_value="/usr/local/bin/ngrok"), patch.object(
+                self.bridge.subprocess,
+                "Popen",
+                fake_popen,
+            ), patch.object(
+                self.bridge,
+                "wait_for_read_only_server",
+                return_value=True,
+            ), patch.object(
+                self.bridge,
+                "wait_for_ngrok_url",
+                return_value=None,
+            ), patch.object(
+                sys,
+                "argv",
+                [
+                    "bridge_mvp_cockpit.py",
+                    "--port",
+                    "4181",
+                    "--ngrok-web-port",
+                    "4041",
+                    "--interval",
+                    "5",
+                ],
+            ):
+                status = self.bridge.main()
+
+            status_payload = json.loads(self.bridge.BRIDGE_STATUS.read_text(encoding="utf-8"))
+            log_text = self.bridge.BRIDGE_LOG.read_text(encoding="utf-8")
+
+        self.assertEqual(status, 1)
+        self.assertTrue(tunnel.terminated)
+        self.assertTrue(tunnel.killed)
+        self.assertTrue(viewer.terminated)
+        self.assertEqual(tunnel.communicate_calls, 2)
+        self.assertEqual(status_payload["status"], "error")
+        self.assertEqual(status_payload["error"], "ngrok did not report a public URL")
+        self.assertEqual(status_payload["bridge_health"]["primary_reason"], "tunnel_url_unavailable")
+        self.assertIn("ngrok did not report a public URL", log_text)
+        self.assertIn("ngrok partial startup log", log_text)
 
 
 if __name__ == "__main__":

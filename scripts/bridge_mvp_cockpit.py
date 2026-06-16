@@ -24,6 +24,8 @@ STATE_DIR = ROOT / ".automoat" / "state"
 BRIDGE_LOG = LOG_DIR / "mvp-bridge.log"
 BRIDGE_STATUS = STATE_DIR / "mvp-bridge-status.json"
 BRIDGE_PID = STATE_DIR / "mvp-bridge.pid"
+STARTUP_OUTPUT_TIMEOUT_SECONDS = 0.5
+STARTUP_OUTPUT_MAX_CHARS = 4000
 BRIDGE_HEALTH_LABELS = {
     "bridge_status_unknown": "Bridge status is unknown",
     "viewer_start_failed": "Read-only viewer failed to start",
@@ -162,6 +164,36 @@ def emit(message: str) -> None:
     print(line, flush=True)
     with BRIDGE_LOG.open("a", encoding="utf-8") as handle:
         handle.write(line + "\n")
+
+
+def stop_and_collect_output(
+    process: subprocess.Popen[str],
+    *,
+    timeout: float = STARTUP_OUTPUT_TIMEOUT_SECONDS,
+    max_chars: int = STARTUP_OUTPUT_MAX_CHARS,
+) -> str:
+    try:
+        process.terminate()
+    except OSError:
+        pass
+
+    try:
+        output, _ = process.communicate(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        try:
+            process.kill()
+        except OSError:
+            pass
+        try:
+            output, _ = process.communicate(timeout=timeout)
+        except (OSError, subprocess.TimeoutExpired, ValueError):
+            output = ""
+    except (OSError, ValueError):
+        output = ""
+
+    if output is None:
+        output = ""
+    return output[:max_chars]
 
 
 def http_json(url: str) -> dict[str, object] | None:
@@ -354,8 +386,8 @@ def main() -> int:
         text=True,
     )
     if not wait_for_read_only_server(args.port):
-        output = viewer.stdout.read() if viewer.stdout else ""
         emit("read-only bridge viewer did not start")
+        output = stop_and_collect_output(viewer)
         if output:
             emit(output.strip())
         write_status(
@@ -366,7 +398,6 @@ def main() -> int:
             },
             runtime_config=runtime_config,
         )
-        viewer.terminate()
         return 1
 
     ngrok_cmd = [
@@ -390,14 +421,8 @@ def main() -> int:
     )
     public_url = bridge_public_url_origin(wait_for_ngrok_url(args.ngrok_web_port))
     if not public_url:
-        output = ""
-        if tunnel.stdout:
-            time.sleep(0.5)
-            try:
-                output = tunnel.stdout.read(4000)
-            except TypeError:
-                output = tunnel.stdout.read()
         emit("ngrok did not report a public URL")
+        output = stop_and_collect_output(tunnel)
         if output:
             emit(output.strip())
         write_status(
@@ -409,7 +434,6 @@ def main() -> int:
             },
             runtime_config=runtime_config,
         )
-        tunnel.terminate()
         viewer.terminate()
         return 1
 
