@@ -136,6 +136,7 @@ BUSINESS_HOURS_ENV_DEFAULTS = {
     "AUTOMOAT_BUSINESS_HOURS_DAYS": "mon-fri",
     "AUTOMOAT_BUSINESS_HOURS_IDLE_SLEEP": "300",
 }
+MAX_BUSINESS_HOURS_CONFIG_VALUE_CHARS = 120
 BUSINESS_HOURS_TRUE_VALUES = {"1", "true", "yes", "on", "enabled"}
 BUSINESS_HOURS_FALSE_VALUES = {"0", "false", "no", "off", "disabled"}
 BUSINESS_HOURS_ENV_NAMES = tuple(BUSINESS_HOURS_ENV_DEFAULTS)
@@ -508,6 +509,36 @@ def business_hours_env_value(
     return env.get(name, BUSINESS_HOURS_ENV_DEFAULTS[name]).strip()
 
 
+def validate_business_hours_env_value(
+    env: os._Environ[str] | dict[str, str],
+    name: str,
+    errors: list[str],
+) -> str | None:
+    value = env.get(name)
+    if value is None:
+        return BUSINESS_HOURS_ENV_DEFAULTS[name]
+    if not value.strip():
+        errors.append(f"{name} must not be empty")
+        return None
+    if value != value.strip():
+        errors.append(f"{name} must not include leading or trailing whitespace")
+        return None
+    if any(
+        character in "\r\n" or ord(character) < 32 or ord(character) == 127
+        for character in value
+    ):
+        errors.append(
+            f"{name} must be a single-line business-hours value without control characters"
+        )
+        return None
+    if len(value) > MAX_BUSINESS_HOURS_CONFIG_VALUE_CHARS:
+        errors.append(
+            f"{name} must be {MAX_BUSINESS_HOURS_CONFIG_VALUE_CHARS} characters or fewer"
+        )
+        return None
+    return value
+
+
 def business_hours_enabled(env: os._Environ[str] | dict[str, str]) -> bool:
     raw_value = business_hours_env_value(env, "AUTOMOAT_BUSINESS_HOURS_ENABLED").lower()
     return raw_value not in BUSINESS_HOURS_FALSE_VALUES
@@ -601,7 +632,16 @@ def validate_business_hours_environment(
     env: os._Environ[str] | dict[str, str],
     errors: list[str],
 ) -> None:
-    enabled_value = business_hours_env_value(env, "AUTOMOAT_BUSINESS_HOURS_ENABLED").lower()
+    business_values: dict[str, str] = {}
+    initial_error_count = len(errors)
+    for name in BUSINESS_HOURS_ENV_NAMES:
+        value = validate_business_hours_env_value(env, name, errors)
+        if value is not None:
+            business_values[name] = value
+    if len(errors) > initial_error_count:
+        return
+
+    enabled_value = business_values["AUTOMOAT_BUSINESS_HOURS_ENABLED"].lower()
     if enabled_value not in BUSINESS_HOURS_TRUE_VALUES | BUSINESS_HOURS_FALSE_VALUES:
         errors.append(
             "AUTOMOAT_BUSINESS_HOURS_ENABLED must be true/false, yes/no, on/off, or 1/0"
@@ -611,14 +651,14 @@ def validate_business_hours_environment(
         return
 
     try:
-        timezone_name = business_hours_env_value(env, "AUTOMOAT_BUSINESS_HOURS_TIMEZONE")
+        timezone_name = business_values["AUTOMOAT_BUSINESS_HOURS_TIMEZONE"]
         ZoneInfo(timezone_name)
     except ZoneInfoNotFoundError:
         errors.append("AUTOMOAT_BUSINESS_HOURS_TIMEZONE must be a valid IANA timezone")
 
     try:
         start = parse_business_time(
-            business_hours_env_value(env, "AUTOMOAT_BUSINESS_HOURS_START"),
+            business_values["AUTOMOAT_BUSINESS_HOURS_START"],
             "AUTOMOAT_BUSINESS_HOURS_START",
         )
     except ValueError as exc:
@@ -627,7 +667,7 @@ def validate_business_hours_environment(
 
     try:
         end = parse_business_time(
-            business_hours_env_value(env, "AUTOMOAT_BUSINESS_HOURS_END"),
+            business_values["AUTOMOAT_BUSINESS_HOURS_END"],
             "AUTOMOAT_BUSINESS_HOURS_END",
         )
     except ValueError as exc:
@@ -638,7 +678,7 @@ def validate_business_hours_environment(
         errors.append("AUTOMOAT_BUSINESS_HOURS_START must be before AUTOMOAT_BUSINESS_HOURS_END")
 
     try:
-        parse_business_days(business_hours_env_value(env, "AUTOMOAT_BUSINESS_HOURS_DAYS"))
+        parse_business_days(business_values["AUTOMOAT_BUSINESS_HOURS_DAYS"])
     except ValueError as exc:
         errors.append(str(exc))
 
@@ -1079,7 +1119,10 @@ def preflight_error_category(error: str) -> str:
         return "invalid_codex_auth_payload"
     if error.startswith("AUTOMOAT_CODEX_"):
         return "invalid_codex_config"
-    if any(error.startswith(name) for name in RUNTIME_CONFIG_LIMITS):
+    if any(
+        error.startswith(name)
+        for name in (*RUNTIME_CONFIG_LIMITS, *BUSINESS_HOURS_ENV_NAMES)
+    ):
         return "invalid_runtime_config"
     if error.startswith("GIT_AUTHOR_") or error.startswith("GIT_COMMITTER_"):
         return "invalid_git_identity"

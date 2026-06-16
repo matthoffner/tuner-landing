@@ -3480,6 +3480,91 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             ],
         )
 
+    def test_rejects_unsafe_business_hours_values_before_logging(self) -> None:
+        oversized_timezone = "America/" + (
+            "secret-zone" * self.worker.MAX_BUSINESS_HOURS_CONFIG_VALUE_CHARS
+        )
+        output = io.StringIO()
+
+        with redirect_stdout(output):
+            errors = self.worker.emit_environment_preflight(
+                {
+                    "AUTOMOAT_RELAY_URL": "https://automoat-cockpit-relay.example",
+                    "AUTOMOAT_RELAY_TOKEN": "relay-token",
+                    "GITHUB_TOKEN": "github-token",
+                    "CODEX_ACCESS_TOKEN": "codex-token",
+                    "AUTOMOAT_BUSINESS_HOURS_ENABLED": "true ",
+                    "AUTOMOAT_BUSINESS_HOURS_TIMEZONE": oversized_timezone,
+                    "AUTOMOAT_BUSINESS_HOURS_START": "09:00\nrelay_token=leaked",
+                    "AUTOMOAT_BUSINESS_HOURS_END": "17:00\tsecret",
+                    "AUTOMOAT_BUSINESS_HOURS_DAYS": "   ",
+                    "AUTOMOAT_BUSINESS_HOURS_IDLE_SLEEP": "300\rsecret",
+                },
+                found_command,
+                output_format="json",
+            )
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(
+            errors,
+            [
+                (
+                    "AUTOMOAT_BUSINESS_HOURS_ENABLED must not include leading or "
+                    "trailing whitespace"
+                ),
+                (
+                    "AUTOMOAT_BUSINESS_HOURS_TIMEZONE must be "
+                    f"{self.worker.MAX_BUSINESS_HOURS_CONFIG_VALUE_CHARS} "
+                    "characters or fewer"
+                ),
+                (
+                    "AUTOMOAT_BUSINESS_HOURS_START must be a single-line "
+                    "business-hours value without control characters"
+                ),
+                (
+                    "AUTOMOAT_BUSINESS_HOURS_END must be a single-line "
+                    "business-hours value without control characters"
+                ),
+                "AUTOMOAT_BUSINESS_HOURS_DAYS must not be empty",
+                (
+                    "AUTOMOAT_BUSINESS_HOURS_IDLE_SLEEP must be a single-line "
+                    "business-hours value without control characters"
+                ),
+            ],
+        )
+        self.assertEqual(payload["status"], "failed")
+        self.assertEqual(
+            payload["diagnostics"]["error_categories"],
+            ["invalid_runtime_config"],
+        )
+        self.assertEqual(
+            payload["diagnostics"]["failed_configuration_keys"],
+            [
+                "AUTOMOAT_BUSINESS_HOURS_DAYS",
+                "AUTOMOAT_BUSINESS_HOURS_ENABLED",
+                "AUTOMOAT_BUSINESS_HOURS_END",
+                "AUTOMOAT_BUSINESS_HOURS_IDLE_SLEEP",
+                "AUTOMOAT_BUSINESS_HOURS_START",
+                "AUTOMOAT_BUSINESS_HOURS_TIMEZONE",
+            ],
+        )
+        self.assertEqual(
+            payload["diagnostics"]["runtime_configured_keys"],
+            [
+                "AUTOMOAT_BUSINESS_HOURS_DAYS",
+                "AUTOMOAT_BUSINESS_HOURS_ENABLED",
+                "AUTOMOAT_BUSINESS_HOURS_END",
+                "AUTOMOAT_BUSINESS_HOURS_IDLE_SLEEP",
+                "AUTOMOAT_BUSINESS_HOURS_START",
+                "AUTOMOAT_BUSINESS_HOURS_TIMEZONE",
+            ],
+        )
+        self.assertNotIn(oversized_timezone, output.getvalue())
+        self.assertNotIn("relay_token=leaked", output.getvalue())
+        self.assertNotIn("relay-token", output.getvalue())
+        self.assertNotIn("github-token", output.getvalue())
+        self.assertNotIn("codex-token", output.getvalue())
+
     def test_write_business_hours_pause_status_updates_cockpit_files(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             self.worker.WORKDIR = Path(temp_dir) / "repo"
