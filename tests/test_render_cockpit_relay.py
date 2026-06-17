@@ -574,6 +574,10 @@ class RenderCockpitRelayTest(unittest.TestCase):
                             ),
                             "source_handoff_latest_section_found": True,
                             "source_handoff_latest_status_found": False,
+                            "source_handoff_status": (
+                                "publishing token=handoff-status-secret"
+                            ),
+                            "source_handoff_age_seconds": "75",
                             "source_cockpit_attention_primary_reason": (
                                 "import_readiness_not_ready token=attention-secret"
                             ),
@@ -635,6 +639,8 @@ class RenderCockpitRelayTest(unittest.TestCase):
             ),
             "source_handoff_latest_section_found": True,
             "source_handoff_latest_status_found": False,
+            "source_handoff_status": "publishing token=[redacted]",
+            "source_handoff_age_seconds": 75,
             "source_cockpit_attention_primary_reason": (
                 "import_readiness_not_ready token=[redacted]"
             ),

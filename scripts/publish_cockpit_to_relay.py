@@ -1775,6 +1775,15 @@ def source_health_diagnostics(status: dict[str, Any]) -> dict[str, Any]:
             value = coordination.get(key)
             if isinstance(value, bool):
                 diagnostics[diagnostic_key] = value
+        handoff_status = compact_policy_detail(
+            coordination.get("latest_handoff_status"),
+            max_length=160,
+        )
+        if handoff_status is not None:
+            diagnostics["source_handoff_status"] = handoff_status
+        handoff_age_seconds = compact_int(coordination.get("handoff_age_seconds"))
+        if handoff_age_seconds is not None:
+            diagnostics["source_handoff_age_seconds"] = handoff_age_seconds
 
     cockpit_attention_primary_reason = compact_policy_detail(
         cockpit_summary.get("operator_attention_primary_reason"),

@@ -2557,6 +2557,10 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                             ),
                             "latest_section_found": True,
                             "latest_status_found": True,
+                            "latest_handoff_status": (
+                                "worker handoff ready token=handoff-secret"
+                            ),
+                            "handoff_age_seconds": "75",
                         },
                     },
                 },
@@ -2570,6 +2574,10 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                     ),
                     "source_handoff_latest_section_found": True,
                     "source_handoff_latest_status_found": True,
+                    "source_handoff_status": (
+                        "worker handoff ready token=[redacted]"
+                    ),
+                    "source_handoff_age_seconds": 75,
                 },
             ),
             (
@@ -2579,6 +2587,10 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                         "handoff_file_status": "loaded",
                         "latest_section_found": True,
                         "latest_status_found": False,
+                        "latest_handoff_status": (
+                            "missing latest status token=handoff-secret"
+                        ),
+                        "handoff_age_seconds": 91,
                     },
                 },
                 "source_handoff_coordination_incomplete",
@@ -2587,6 +2599,10 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                     "source_handoff_file_status": "loaded",
                     "source_handoff_latest_section_found": True,
                     "source_handoff_latest_status_found": False,
+                    "source_handoff_status": (
+                        "missing latest status token=[redacted]"
+                    ),
+                    "source_handoff_age_seconds": 91,
                 },
             ),
         )

@@ -269,6 +269,12 @@ def publisher_source_health(state: dict[str, Any]) -> dict[str, Any]:
         )
         if source_bridge_status is not None:
             diagnostics["source_bridge_status"] = source_bridge_status
+        source_handoff_status = compact_policy_detail(
+            raw_diagnostics.get("source_handoff_status"),
+            max_length=160,
+        )
+        if source_handoff_status is not None:
+            diagnostics["source_handoff_status"] = source_handoff_status
         for key in (
             "source_status_value_invalid",
             "source_bridge_status_value_invalid",
@@ -300,6 +306,7 @@ def publisher_source_health(state: dict[str, Any]) -> dict[str, Any]:
             "source_cockpit_attention_reason_count",
             "source_bridge_status_age_seconds",
             "source_bridge_status_stale_after_seconds",
+            "source_handoff_age_seconds",
             "source_status_age_seconds",
             "source_status_stale_after_seconds",
         ):
