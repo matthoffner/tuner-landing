@@ -3816,6 +3816,35 @@ class RenderCockpitRelayTest(unittest.TestCase):
 
         self.assertEqual(self.relay.snapshot(), before)
 
+    def test_update_state_rejects_non_finite_ingest_metadata_without_mutating_snapshot(self) -> None:
+        cases = [
+            (
+                {
+                    "status": {"status": "running", "loop_running": True},
+                    "log_tail": "new log\n",
+                    "relay_metrics": {"bad_value": float("inf")},
+                },
+                r"ingest metadata includes non-finite JSON number at \$\.relay_metrics\.bad_value",
+            ),
+            (
+                {
+                    "status": {"status": "running", "loop_running": True},
+                    "log_tail": "new log\n",
+                    "publisher": float("inf"),
+                },
+                r"ingest metadata includes non-finite JSON number at \$\.publisher",
+            ),
+        ]
+
+        for payload, message_pattern in cases:
+            with self.subTest(message_pattern=message_pattern):
+                before = self.relay.snapshot()
+
+                with self.assertRaisesRegex(ValueError, message_pattern):
+                    self.relay.update_state(payload)
+
+                self.assertEqual(self.relay.snapshot(), before)
+
     def test_check_env_exits_without_serving_when_relay_config_is_valid(self) -> None:
         env = {
             "AUTOMOAT_RELAY_TOKEN": "relay-token",

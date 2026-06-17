@@ -424,6 +424,50 @@ def reject_json_constant(value: str) -> None:
     raise ValueError(f"invalid JSON constant {value}")
 
 
+def json_path_component(value: Any) -> str:
+    key = compact_policy_detail(value, max_length=80)
+    if key is None:
+        return "<?>"
+    if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", key):
+        return f".{key}"
+    return f"[{json.dumps(key)}]"
+
+
+def first_non_finite_json_number_path(value: Any, path: str = "$") -> str | None:
+    if isinstance(value, float) and not math.isfinite(value):
+        return path
+    if isinstance(value, dict):
+        for key, item in value.items():
+            nested_path = first_non_finite_json_number_path(
+                item,
+                f"{path}{json_path_component(key)}",
+            )
+            if nested_path is not None:
+                return nested_path
+    if isinstance(value, list):
+        for index, item in enumerate(value):
+            nested_path = first_non_finite_json_number_path(
+                item,
+                f"{path}[{index}]",
+            )
+            if nested_path is not None:
+                return nested_path
+    return None
+
+
+def first_non_finite_ingest_metadata_path(payload: dict[str, Any]) -> str | None:
+    for key, value in payload.items():
+        if key in {"status", "publisher"} and isinstance(value, dict):
+            continue
+        nested_path = first_non_finite_json_number_path(
+            value,
+            f"${json_path_component(key)}",
+        )
+        if nested_path is not None:
+            return nested_path
+    return None
+
+
 def strict_json_clone(payload: dict[str, Any]) -> dict[str, Any]:
     return json.loads(json.dumps(payload, allow_nan=False))
 
@@ -1848,6 +1892,13 @@ def snapshot() -> dict[str, Any]:
 
 def update_state(payload: dict[str, Any]) -> dict[str, Any]:
     received_at = utc_now()
+    non_finite_metadata_path = first_non_finite_ingest_metadata_path(payload)
+    if non_finite_metadata_path is not None:
+        raise ValueError(
+            "ingest metadata includes non-finite JSON number at "
+            f"{non_finite_metadata_path}"
+        )
+
     status = payload.get("status")
     if not isinstance(status, dict):
         status = {"status": "publisher_missing_status"}
