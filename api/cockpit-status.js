@@ -30,23 +30,59 @@ function parseStatusPayload(body) {
   if (!payload || Array.isArray(payload) || typeof payload !== "object") {
     return { ok: false, error: "status_payload_must_be_object" };
   }
-  if (!hasOnlyFiniteNumbers(payload)) {
-    return { ok: false, error: "status_payload_must_not_include_non_finite_numbers" };
+  const nonFinitePath = firstNonFiniteNumberPath(payload);
+  if (nonFinitePath) {
+    return {
+      ok: false,
+      error: `status_payload_must_not_include_non_finite_numbers at ${nonFinitePath}`,
+    };
   }
   return { ok: true, body: JSON.stringify(payload) };
 }
 
 function hasOnlyFiniteNumbers(value) {
+  return !firstNonFiniteNumberPath(value);
+}
+
+function firstNonFiniteNumberPath(value, path = "$") {
   if (typeof value === "number") {
-    return Number.isFinite(value);
+    return Number.isFinite(value) ? "" : path;
   }
   if (!value || typeof value !== "object") {
-    return true;
+    return "";
   }
   if (Array.isArray(value)) {
-    return value.every(hasOnlyFiniteNumbers);
+    for (let index = 0; index < value.length; index += 1) {
+      const nestedPath = firstNonFiniteNumberPath(value[index], `${path}[${index}]`);
+      if (nestedPath) {
+        return nestedPath;
+      }
+    }
+    return "";
   }
-  return Object.values(value).every(hasOnlyFiniteNumbers);
+  for (const [key, item] of Object.entries(value)) {
+    const nestedPath = firstNonFiniteNumberPath(item, `${path}${jsonPathComponent(key)}`);
+    if (nestedPath) {
+      return nestedPath;
+    }
+  }
+  return "";
+}
+
+function jsonPathComponent(key) {
+  const text = String(key || "");
+  if (/^[A-Za-z_][A-Za-z0-9_]*$/.test(text)) {
+    return `.${text}`;
+  }
+  const compact = text
+    .replace(/[\r\n\t]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 80);
+  if (!compact || /https?:\/\//i.test(compact) || /\b(access_token|api_key|codex_access_token|gh_token|github_token|password|passwd|relay_token|secret|token|key)=/i.test(compact)) {
+    return "[<?>]";
+  }
+  return `[${JSON.stringify(compact)}]`;
 }
 
 module.exports = async function handler(request, response) {
@@ -143,4 +179,5 @@ module.exports = async function handler(request, response) {
 
 module.exports.parseStatusPayload = parseStatusPayload;
 module.exports.hasOnlyFiniteNumbers = hasOnlyFiniteNumbers;
+module.exports.firstNonFiniteNumberPath = firstNonFiniteNumberPath;
 module.exports.MAX_STATUS_BODY_CHARS = MAX_STATUS_BODY_CHARS;

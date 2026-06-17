@@ -1813,7 +1813,11 @@ class CockpitApiProxyTest(unittest.TestCase):
               });
               assert.strictEqual(
                 statusResponse.headers["X-Automoat-Upstream-Attempts"],
-                "relay:200:status_payload_must_not_include_non_finite_numbers,legacy_bridge:200",
+                "relay:200:status_payload_must_not_include_non_finite_numbers at $.cockpit_summary.status_age_seconds,legacy_bridge:200",
+              );
+              assert.strictEqual(
+                statusResponse.headers["X-Automoat-Upstream-Error"],
+                "",
               );
               assert.strictEqual(statusResponse.headers["X-Automoat-Upstream"], "legacy_bridge");
               assert.strictEqual(
@@ -1826,8 +1830,14 @@ class CockpitApiProxyTest(unittest.TestCase):
               );
               assert.deepStrictEqual(parsed, {
                 ok: false,
-                error: "status_payload_must_not_include_non_finite_numbers",
+                error: "status_payload_must_not_include_non_finite_numbers at $.metrics[1]",
               });
+              assert.strictEqual(
+                statusHandler.firstNonFiniteNumberPath({
+                  metrics: { "bad-key": [1, 1e999] },
+                }),
+                '$.metrics["bad-key"][1]',
+              );
             })().catch((error) => {
               console.error(error.stack || error);
               process.exit(1);
