@@ -76,8 +76,20 @@ PATH_TOKEN_RE = re.compile(r"(?<![\w:/])(?:~|/)[^\s,;|'\"\])}]+")
 SENSITIVE_ASSIGNMENT_RE = re.compile(
     r"(?i)\b("
     r"access_token|api_key|codex_access_token|gh_token|github_token|password|"
-    r"passwd|relay_token|secret|token|key"
-    r")=([^\s,;|]+)"
+    r"passwd|relay_token|secret|token|key|x-automoat-relay-token"
+    r")\s*[:=]\s*([^\s,;|]+)"
+)
+SENSITIVE_DOUBLE_QUOTED_FIELD_RE = re.compile(
+    r'"'
+    r"(?i:access_token|api_key|codex_access_token|gh_token|github_token|password|"
+    r"passwd|relay_token|secret|token|key|x-automoat-relay-token)"
+    r'"\s*:\s*"(?:\\.|[^"\\\r\n])*"'
+)
+SENSITIVE_SINGLE_QUOTED_FIELD_RE = re.compile(
+    r"'"
+    r"(?i:access_token|api_key|codex_access_token|gh_token|github_token|password|"
+    r"passwd|relay_token|secret|token|key|x-automoat-relay-token)"
+    r"'\s*:\s*'(?:\\.|[^'\\\r\n])*'"
 )
 BEARER_SECRET_RE = re.compile(
     r"\b(authorization\s*[:=]\s*bearer)\s+[^\s,;|]+",
@@ -353,11 +365,31 @@ def compact_policy_detail(value: Any, *, max_length: int = 240) -> str | None:
         return None
     text = EMBEDDED_URL_RE.sub(lambda match: sanitize_url_value(match.group(0)), text)
     text = BEARER_SECRET_RE.sub(r"\1 [redacted]", text)
+    text = sanitize_sensitive_quoted_fields(text)
     text = SENSITIVE_ASSIGNMENT_RE.sub(
         lambda match: f"{match.group(1)}=[redacted]",
         text,
     )
     return text[:max_length] if text else None
+
+
+def sanitize_sensitive_quoted_fields(text: str) -> str:
+    text = SENSITIVE_DOUBLE_QUOTED_FIELD_RE.sub(
+        lambda match: re.sub(
+            r'"\s*:\s*"(?:\\.|[^"\\\r\n])*"$',
+            '":"[redacted]"',
+            match.group(0),
+        ),
+        text,
+    )
+    return SENSITIVE_SINGLE_QUOTED_FIELD_RE.sub(
+        lambda match: re.sub(
+            r"'\s*:\s*'(?:\\.|[^'\\\r\n])*'$",
+            "':'[redacted]'",
+            match.group(0),
+        ),
+        text,
+    )
 
 
 def compact_health_reasons(value: Any, *, max_items: int = 5) -> list[str]:
@@ -1889,6 +1921,7 @@ def sanitize_log_tail_for_relay(text: str, *, max_line_length: int = 1200) -> st
             sanitized,
         )
         sanitized = BEARER_SECRET_RE.sub(r"\1 [redacted]", sanitized)
+        sanitized = sanitize_sensitive_quoted_fields(sanitized)
         sanitized = SENSITIVE_ASSIGNMENT_RE.sub(
             lambda match: f"{match.group(1)}=[redacted]",
             sanitized,

@@ -3765,6 +3765,10 @@ class RenderCockpitRelayTest(unittest.TestCase):
                     "?token=query-secret#frag\n"
                     "Authorization: Bearer bearer-secret token=assignment-secret"
                     "\x00done\n"
+                    "X-Automoat-Relay-Token: relay-header-secret "
+                    "password : spaced-secret\n"
+                    '{"relay_token": "json-secret", "safe": "visible"}\n'
+                    "{'api_key': 'single-json-secret', 'safe': 'visible'}\n"
                 ),
             }
         )
@@ -3775,12 +3779,26 @@ class RenderCockpitRelayTest(unittest.TestCase):
         )
         self.assertIn("Authorization: Bearer [redacted]", state["log_tail"])
         self.assertIn("token=[redacted]", state["log_tail"])
+        self.assertIn("X-Automoat-Relay-Token=[redacted]", state["log_tail"])
+        self.assertIn("password=[redacted]", state["log_tail"])
+        self.assertIn(
+            '{"relay_token":"[redacted]", "safe": "visible"}',
+            state["log_tail"],
+        )
+        self.assertIn(
+            "{'api_key':'[redacted]', 'safe': 'visible'}",
+            state["log_tail"],
+        )
         self.assertIn(" done", state["log_tail"])
         for secret in (
             "url-secret",
             "query-secret",
             "bearer-secret",
             "assignment-secret",
+            "relay-header-secret",
+            "spaced-secret",
+            "json-secret",
+            "single-json-secret",
         ):
             self.assertNotIn(secret, state["log_tail"])
 
