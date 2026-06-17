@@ -2016,6 +2016,8 @@ class CockpitApiProxyTest(unittest.TestCase):
               "Authorization: Bearer bearer-secret api_key=assignment-secret",
               "X-Automoat-Relay-Token: relay-header-secret github_token:github-secret",
               "password : spaced-secret",
+              "{\\"relay_token\\": \\"json-secret\\", \\"safe\\": \\"visible\\"}",
+              "{'api_key': 'single-json-secret', 'safe': 'visible'}",
               "raw\\x00control",
               "",
             ].join("\\n");
@@ -2029,6 +2031,8 @@ class CockpitApiProxyTest(unittest.TestCase):
             assert(parsed.body.includes("X-Automoat-Relay-Token=[redacted]"));
             assert(parsed.body.includes("github_token=[redacted]"));
             assert(parsed.body.includes("password=[redacted]"));
+            assert(parsed.body.includes("{\\"relay_token\\":\\"[redacted]\\", \\"safe\\": \\"visible\\"}"));
+            assert(parsed.body.includes("{'api_key':'[redacted]', 'safe': 'visible'}"));
             assert(parsed.body.includes("raw control"));
             assert.strictEqual(parsed.body, sanitizeLogText(body));
             for (const secret of [
@@ -2039,6 +2043,8 @@ class CockpitApiProxyTest(unittest.TestCase):
               "relay-header-secret",
               "github-secret",
               "spaced-secret",
+              "json-secret",
+              "single-json-secret",
               "\\x00",
             ]) {
               assert(!parsed.body.includes(secret), secret);

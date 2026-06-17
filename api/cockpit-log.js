@@ -18,6 +18,8 @@ const MAX_LOG_BODY_CHARS = 160 * 1024;
 const EMBEDDED_URL_RE = /https?:\/\/[^\s,;|]+/gi;
 const BEARER_SECRET_RE = /\b(authorization\s*[:=]\s*bearer)\s+[^\s,;|]+/gi;
 const SENSITIVE_ASSIGNMENT_RE = /\b(access_token|api_key|codex_access_token|gh_token|github_token|password|passwd|relay_token|secret|token|key|x-automoat-relay-token)\s*[:=]\s*[^\s,;|]+/gi;
+const SENSITIVE_DOUBLE_QUOTED_FIELD_RE = /"(access_token|api_key|codex_access_token|gh_token|github_token|password|passwd|relay_token|secret|token|key|x-automoat-relay-token)"\s*:\s*"(?:\\.|[^"\\\r\n])*"/gi;
+const SENSITIVE_SINGLE_QUOTED_FIELD_RE = /'(access_token|api_key|codex_access_token|gh_token|github_token|password|passwd|relay_token|secret|token|key|x-automoat-relay-token)'\s*:\s*'(?:\\.|[^'\\\r\n])*'/gi;
 
 function parseLogPayload(body) {
   const normalized = body.trimStart().toLowerCase();
@@ -40,6 +42,8 @@ function sanitizeLogText(value) {
     .replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, " ")
     .replace(EMBEDDED_URL_RE, sanitizeEmbeddedUrlForLog)
     .replace(BEARER_SECRET_RE, "$1 [redacted]")
+    .replace(SENSITIVE_DOUBLE_QUOTED_FIELD_RE, (_match, key) => `"${key}":"[redacted]"`)
+    .replace(SENSITIVE_SINGLE_QUOTED_FIELD_RE, (_match, key) => `'${key}':'[redacted]'`)
     .replace(SENSITIVE_ASSIGNMENT_RE, (_match, key) => `${key}=[redacted]`);
 }
 
