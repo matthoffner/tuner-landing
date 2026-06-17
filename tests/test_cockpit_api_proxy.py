@@ -783,6 +783,12 @@ class CockpitApiProxyTest(unittest.TestCase):
               "GET https://relay.example/status?[redacted]#[redacted] Authorization: Bearer [redacted] api_key=[redacted]",
             );
             assert.strictEqual(
+              compactUpstreamHeaderPart(
+                "OPENAI_API_KEY=raw-openai AUTOMOAT_RELAY_TOKEN:raw-relay x-automoat-relay-token:raw-header",
+              ),
+              "OPENAI_API_KEY=[redacted] AUTOMOAT_RELAY_TOKEN=[redacted] x-automoat-relay-token=[redacted]",
+            );
+            assert.strictEqual(
               compactUpstreamHeaderPart(longError).length,
               MAX_UPSTREAM_HEADER_PART_CHARS,
             );
@@ -799,16 +805,16 @@ class CockpitApiProxyTest(unittest.TestCase):
             assert.strictEqual(
               invalidUpstreamDiagnosticText([{
                 kind: "relay",
-                error: "token=raw-token, Authorization: Bearer raw-token",
+                error: "token=raw-token, Authorization: Bearer raw-token AUTOMOAT_RELAY_TOKEN:raw-relay",
               }]),
-              "relay:token=[redacted] Authorization: Bearer [redacted]",
+              "relay:token=[redacted] Authorization: Bearer [redacted] AUTOMOAT_RELAY_TOKEN=[redacted]",
             );
             assert.strictEqual(
               invalidUpstreamsHeader([{
                 kind: "relay\\nkind",
-                error: "bad\\r\\nconfig, token=secret",
+                error: "bad\\r\\nconfig, token=secret OPENAI_API_KEY=raw-openai",
               }]),
-              "relay kind:bad config token=[redacted]",
+              "relay kind:bad config token=[redacted] OPENAI_API_KEY=[redacted]",
             );
             const contentLengthHeaders = (value) => ({
               get(name) {
