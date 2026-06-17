@@ -30,7 +30,23 @@ function parseStatusPayload(body) {
   if (!payload || Array.isArray(payload) || typeof payload !== "object") {
     return { ok: false, error: "status_payload_must_be_object" };
   }
+  if (!hasOnlyFiniteNumbers(payload)) {
+    return { ok: false, error: "status_payload_must_not_include_non_finite_numbers" };
+  }
   return { ok: true, body: JSON.stringify(payload) };
+}
+
+function hasOnlyFiniteNumbers(value) {
+  if (typeof value === "number") {
+    return Number.isFinite(value);
+  }
+  if (!value || typeof value !== "object") {
+    return true;
+  }
+  if (Array.isArray(value)) {
+    return value.every(hasOnlyFiniteNumbers);
+  }
+  return Object.values(value).every(hasOnlyFiniteNumbers);
 }
 
 module.exports = async function handler(request, response) {
@@ -126,4 +142,5 @@ module.exports = async function handler(request, response) {
 };
 
 module.exports.parseStatusPayload = parseStatusPayload;
+module.exports.hasOnlyFiniteNumbers = hasOnlyFiniteNumbers;
 module.exports.MAX_STATUS_BODY_CHARS = MAX_STATUS_BODY_CHARS;

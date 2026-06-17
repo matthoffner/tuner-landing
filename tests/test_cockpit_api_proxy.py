@@ -1753,6 +1753,90 @@ class CockpitApiProxyTest(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_status_handler_rejects_non_finite_status_numbers_and_falls_back(self) -> None:
+        result = run_node(
+            """
+            const assert = require("assert");
+            const statusHandler = require("./api/cockpit-status");
+
+            function response() {
+              return {
+                statusCode: null,
+                body: "",
+                headers: {},
+                setHeader(name, value) {
+                  this.headers[name] = value;
+                },
+                status(code) {
+                  this.statusCode = code;
+                  return this;
+                },
+                send(body) {
+                  this.body = String(body);
+                  return this;
+                },
+                end(body = "") {
+                  this.body = String(body);
+                  return this;
+                },
+              };
+            }
+
+            process.env.AUTOMOAT_RELAY_URL = "https://automoat-cockpit-relay.example";
+            process.env.AUTOMOAT_BRIDGE_URL = "https://legacy-bridge.example";
+            process.env.AUTOMOAT_COCKPIT_UPSTREAM_TIMEOUT_MS = "";
+            global.fetch = async (url) => {
+              if (url.includes("automoat-cockpit-relay.example")) {
+                return {
+                  ok: true,
+                  status: 200,
+                  text: async () => '{"status":"relay","cockpit_summary":{"status_age_seconds":1e999}}',
+                };
+              }
+              return {
+                ok: true,
+                status: 200,
+                text: async () => JSON.stringify({
+                  status: "bridge-live",
+                  cockpit_summary: { status_age_seconds: 12 },
+                }),
+              };
+            };
+
+            (async () => {
+              const statusResponse = response();
+              await statusHandler({ method: "GET" }, statusResponse);
+              assert.strictEqual(statusResponse.statusCode, 200);
+              assert.deepStrictEqual(JSON.parse(statusResponse.body), {
+                status: "bridge-live",
+                cockpit_summary: { status_age_seconds: 12 },
+              });
+              assert.strictEqual(
+                statusResponse.headers["X-Automoat-Upstream-Attempts"],
+                "relay:200:status_payload_must_not_include_non_finite_numbers,legacy_bridge:200",
+              );
+              assert.strictEqual(statusResponse.headers["X-Automoat-Upstream"], "legacy_bridge");
+              assert.strictEqual(
+                statusResponse.headers["X-Automoat-Upstream-Fallback-Count"],
+                "1",
+              );
+
+              const parsed = statusHandler.parseStatusPayload(
+                '{"status":"relay","metrics":[0,1e999]}',
+              );
+              assert.deepStrictEqual(parsed, {
+                ok: false,
+                error: "status_payload_must_not_include_non_finite_numbers",
+              });
+            })().catch((error) => {
+              console.error(error.stack || error);
+              process.exit(1);
+            });
+            """
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_log_handler_rejects_html_success_and_falls_back(self) -> None:
         result = run_node(
             """
