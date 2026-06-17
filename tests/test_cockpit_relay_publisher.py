@@ -4200,6 +4200,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                     "source_status_stale": True,
                     "source_status_timestamp_invalid": True,
                     "source_status_timestamp_future": True,
+                    "source_status_value_invalid": True,
                     "source_status_age_seconds": 700,
                 },
                 "log_tail": "loop log\n",
@@ -4223,6 +4224,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertIn("source_status_stale=True", log_text)
         self.assertIn("source_status_timestamp_invalid=True", log_text)
         self.assertIn("source_status_timestamp_future=True", log_text)
+        self.assertIn("source_status_value_invalid=True", log_text)
         self.assertIn("source_status_age_seconds=700", log_text)
         self.assertIn("source_status_file_status=None", log_text)
         self.assertIn("source_status_file_error=None", log_text)
