@@ -2509,6 +2509,33 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                         "review https://user:pass@example.local/status"
                         "?token=message-secret#debug"
                     ),
+                    "decision_reason": (
+                        "dallas_ready_no_thin_groups token=decision-secret"
+                    ),
+                    "current_focus": (
+                        "autonomy_visibility_or_real_ingest token=focus-secret"
+                    ),
+                    "synthetic_row_count": "9",
+                    "raw_dallas_csv_changed_path_count": "7",
+                    "productive_changed_path_count": "2",
+                    "import_pipeline_status": "loaded token=pipeline-secret",
+                    "import_pipeline_summary_path": (
+                        "/tmp/customer/pipeline/summary.json "
+                        "token=summary-path-secret"
+                    ),
+                    "readiness_status": "ready token=readiness-secret",
+                    "readiness_blocker_count": "3",
+                    "ready_for_next_import_records": True,
+                    "artifact_health_status": "degraded token=artifact-secret",
+                    "degraded_artifact_count": "4",
+                    "source_path": (
+                        "/tmp/customer/generated/landing.html "
+                        "token=source-path-secret"
+                    ),
+                    "target_path": (
+                        "/tmp/customer/index.html token=target-path-secret"
+                    ),
+                    "sync_exit_status": "2",
                     "debug_blob": "relay_token=hidden-debug",
                 },
             },
@@ -2533,6 +2560,31 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 "source_failure_message": (
                     "review https://example.local/status?[redacted]#[redacted]"
                 ),
+                "source_failure_decision_reason": (
+                    "dallas_ready_no_thin_groups token=[redacted]"
+                ),
+                "source_failure_current_focus": (
+                    "autonomy_visibility_or_real_ingest token=[redacted]"
+                ),
+                "source_failure_import_pipeline_status": "loaded token=[redacted]",
+                "source_failure_readiness_status": "ready token=[redacted]",
+                "source_failure_artifact_health_status": "degraded token=[redacted]",
+                "source_failure_import_pipeline_summary_path": (
+                    "<external>/summary.json token=[redacted]"
+                ),
+                "source_failure_source_path": (
+                    "<external>/landing.html token=[redacted]"
+                ),
+                "source_failure_target_path": (
+                    "<external>/index.html token=[redacted]"
+                ),
+                "source_failure_synthetic_row_count": 9,
+                "source_failure_raw_path_count": 7,
+                "source_failure_productive_path_count": 2,
+                "source_failure_readiness_blocker_count": 3,
+                "source_failure_degraded_artifact_count": 4,
+                "source_failure_sync_exit_status": 2,
+                "source_failure_ready_for_next_import_records": True,
             },
         )
         health_text = json.dumps(health, sort_keys=True)
@@ -2541,6 +2593,15 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertNotIn("route-secret", health_text)
         self.assertNotIn("reason-secret", health_text)
         self.assertNotIn("message-secret", health_text)
+        self.assertNotIn("decision-secret", health_text)
+        self.assertNotIn("focus-secret", health_text)
+        self.assertNotIn("pipeline-secret", health_text)
+        self.assertNotIn("summary-path-secret", health_text)
+        self.assertNotIn("readiness-secret", health_text)
+        self.assertNotIn("artifact-secret", health_text)
+        self.assertNotIn("source-path-secret", health_text)
+        self.assertNotIn("target-path-secret", health_text)
+        self.assertNotIn("/tmp/customer", health_text)
         self.assertNotIn("hidden-debug", health_text)
 
     def test_publisher_source_health_promotes_autonomy_policy_attention(self) -> None:

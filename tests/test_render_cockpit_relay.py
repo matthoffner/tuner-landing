@@ -653,6 +653,40 @@ class RenderCockpitRelayTest(unittest.TestCase):
                                 "review https://user:pass@example.local/status"
                                 "?token=message-secret#debug"
                             ),
+                            "source_failure_decision_reason": (
+                                "dallas_ready_no_thin_groups token=decision-secret"
+                            ),
+                            "source_failure_current_focus": (
+                                "autonomy_visibility_or_real_ingest token=focus-secret"
+                            ),
+                            "source_failure_import_pipeline_status": (
+                                "loaded token=pipeline-secret"
+                            ),
+                            "source_failure_readiness_status": (
+                                "ready token=readiness-secret"
+                            ),
+                            "source_failure_artifact_health_status": (
+                                "degraded token=artifact-secret"
+                            ),
+                            "source_failure_import_pipeline_summary_path": (
+                                "/tmp/customer/pipeline/summary.json "
+                                "token=summary-path-secret"
+                            ),
+                            "source_failure_source_path": (
+                                "/tmp/customer/generated/landing.html "
+                                "token=source-path-secret"
+                            ),
+                            "source_failure_target_path": (
+                                "/tmp/customer/index.html "
+                                "token=target-path-secret"
+                            ),
+                            "source_failure_synthetic_row_count": "12",
+                            "source_failure_raw_path_count": "9",
+                            "source_failure_productive_path_count": "3",
+                            "source_failure_readiness_blocker_count": "2",
+                            "source_failure_ready_for_next_import_records": True,
+                            "source_failure_degraded_artifact_count": "4",
+                            "source_failure_sync_exit_status": "2",
                             "raw_status": "token=raw-secret",
                         },
                     },
@@ -749,6 +783,29 @@ class RenderCockpitRelayTest(unittest.TestCase):
             "source_failure_message": (
                 "review https://example.local/status?[redacted]#[redacted]"
             ),
+            "source_failure_decision_reason": (
+                "dallas_ready_no_thin_groups token=[redacted]"
+            ),
+            "source_failure_current_focus": (
+                "autonomy_visibility_or_real_ingest token=[redacted]"
+            ),
+            "source_failure_import_pipeline_status": "loaded token=[redacted]",
+            "source_failure_readiness_status": "ready token=[redacted]",
+            "source_failure_artifact_health_status": "degraded token=[redacted]",
+            "source_failure_import_pipeline_summary_path": (
+                "<external>/summary.json token=[redacted]"
+            ),
+            "source_failure_source_path": (
+                "<external>/landing.html token=[redacted]"
+            ),
+            "source_failure_target_path": "<external>/index.html token=[redacted]",
+            "source_failure_synthetic_row_count": 12,
+            "source_failure_raw_path_count": 9,
+            "source_failure_productive_path_count": 3,
+            "source_failure_readiness_blocker_count": 2,
+            "source_failure_ready_for_next_import_records": True,
+            "source_failure_degraded_artifact_count": 4,
+            "source_failure_sync_exit_status": 2,
         }
         self.assertEqual(
             health["cockpit_health"]["source_health"]["diagnostics"],

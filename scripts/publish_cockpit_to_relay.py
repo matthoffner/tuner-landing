@@ -1905,6 +1905,11 @@ def source_health_diagnostics(status: dict[str, Any]) -> dict[str, Any]:
             ("source_failure_route_hint", 120),
             ("source_failure_failure_reason", 160),
             ("source_failure_message", 160),
+            ("source_failure_decision_reason", 160),
+            ("source_failure_current_focus", 120),
+            ("source_failure_import_pipeline_status", 80),
+            ("source_failure_readiness_status", 80),
+            ("source_failure_artifact_health_status", 80),
         ):
             source_key = key.removeprefix("source_failure_")
             compact_value = compact_policy_detail(
@@ -1913,6 +1918,39 @@ def source_health_diagnostics(status: dict[str, Any]) -> dict[str, Any]:
             )
             if compact_value is not None:
                 diagnostics[key] = compact_value
+        for key, source_key in (
+            (
+                "source_failure_import_pipeline_summary_path",
+                "import_pipeline_summary_path",
+            ),
+            ("source_failure_source_path", "source_path"),
+            ("source_failure_target_path", "target_path"),
+        ):
+            compact_value = compact_path_diagnostic(
+                failure.get(source_key),
+                max_length=160,
+            )
+            if compact_value is not None:
+                diagnostics[key] = compact_value
+        for key, source_key in (
+            ("source_failure_synthetic_row_count", "synthetic_row_count"),
+            (
+                "source_failure_raw_path_count",
+                "raw_dallas_csv_changed_path_count",
+            ),
+            ("source_failure_productive_path_count", "productive_changed_path_count"),
+            ("source_failure_readiness_blocker_count", "readiness_blocker_count"),
+            ("source_failure_degraded_artifact_count", "degraded_artifact_count"),
+            ("source_failure_sync_exit_status", "sync_exit_status"),
+        ):
+            compact_value = compact_int(failure.get(source_key))
+            if compact_value is not None:
+                diagnostics[key] = compact_value
+        ready_for_next_import_records = failure.get("ready_for_next_import_records")
+        if isinstance(ready_for_next_import_records, bool):
+            diagnostics["source_failure_ready_for_next_import_records"] = (
+                ready_for_next_import_records
+            )
 
     omitted_field_count = compact_int(
         status.get("source_status_remote_omitted_field_count")

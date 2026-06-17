@@ -306,9 +306,28 @@ def publisher_source_health(state: dict[str, Any]) -> dict[str, Any]:
             "source_failure_route_hint",
             "source_failure_failure_reason",
             "source_failure_message",
+            "source_failure_decision_reason",
+            "source_failure_current_focus",
+            "source_failure_import_pipeline_status",
+            "source_failure_readiness_status",
+            "source_failure_artifact_health_status",
         ):
             value = compact_policy_detail(raw_diagnostics.get(key), max_length=160)
             if value is not None:
+                diagnostics[key] = value
+        for key in (
+            "source_failure_import_pipeline_summary_path",
+            "source_failure_source_path",
+            "source_failure_target_path",
+        ):
+            value = compact_path_diagnostic(raw_diagnostics.get(key), max_length=160)
+            if value is not None:
+                diagnostics[key] = value
+        for key in (
+            "source_failure_ready_for_next_import_records",
+        ):
+            value = raw_diagnostics.get(key)
+            if isinstance(value, bool):
                 diagnostics[key] = value
         for key in (
             "source_cockpit_attention_reason_count",
@@ -316,6 +335,12 @@ def publisher_source_health(state: dict[str, Any]) -> dict[str, Any]:
             "source_policy_productive_path_count",
             "source_policy_non_productive_path_count",
             "source_policy_synthetic_row_count",
+            "source_failure_synthetic_row_count",
+            "source_failure_raw_path_count",
+            "source_failure_productive_path_count",
+            "source_failure_readiness_blocker_count",
+            "source_failure_degraded_artifact_count",
+            "source_failure_sync_exit_status",
             "source_bridge_status_age_seconds",
             "source_bridge_status_stale_after_seconds",
             "source_handoff_age_seconds",
