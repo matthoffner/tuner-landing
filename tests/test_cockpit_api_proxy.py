@@ -647,6 +647,7 @@ class CockpitApiProxyTest(unittest.TestCase):
               invalidUpstreamDiagnosticText,
               invalidUpstreamDiagnostics,
               invalidUpstreamsHeader,
+              parseUpstreamContentLength,
               sendMethodNotAllowed,
               sendOptionsResponse,
               sendProxyResponse,
@@ -809,6 +810,21 @@ class CockpitApiProxyTest(unittest.TestCase):
               }]),
               "relay kind:bad config token=[redacted]",
             );
+            const contentLengthHeaders = (value) => ({
+              get(name) {
+                return name.toLowerCase() === "content-length" ? value : null;
+              },
+            });
+            assert.strictEqual(parseUpstreamContentLength(contentLengthHeaders("42")), 42);
+            assert.strictEqual(parseUpstreamContentLength(contentLengthHeaders(" 42 ")), 42);
+            assert.strictEqual(parseUpstreamContentLength(contentLengthHeaders("0")), 0);
+            assert.strictEqual(parseUpstreamContentLength(contentLengthHeaders("")), null);
+            assert.strictEqual(parseUpstreamContentLength(contentLengthHeaders("-1")), null);
+            assert.strictEqual(parseUpstreamContentLength(contentLengthHeaders("4.2")), null);
+            assert.strictEqual(parseUpstreamContentLength(contentLengthHeaders("42 bytes")), null);
+            assert.strictEqual(parseUpstreamContentLength(contentLengthHeaders("9007199254740992")), null);
+            assert.strictEqual(parseUpstreamContentLength({ get() { return null; } }), null);
+            assert.strictEqual(parseUpstreamContentLength(null), null);
             assert.strictEqual(
               setUpstreamSelectionHeaders(getResponse, "unreachable", 1, [
                 { kind: "relay\\r\\nextra", status: 503, error: "bad\\nstatus,next" },

@@ -560,6 +560,21 @@ async function readTailBoundedUpstreamText(upstream, maxBodyChars, options = {})
   return { ok: true, body, truncated };
 }
 
+function parseUpstreamContentLength(headers) {
+  const rawValue = headers && typeof headers.get === "function"
+    ? headers.get("content-length")
+    : null;
+  if (rawValue === null || rawValue === undefined) {
+    return null;
+  }
+  const text = String(rawValue).trim();
+  if (!/^\d+$/.test(text)) {
+    return null;
+  }
+  const parsed = Number(text);
+  return Number.isSafeInteger(parsed) ? parsed : null;
+}
+
 async function fetchUpstreamText(
   upstreamConfig,
   timeoutMs,
@@ -591,7 +606,7 @@ async function fetchUpstreamText(
       && Number.isInteger(maxBodyChars)
       && maxBodyChars > 0
     ) {
-      const contentLength = Number(upstream.headers && upstream.headers.get("content-length"));
+      const contentLength = parseUpstreamContentLength(upstream.headers);
       if (Number.isInteger(contentLength) && contentLength > maxBodyChars) {
         return {
           ok: false,
@@ -605,7 +620,7 @@ async function fetchUpstreamText(
       ? { ok: true, body: "" }
       : bodyLimitMode === "tail"
         ? await readTailBoundedUpstreamText(upstream, maxBodyChars, {
-          expectedLength: Number(upstream.headers && upstream.headers.get("content-length")),
+          expectedLength: parseUpstreamContentLength(upstream.headers),
         })
         : await readBoundedUpstreamText(upstream, maxBodyChars);
     if (!bodyResult.ok) {
@@ -699,6 +714,7 @@ module.exports = {
   isValidUrlHostname,
   normalizeBaseUrl,
   normalizeUpstreamTimeoutMs,
+  parseUpstreamContentLength,
   readBoundedUpstreamText,
   readTailBoundedUpstreamText,
   relayHeaderConfig,
