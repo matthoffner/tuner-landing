@@ -2015,6 +2015,24 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             "token=[redacted] generated/raw/private.csv",
             summary["policy_raw_dallas_csv_changed_paths"],
         )
+        source_health = self.publisher.publisher_source_health(status)
+        diagnostics = source_health["diagnostics"]
+        self.assertEqual(
+            diagnostics["source_policy_raw_path_samples"],
+            summary["policy_raw_dallas_csv_changed_paths"],
+        )
+        self.assertEqual(
+            diagnostics["source_policy_productive_path_samples"],
+            summary["policy_productive_changed_paths"],
+        )
+        self.assertEqual(
+            diagnostics["source_policy_non_productive_path_samples"],
+            summary["policy_non_productive_companion_paths"],
+        )
+        self.assertEqual(
+            diagnostics["source_policy_synthetic_row_samples"],
+            summary["policy_synthetic_row_samples"],
+        )
         self.assertNotIn("policy-secret", summary_text)
         self.assertNotIn("reason-secret", summary_text)
         self.assertNotIn("url-secret", summary_text)

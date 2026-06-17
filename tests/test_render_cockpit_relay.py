@@ -607,6 +607,36 @@ class RenderCockpitRelayTest(unittest.TestCase):
                             "source_policy_preview_json_changed": False,
                             "source_policy_allows_synthetic_append": False,
                             "source_policy_override": True,
+                            "source_policy_raw_path_samples": [
+                                "generated/raw/dallas-electrician-import-sample-v2/permits.csv",
+                                (
+                                    "https://source.example/raw.csv"
+                                    "?token=raw-sample-secret#debug"
+                                ),
+                                "token=raw-path-secret generated/raw/private.csv",
+                            ],
+                            "source_policy_productive_path_samples": [
+                                "scripts/run_autonomous_agent_loop.py",
+                                (
+                                    "https://source.example/productive"
+                                    "?token=productive-secret#debug"
+                                ),
+                            ],
+                            "source_policy_non_productive_path_samples": [
+                                "README.md",
+                                (
+                                    "https://source.example/ignored"
+                                    "?token=ignored-secret#debug"
+                                ),
+                            ],
+                            "source_policy_synthetic_row_samples": [
+                                (
+                                    "ELZ-2026-9999 "
+                                    "https://row.example/export?token=row-secret#debug "
+                                    "relay_token=sample-secret"
+                                ),
+                                "ELZ-2026-9998 api_key=second-sample-secret",
+                            ],
                             "source_failure_phase": (
                                 "artifact_health_failed token=phase-secret"
                             ),
@@ -691,6 +721,27 @@ class RenderCockpitRelayTest(unittest.TestCase):
             "source_policy_preview_json_changed": False,
             "source_policy_allows_synthetic_append": False,
             "source_policy_override": True,
+            "source_policy_raw_path_samples": [
+                "generated/raw/dallas-electrician-import-sample-v2/permits.csv",
+                "https://source.example/raw.csv?[redacted]#[redacted]",
+                "token=[redacted] generated/raw/private.csv",
+            ],
+            "source_policy_productive_path_samples": [
+                "scripts/run_autonomous_agent_loop.py",
+                "https://source.example/productive?[redacted]#[redacted]",
+            ],
+            "source_policy_non_productive_path_samples": [
+                "README.md",
+                "https://source.example/ignored?[redacted]#[redacted]",
+            ],
+            "source_policy_synthetic_row_samples": [
+                (
+                    "ELZ-2026-9999 "
+                    "https://row.example/export?[redacted]#[redacted] "
+                    "relay_token=[redacted]"
+                ),
+                "ELZ-2026-9998 api_key=[redacted]",
+            ],
             "source_failure_phase": "artifact_health_failed token=[redacted]",
             "source_failure_category": "artifact_health token=[redacted]",
             "source_failure_route_hint": "cockpit_artifact_health token=[redacted]",

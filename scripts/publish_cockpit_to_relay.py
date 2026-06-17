@@ -1864,6 +1864,39 @@ def source_health_diagnostics(status: dict[str, Any]) -> dict[str, Any]:
             value = cockpit_summary.get(key)
             if isinstance(value, bool):
                 diagnostics[diagnostic_key] = value
+        for key, diagnostic_key, max_items, max_length in (
+            (
+                "policy_raw_dallas_csv_changed_paths",
+                "source_policy_raw_path_samples",
+                POLICY_RAW_PATH_SAMPLE_LIMIT,
+                160,
+            ),
+            (
+                "policy_productive_changed_paths",
+                "source_policy_productive_path_samples",
+                POLICY_RAW_PATH_SAMPLE_LIMIT,
+                160,
+            ),
+            (
+                "policy_non_productive_companion_paths",
+                "source_policy_non_productive_path_samples",
+                POLICY_RAW_PATH_SAMPLE_LIMIT,
+                160,
+            ),
+            (
+                "policy_synthetic_row_samples",
+                "source_policy_synthetic_row_samples",
+                POLICY_ROW_SAMPLE_LIMIT,
+                240,
+            ),
+        ):
+            compact_value = compact_policy_detail_list(
+                cockpit_summary.get(key),
+                max_items=max_items,
+                max_length=max_length,
+            )
+            if compact_value:
+                diagnostics[diagnostic_key] = compact_value
 
     if failure.get("available") is True:
         for key, max_length in (

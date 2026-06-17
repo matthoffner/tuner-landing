@@ -326,6 +326,19 @@ def publisher_source_health(state: dict[str, Any]) -> dict[str, Any]:
             value = compact_int(raw_diagnostics.get(key))
             if value is not None:
                 diagnostics[key] = value
+        for key, max_items, max_length in (
+            ("source_policy_raw_path_samples", 8, 160),
+            ("source_policy_productive_path_samples", 8, 160),
+            ("source_policy_non_productive_path_samples", 8, 160),
+            ("source_policy_synthetic_row_samples", 5, 240),
+        ):
+            value = compact_policy_detail_list(
+                raw_diagnostics.get(key),
+                max_items=max_items,
+                max_length=max_length,
+            )
+            if value:
+                diagnostics[key] = value
         if diagnostics:
             summary["diagnostics"] = diagnostics
     return summary
@@ -392,6 +405,24 @@ def compact_path_detail_list(
         compacted_item = compact_policy_detail(path_label, max_length=max_length)
         if compacted_item is not None:
             compacted.append(compacted_item)
+    return compacted
+
+
+def compact_policy_detail_list(
+    value: Any,
+    *,
+    max_items: int = 5,
+    max_length: int = 160,
+) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    compacted: list[str] = []
+    for item in value:
+        compacted_item = compact_policy_detail(item, max_length=max_length)
+        if compacted_item is not None:
+            compacted.append(compacted_item)
+        if len(compacted) >= max_items:
+            break
     return compacted
 
 
