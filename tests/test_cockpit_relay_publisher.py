@@ -361,11 +361,15 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                         (
                             "authorization: Bearer relay-secret "
                             "token=tail-secret relay_token=second-secret "
+                            "OPENAI_API_KEY=openai-tail-secret "
+                            "AUTOMOAT_RELAY_TOKEN:render-relay-secret "
                             "https://relay-user:relay-pass@relay.example/status"
                             "?token=url-secret#debug"
                         ),
                         '{"relay_token": "json-secret", "safe": "visible"}',
+                        '{"AUTOMOAT_RELAY_TOKEN": "json-env-secret", "safe": "visible"}',
                         "{'api_key': 'single-json-secret', 'safe': 'visible'}",
+                        "{'OPENAI_API_KEY': 'single-env-secret', 'safe': 'visible'}",
                         "password : spaced-secret",
                     ]
                 )
@@ -380,7 +384,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 bridge_status_file=bridge_status_file,
                 interval=4.5,
                 timeout=11.25,
-                tail_lines=5,
+                tail_lines=7,
                 max_log_bytes=4096,
                 max_consecutive_failures=5,
                 max_consecutive_stale_statuses=6,
@@ -396,19 +400,27 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertIn("authorization: Bearer [redacted]", log_tail)
         self.assertIn("token=[redacted]", log_tail)
         self.assertIn("relay_token=[redacted]", log_tail)
+        self.assertIn("OPENAI_API_KEY=[redacted]", log_tail)
+        self.assertIn("AUTOMOAT_RELAY_TOKEN=[redacted]", log_tail)
         self.assertIn("https://relay.example/status?[redacted]#[redacted]", log_tail)
         self.assertIn('{"relay_token":"[redacted]", "safe": "visible"}', log_tail)
+        self.assertIn('{"AUTOMOAT_RELAY_TOKEN":"[redacted]", "safe": "visible"}', log_tail)
         self.assertIn("{'api_key':'[redacted]', 'safe': 'visible'}", log_tail)
+        self.assertIn("{'OPENAI_API_KEY':'[redacted]', 'safe': 'visible'}", log_tail)
         self.assertIn("password=[redacted]", log_tail)
         self.assertTrue(log_tail.endswith("\n"))
         self.assertNotIn("relay-secret", log_tail)
         self.assertNotIn("tail-secret", log_tail)
         self.assertNotIn("second-secret", log_tail)
+        self.assertNotIn("openai-tail-secret", log_tail)
+        self.assertNotIn("render-relay-secret", log_tail)
         self.assertNotIn("relay-user", log_tail)
         self.assertNotIn("relay-pass", log_tail)
         self.assertNotIn("url-secret", log_tail)
         self.assertNotIn("json-secret", log_tail)
+        self.assertNotIn("json-env-secret", log_tail)
         self.assertNotIn("single-json-secret", log_tail)
+        self.assertNotIn("single-env-secret", log_tail)
         self.assertNotIn("spaced-secret", log_tail)
 
     def test_build_payload_sanitizes_quoted_secret_status_fields_before_publish(
