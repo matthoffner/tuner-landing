@@ -102,8 +102,23 @@ BEARER_SECRET_PATTERN = re.compile(
     re.IGNORECASE,
 )
 SECRET_ASSIGNMENT_PATTERN = re.compile(
-    r"\b(token|relay_token|access_token|api_key|x-automoat-relay-token)\s*[:=]\s*[^\s,;]+",
+    r"\b("
+    r"access_token|api_key|codex_access_token|gh_token|github_token|password|"
+    r"passwd|relay_token|secret|token|key|x-automoat-relay-token"
+    r")\s*[:=]\s*[^\s,;|]+",
     re.IGNORECASE,
+)
+SENSITIVE_DOUBLE_QUOTED_FIELD_PATTERN = re.compile(
+    r'"'
+    r"(?i:access_token|api_key|codex_access_token|gh_token|github_token|password|"
+    r"passwd|relay_token|secret|token|key|x-automoat-relay-token)"
+    r'"\s*:\s*"(?:\\.|[^"\\\r\n])*"'
+)
+SENSITIVE_SINGLE_QUOTED_FIELD_PATTERN = re.compile(
+    r"'"
+    r"(?i:access_token|api_key|codex_access_token|gh_token|github_token|password|"
+    r"passwd|relay_token|secret|token|key|x-automoat-relay-token)"
+    r"'\s*:\s*'(?:\\.|[^'\\\r\n])*'"
 )
 SOURCE_HEALTH_LABELS = {
     "source_autonomy_policy_failed": "Autonomy policy failed",
@@ -436,11 +451,31 @@ def compact_policy_detail(value: Any, *, max_length: int = 240) -> str | None:
         return None
     text = URL_TEXT_PATTERN.sub(lambda match: sanitize_url_value(match.group(0)), text)
     text = BEARER_SECRET_PATTERN.sub(r"\1 [redacted]", text)
+    text = sanitize_sensitive_quoted_fields(text)
     text = SECRET_ASSIGNMENT_PATTERN.sub(
         lambda match: f"{match.group(1)}=[redacted]",
         text,
     )
     return text[:max_length] if text else None
+
+
+def sanitize_sensitive_quoted_fields(text: str) -> str:
+    text = SENSITIVE_DOUBLE_QUOTED_FIELD_PATTERN.sub(
+        lambda match: re.sub(
+            r'"\s*:\s*"(?:\\.|[^"\\\r\n])*"$',
+            '":"[redacted]"',
+            match.group(0),
+        ),
+        text,
+    )
+    return SENSITIVE_SINGLE_QUOTED_FIELD_PATTERN.sub(
+        lambda match: re.sub(
+            r"'\s*:\s*'(?:\\.|[^'\\\r\n])*'$",
+            "':'[redacted]'",
+            match.group(0),
+        ),
+        text,
+    )
 
 
 def compact_path_diagnostic(value: Any, *, max_length: int = 240) -> str | None:
@@ -1488,6 +1523,7 @@ def sanitize_log_tail_for_relay(text: str, *, max_line_length: int = 1200) -> st
         )
         sanitized = URL_TEXT_PATTERN.sub(sanitize_url_for_log, sanitized)
         sanitized = BEARER_SECRET_PATTERN.sub(r"\1 [redacted]", sanitized)
+        sanitized = sanitize_sensitive_quoted_fields(sanitized)
         sanitized = SECRET_ASSIGNMENT_PATTERN.sub(
             lambda match: f"{match.group(1)}=[redacted]",
             sanitized,
@@ -2633,6 +2669,7 @@ def sanitize_error_for_log(exc: BaseException) -> str:
     message = str(exc)
     message = URL_TEXT_PATTERN.sub(sanitize_url_for_log, message)
     message = BEARER_SECRET_PATTERN.sub(r"\1 [redacted]", message)
+    message = sanitize_sensitive_quoted_fields(message)
     message = SECRET_ASSIGNMENT_PATTERN.sub(
         lambda match: f"{match.group(1)}=[redacted]",
         message,

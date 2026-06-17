@@ -364,6 +364,9 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                             "https://relay-user:relay-pass@relay.example/status"
                             "?token=url-secret#debug"
                         ),
+                        '{"relay_token": "json-secret", "safe": "visible"}',
+                        "{'api_key': 'single-json-secret', 'safe': 'visible'}",
+                        "password : spaced-secret",
                     ]
                 )
                 + "\n",
@@ -394,6 +397,9 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertIn("token=[redacted]", log_tail)
         self.assertIn("relay_token=[redacted]", log_tail)
         self.assertIn("https://relay.example/status?[redacted]#[redacted]", log_tail)
+        self.assertIn('{"relay_token":"[redacted]", "safe": "visible"}', log_tail)
+        self.assertIn("{'api_key':'[redacted]', 'safe': 'visible'}", log_tail)
+        self.assertIn("password=[redacted]", log_tail)
         self.assertTrue(log_tail.endswith("\n"))
         self.assertNotIn("relay-secret", log_tail)
         self.assertNotIn("tail-secret", log_tail)
@@ -401,6 +407,70 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertNotIn("relay-user", log_tail)
         self.assertNotIn("relay-pass", log_tail)
         self.assertNotIn("url-secret", log_tail)
+        self.assertNotIn("json-secret", log_tail)
+        self.assertNotIn("single-json-secret", log_tail)
+        self.assertNotIn("spaced-secret", log_tail)
+
+    def test_build_payload_sanitizes_quoted_secret_status_fields_before_publish(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            status_file = tmp_path / "status.json"
+            pid_file = tmp_path / "custom.pid"
+            log_file = tmp_path / "custom.log"
+            publisher_log = tmp_path / "publisher.log"
+            bridge_status_file = tmp_path / "missing-bridge-status.json"
+            status_file.write_text(
+                json.dumps(
+                    {
+                        "status": "failing",
+                        "phase": '{"relay_token": "phase-secret", "safe": "visible"}',
+                        "mode": "{'api_key': 'mode-secret', 'safe': 'visible'}",
+                        "updated_at": (
+                            "2026-06-14T19:30:00Z password : time-secret"
+                        ),
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            log_file.write_text("ready\n", encoding="utf-8")
+            args = Namespace(
+                status_file=status_file,
+                pid_file=pid_file,
+                log_file=log_file,
+                publisher_log=publisher_log,
+                bridge_status_file=bridge_status_file,
+                interval=4.5,
+                timeout=11.25,
+                tail_lines=2,
+                max_log_bytes=1024,
+                max_consecutive_failures=5,
+                max_consecutive_stale_statuses=6,
+                status_stale_after_seconds=120,
+                bridge_status_stale_after_seconds=120,
+            )
+            self.publisher.utc_now = lambda: "2026-06-14T19:31:00Z"
+
+            payload = self.publisher.build_payload(args)
+            payload_text = json.dumps(payload, sort_keys=True)
+
+        self.assertEqual(
+            payload["status"]["phase"],
+            '{"relay_token":"[redacted]", "safe": "visible"}',
+        )
+        self.assertEqual(
+            payload["status"]["mode"],
+            "{'api_key':'[redacted]', 'safe': 'visible'}",
+        )
+        self.assertEqual(
+            payload["status"]["updated_at"],
+            "2026-06-14T19:30:00Z password=[redacted]",
+        )
+        self.assertNotIn("phase-secret", payload_text)
+        self.assertNotIn("mode-secret", payload_text)
+        self.assertNotIn("time-secret", payload_text)
 
     def test_read_status_returns_waiting_for_missing_configured_file(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
