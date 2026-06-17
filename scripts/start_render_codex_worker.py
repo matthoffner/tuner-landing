@@ -2273,6 +2273,14 @@ def compact_worker_exit_status(value: object) -> int | None:
     return None
 
 
+def compact_worker_child_pid(value: object) -> int | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int) and value > 0:
+        return value
+    return None
+
+
 def render_worker_failure_route_hint(reason: str) -> str:
     safe_reason = sanitize_worker_log_text(reason)[:MAX_BUSINESS_HOURS_CONFIG_VALUE_CHARS]
     route_candidate = safe_reason.split(maxsplit=1)[0] if safe_reason else ""
@@ -2329,6 +2337,9 @@ def compact_render_worker_failure_details(details: dict[str, object]) -> dict[st
         ]
         if safe_child_label:
             compact["child_label"] = safe_child_label
+    child_pid = compact_worker_child_pid(details.get("child_pid"))
+    if child_pid is not None:
+        compact["child_pid"] = child_pid
     child_exit_status = compact_worker_exit_status(details.get("child_exit_status"))
     if child_exit_status is not None:
         compact["child_exit_status"] = child_exit_status
@@ -2373,6 +2384,9 @@ def write_render_worker_failure_status(
     child_label = compact_details.pop("child_label", None)
     if child_label:
         failure["child_label"] = child_label
+    child_pid = compact_details.pop("child_pid", None)
+    if child_pid is not None:
+        failure["child_pid"] = child_pid
     child_exit_status = compact_details.pop("child_exit_status", None)
     if child_exit_status is not None:
         failure["child_exit_status"] = child_exit_status
@@ -2543,7 +2557,7 @@ def child_startup_exit_result(
     status, poll_ok = safe_child_poll(process, label)
     if status is None:
         return None, {}
-    details = child_failure_details(label, status, poll_ok)
+    details = child_failure_details(label, status, poll_ok, child_pid=process.pid)
     if not poll_ok:
         return CHILD_POLL_FAILURE_EXIT_STATUS, details
 
@@ -2555,11 +2569,19 @@ def child_startup_exit_result(
     return worker_status, details
 
 
-def child_failure_details(label: str, status: int, poll_ok: bool) -> dict[str, object]:
+def child_failure_details(
+    label: str,
+    status: int,
+    poll_ok: bool,
+    *,
+    child_pid: int | None = None,
+) -> dict[str, object]:
     details: dict[str, object] = {
         "child_label": label,
         "child_status_available": poll_ok,
     }
+    if child_pid is not None:
+        details["child_pid"] = child_pid
     if poll_ok:
         details["child_exit_status"] = status
     return details
@@ -2677,6 +2699,7 @@ def monitor_scheduled_loop(
                     "autonomous loop",
                     loop_status,
                     loop_poll_ok,
+                    child_pid=loop_process.pid,
                 ),
             )
             stop_children()
@@ -2701,6 +2724,7 @@ def monitor_scheduled_loop(
                     "relay publisher",
                     publisher_status,
                     publisher_poll_ok,
+                    child_pid=publisher_process.pid,
                 ),
             )
             if not publisher_poll_ok:
@@ -2739,6 +2763,7 @@ def sleep_outside_business_hours(
                     "relay publisher",
                     publisher_status,
                     publisher_poll_ok,
+                    child_pid=publisher_process.pid,
                 ),
             )
             return PUBLISHER_EXITED, worker_exit_status

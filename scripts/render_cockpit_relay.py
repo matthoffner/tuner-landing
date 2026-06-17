@@ -1144,6 +1144,7 @@ def source_failure_summary(status: dict[str, Any]) -> dict[str, Any]:
         "readiness_blocker_count": failure.get("readiness_blocker_count"),
         "degraded_artifact_count": failure.get("degraded_artifact_count"),
         "sync_exit_status": failure.get("sync_exit_status"),
+        "child_pid": failure.get("child_pid"),
     }
     for key, value in int_fields.items():
         compact_value = compact_int(value)

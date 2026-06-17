@@ -3624,6 +3624,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                             "https://relay-secret.example/status",
                         ],
                         "child_label": "relay publisher",
+                        "child_pid": 202,
                         "child_status_available": True,
                         "child_exit_status": 2,
                         "message": "token=relay-secret",
@@ -3642,6 +3643,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                 "category": "render_worker",
                 "child_exit_status": 2,
                 "child_label": "relay publisher",
+                "child_pid": 202,
                 "child_status_available": True,
                 "failure_reason": "relay_publisher_startup_exit token=[redacted]",
                 "message": "publisher failed token=[redacted]",
@@ -5282,6 +5284,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             publisher_exit_status=4,
             details={
                 "child_label": "relay publisher",
+                "child_pid": 202,
                 "child_status_available": True,
                 "child_exit_status": 4,
             },
@@ -5343,6 +5346,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             publisher_exit_status=None,
             details={
                 "child_label": "relay publisher",
+                "child_pid": 202,
                 "child_status_available": False,
             },
         )
@@ -5672,6 +5676,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             publisher_exit_status=0,
             details={
                 "child_label": "relay publisher",
+                "child_pid": 202,
                 "child_status_available": True,
                 "child_exit_status": 0,
             },
@@ -5742,6 +5747,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             worker_exit_status=6,
             details={
                 "child_label": "autonomous loop",
+                "child_pid": 101,
                 "child_status_available": True,
                 "child_exit_status": 6,
             },
@@ -5813,6 +5819,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             worker_exit_status=self.worker.CHILD_POLL_FAILURE_EXIT_STATUS,
             details={
                 "child_label": "autonomous loop",
+                "child_pid": 101,
                 "child_status_available": False,
             },
         )
@@ -5908,6 +5915,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             worker_exit_status=self.worker.CHILD_POLL_FAILURE_EXIT_STATUS,
             details={
                 "child_label": "autonomous loop",
+                "child_pid": 101,
                 "child_status_available": False,
             },
         )
@@ -5948,6 +5956,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             worker_exit_status=6,
             details={
                 "child_label": "autonomous loop",
+                "child_pid": 101,
                 "child_status_available": True,
                 "child_exit_status": 6,
             },
@@ -5986,6 +5995,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             worker_exit_status=1,
             details={
                 "child_label": "autonomous loop",
+                "child_pid": 101,
                 "child_status_available": True,
                 "child_exit_status": 0,
             },
@@ -6025,6 +6035,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             publisher_exit_status=0,
             details={
                 "child_label": "relay publisher",
+                "child_pid": 202,
                 "child_status_available": True,
                 "child_exit_status": 0,
             },
@@ -6065,6 +6076,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             publisher_exit_status=None,
             details={
                 "child_label": "relay publisher",
+                "child_pid": 202,
                 "child_status_available": False,
             },
         )
@@ -6105,6 +6117,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             publisher_exit_status=0,
             details={
                 "child_label": "relay publisher",
+                "child_pid": 202,
                 "child_status_available": True,
                 "child_exit_status": 0,
             },

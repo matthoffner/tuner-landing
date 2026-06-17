@@ -879,6 +879,7 @@ def failure_summary(status: dict[str, Any]) -> dict[str, Any]:
         "readiness_blocker_count": failure.get("readiness_blocker_count"),
         "degraded_artifact_count": failure.get("degraded_artifact_count"),
         "sync_exit_status": failure.get("sync_exit_status"),
+        "child_pid": failure.get("child_pid"),
     }
     for key, value in count_fields.items():
         compact_value = compact_int(value)
@@ -2035,6 +2036,7 @@ def source_status_log_fields(payload: dict[str, Any]) -> dict[str, Any]:
             failure.get("child_label"),
             max_length=120,
         ),
+        "source_failure_child_pid": compact_int(failure.get("child_pid")),
         "source_failure_codex_exit_status": compact_exit_status(
             failure.get("codex_exit_status")
         ),
@@ -2199,6 +2201,7 @@ SOURCE_STATUS_LOG_FIELD_NAMES = (
     "source_failure_failed_substep",
     "source_failure_setup_stage",
     "source_failure_child_label",
+    "source_failure_child_pid",
     "source_failure_codex_exit_status",
     "source_failure_worker_exit_status",
     "source_failure_publisher_exit_status",
