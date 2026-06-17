@@ -3,6 +3,13 @@
 Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
+- timestamp: 2026-06-17T20:58:38Z
+- lane: editor
+- status: marked oversized Vercel cockpit status upstream responses with the existing CORS-visible body truncation diagnostic; `/api/status` now sets `X-Automoat-Upstream-Body-Truncated: true` when any attempted upstream is rejected as `upstream_body_too_large`, including successful fallback and all-upstreams-failed paths, so browser clients can distinguish body-cap rejection from generic unreachable status; no Dallas raw CSV rows were edited
+- files: api/cockpit-status.js, tests/test_cockpit_api_proxy.py, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- checks: `python3 -m unittest tests.test_cockpit_api_proxy -v`; `node --check api/cockpit-status.js`; `python3 -m py_compile tests/test_cockpit_api_proxy.py`; `python3 -m unittest discover -s tests -v`; `node --check api/cockpit-upstreams.js && node --check api/cockpit-status.js && node --check api/cockpit-log.js`; `cmp -s generated/landing.html index.html`; `git diff --check`; `git diff --name-only -- generated/raw .pxcode/preview.json generated/landing.html index.html generated/pipeline/dallas-import-pipeline-summary-v1`; local `run_autonomy_policy_check(Path('/tmp/automoat-status-truncation-final-policy.log'))` assertion for `exit_status=0`, zero synthetic rows, zero raw Dallas CSV paths, two productive paths, two ignored routine companion paths, and no preview change; `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json > /tmp/automoat-status-truncation-ready.json` plus JSON assertion for readiness `ready`, `535` permits, `1082` inspections, `1625` source records, `1093` tasks, `535/535` operator corrections, `13/13` contract checks, and zero latest thin-count buckets
+- next: when `/api/status` reports `upstream_body_too_large`, inspect `X-Automoat-Upstream-Body-Truncated`, `X-Automoat-Upstream-Body-Limit-Chars`, and `X-Automoat-Upstream-Attempts` before changing relay or worker status payload sizes
+
 - timestamp: 2026-06-17T20:14:55Z
 - lane: editor
 - status: exposed Vercel cockpit proxy upstream body caps in CORS-visible diagnostics; status and log proxy responses now set `X-Automoat-Upstream-Body-Limit-Chars`, and the shared exposed-header contract includes it so browser clients can inspect status/log body limits when debugging oversized upstream payloads; no Dallas raw CSV rows were edited

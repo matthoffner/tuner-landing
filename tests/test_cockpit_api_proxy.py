@@ -2307,6 +2307,10 @@ class CockpitApiProxyTest(unittest.TestCase):
                 statusResponse.headers["X-Automoat-Upstream-Attempts"],
                 "relay:200:upstream_body_too_large,legacy_bridge:200",
               );
+              assert.strictEqual(
+                statusResponse.headers["X-Automoat-Upstream-Body-Truncated"],
+                "true",
+              );
 
               const logResponse = response();
               await logHandler({ method: "GET" }, logResponse);
@@ -2398,6 +2402,10 @@ class CockpitApiProxyTest(unittest.TestCase):
                 { kind: "relay", status: 200, error: "upstream_body_too_large" },
                 { kind: "legacy_bridge", status: 200, error: "upstream_body_too_large" },
               ]);
+              assert.strictEqual(
+                statusResponse.headers["X-Automoat-Upstream-Body-Truncated"],
+                "true",
+              );
               assert(!statusResponse.body.includes("relay-oversized-secret"));
               assert(!statusResponse.body.includes("bridge-oversized-secret"));
 
@@ -2707,6 +2715,10 @@ class CockpitApiProxyTest(unittest.TestCase):
               assert.strictEqual(
                 statusResponse.headers["X-Automoat-Upstream-Attempts"],
                 "relay:200:upstream_body_too_large,legacy_bridge:200",
+              );
+              assert.strictEqual(
+                statusResponse.headers["X-Automoat-Upstream-Body-Truncated"],
+                "true",
               );
 
               const logResponse = response();

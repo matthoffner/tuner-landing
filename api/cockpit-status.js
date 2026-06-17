@@ -196,6 +196,9 @@ module.exports = async function handler(request, response) {
         MAX_STATUS_BODY_CHARS,
       );
       if (!upstream.ok) {
+        if (upstream.error === "upstream_body_too_large") {
+          response.setHeader("X-Automoat-Upstream-Body-Truncated", "true");
+        }
         attempts.push({
           kind: upstreamConfig.kind,
           status: upstream.status,
