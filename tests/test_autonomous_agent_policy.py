@@ -1481,6 +1481,10 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
                 "decision_reason": "dallas_ready_no_thin_groups",
                 "current_focus": "autonomy_visibility_or_real_ingest",
                 "preview_json_changed": False,
+                "landing_index_synced": True,
+                "landing_index_sync_status": "synced",
+                "landing_index_source_path": "generated/landing.html",
+                "landing_index_target_path": "index.html",
                 "synthetic_row_count": 1,
                 "raw_dallas_csv_changed_path_count": 1,
                 "productive_changed_path_count": 0,
@@ -1514,7 +1518,7 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
             "decision=dallas_ready_no_thin_groups "
             "focus=autonomy_visibility_or_real_ingest synthetic_rows=1 "
             "raw_csv_paths=1 productive_paths=0 ignored_paths=2 preview_changed=false "
-            "allows_synthetic=false override=false",
+            "landing_synced=true allows_synthetic=false override=false",
         )
 
     def test_synthetic_row_samples_are_bounded_and_secret_safe(self) -> None:
@@ -1718,7 +1722,7 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
             "status=passed route=ok decision=dallas_ready_no_thin_groups "
             "focus=autonomy_visibility_or_real_ingest synthetic_rows=0 "
             "raw_csv_paths=1 productive_paths=1 ignored_paths=0 preview_changed=false "
-            "allows_synthetic=false override=false",
+            "landing_synced=true allows_synthetic=false override=false",
         )
 
     def test_policy_diagnostics_are_routeable_and_secret_safe(self) -> None:
@@ -1730,6 +1734,12 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
             raw_csv_path_count=3,
             productive_path_count=4,
             policy_allows_synthetic_append=False,
+            landing_sync={
+                "synced": False,
+                "status": "different token=landing-secret",
+                "source_path": "generated/landing.html",
+                "target_path": "index.html",
+            },
             allow_override=False,
             policy_snapshot={
                 "decision_reason": "blocked token=secret\nsecond line",
@@ -1760,6 +1770,16 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
         self.assertEqual(diagnostics["decision_reason"], "blocked token=<redacted> second line")
         self.assertEqual(diagnostics["current_focus"], "fix_import_readiness_blockers")
         self.assertTrue(diagnostics["preview_json_changed"])
+        self.assertFalse(diagnostics["landing_index_synced"])
+        self.assertEqual(
+            diagnostics["landing_index_sync_status"],
+            "different token=<redacted>",
+        )
+        self.assertEqual(
+            diagnostics["landing_index_source_path"],
+            "generated/landing.html",
+        )
+        self.assertEqual(diagnostics["landing_index_target_path"], "index.html")
         self.assertEqual(diagnostics["synthetic_row_count"], 2)
         self.assertEqual(diagnostics["raw_dallas_csv_changed_path_count"], 3)
         self.assertEqual(diagnostics["productive_changed_path_count"], 4)
@@ -1817,6 +1837,7 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
         self.assertIn("productive_paths=9", summary)
         self.assertIn("ignored_paths=10", summary)
         self.assertIn("preview_changed=true", summary)
+        self.assertIn("landing_synced=false", summary)
         self.assertIn("override=true", summary)
         self.assertNotIn("super-secret", summary)
         self.assertNotIn("user:pass", summary)
@@ -1834,9 +1855,39 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
             "dallas_raw_fixture_without_productive_companion",
         )
         self.assertEqual(
+            self.loop.autonomy_policy_route_hint("landing_index_out_of_sync"),
+            "landing_index_sync",
+        )
+        self.assertEqual(
             self.loop.autonomy_policy_route_hint("unexpected"),
             "policy_failure",
         )
+
+    def test_policy_check_rejects_unsynced_landing_assets(self) -> None:
+        self.loop.dirty_paths_excluding_preview = lambda: [
+            "generated/landing.html",
+            "index.html",
+        ]
+        self.loop.added_synthetic_dallas_rows = lambda: []
+        self.loop.landing_index_sync_status = lambda: {
+            "synced": False,
+            "status": "different",
+            "source_path": "generated/landing.html",
+            "target_path": "index.html",
+        }
+
+        with tempfile.TemporaryDirectory() as tmp:
+            result = self.loop.run_autonomy_policy_check(Path(tmp) / "policy.log")
+
+        self.assertEqual(result["exit_status"], 1)
+        self.assertEqual(result["failure_reason"], "landing_index_out_of_sync")
+        self.assertFalse(result["landing_index_synced"])
+        self.assertEqual(result["landing_index_sync_status"], "different")
+        self.assertEqual(
+            result["policy_diagnostics"]["route_hint"],
+            "landing_index_sync",
+        )
+        self.assertIn("landing_synced=false", result["policy_summary"])
 
     def test_policy_check_rejects_synthetic_row_when_snapshot_disallows_it(self) -> None:
         self.loop.dirty_paths_excluding_preview = lambda: [
@@ -1980,6 +2031,19 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
 
         self.assertIn(".pxcode/preview.json", message)
         self.assertIn("must stay untouched", message)
+
+    def test_policy_error_message_names_landing_sync_block(self) -> None:
+        message = self.loop.autonomy_policy_error_message(
+            {
+                "failure_reason": "landing_index_out_of_sync",
+                "synthetic_row_count": 0,
+                "raw_dallas_csv_changed_paths": [],
+            }
+        )
+
+        self.assertIn("unsynced landing assets", message)
+        self.assertIn("generated/landing.html", message)
+        self.assertIn("index.html", message)
 
     def test_run_iteration_syncs_landing_before_policy_failure(self) -> None:
         calls = []

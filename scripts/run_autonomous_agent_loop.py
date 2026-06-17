@@ -37,6 +37,8 @@ QUEUE_PATH = ROOT / "generated/workflows/dallas-inspection-workflow-v1/action-qu
 PIPELINE_SUMMARY_PATH = ROOT / "generated/pipeline/dallas-import-pipeline-summary-v1/summary.json"
 HANDOFF_PATH = ROOT / ".pixelbox/handoff.md"
 PREVIEW_PATH = ".pxcode/preview.json"
+LANDING_PATH = ROOT / "generated" / "landing.html"
+INDEX_PATH = ROOT / "index.html"
 
 STOP_REQUESTED = False
 
@@ -624,6 +626,43 @@ def dirty_paths_excluding_preview() -> list[str]:
 def preview_json_changed(paths: list[str] | None = None) -> bool:
     """Return whether the Pixelbox preview file is dirty in the current diff."""
     return PREVIEW_PATH in (dirty_paths() if paths is None else paths)
+
+
+def landing_index_sync_status() -> dict[str, Any]:
+    """Return whether the generated landing page and root index are identical."""
+    source_label = repo_path(LANDING_PATH)
+    target_label = repo_path(INDEX_PATH)
+    if not LANDING_PATH.exists():
+        return {
+            "synced": True,
+            "status": "source_missing",
+            "source_path": source_label,
+            "target_path": target_label,
+        }
+    if not INDEX_PATH.exists():
+        return {
+            "synced": False,
+            "status": "target_missing",
+            "source_path": source_label,
+            "target_path": target_label,
+        }
+    try:
+        source_bytes = LANDING_PATH.read_bytes()
+        target_bytes = INDEX_PATH.read_bytes()
+    except OSError as exc:
+        return {
+            "synced": False,
+            "status": "read_failed",
+            "source_path": source_label,
+            "target_path": target_label,
+            "error": sanitized_policy_detail(str(exc)),
+        }
+    return {
+        "synced": source_bytes == target_bytes,
+        "status": "synced" if source_bytes == target_bytes else "different",
+        "source_path": source_label,
+        "target_path": target_label,
+    }
 
 
 def changed_paths_include_productive_work(paths: list[str]) -> bool:
@@ -1418,6 +1457,8 @@ def run_autonomy_policy_check(log_file: Path) -> dict[str, Any]:
     all_paths = dirty_paths()
     paths = dirty_paths_excluding_preview()
     preview_changed = preview_json_changed(all_paths)
+    landing_sync = landing_index_sync_status()
+    landing_index_synced = landing_sync.get("synced") is True
     raw_csv_paths = changed_dallas_raw_csv_paths(paths)
     synthetic_rows = added_synthetic_dallas_rows()
     synthetic_row_samples = synthetic_dallas_row_samples(synthetic_rows)
@@ -1442,6 +1483,14 @@ def run_autonomy_policy_check(log_file: Path) -> dict[str, Any]:
             log_file,
             "policy violation: .pxcode/preview.json is dirty; autonomous "
             "iterations must not edit Pixelbox preview metadata",
+        )
+    elif not landing_index_synced:
+        exit_status = 1
+        failure_reason = "landing_index_out_of_sync"
+        emit(
+            log_file,
+            "policy violation: generated/landing.html and index.html are not "
+            f"synced status={landing_sync.get('status')}",
         )
     elif synthetic_rows and not policy_allows_synthetic_append and not allow_override:
         exit_status = 1
@@ -1483,6 +1532,7 @@ def run_autonomy_policy_check(log_file: Path) -> dict[str, Any]:
             f"productive_change={productive_change} "
             f"productive_paths={len(productive_paths)} "
             f"ignored_companion_paths={len(ignored_companion_paths)} "
+            f"landing_index_synced={landing_index_synced} "
             f"policy_allows_synthetic_append={policy_allows_synthetic_append} "
             f"override={allow_override}",
         )
@@ -1496,6 +1546,7 @@ def run_autonomy_policy_check(log_file: Path) -> dict[str, Any]:
         raw_csv_path_count=len(raw_csv_paths),
         productive_path_count=len(productive_paths),
         policy_allows_synthetic_append=policy_allows_synthetic_append,
+        landing_sync=landing_sync,
         allow_override=allow_override,
         policy_snapshot=policy_snapshot,
         dirty_paths_excluding_preview=paths,
@@ -1513,6 +1564,8 @@ def run_autonomy_policy_check(log_file: Path) -> dict[str, Any]:
         "dirty_paths": all_paths,
         "dirty_paths_excluding_preview": paths,
         "preview_json_changed": preview_changed,
+        "landing_index_synced": landing_index_synced,
+        "landing_index_sync_status": landing_sync.get("status"),
         "synthetic_row_count": len(synthetic_rows),
         "synthetic_row_samples": synthetic_row_samples,
         "raw_dallas_csv_changed_paths": raw_csv_paths,
@@ -1539,6 +1592,7 @@ def autonomy_policy_diagnostics(
     policy_allows_synthetic_append: bool,
     allow_override: bool,
     policy_snapshot: dict[str, Any],
+    landing_sync: dict[str, Any] | None = None,
     dirty_paths_excluding_preview: list[str] | None = None,
     raw_csv_paths: list[str] | None = None,
     productive_paths: list[str] | None = None,
@@ -1546,6 +1600,8 @@ def autonomy_policy_diagnostics(
     synthetic_row_samples: list[str] | None = None,
 ) -> dict[str, Any]:
     """Return compact routeable details for the policy step status payload."""
+    landing_sync = landing_sync if isinstance(landing_sync, dict) else {}
+    landing_index_synced = landing_sync.get("synced") is True
     return {
         "status": "passed" if exit_status == 0 else "failed",
         "failure_reason": failure_reason,
@@ -1555,6 +1611,16 @@ def autonomy_policy_diagnostics(
         ),
         "current_focus": sanitized_policy_scalar(policy_snapshot.get("current_focus")),
         "preview_json_changed": preview_changed,
+        "landing_index_synced": landing_index_synced,
+        "landing_index_sync_status": sanitized_policy_scalar(
+            landing_sync.get("status")
+        ),
+        "landing_index_source_path": sanitized_policy_scalar(
+            landing_sync.get("source_path")
+        ),
+        "landing_index_target_path": sanitized_policy_scalar(
+            landing_sync.get("target_path")
+        ),
         "synthetic_row_count": synthetic_row_count,
         "raw_dallas_csv_changed_path_count": raw_csv_path_count,
         "productive_changed_path_count": productive_path_count,
@@ -1582,6 +1648,8 @@ def autonomy_policy_diagnostics(
 def autonomy_policy_route_hint(failure_reason: str | None) -> str:
     if failure_reason == "preview_json_changed":
         return "pixelbox_preview_metadata"
+    if failure_reason == "landing_index_out_of_sync":
+        return "landing_index_sync"
     if failure_reason == "synthetic_append_disallowed_by_snapshot":
         return "dallas_synthetic_fixture_growth_disallowed"
     if failure_reason == "raw_dallas_csv_without_productive_work":
@@ -1618,6 +1686,7 @@ def autonomy_policy_summary(policy_diagnostics: dict[str, Any]) -> str:
         parts.append(f"{label}={int(policy_diagnostics.get(key) or 0)}")
     for key, label in (
         ("preview_json_changed", "preview_changed"),
+        ("landing_index_synced", "landing_synced"),
         ("policy_allows_synthetic_append", "allows_synthetic"),
         ("policy_override", "override"),
     ):
@@ -1658,6 +1727,11 @@ def autonomy_policy_error_message(policy_step: dict[str, Any]) -> str:
         return (
             "Autonomy policy rejected changes to .pxcode/preview.json; Pixelbox "
             "preview metadata must stay untouched by autonomous iterations."
+        )
+    if reason == "landing_index_out_of_sync":
+        return (
+            "Autonomy policy rejected unsynced landing assets; copy "
+            "generated/landing.html to index.html before finishing."
         )
     return "Autonomy policy rejected the current diff."
 

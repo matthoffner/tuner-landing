@@ -3,6 +3,13 @@
 Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
+- timestamp: 2026-06-17T21:50:53Z
+- lane: editor
+- status: added an autonomous policy guard for unsynced landing assets; standalone policy checks now compare `generated/landing.html` with `index.html`, fail with route `landing_index_sync` / reason `landing_index_out_of_sync`, expose compact `landing_synced=<bool>` summaries and routeable diagnostics, and keep the existing loop-time sync step as the first repair path; no Dallas raw CSV rows were edited
+- files: scripts/run_autonomous_agent_loop.py, tests/test_autonomous_agent_policy.py, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- checks: `python3 -m py_compile scripts/run_autonomous_agent_loop.py tests/test_autonomous_agent_policy.py`; `python3 -m unittest tests.test_autonomous_agent_policy -v`; `node --check api/cockpit-upstreams.js && node --check api/cockpit-status.js && node --check api/cockpit-log.js`; `cmp -s generated/landing.html index.html`; `python3 -m unittest discover -s tests -v`; `git diff --check`; `git diff --name-only -- generated/raw .pxcode/preview.json generated/landing.html index.html generated/pipeline/dallas-import-pipeline-summary-v1`; local `run_autonomy_policy_check(Path('/tmp/automoat-landing-index-policy.log'))` with zero synthetic rows, zero raw Dallas CSV paths, two productive paths, two ignored coordination files, no preview change, and `landing_index_synced=true`; `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json > /tmp/automoat-landing-index-ready.json` plus JSON assertion for readiness `ready`, zero blockers, `ready_for_next_import_records=true`, `535` permits, `1082` inspections, `1625` source records, `535/535` operator corrections, `13/13` contract checks, and zero latest thin-count buckets
+- next: if autonomous policy fails with `route=landing_index_sync`, rerun or inspect the `sync landing` step (`cp generated/landing.html index.html`) before debugging Dallas readiness or synthetic fixture policy
+
 - timestamp: 2026-06-17T21:44:27Z
 - lane: editor
 - status: marked rejected oversized legacy bridge log upstreams with the existing Vercel cockpit body-truncation diagnostic; `/api/log` now sets `X-Automoat-Upstream-Body-Truncated: true` when a non-relay log upstream is rejected as `upstream_body_too_large`, keeping browser-visible body-cap diagnostics consistent with relay tail truncation and status upstream rejection; no Dallas raw CSV rows were edited
