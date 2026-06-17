@@ -3808,8 +3808,12 @@ class RenderCockpitRelayTest(unittest.TestCase):
                     "\x00done\n"
                     "X-Automoat-Relay-Token: relay-header-secret "
                     "password : spaced-secret\n"
+                    "AUTOMOAT_RELAY_TOKEN=env-relay-secret "
+                    "OPENAI_API_KEY=env-openai-secret\n"
                     '{"relay_token": "json-secret", "safe": "visible"}\n'
+                    '{"AUTOMOAT_RELAY_TOKEN": "json-env-secret", "safe": "visible"}\n'
                     "{'api_key': 'single-json-secret', 'safe': 'visible'}\n"
+                    "{'OPENAI_API_KEY': 'single-env-secret', 'safe': 'visible'}\n"
                 ),
             }
         )
@@ -3822,12 +3826,22 @@ class RenderCockpitRelayTest(unittest.TestCase):
         self.assertIn("token=[redacted]", state["log_tail"])
         self.assertIn("X-Automoat-Relay-Token=[redacted]", state["log_tail"])
         self.assertIn("password=[redacted]", state["log_tail"])
+        self.assertIn("AUTOMOAT_RELAY_TOKEN=[redacted]", state["log_tail"])
+        self.assertIn("OPENAI_API_KEY=[redacted]", state["log_tail"])
         self.assertIn(
             '{"relay_token":"[redacted]", "safe": "visible"}',
             state["log_tail"],
         )
         self.assertIn(
+            '{"AUTOMOAT_RELAY_TOKEN":"[redacted]", "safe": "visible"}',
+            state["log_tail"],
+        )
+        self.assertIn(
             "{'api_key':'[redacted]', 'safe': 'visible'}",
+            state["log_tail"],
+        )
+        self.assertIn(
+            "{'OPENAI_API_KEY':'[redacted]', 'safe': 'visible'}",
             state["log_tail"],
         )
         self.assertIn(" done", state["log_tail"])
@@ -3838,8 +3852,12 @@ class RenderCockpitRelayTest(unittest.TestCase):
             "assignment-secret",
             "relay-header-secret",
             "spaced-secret",
+            "env-relay-secret",
+            "env-openai-secret",
             "json-secret",
+            "json-env-secret",
             "single-json-secret",
+            "single-env-secret",
         ):
             self.assertNotIn(secret, state["log_tail"])
 

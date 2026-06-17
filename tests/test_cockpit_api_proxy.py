@@ -2124,8 +2124,11 @@ class CockpitApiProxyTest(unittest.TestCase):
               "Authorization: Bearer bearer-secret api_key=assignment-secret",
               "X-Automoat-Relay-Token: relay-header-secret github_token:github-secret",
               "password : spaced-secret",
+              "AUTOMOAT_RELAY_TOKEN=env-relay-secret OPENAI_API_KEY=env-openai-secret",
               "{\\"relay_token\\": \\"json-secret\\", \\"safe\\": \\"visible\\"}",
+              "{\\"AUTOMOAT_RELAY_TOKEN\\": \\"json-env-secret\\", \\"safe\\": \\"visible\\"}",
               "{'api_key': 'single-json-secret', 'safe': 'visible'}",
+              "{'OPENAI_API_KEY': 'single-env-secret', 'safe': 'visible'}",
               "raw\\x00control",
               "",
             ].join("\\n");
@@ -2139,8 +2142,12 @@ class CockpitApiProxyTest(unittest.TestCase):
             assert(parsed.body.includes("X-Automoat-Relay-Token=[redacted]"));
             assert(parsed.body.includes("github_token=[redacted]"));
             assert(parsed.body.includes("password=[redacted]"));
+            assert(parsed.body.includes("AUTOMOAT_RELAY_TOKEN=[redacted]"));
+            assert(parsed.body.includes("OPENAI_API_KEY=[redacted]"));
             assert(parsed.body.includes("{\\"relay_token\\":\\"[redacted]\\", \\"safe\\": \\"visible\\"}"));
+            assert(parsed.body.includes("{\\"AUTOMOAT_RELAY_TOKEN\\":\\"[redacted]\\", \\"safe\\": \\"visible\\"}"));
             assert(parsed.body.includes("{'api_key':'[redacted]', 'safe': 'visible'}"));
+            assert(parsed.body.includes("{'OPENAI_API_KEY':'[redacted]', 'safe': 'visible'}"));
             assert(parsed.body.includes("raw control"));
             assert.strictEqual(parsed.body, sanitizeLogText(body));
             for (const secret of [
@@ -2151,8 +2158,12 @@ class CockpitApiProxyTest(unittest.TestCase):
               "relay-header-secret",
               "github-secret",
               "spaced-secret",
+              "env-relay-secret",
+              "env-openai-secret",
               "json-secret",
+              "json-env-secret",
               "single-json-secret",
+              "single-env-secret",
               "\\x00",
             ]) {
               assert(!parsed.body.includes(secret), secret);

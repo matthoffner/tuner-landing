@@ -73,23 +73,24 @@ COCKPIT_HEALTH_LABELS = {
 }
 EMBEDDED_URL_RE = re.compile(r"https?://[^\s,;|]+")
 PATH_TOKEN_RE = re.compile(r"(?<![\w:/])(?:~|/)[^\s,;|'\"\])}]+")
+SENSITIVE_KEY_PATTERN = (
+    r"(?:[A-Za-z0-9]+[_-])*"
+    r"(?:access[_-]?token|api[_-]?key|codex[_-]?access[_-]?token|gh[_-]?token|"
+    r"github[_-]?token|password|passwd|relay[_-]?token|secret|token|key|"
+    r"x-automoat-relay-token)"
+    r"(?:[_-][A-Za-z0-9]+)*"
+)
 SENSITIVE_ASSIGNMENT_RE = re.compile(
-    r"(?i)\b("
-    r"access_token|api_key|codex_access_token|gh_token|github_token|password|"
-    r"passwd|relay_token|secret|token|key|x-automoat-relay-token"
-    r")\s*[:=]\s*([^\s,;|]+)"
+    rf"\b({SENSITIVE_KEY_PATTERN})\s*[:=]\s*([^\s,;|]+)",
+    re.IGNORECASE,
 )
 SENSITIVE_DOUBLE_QUOTED_FIELD_RE = re.compile(
-    r'"'
-    r"(?i:access_token|api_key|codex_access_token|gh_token|github_token|password|"
-    r"passwd|relay_token|secret|token|key|x-automoat-relay-token)"
-    r'"\s*:\s*"(?:\\.|[^"\\\r\n])*"'
+    rf'"{SENSITIVE_KEY_PATTERN}"\s*:\s*"(?:\\.|[^"\\\r\n])*"',
+    re.IGNORECASE,
 )
 SENSITIVE_SINGLE_QUOTED_FIELD_RE = re.compile(
-    r"'"
-    r"(?i:access_token|api_key|codex_access_token|gh_token|github_token|password|"
-    r"passwd|relay_token|secret|token|key|x-automoat-relay-token)"
-    r"'\s*:\s*'(?:\\.|[^'\\\r\n])*'"
+    rf"'{SENSITIVE_KEY_PATTERN}'\s*:\s*'(?:\\.|[^'\\\r\n])*'",
+    re.IGNORECASE,
 )
 BEARER_SECRET_RE = re.compile(
     r"\b(authorization\s*[:=]\s*bearer)\s+[^\s,;|]+",
