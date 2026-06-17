@@ -2425,6 +2425,101 @@ class CockpitApiProxyTest(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_log_handler_returns_final_tail_for_known_length_streams(self) -> None:
+        result = run_node(
+            """
+            const assert = require("assert");
+            const logHandler = require("./api/cockpit-log");
+            const { MAX_LOG_BODY_CHARS } = require("./api/cockpit-log");
+
+            function response() {
+              return {
+                statusCode: null,
+                body: "",
+                headers: {},
+                setHeader(name, value) {
+                  this.headers[name] = value;
+                },
+                status(code) {
+                  this.statusCode = code;
+                  return this;
+                },
+                send(body) {
+                  this.body = String(body);
+                  return this;
+                },
+                end(body = "") {
+                  this.body = String(body);
+                  return this;
+                },
+              };
+            }
+
+            process.env.AUTOMOAT_RELAY_URL = "https://automoat-cockpit-relay.example";
+            process.env.AUTOMOAT_BRIDGE_URL = "";
+            process.env.AUTOMOAT_COCKPIT_UPSTREAM_TIMEOUT_MS = "";
+            let relayCancels = 0;
+            let relayTextCalls = 0;
+            global.fetch = async () => {
+              const chunks = [
+                "old relay log line\\n",
+                "m".repeat(MAX_LOG_BODY_CHARS),
+                "final relay tail\\n",
+              ];
+              const bodyLength = chunks.reduce((total, chunk) => total + chunk.length, 0);
+              const body = new ReadableStream({
+                start(controller) {
+                  for (const chunk of chunks) {
+                    controller.enqueue(new TextEncoder().encode(chunk));
+                  }
+                  controller.close();
+                },
+                cancel() {
+                  relayCancels += 1;
+                },
+              });
+              return {
+                ok: true,
+                status: 200,
+                headers: {
+                  get(name) {
+                    return name.toLowerCase() === "content-length" ? String(bodyLength) : null;
+                  },
+                },
+                body,
+                text: async () => {
+                  relayTextCalls += 1;
+                  return "streamed relay log should not be buffered through text()";
+                },
+              };
+            };
+
+            (async () => {
+              const logResponse = response();
+              await logHandler({ method: "GET" }, logResponse);
+              assert.strictEqual(logResponse.statusCode, 200);
+              assert.strictEqual(logResponse.body.length, MAX_LOG_BODY_CHARS);
+              assert(logResponse.body.endsWith("final relay tail\\n"));
+              assert(!logResponse.body.includes("old relay log line"));
+              assert.strictEqual(
+                logResponse.headers["X-Automoat-Upstream-Body-Truncated"],
+                "true",
+              );
+              assert.strictEqual(
+                logResponse.headers["X-Automoat-Upstream-Attempts"],
+                "relay:200",
+              );
+              assert.strictEqual(relayCancels, 0);
+              assert.strictEqual(relayTextCalls, 0);
+            })().catch((error) => {
+              console.error(error.stack || error);
+              process.exit(1);
+            });
+            """
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_handlers_report_fetch_errors_without_message_leak(self) -> None:
         result = run_node(
             """

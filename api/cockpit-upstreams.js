@@ -498,7 +498,7 @@ async function readBoundedUpstreamText(upstream, maxBodyChars) {
   return { ok: true, body };
 }
 
-async function readTailBoundedUpstreamText(upstream, maxBodyChars) {
+async function readTailBoundedUpstreamText(upstream, maxBodyChars, options = {}) {
   if (
     !Number.isInteger(maxBodyChars)
     || maxBodyChars <= 0
@@ -515,6 +515,8 @@ async function readTailBoundedUpstreamText(upstream, maxBodyChars) {
 
   const reader = upstream.body.getReader();
   const decoder = new TextDecoder();
+  const expectedLength = options.expectedLength;
+  const shouldReadToEnd = Number.isInteger(expectedLength) && expectedLength > maxBodyChars;
   let body = "";
   let truncated = false;
 
@@ -528,6 +530,9 @@ async function readTailBoundedUpstreamText(upstream, maxBodyChars) {
       if (body.length > maxBodyChars) {
         truncated = true;
         body = body.slice(-maxBodyChars);
+        if (shouldReadToEnd) {
+          continue;
+        }
         if (typeof reader.cancel === "function") {
           try {
             await reader.cancel();
@@ -597,7 +602,9 @@ async function fetchUpstreamText(
     const bodyResult = method === "HEAD"
       ? { ok: true, body: "" }
       : bodyLimitMode === "tail"
-        ? await readTailBoundedUpstreamText(upstream, maxBodyChars)
+        ? await readTailBoundedUpstreamText(upstream, maxBodyChars, {
+          expectedLength: Number(upstream.headers && upstream.headers.get("content-length")),
+        })
         : await readBoundedUpstreamText(upstream, maxBodyChars);
     if (!bodyResult.ok) {
       return {
