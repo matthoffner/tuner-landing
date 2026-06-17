@@ -1590,6 +1590,14 @@ def source_health_diagnostics(status: dict[str, Any]) -> dict[str, Any]:
         or status.get("source_status_timestamp_invalid") is True
         or status.get("source_status_timestamp_future") is True
     )
+    bridge_freshness_attention = (
+        bridge_summary.get("available") is True
+        and (
+            bridge_summary.get("bridge_status_stale") is True
+            or bridge_summary.get("bridge_status_timestamp_invalid") is True
+            or bridge_summary.get("bridge_status_timestamp_future") is True
+        )
+    )
 
     if source_freshness_attention and not source_status_unavailable:
         for key in (
@@ -1652,6 +1660,29 @@ def source_health_diagnostics(status: dict[str, Any]) -> dict[str, Any]:
         )
         if bridge_error is not None:
             diagnostics["source_bridge_status_file_error"] = bridge_error
+
+    if bridge_freshness_attention and not bridge_status_unavailable:
+        for key, diagnostic_key in (
+            ("bridge_status_age_seconds", "source_bridge_status_age_seconds"),
+            (
+                "bridge_status_stale_after_seconds",
+                "source_bridge_status_stale_after_seconds",
+            ),
+        ):
+            compact_value = compact_int(bridge_summary.get(key))
+            if compact_value is not None:
+                diagnostics[diagnostic_key] = compact_value
+        for key, diagnostic_key in (
+            ("bridge_status_stale", "source_bridge_status_stale"),
+            (
+                "bridge_status_timestamp_invalid",
+                "source_bridge_status_timestamp_invalid",
+            ),
+            ("bridge_status_timestamp_future", "source_bridge_status_timestamp_future"),
+        ):
+            value = bridge_summary.get(key)
+            if isinstance(value, bool):
+                diagnostics[diagnostic_key] = value
 
     if coordination_unavailable or coordination_incomplete:
         handoff_status = compact_policy_detail(

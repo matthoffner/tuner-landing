@@ -553,6 +553,11 @@ class RenderCockpitRelayTest(unittest.TestCase):
                             "source_bridge_status_file_error": (
                                 "failed /tmp/bridge-status-token.json token=bridge-secret"
                             ),
+                            "source_bridge_status_age_seconds": "901",
+                            "source_bridge_status_stale_after_seconds": 660,
+                            "source_bridge_status_stale": True,
+                            "source_bridge_status_timestamp_invalid": False,
+                            "source_bridge_status_timestamp_future": True,
                             "source_handoff_path": (
                                 "/tmp/customer/.pixelbox/handoff.md token=handoff-path-secret"
                             ),
@@ -585,6 +590,11 @@ class RenderCockpitRelayTest(unittest.TestCase):
             "source_bridge_status_file_error": (
                 "failed <external>/bridge-status-token.json token=[redacted]"
             ),
+            "source_bridge_status_age_seconds": 901,
+            "source_bridge_status_stale_after_seconds": 660,
+            "source_bridge_status_stale": True,
+            "source_bridge_status_timestamp_invalid": False,
+            "source_bridge_status_timestamp_future": True,
             "source_handoff_path": "<external>/handoff.md token=[redacted]",
             "source_handoff_file_status": "too_large token=[redacted]",
             "source_handoff_error": (

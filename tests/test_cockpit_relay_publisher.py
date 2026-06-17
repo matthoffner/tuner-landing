@@ -162,6 +162,12 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 ],
                 "primary_reason": "source_loop_not_running",
                 "label": "Source loop is not running",
+                "diagnostics": {
+                    "source_bridge_status_stale_after_seconds": 120,
+                    "source_bridge_status_stale": True,
+                    "source_bridge_status_timestamp_invalid": False,
+                    "source_bridge_status_timestamp_future": False,
+                },
             },
         )
         self.assertEqual(
@@ -2543,6 +2549,8 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             "bridge_summary": {
                 "available": True,
                 "status_file_status": "loaded",
+                "bridge_status_age_seconds": 901,
+                "bridge_status_stale_after_seconds": 660,
                 "bridge_status_stale": True,
                 "bridge_status_timestamp_invalid": False,
                 "bridge_status_timestamp_future": False,
@@ -2566,20 +2574,45 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 "reasons": ["source_bridge_status_stale"],
                 "primary_reason": "source_bridge_status_stale",
                 "label": "Source bridge status is stale",
+                "diagnostics": {
+                    "source_bridge_status_age_seconds": 901,
+                    "source_bridge_status_stale_after_seconds": 660,
+                    "source_bridge_status_stale": True,
+                    "source_bridge_status_timestamp_invalid": False,
+                    "source_bridge_status_timestamp_future": False,
+                },
             },
         )
 
     def test_publisher_source_health_suppresses_bridge_stale_for_timestamp_errors(self) -> None:
-        for timestamp_field, expected_reason, expected_label in (
+        for (
+            timestamp_field,
+            expected_reason,
+            expected_label,
+            expected_diagnostics,
+        ) in (
             (
                 "bridge_status_timestamp_invalid",
                 "source_bridge_status_timestamp_invalid",
                 "Source bridge status timestamp is invalid",
+                {
+                    "source_bridge_status_stale_after_seconds": 660,
+                    "source_bridge_status_stale": True,
+                    "source_bridge_status_timestamp_invalid": True,
+                    "source_bridge_status_timestamp_future": False,
+                },
             ),
             (
                 "bridge_status_timestamp_future",
                 "source_bridge_status_timestamp_future",
                 "Source bridge status is in the future",
+                {
+                    "source_bridge_status_age_seconds": 0,
+                    "source_bridge_status_stale_after_seconds": 660,
+                    "source_bridge_status_stale": True,
+                    "source_bridge_status_timestamp_invalid": False,
+                    "source_bridge_status_timestamp_future": True,
+                },
             ),
         ):
             with self.subTest(timestamp_field=timestamp_field):
@@ -2591,9 +2624,15 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                     "bridge_summary": {
                         "available": True,
                         "status_file_status": "loaded",
+                        "bridge_status_stale_after_seconds": 660,
                         "bridge_status_stale": True,
                         "bridge_status_timestamp_invalid": False,
                         "bridge_status_timestamp_future": False,
+                        "bridge_status_age_seconds": (
+                            "not-a-number token=bridge-age-secret"
+                            if timestamp_field == "bridge_status_timestamp_invalid"
+                            else 0
+                        ),
                         timestamp_field: True,
                         "bridge_health": {
                             "status": "live",
@@ -2615,8 +2654,10 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                         "reasons": [expected_reason],
                         "primary_reason": expected_reason,
                         "label": expected_label,
+                        "diagnostics": expected_diagnostics,
                     },
                 )
+                self.assertNotIn("bridge-age-secret", json.dumps(health, sort_keys=True))
 
     def test_publisher_source_health_routes_unavailable_source_bridge_status(self) -> None:
         status = {

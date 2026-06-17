@@ -247,6 +247,9 @@ def publisher_source_health(state: dict[str, Any]) -> dict[str, Any]:
         for key in (
             "source_handoff_latest_section_found",
             "source_handoff_latest_status_found",
+            "source_bridge_status_stale",
+            "source_bridge_status_timestamp_invalid",
+            "source_bridge_status_timestamp_future",
             "source_status_stale",
             "source_status_timestamp_invalid",
             "source_status_timestamp_future",
@@ -255,6 +258,8 @@ def publisher_source_health(state: dict[str, Any]) -> dict[str, Any]:
             if isinstance(value, bool):
                 diagnostics[key] = value
         for key in (
+            "source_bridge_status_age_seconds",
+            "source_bridge_status_stale_after_seconds",
             "source_status_age_seconds",
             "source_status_stale_after_seconds",
         ):
