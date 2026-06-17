@@ -6286,6 +6286,69 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertNotIn("bearer-secret", log_text)
         self.assertNotIn("header-secret", log_text)
 
+    def test_publish_once_logs_source_status_when_payload_build_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            status_file = tmp_path / "status.json"
+            log_file = tmp_path / "loop-log-directory"
+            publisher_log = tmp_path / "publisher.log"
+            status_file.write_text(
+                json.dumps(
+                    {
+                        "status": "passing",
+                        "updated_at": "2026-06-14T19:30:00Z",
+                        "artifacts": {
+                            "artifact_health": {"status": "loaded"},
+                            "import_pipeline": {
+                                "execution_readiness": {
+                                    "status": "ready",
+                                    "blockers": [],
+                                    "ready_for_next_import_records": True,
+                                }
+                            },
+                        },
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            log_file.mkdir()
+            args = Namespace(
+                status_file=status_file,
+                pid_file=tmp_path / "missing.pid",
+                log_file=log_file,
+                publisher_log=publisher_log,
+                bridge_status_file=tmp_path / "missing-bridge-status.json",
+                status_stale_after_seconds=120,
+                bridge_status_stale_after_seconds=120,
+                tail_lines=20,
+                max_log_bytes=1024,
+            )
+            self.publisher.utc_now = lambda: "2026-06-14T19:31:00Z"
+
+            result = self.publisher.publish_once_result(args)
+            log_text = publisher_log.read_text(encoding="utf-8")
+
+        self.assertEqual(
+            result,
+            {
+                "published": False,
+                "source_status_stale": False,
+                "source_status_age_seconds": 60,
+                "source_status_stale_after_seconds": 120,
+            },
+        )
+        self.assertIn("publish failed failure_kind=transport_error", log_text)
+        self.assertIn("source_status=passing", log_text)
+        self.assertIn("source_status_file_status=loaded", log_text)
+        self.assertIn("source_status_stale=False", log_text)
+        self.assertIn("source_status_age_seconds=60", log_text)
+        self.assertIn("source_status_stale_after_seconds=120", log_text)
+        self.assertIn("source_health_status=degraded", log_text)
+        self.assertIn("source_health_primary_reason=source_loop_not_running", log_text)
+        self.assertIn("source_loop_running=False", log_text)
+        self.assertNotIn(str(tmp_path), log_text)
+
     def test_publish_loop_exits_after_configured_consecutive_failures(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             publisher_log = Path(tmp) / "publisher.log"

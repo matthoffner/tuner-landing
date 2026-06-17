@@ -3045,6 +3045,41 @@ def source_status_log_suffix(source_fields: dict[str, Any]) -> str:
     )
 
 
+def fallback_source_status_log_fields(args: argparse.Namespace) -> dict[str, Any]:
+    """Build compact source fields when payload construction fails before POST."""
+    try:
+        status = read_status(
+            getattr(args, "status_file", STATUS_FILE),
+            getattr(args, "pid_file", PID_FILE),
+            int(
+                getattr(
+                    args,
+                    "status_stale_after_seconds",
+                    DEFAULT_STATUS_STALE_AFTER_SECONDS,
+                )
+            ),
+            getattr(args, "bridge_status_file", BRIDGE_STATUS_FILE),
+            int(
+                getattr(
+                    args,
+                    "bridge_status_stale_after_seconds",
+                    DEFAULT_BRIDGE_STATUS_STALE_AFTER_SECONDS,
+                )
+            ),
+        )
+        remote_status = source_status_for_relay(status)
+        return source_status_log_fields(
+            {
+                "status": remote_status,
+                "publisher": {
+                    "source_health": publisher_source_health(remote_status),
+                },
+            }
+        )
+    except Exception:
+        return {}
+
+
 def relay_response_failure_reason(response: Any) -> str:
     if not isinstance(response, dict):
         return "relay_response_not_object"
@@ -3105,7 +3140,10 @@ def sanitize_url_for_log(match: re.Match[str]) -> str:
 
 
 def sanitize_error_for_log(exc: BaseException) -> str:
-    message = str(exc)
+    return sanitize_error_text_for_log(str(exc))
+
+
+def sanitize_error_text_for_log(message: str) -> str:
     message = URL_TEXT_PATTERN.sub(sanitize_url_for_log, message)
     message = BEARER_SECRET_PATTERN.sub(r"\1 [redacted]", message)
     message = sanitize_sensitive_quoted_fields(message)
@@ -3117,6 +3155,30 @@ def sanitize_error_for_log(exc: BaseException) -> str:
     return message[:300]
 
 
+def sanitize_exception_for_log(exc: BaseException, args: argparse.Namespace) -> str:
+    message = str(exc)
+    for attr_name, default_path in (
+        ("status_file", STATUS_FILE),
+        ("pid_file", PID_FILE),
+        ("log_file", LOG_FILE),
+        ("publisher_log", PUBLISHER_LOG),
+        ("bridge_status_file", BRIDGE_STATUS_FILE),
+    ):
+        path = getattr(args, attr_name, default_path)
+        if not isinstance(path, Path):
+            continue
+        safe_label = repo_relative(path)
+        path_strings = {str(path)}
+        try:
+            path_strings.add(str(path.resolve(strict=False)))
+        except OSError:
+            pass
+        for path_string in sorted(path_strings, key=len, reverse=True):
+            if path_string:
+                message = message.replace(path_string, safe_label)
+    return sanitize_error_text_for_log(message)
+
+
 def publish_once_result(args: argparse.Namespace) -> dict[str, Any]:
     source_fields: dict[str, Any] = {}
     try:
@@ -3124,6 +3186,8 @@ def publish_once_result(args: argparse.Namespace) -> dict[str, Any]:
         source_fields = source_status_log_fields(payload)
         response = post_payload(args, payload)
     except HTTPError as exc:
+        if not source_fields:
+            source_fields = fallback_source_status_log_fields(args)
         http_fields = http_error_summary(exc)
         emit(
             "publish failed "
@@ -3149,10 +3213,12 @@ def publish_once_result(args: argparse.Namespace) -> dict[str, Any]:
         json.JSONDecodeError,
         subprocess.SubprocessError,
     ) as exc:
+        if not source_fields:
+            source_fields = fallback_source_status_log_fields(args)
         emit(
             "publish failed "
             f"failure_kind={publish_error_kind(exc)} "
-            f"error={sanitize_error_for_log(exc)} "
+            f"error={sanitize_exception_for_log(exc, args)} "
             f"{source_status_log_suffix(source_fields)}",
             log_path=args.publisher_log,
         )
