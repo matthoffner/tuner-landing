@@ -2803,8 +2803,10 @@ def is_valid_url_hostname(hostname: str) -> bool:
     if normalized == "localhost":
         return True
     try:
-        ipaddress.ip_address(normalized)
-        return True
+        ip_address = ipaddress.ip_address(normalized)
+        return ip_address.is_loopback or (
+            ip_address.is_global and not ip_address.is_multicast
+        )
     except ValueError:
         pass
     if len(normalized) > 253:
