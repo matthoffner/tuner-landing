@@ -1847,6 +1847,114 @@ class CockpitApiProxyTest(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_status_handler_sanitizes_copied_secrets_before_proxying(self) -> None:
+        result = run_node(
+            """
+            const assert = require("assert");
+            const statusHandler = require("./api/cockpit-status");
+
+            function response() {
+              return {
+                statusCode: null,
+                body: "",
+                headers: {},
+                setHeader(name, value) {
+                  this.headers[name] = value;
+                },
+                status(code) {
+                  this.statusCode = code;
+                  return this;
+                },
+                send(body) {
+                  this.body = String(body);
+                  return this;
+                },
+                end(body = "") {
+                  this.body = String(body);
+                  return this;
+                },
+              };
+            }
+
+            const upstreamPayload = {
+              status: "running",
+              relay_token: "relay-field-secret",
+              cockpit_summary: {
+                operator_attention_label: "Authorization: Bearer bearer-secret",
+                failure_summary: {
+                  message: "posting https://user:url-secret@relay.example/api/status?token=query-secret#debug",
+                  detail: "api_key=assignment-secret password : spaced-secret",
+                  nested: "{\\"github_token\\": \\"json-secret\\", \\"safe\\": \\"visible\\"}",
+                },
+              },
+              items: [
+                { "x-automoat-relay-token": "relay-header-secret" },
+                "raw\\x00control",
+              ],
+            };
+
+            process.env.AUTOMOAT_RELAY_URL = "https://automoat-cockpit-relay.example";
+            process.env.AUTOMOAT_BRIDGE_URL = "";
+            process.env.AUTOMOAT_COCKPIT_UPSTREAM_TIMEOUT_MS = "";
+            global.fetch = async () => ({
+              ok: true,
+              status: 200,
+              text: async () => JSON.stringify(upstreamPayload),
+            });
+
+            (async () => {
+              const statusResponse = response();
+              await statusHandler({ method: "GET" }, statusResponse);
+              assert.strictEqual(statusResponse.statusCode, 200);
+              assert.strictEqual(statusResponse.headers["X-Automoat-Upstream"], "relay");
+              const body = JSON.parse(statusResponse.body);
+              assert.deepStrictEqual(body, {
+                status: "running",
+                relay_token: "[redacted]",
+                cockpit_summary: {
+                  operator_attention_label: "Authorization: Bearer [redacted]",
+                  failure_summary: {
+                    message: "posting https://relay.example/api/status?[redacted]#[redacted]",
+                    detail: "api_key=[redacted] password=[redacted]",
+                    nested: "{\\"github_token\\":\\"[redacted]\\", \\"safe\\": \\"visible\\"}",
+                  },
+                },
+                items: [
+                  { "x-automoat-relay-token": "[redacted]" },
+                  "raw control",
+                ],
+              });
+              assert.deepStrictEqual(
+                JSON.parse(statusHandler.parseStatusPayload(JSON.stringify(upstreamPayload)).body),
+                body,
+              );
+              assert.strictEqual(
+                statusHandler.sanitizeStatusText("'api_key': 'single-json-secret'"),
+                "'api_key':'[redacted]'",
+              );
+              for (const secret of [
+                "relay-field-secret",
+                "bearer-secret",
+                "url-secret",
+                "query-secret",
+                "assignment-secret",
+                "spaced-secret",
+                "json-secret",
+                "relay-header-secret",
+                "single-json-secret",
+                "\\x00",
+              ]) {
+                assert(!statusResponse.body.includes(secret), secret);
+              }
+            })().catch((error) => {
+              console.error(error.stack || error);
+              process.exit(1);
+            });
+            """
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_log_handler_rejects_html_success_and_falls_back(self) -> None:
         result = run_node(
             """

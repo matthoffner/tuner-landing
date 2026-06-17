@@ -14,6 +14,12 @@ const {
 } = require("./cockpit-upstreams");
 
 const MAX_STATUS_BODY_CHARS = 512 * 1024;
+const EMBEDDED_URL_RE = /https?:\/\/[^\s,;|]+/gi;
+const BEARER_SECRET_RE = /\b(authorization\s*[:=]\s*bearer)\s+[^\s,;|]+/gi;
+const SENSITIVE_ASSIGNMENT_RE = /\b(access_token|api_key|codex_access_token|gh_token|github_token|password|passwd|relay_token|secret|token|key|x-automoat-relay-token)\s*[:=]\s*[^\s,;|]+/gi;
+const SENSITIVE_DOUBLE_QUOTED_FIELD_RE = /"(access_token|api_key|codex_access_token|gh_token|github_token|password|passwd|relay_token|secret|token|key|x-automoat-relay-token)"\s*:\s*"(?:\\.|[^"\\\r\n])*"/gi;
+const SENSITIVE_SINGLE_QUOTED_FIELD_RE = /'(access_token|api_key|codex_access_token|gh_token|github_token|password|passwd|relay_token|secret|token|key|x-automoat-relay-token)'\s*:\s*'(?:\\.|[^'\\\r\n])*'/gi;
+const SENSITIVE_STATUS_KEY_RE = /^(access_token|api_key|codex_access_token|gh_token|github_token|password|passwd|relay_token|secret|token|key|x-automoat-relay-token)$/i;
 
 function parseStatusPayload(body) {
   const normalized = body.trimStart().toLowerCase();
@@ -37,7 +43,7 @@ function parseStatusPayload(body) {
       error: `status_payload_must_not_include_non_finite_numbers at ${nonFinitePath}`,
     };
   }
-  return { ok: true, body: JSON.stringify(payload) };
+  return { ok: true, body: JSON.stringify(sanitizeStatusPayload(payload)) };
 }
 
 function hasOnlyFiniteNumbers(value) {
@@ -83,6 +89,55 @@ function jsonPathComponent(key) {
     return "[<?>]";
   }
   return `[${JSON.stringify(compact)}]`;
+}
+
+function sanitizeStatusPayload(value, key = "") {
+  if (SENSITIVE_STATUS_KEY_RE.test(String(key || ""))) {
+    return "[redacted]";
+  }
+  if (typeof value === "string") {
+    return sanitizeStatusText(value);
+  }
+  if (Array.isArray(value)) {
+    return value.map((item) => sanitizeStatusPayload(item));
+  }
+  if (!value || typeof value !== "object") {
+    return value;
+  }
+
+  const sanitized = {};
+  for (const [itemKey, itemValue] of Object.entries(value)) {
+    sanitized[itemKey] = sanitizeStatusPayload(itemValue, itemKey);
+  }
+  return sanitized;
+}
+
+function sanitizeStatusText(value) {
+  return String(value || "")
+    .replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, " ")
+    .replace(EMBEDDED_URL_RE, sanitizeEmbeddedUrlForStatus)
+    .replace(BEARER_SECRET_RE, "$1 [redacted]")
+    .replace(SENSITIVE_DOUBLE_QUOTED_FIELD_RE, (_match, key) => `"${key}":"[redacted]"`)
+    .replace(SENSITIVE_SINGLE_QUOTED_FIELD_RE, (_match, key) => `'${key}':'[redacted]'`)
+    .replace(SENSITIVE_ASSIGNMENT_RE, (_match, key) => `${key}=[redacted]`);
+}
+
+function sanitizeEmbeddedUrlForStatus(rawUrl) {
+  let parsed;
+  try {
+    parsed = new URL(rawUrl);
+  } catch (_error) {
+    return rawUrl;
+  }
+  if (!parsed.username && !parsed.password && !parsed.search && !parsed.hash) {
+    return rawUrl;
+  }
+  return [
+    `${parsed.protocol}//${parsed.host}`,
+    parsed.pathname || "",
+    parsed.search ? "?[redacted]" : "",
+    parsed.hash ? "#[redacted]" : "",
+  ].join("");
 }
 
 module.exports = async function handler(request, response) {
@@ -178,6 +233,8 @@ module.exports = async function handler(request, response) {
 };
 
 module.exports.parseStatusPayload = parseStatusPayload;
+module.exports.sanitizeStatusPayload = sanitizeStatusPayload;
+module.exports.sanitizeStatusText = sanitizeStatusText;
 module.exports.hasOnlyFiniteNumbers = hasOnlyFiniteNumbers;
 module.exports.firstNonFiniteNumberPath = firstNonFiniteNumberPath;
 module.exports.MAX_STATUS_BODY_CHARS = MAX_STATUS_BODY_CHARS;
