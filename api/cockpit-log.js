@@ -15,20 +15,50 @@ const {
 } = require("./cockpit-upstreams");
 
 const MAX_LOG_BODY_CHARS = 160 * 1024;
+const EMBEDDED_URL_RE = /https?:\/\/[^\s,;|]+/gi;
+const BEARER_SECRET_RE = /\b(authorization\s*[:=]\s*bearer)\s+[^\s,;|]+/gi;
+const SENSITIVE_ASSIGNMENT_RE = /\b(access_token|api_key|codex_access_token|gh_token|github_token|password|passwd|relay_token|secret|token|key)=\S+/gi;
 
 function parseLogPayload(body) {
   const normalized = body.trimStart().toLowerCase();
   if (normalized.startsWith("<!doctype html") || normalized.startsWith("<html")) {
     return { ok: false, error: "log_payload_must_not_be_html" };
   }
-  if (body.length > MAX_LOG_BODY_CHARS) {
+  const sanitized = sanitizeLogText(body);
+  if (sanitized.length > MAX_LOG_BODY_CHARS) {
     return {
       ok: true,
-      body: body.slice(-MAX_LOG_BODY_CHARS),
+      body: sanitized.slice(-MAX_LOG_BODY_CHARS),
       truncated: true,
     };
   }
-  return { ok: true, body, truncated: false };
+  return { ok: true, body: sanitized, truncated: false };
+}
+
+function sanitizeLogText(value) {
+  return String(value || "")
+    .replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, " ")
+    .replace(EMBEDDED_URL_RE, sanitizeEmbeddedUrlForLog)
+    .replace(BEARER_SECRET_RE, "$1 [redacted]")
+    .replace(SENSITIVE_ASSIGNMENT_RE, (_match, key) => `${key}=[redacted]`);
+}
+
+function sanitizeEmbeddedUrlForLog(rawUrl) {
+  let parsed;
+  try {
+    parsed = new URL(rawUrl);
+  } catch (_error) {
+    return rawUrl;
+  }
+  if (!parsed.username && !parsed.password && !parsed.search && !parsed.hash) {
+    return rawUrl;
+  }
+  return [
+    `${parsed.protocol}//${parsed.host}`,
+    parsed.pathname || "",
+    parsed.search ? "?[redacted]" : "",
+    parsed.hash ? "#[redacted]" : "",
+  ].join("");
 }
 
 module.exports = async function handler(request, response) {
@@ -130,4 +160,5 @@ module.exports = async function handler(request, response) {
 };
 
 module.exports.parseLogPayload = parseLogPayload;
+module.exports.sanitizeLogText = sanitizeLogText;
 module.exports.MAX_LOG_BODY_CHARS = MAX_LOG_BODY_CHARS;

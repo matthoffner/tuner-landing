@@ -2005,6 +2005,67 @@ class CockpitApiProxyTest(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_log_parser_sanitizes_copied_secrets_before_proxying(self) -> None:
+        result = run_node(
+            """
+            const assert = require("assert");
+            const { parseLogPayload, sanitizeLogText } = require("./api/cockpit-log");
+
+            const body = [
+              "posting https://user:url-secret@relay.example/api/log?token=query-secret#debug",
+              "Authorization: Bearer bearer-secret api_key=assignment-secret",
+              "raw\\x00control",
+              "",
+            ].join("\\n");
+            const parsed = parseLogPayload(body);
+
+            assert.strictEqual(parsed.ok, true);
+            assert.strictEqual(parsed.truncated, false);
+            assert(parsed.body.includes("https://relay.example/api/log?[redacted]#[redacted]"));
+            assert(parsed.body.includes("Authorization: Bearer [redacted]"));
+            assert(parsed.body.includes("api_key=[redacted]"));
+            assert(parsed.body.includes("raw control"));
+            assert.strictEqual(parsed.body, sanitizeLogText(body));
+            for (const secret of [
+              "url-secret",
+              "query-secret",
+              "bearer-secret",
+              "assignment-secret",
+              "\\x00",
+            ]) {
+              assert(!parsed.body.includes(secret), secret);
+            }
+            """
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_log_parser_sanitizes_before_tail_truncation(self) -> None:
+        result = run_node(
+            """
+            const assert = require("assert");
+            const { MAX_LOG_BODY_CHARS, parseLogPayload } = require("./api/cockpit-log");
+
+            const body = [
+              "old token=old-secret",
+              "x".repeat(MAX_LOG_BODY_CHARS),
+              "tail https://user:tail-secret@relay.example/log?token=query-secret#frag",
+              "",
+            ].join("\\n");
+            const parsed = parseLogPayload(body);
+
+            assert.strictEqual(parsed.ok, true);
+            assert.strictEqual(parsed.truncated, true);
+            assert.strictEqual(parsed.body.length, MAX_LOG_BODY_CHARS);
+            assert(parsed.body.endsWith("https://relay.example/log?[redacted]#[redacted]\\n"));
+            for (const secret of ["old-secret", "tail-secret", "query-secret"]) {
+              assert(!parsed.body.includes(secret), secret);
+            }
+            """
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_handlers_reject_oversized_upstream_bodies_and_fall_back(self) -> None:
         result = run_node(
             """
