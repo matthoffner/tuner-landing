@@ -2518,6 +2518,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                     "synthetic_row_count": "9",
                     "raw_dallas_csv_changed_path_count": "7",
                     "productive_changed_path_count": "2",
+                    "non_productive_companion_path_count": "5",
                     "import_pipeline_status": "loaded token=pipeline-secret",
                     "import_pipeline_summary_path": (
                         "/tmp/customer/pipeline/summary.json "
@@ -2581,6 +2582,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 "source_failure_synthetic_row_count": 9,
                 "source_failure_raw_path_count": 7,
                 "source_failure_productive_path_count": 2,
+                "source_failure_non_productive_path_count": 5,
                 "source_failure_readiness_blocker_count": 3,
                 "source_failure_degraded_artifact_count": 4,
                 "source_failure_sync_exit_status": 2,
@@ -5212,6 +5214,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                         "policy_override": False,
                         "policy_raw_dallas_csv_changed_path_count": "9",
                         "policy_productive_changed_path_count": "3",
+                        "policy_non_productive_companion_path_count": "2",
                         "policy_synthetic_row_count": "12",
                         "failure_summary": {
                             "available": True,
@@ -5239,6 +5242,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                             "synthetic_row_count": "12",
                             "raw_dallas_csv_changed_path_count": "9",
                             "productive_changed_path_count": "3",
+                            "non_productive_companion_path_count": "2",
                             "import_pipeline_status": (
                                 "loaded token=failure-pipeline-status-secret"
                             ),
@@ -5399,6 +5403,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertIn("source_failure_synthetic_row_count=12", log_text)
         self.assertIn("source_failure_raw_path_count=9", log_text)
         self.assertIn("source_failure_productive_path_count=3", log_text)
+        self.assertIn("source_failure_non_productive_path_count=2", log_text)
         self.assertIn(
             "source_failure_import_pipeline_status=loaded token=[redacted]",
             log_text,

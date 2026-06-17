@@ -1041,6 +1041,12 @@ def status_failure_snapshot(
                         len(policy_step.get("productive_changed_paths") or []),
                     )
                 ),
+                "non_productive_companion_path_count": compact_policy_count(
+                    diagnostics.get(
+                        "non_productive_companion_path_count",
+                        len(policy_step.get("non_productive_companion_paths") or []),
+                    )
+                ),
             }
         )
     elif phase == "codex_exec_failed":

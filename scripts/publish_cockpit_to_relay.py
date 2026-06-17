@@ -944,6 +944,9 @@ def failure_summary(status: dict[str, Any]) -> dict[str, Any]:
             "raw_dallas_csv_changed_path_count"
         ),
         "productive_changed_path_count": failure.get("productive_changed_path_count"),
+        "non_productive_companion_path_count": failure.get(
+            "non_productive_companion_path_count"
+        ),
         "readiness_blocker_count": failure.get("readiness_blocker_count"),
         "degraded_artifact_count": failure.get("degraded_artifact_count"),
         "sync_exit_status": failure.get("sync_exit_status"),
@@ -1939,6 +1942,10 @@ def source_health_diagnostics(status: dict[str, Any]) -> dict[str, Any]:
                 "raw_dallas_csv_changed_path_count",
             ),
             ("source_failure_productive_path_count", "productive_changed_path_count"),
+            (
+                "source_failure_non_productive_path_count",
+                "non_productive_companion_path_count",
+            ),
             ("source_failure_readiness_blocker_count", "readiness_blocker_count"),
             ("source_failure_degraded_artifact_count", "degraded_artifact_count"),
             ("source_failure_sync_exit_status", "sync_exit_status"),
@@ -2585,6 +2592,9 @@ def source_status_log_fields(payload: dict[str, Any]) -> dict[str, Any]:
         "source_failure_productive_path_count": compact_int(
             failure.get("productive_changed_path_count")
         ),
+        "source_failure_non_productive_path_count": compact_int(
+            failure.get("non_productive_companion_path_count")
+        ),
         "source_failure_import_pipeline_status": compact_policy_detail(
             failure.get("import_pipeline_status"),
             max_length=80,
@@ -2716,6 +2726,7 @@ SOURCE_STATUS_LOG_FIELD_NAMES = (
     "source_failure_synthetic_row_count",
     "source_failure_raw_path_count",
     "source_failure_productive_path_count",
+    "source_failure_non_productive_path_count",
     "source_failure_import_pipeline_status",
     "source_failure_readiness_status",
     "source_failure_readiness_blocker_count",

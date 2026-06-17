@@ -338,6 +338,7 @@ def publisher_source_health(state: dict[str, Any]) -> dict[str, Any]:
             "source_failure_synthetic_row_count",
             "source_failure_raw_path_count",
             "source_failure_productive_path_count",
+            "source_failure_non_productive_path_count",
             "source_failure_readiness_blocker_count",
             "source_failure_degraded_artifact_count",
             "source_failure_sync_exit_status",

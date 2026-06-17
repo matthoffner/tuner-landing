@@ -393,6 +393,7 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
                 "synthetic_row_count": "4",
                 "raw_dallas_csv_changed_path_count": 1,
                 "productive_changed_path_count": 1,
+                "non_productive_companion_path_count": "2",
             },
             "policy_summary": (
                 "status=failed route=policy_failure "
@@ -427,6 +428,7 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
                 "synthetic_row_count": 4,
                 "raw_dallas_csv_changed_path_count": 1,
                 "productive_changed_path_count": 1,
+                "non_productive_companion_path_count": 2,
             },
         )
         failure_json = json.dumps(payload["failure"], sort_keys=True)
