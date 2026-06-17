@@ -2533,6 +2533,44 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                     "current_focus": (
                         "autonomy_visibility_or_real_ingest token=focus-secret"
                     ),
+                    "termination_reason": "timeout token=termination-secret",
+                    "failed_step": "codex exec token=step-secret",
+                    "failed_substep": "run checks token=substep-secret",
+                    "setup_stage": "publisher_preflight token=setup-secret",
+                    "child_label": "codex token=child-secret",
+                    "child_pid": "4242",
+                    "codex_exit_status": "124",
+                    "worker_exit_status": "2",
+                    "publisher_exit_status": "3",
+                    "child_exit_status": "137",
+                    "failed_step_exit_status": "1",
+                    "failed_substep_exit_status": "2",
+                    "timed_out": True,
+                    "killed_after_terminate": True,
+                    "child_status_available": False,
+                    "environment_preflight": {
+                        "status": "failed token=env-status-secret",
+                        "error_count": "2",
+                        "error_categories": [
+                            "missing_runtime token=env-category-secret",
+                            "invalid_path",
+                        ],
+                        "failed_configuration_keys": [
+                            "MOJO_HOME token=env-key-secret",
+                            "PATH",
+                        ],
+                    },
+                    "publisher_preflight": {
+                        "status": "failed token=publisher-status-secret",
+                        "exit_status": "2",
+                        "error_count": "1",
+                        "error_categories": [
+                            "relay_url token=publisher-category-secret"
+                        ],
+                        "failed_configuration_keys": [
+                            "AUTOMOAT_RELAY_TOKEN token=publisher-key-secret"
+                        ],
+                    },
                     "synthetic_row_count": "9",
                     "raw_dallas_csv_changed_path_count": "7",
                     "productive_changed_path_count": "2",
@@ -2585,6 +2623,11 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 "source_failure_current_focus": (
                     "autonomy_visibility_or_real_ingest token=[redacted]"
                 ),
+                "source_failure_termination_reason": "timeout token=[redacted]",
+                "source_failure_failed_step": "codex exec token=[redacted]",
+                "source_failure_failed_substep": "run checks token=[redacted]",
+                "source_failure_setup_stage": "publisher_preflight token=[redacted]",
+                "source_failure_child_label": "codex token=[redacted]",
                 "source_failure_import_pipeline_status": "loaded token=[redacted]",
                 "source_failure_readiness_status": "ready token=[redacted]",
                 "source_failure_artifact_health_status": "degraded token=[redacted]",
@@ -2604,7 +2647,40 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 "source_failure_readiness_blocker_count": 3,
                 "source_failure_degraded_artifact_count": 4,
                 "source_failure_sync_exit_status": 2,
+                "source_failure_child_pid": 4242,
+                "source_failure_codex_exit_status": 124,
+                "source_failure_worker_exit_status": 2,
+                "source_failure_publisher_exit_status": 3,
+                "source_failure_child_exit_status": 137,
+                "source_failure_failed_step_exit_status": 1,
+                "source_failure_failed_substep_exit_status": 2,
+                "source_failure_timed_out": True,
+                "source_failure_killed_after_terminate": True,
+                "source_failure_child_status_available": False,
                 "source_failure_ready_for_next_import_records": True,
+                "source_failure_environment_preflight_status": (
+                    "failed token=[redacted]"
+                ),
+                "source_failure_environment_preflight_error_count": 2,
+                "source_failure_environment_preflight_error_categories": [
+                    "missing_runtime token=[redacted]",
+                    "invalid_path",
+                ],
+                "source_failure_environment_preflight_failed_keys": [
+                    "MOJO_HOME token=[redacted]",
+                    "PATH",
+                ],
+                "source_failure_publisher_preflight_status": (
+                    "failed token=[redacted]"
+                ),
+                "source_failure_publisher_preflight_exit_status": 2,
+                "source_failure_publisher_preflight_error_count": 1,
+                "source_failure_publisher_preflight_error_categories": [
+                    "relay_url token=[redacted]"
+                ],
+                "source_failure_publisher_preflight_failed_keys": [
+                    "AUTOMOAT_RELAY_TOKEN token=[redacted]"
+                ],
             },
         )
         health_text = json.dumps(health, sort_keys=True)
@@ -2615,6 +2691,17 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertNotIn("message-secret", health_text)
         self.assertNotIn("decision-secret", health_text)
         self.assertNotIn("focus-secret", health_text)
+        self.assertNotIn("termination-secret", health_text)
+        self.assertNotIn("step-secret", health_text)
+        self.assertNotIn("substep-secret", health_text)
+        self.assertNotIn("setup-secret", health_text)
+        self.assertNotIn("child-secret", health_text)
+        self.assertNotIn("env-status-secret", health_text)
+        self.assertNotIn("env-category-secret", health_text)
+        self.assertNotIn("env-key-secret", health_text)
+        self.assertNotIn("publisher-status-secret", health_text)
+        self.assertNotIn("publisher-category-secret", health_text)
+        self.assertNotIn("publisher-key-secret", health_text)
         self.assertNotIn("pipeline-secret", health_text)
         self.assertNotIn("summary-path-secret", health_text)
         self.assertNotIn("readiness-secret", health_text)

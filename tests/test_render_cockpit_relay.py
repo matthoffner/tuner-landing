@@ -671,6 +671,21 @@ class RenderCockpitRelayTest(unittest.TestCase):
                             "source_failure_current_focus": (
                                 "autonomy_visibility_or_real_ingest token=focus-secret"
                             ),
+                            "source_failure_termination_reason": (
+                                "timeout token=termination-secret"
+                            ),
+                            "source_failure_failed_step": (
+                                "codex exec token=step-secret"
+                            ),
+                            "source_failure_failed_substep": (
+                                "run checks token=substep-secret"
+                            ),
+                            "source_failure_setup_stage": (
+                                "publisher_preflight token=setup-secret"
+                            ),
+                            "source_failure_child_label": (
+                                "codex token=child-secret"
+                            ),
                             "source_failure_import_pipeline_status": (
                                 "loaded token=pipeline-secret"
                             ),
@@ -700,6 +715,39 @@ class RenderCockpitRelayTest(unittest.TestCase):
                             "source_failure_ready_for_next_import_records": True,
                             "source_failure_degraded_artifact_count": "4",
                             "source_failure_sync_exit_status": "2",
+                            "source_failure_child_pid": "4242",
+                            "source_failure_codex_exit_status": "124",
+                            "source_failure_worker_exit_status": "2",
+                            "source_failure_publisher_exit_status": "3",
+                            "source_failure_child_exit_status": "137",
+                            "source_failure_failed_step_exit_status": "1",
+                            "source_failure_failed_substep_exit_status": "2",
+                            "source_failure_timed_out": True,
+                            "source_failure_killed_after_terminate": True,
+                            "source_failure_child_status_available": False,
+                            "source_failure_environment_preflight_status": (
+                                "failed token=env-status-secret"
+                            ),
+                            "source_failure_environment_preflight_error_count": "2",
+                            "source_failure_environment_preflight_error_categories": [
+                                "missing_runtime token=env-category-secret",
+                                "invalid_path",
+                            ],
+                            "source_failure_environment_preflight_failed_keys": [
+                                "MOJO_HOME token=env-key-secret",
+                                "PATH",
+                            ],
+                            "source_failure_publisher_preflight_status": (
+                                "failed token=publisher-status-secret"
+                            ),
+                            "source_failure_publisher_preflight_exit_status": "2",
+                            "source_failure_publisher_preflight_error_count": "1",
+                            "source_failure_publisher_preflight_error_categories": [
+                                "relay_url token=publisher-category-secret"
+                            ],
+                            "source_failure_publisher_preflight_failed_keys": [
+                                "AUTOMOAT_RELAY_TOKEN token=publisher-key-secret"
+                            ],
                             "raw_status": "token=raw-secret",
                         },
                     },
@@ -809,6 +857,11 @@ class RenderCockpitRelayTest(unittest.TestCase):
             "source_failure_current_focus": (
                 "autonomy_visibility_or_real_ingest token=[redacted]"
             ),
+            "source_failure_termination_reason": "timeout token=[redacted]",
+            "source_failure_failed_step": "codex exec token=[redacted]",
+            "source_failure_failed_substep": "run checks token=[redacted]",
+            "source_failure_setup_stage": "publisher_preflight token=[redacted]",
+            "source_failure_child_label": "codex token=[redacted]",
             "source_failure_import_pipeline_status": "loaded token=[redacted]",
             "source_failure_readiness_status": "ready token=[redacted]",
             "source_failure_artifact_health_status": "degraded token=[redacted]",
@@ -827,6 +880,37 @@ class RenderCockpitRelayTest(unittest.TestCase):
             "source_failure_ready_for_next_import_records": True,
             "source_failure_degraded_artifact_count": 4,
             "source_failure_sync_exit_status": 2,
+            "source_failure_child_pid": 4242,
+            "source_failure_codex_exit_status": 124,
+            "source_failure_worker_exit_status": 2,
+            "source_failure_publisher_exit_status": 3,
+            "source_failure_child_exit_status": 137,
+            "source_failure_failed_step_exit_status": 1,
+            "source_failure_failed_substep_exit_status": 2,
+            "source_failure_timed_out": True,
+            "source_failure_killed_after_terminate": True,
+            "source_failure_child_status_available": False,
+            "source_failure_environment_preflight_status": "failed token=[redacted]",
+            "source_failure_environment_preflight_error_count": 2,
+            "source_failure_environment_preflight_error_categories": [
+                "missing_runtime token=[redacted]",
+                "invalid_path",
+            ],
+            "source_failure_environment_preflight_failed_keys": [
+                "MOJO_HOME token=[redacted]",
+                "PATH",
+            ],
+            "source_failure_publisher_preflight_status": (
+                "failed token=[redacted]"
+            ),
+            "source_failure_publisher_preflight_exit_status": 2,
+            "source_failure_publisher_preflight_error_count": 1,
+            "source_failure_publisher_preflight_error_categories": [
+                "relay_url token=[redacted]"
+            ],
+            "source_failure_publisher_preflight_failed_keys": [
+                "AUTOMOAT_RELAY_TOKEN token=[redacted]"
+            ],
         }
         self.assertEqual(
             health["cockpit_health"]["source_health"]["diagnostics"],

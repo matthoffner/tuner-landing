@@ -1940,6 +1940,11 @@ def source_health_diagnostics(status: dict[str, Any]) -> dict[str, Any]:
             ("source_failure_message", 160),
             ("source_failure_decision_reason", 160),
             ("source_failure_current_focus", 120),
+            ("source_failure_termination_reason", 120),
+            ("source_failure_failed_step", 120),
+            ("source_failure_failed_substep", 120),
+            ("source_failure_setup_stage", 120),
+            ("source_failure_child_label", 120),
             ("source_failure_import_pipeline_status", 80),
             ("source_failure_readiness_status", 80),
             ("source_failure_artifact_health_status", 80),
@@ -1979,15 +1984,64 @@ def source_health_diagnostics(status: dict[str, Any]) -> dict[str, Any]:
             ("source_failure_readiness_blocker_count", "readiness_blocker_count"),
             ("source_failure_degraded_artifact_count", "degraded_artifact_count"),
             ("source_failure_sync_exit_status", "sync_exit_status"),
+            ("source_failure_child_pid", "child_pid"),
         ):
             compact_value = compact_int(failure.get(source_key))
             if compact_value is not None:
                 diagnostics[key] = compact_value
+        for key, source_key in (
+            ("source_failure_codex_exit_status", "codex_exit_status"),
+            ("source_failure_worker_exit_status", "worker_exit_status"),
+            ("source_failure_publisher_exit_status", "publisher_exit_status"),
+            ("source_failure_child_exit_status", "child_exit_status"),
+            ("source_failure_failed_step_exit_status", "failed_step_exit_status"),
+            ("source_failure_failed_substep_exit_status", "failed_substep_exit_status"),
+        ):
+            compact_value = compact_exit_status(failure.get(source_key))
+            if compact_value is not None:
+                diagnostics[key] = compact_value
+        for key, source_key in (
+            ("source_failure_timed_out", "timed_out"),
+            ("source_failure_killed_after_terminate", "killed_after_terminate"),
+            ("source_failure_child_status_available", "child_status_available"),
+        ):
+            value = failure.get(source_key)
+            if isinstance(value, bool):
+                diagnostics[key] = value
         ready_for_next_import_records = failure.get("ready_for_next_import_records")
         if isinstance(ready_for_next_import_records, bool):
             diagnostics["source_failure_ready_for_next_import_records"] = (
                 ready_for_next_import_records
             )
+        for preflight_key, prefix, include_exit_status in (
+            ("environment_preflight", "source_failure_environment_preflight", False),
+            ("publisher_preflight", "source_failure_publisher_preflight", True),
+        ):
+            preflight = as_dict(failure.get(preflight_key))
+            status_value = compact_policy_detail(preflight.get("status"), max_length=80)
+            if status_value is not None:
+                diagnostics[f"{prefix}_status"] = status_value
+            if include_exit_status:
+                exit_status = compact_exit_status(preflight.get("exit_status"))
+                if exit_status is not None:
+                    diagnostics[f"{prefix}_exit_status"] = exit_status
+            error_count = compact_int(preflight.get("error_count"))
+            if error_count is not None:
+                diagnostics[f"{prefix}_error_count"] = error_count
+            error_categories = compact_policy_detail_list(
+                preflight.get("error_categories"),
+                max_items=12,
+                max_length=80,
+            )
+            if error_categories:
+                diagnostics[f"{prefix}_error_categories"] = error_categories
+            failed_keys = compact_policy_detail_list(
+                preflight.get("failed_configuration_keys"),
+                max_items=12,
+                max_length=120,
+            )
+            if failed_keys:
+                diagnostics[f"{prefix}_failed_keys"] = failed_keys
 
     omitted_field_count = compact_int(
         status.get("source_status_remote_omitted_field_count")

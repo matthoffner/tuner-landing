@@ -310,9 +310,16 @@ def publisher_source_health(state: dict[str, Any]) -> dict[str, Any]:
             "source_failure_message",
             "source_failure_decision_reason",
             "source_failure_current_focus",
+            "source_failure_termination_reason",
+            "source_failure_failed_step",
+            "source_failure_failed_substep",
+            "source_failure_setup_stage",
+            "source_failure_child_label",
             "source_failure_import_pipeline_status",
             "source_failure_readiness_status",
             "source_failure_artifact_health_status",
+            "source_failure_environment_preflight_status",
+            "source_failure_publisher_preflight_status",
         ):
             value = compact_policy_detail(raw_diagnostics.get(key), max_length=160)
             if value is not None:
@@ -327,6 +334,9 @@ def publisher_source_health(state: dict[str, Any]) -> dict[str, Any]:
                 diagnostics[key] = value
         for key in (
             "source_failure_ready_for_next_import_records",
+            "source_failure_timed_out",
+            "source_failure_killed_after_terminate",
+            "source_failure_child_status_available",
         ):
             value = raw_diagnostics.get(key)
             if isinstance(value, bool):
@@ -344,6 +354,9 @@ def publisher_source_health(state: dict[str, Any]) -> dict[str, Any]:
             "source_failure_readiness_blocker_count",
             "source_failure_degraded_artifact_count",
             "source_failure_sync_exit_status",
+            "source_failure_child_pid",
+            "source_failure_environment_preflight_error_count",
+            "source_failure_publisher_preflight_error_count",
             "source_bridge_status_age_seconds",
             "source_bridge_status_stale_after_seconds",
             "source_handoff_age_seconds",
@@ -355,12 +368,28 @@ def publisher_source_health(state: dict[str, Any]) -> dict[str, Any]:
             value = compact_int(raw_diagnostics.get(key))
             if value is not None:
                 diagnostics[key] = value
+        for key in (
+            "source_failure_codex_exit_status",
+            "source_failure_worker_exit_status",
+            "source_failure_publisher_exit_status",
+            "source_failure_child_exit_status",
+            "source_failure_failed_step_exit_status",
+            "source_failure_failed_substep_exit_status",
+            "source_failure_publisher_preflight_exit_status",
+        ):
+            value = compact_exit_status(raw_diagnostics.get(key))
+            if value is not None:
+                diagnostics[key] = value
         for key, max_items, max_length in (
             ("source_policy_raw_path_samples", 8, 160),
             ("source_policy_productive_path_samples", 8, 160),
             ("source_policy_non_productive_path_samples", 8, 160),
             ("source_policy_synthetic_row_samples", 5, 240),
             ("source_readiness_blockers", 8, 160),
+            ("source_failure_environment_preflight_error_categories", 12, 80),
+            ("source_failure_environment_preflight_failed_keys", 12, 120),
+            ("source_failure_publisher_preflight_error_categories", 12, 80),
+            ("source_failure_publisher_preflight_failed_keys", 12, 120),
         ):
             value = compact_policy_detail_list(
                 raw_diagnostics.get(key),
