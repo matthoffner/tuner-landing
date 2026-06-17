@@ -3665,6 +3665,66 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertNotIn("relay-secret", status_text)
         self.assertNotIn("relay-secret", log_text)
 
+    def test_write_render_worker_failure_status_preserves_business_hours_context(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            self.worker.WORKDIR = Path(temp_dir) / "repo"
+            self.worker.WORKDIR.mkdir(parents=True)
+
+            with patch.dict(
+                self.worker.os.environ,
+                {"AUTOMOAT_RELAY_TOKEN": "relay-secret"},
+                clear=True,
+            ), patch.object(
+                self.worker,
+                "worker_git_snapshot",
+                return_value={"branch": "main", "head": "abc123"},
+            ):
+                self.worker.write_render_worker_failure_status(
+                    reason=self.worker.PUBLISHER_EXITED,
+                    worker_exit_status=1,
+                    publisher_exit_status=0,
+                    details={
+                        "child_label": "relay publisher",
+                        "child_pid": 202,
+                        "business_hours": {
+                            "enabled": True,
+                            "in_business_hours": False,
+                            "timezone": "America/Chicago token=relay-secret",
+                            "start": "09:00",
+                            "end": "17:00",
+                            "days": "mon-fri",
+                            "local_time": "2026-06-15T17:01:00-05:00",
+                            "local_weekday": "mon",
+                            "next_start_at": "2026-06-16T09:00:00-05:00",
+                            "debug": "token=relay-secret",
+                        },
+                    },
+                )
+
+            status_text = self.worker.cockpit_status_file().read_text(encoding="utf-8")
+            status = json.loads(status_text)
+
+        self.assertEqual(status["phase"], self.worker.PUBLISHER_EXITED)
+        self.assertEqual(
+            status["business_hours"],
+            {
+                "days": "mon-fri",
+                "enabled": True,
+                "end": "17:00",
+                "in_business_hours": False,
+                "local_time": "2026-06-15T17:01:00-05:00",
+                "local_weekday": "mon",
+                "next_start_at": "2026-06-16T09:00:00-05:00",
+                "start": "09:00",
+                "timezone": "America/Chicago token=[redacted]",
+            },
+        )
+        self.assertNotIn("business_hours", status["failure"])
+        self.assertNotIn("debug", status_text)
+        self.assertNotIn("relay-secret", status_text)
+
     def test_write_render_worker_failure_status_routes_environment_preflight(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             self.worker.WORKDIR = Path(temp_dir) / "repo"
@@ -6258,6 +6318,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                 "child_label": "relay publisher",
                 "child_pid": 202,
                 "child_status_available": False,
+                "business_hours": state,
             },
         )
         self.assertIn("could not poll relay publisher pid=202: OSError", output.getvalue())
@@ -6300,6 +6361,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                 "child_pid": 202,
                 "child_status_available": True,
                 "child_exit_status": 0,
+                "business_hours": state,
             },
         )
         self.assertIn("relay publisher exited unexpectedly status=0", output.getvalue())

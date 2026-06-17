@@ -2355,7 +2355,36 @@ def compact_render_worker_failure_details(details: dict[str, object]) -> dict[st
         )
         if compact_environment_preflight:
             compact["environment_preflight"] = compact_environment_preflight
+    business_hours = details.get("business_hours")
+    if isinstance(business_hours, dict):
+        compact_business_hours = compact_business_hours_state(business_hours)
+        if compact_business_hours:
+            compact["business_hours"] = compact_business_hours
     compact.update(compact_publisher_preflight_details(details))
+    return compact
+
+
+def compact_business_hours_state(state: dict[str, object]) -> dict[str, object]:
+    compact: dict[str, object] = {}
+    for key in ("enabled", "in_business_hours"):
+        value = state.get(key)
+        if isinstance(value, bool):
+            compact[key] = value
+    for key in (
+        "timezone",
+        "start",
+        "end",
+        "days",
+        "local_time",
+        "local_weekday",
+        "next_start_at",
+    ):
+        value = state.get(key)
+        if not isinstance(value, str):
+            continue
+        safe_value = sanitize_worker_log_text(value)[:MAX_BUSINESS_HOURS_CONFIG_VALUE_CHARS]
+        if safe_value:
+            compact[key] = safe_value
     return compact
 
 
@@ -2405,6 +2434,7 @@ def write_render_worker_failure_status(
     environment_preflight = compact_details.pop("environment_preflight", None)
     if isinstance(environment_preflight, dict):
         failure["environment_preflight"] = environment_preflight
+    business_hours = compact_details.pop("business_hours", None)
     if compact_details:
         failure["publisher_preflight"] = compact_details
     payload = {
@@ -2419,6 +2449,8 @@ def write_render_worker_failure_status(
         "failure": failure,
         "git": worker_git_snapshot(),
     }
+    if isinstance(business_hours, dict):
+        payload["business_hours"] = business_hours
     status_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     append_cockpit_log(
         "render-worker failure: "
@@ -2595,6 +2627,7 @@ def child_failure_details(
     poll_ok: bool,
     *,
     child_pid: int | None = None,
+    business_hours: dict[str, object] | None = None,
 ) -> dict[str, object]:
     details: dict[str, object] = {
         "child_label": label,
@@ -2604,6 +2637,8 @@ def child_failure_details(
         details["child_pid"] = child_pid
     if poll_ok:
         details["child_exit_status"] = status
+    if business_hours is not None:
+        details["business_hours"] = business_hours
     return details
 
 
@@ -2807,6 +2842,7 @@ def sleep_outside_business_hours(
                     publisher_status,
                     publisher_poll_ok,
                     child_pid=publisher_process.pid,
+                    business_hours=state,
                 ),
             )
             return PUBLISHER_EXITED, worker_exit_status
