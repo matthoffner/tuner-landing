@@ -125,6 +125,9 @@ module.exports = async function handler(request, response) {
         { bodyLimitMode: upstreamConfig.kind === "relay" ? "tail" : "error" },
       );
       if (!upstream.ok) {
+        if (upstream.error === "upstream_body_too_large") {
+          response.setHeader("X-Automoat-Upstream-Body-Truncated", "true");
+        }
         attempts.push({
           kind: upstreamConfig.kind,
           status: upstream.status,

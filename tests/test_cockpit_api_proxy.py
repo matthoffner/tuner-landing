@@ -2506,6 +2506,87 @@ class CockpitApiProxyTest(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_log_handler_marks_rejected_oversized_legacy_bridge_body(self) -> None:
+        result = run_node(
+            """
+            const assert = require("assert");
+            const logHandler = require("./api/cockpit-log");
+            const { MAX_LOG_BODY_CHARS } = require("./api/cockpit-log");
+
+            function response() {
+              return {
+                statusCode: null,
+                body: "",
+                headers: {},
+                setHeader(name, value) {
+                  this.headers[name] = value;
+                },
+                status(code) {
+                  this.statusCode = code;
+                  return this;
+                },
+                send(body) {
+                  this.body = String(body);
+                  return this;
+                },
+                end(body = "") {
+                  this.body = String(body);
+                  return this;
+                },
+              };
+            }
+
+            process.env.AUTOMOAT_RELAY_URL = "";
+            process.env.AUTOMOAT_BRIDGE_URL = "https://legacy-bridge.example";
+            process.env.AUTOMOAT_COCKPIT_UPSTREAM_TIMEOUT_MS = "";
+            let textCalls = 0;
+            global.fetch = async () => ({
+              ok: true,
+              status: 200,
+              headers: {
+                get(name) {
+                  return name.toLowerCase() === "content-length"
+                    ? String(MAX_LOG_BODY_CHARS + 1)
+                    : null;
+                },
+              },
+              text: async () => {
+                textCalls += 1;
+                return "bridge-oversized-secret".repeat(200000);
+              },
+            });
+
+            (async () => {
+              const logResponse = response();
+              await logHandler({ method: "GET" }, logResponse);
+              assert.strictEqual(logResponse.statusCode, 502);
+              assert.strictEqual(
+                logResponse.body,
+                "cockpit_relay_unreachable: legacy_bridge:200:upstream_body_too_large\\n",
+              );
+              assert.strictEqual(
+                logResponse.headers["X-Automoat-Upstream-Body-Truncated"],
+                "true",
+              );
+              assert.strictEqual(
+                logResponse.headers["X-Automoat-Upstream-Attempts"],
+                "legacy_bridge:200:upstream_body_too_large",
+              );
+              assert.strictEqual(
+                logResponse.headers["X-Automoat-Upstream-Error"],
+                "upstream_body_too_large",
+              );
+              assert(!logResponse.body.includes("bridge-oversized-secret"));
+              assert.strictEqual(textCalls, 0);
+            })().catch((error) => {
+              console.error(error.stack || error);
+              process.exit(1);
+            });
+            """
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_log_handler_returns_final_tail_for_known_length_streams(self) -> None:
         result = run_node(
             """

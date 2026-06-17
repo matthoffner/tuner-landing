@@ -3,6 +3,13 @@
 Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
+- timestamp: 2026-06-17T21:44:27Z
+- lane: editor
+- status: marked rejected oversized legacy bridge log upstreams with the existing Vercel cockpit body-truncation diagnostic; `/api/log` now sets `X-Automoat-Upstream-Body-Truncated: true` when a non-relay log upstream is rejected as `upstream_body_too_large`, keeping browser-visible body-cap diagnostics consistent with relay tail truncation and status upstream rejection; no Dallas raw CSV rows were edited
+- files: api/cockpit-log.js, tests/test_cockpit_api_proxy.py, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- checks: `python3 -m unittest tests.test_cockpit_api_proxy.CockpitApiProxyTest.test_log_handler_marks_rejected_oversized_legacy_bridge_body -v`; `node --check api/cockpit-log.js`; `python3 -m py_compile tests/test_cockpit_api_proxy.py`; `python3 -m unittest tests.test_cockpit_api_proxy -v`; `node --check api/cockpit-upstreams.js && node --check api/cockpit-status.js && node --check api/cockpit-log.js`; `cmp -s generated/landing.html index.html`; `git diff --name-only -- generated/raw .pxcode/preview.json generated/landing.html index.html generated/pipeline/dallas-import-pipeline-summary-v1`; `git diff --check`; `python3 -m unittest discover -s tests -v`; local `run_autonomy_policy_check(Path('/tmp/automoat-log-oversized-bridge-policy.log'))` with zero synthetic rows, zero raw Dallas CSV paths, two productive paths, and no preview change; `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json > /tmp/automoat-log-oversized-bridge-ready.json` plus JSON assertion for readiness `ready`, zero blockers, `ready_for_next_import_records=true`, `535` permits, `1082` inspections, `1625` source records, `535/535` operator corrections, `13/13` contract checks, and zero latest thin-count buckets
+- next: when `/api/log` reports `legacy_bridge:200:upstream_body_too_large`, inspect `X-Automoat-Upstream-Body-Truncated`, `X-Automoat-Upstream-Body-Limit-Chars`, and `X-Automoat-Upstream-Attempts` before changing bridge log retention or proxy body caps
+
 - timestamp: 2026-06-17T21:24:10Z
 - lane: editor
 - status: added ignored companion path counts to autonomous supervisor policy summaries; `scripts/run_autonomous_agent_loop.py` now includes `ignored_paths=<count>` in the compact one-line policy summary so Render logs/status snippets show when README/NEXT_TASK/handoff-style files did not count as productive companion work; no Dallas raw CSV rows were edited
