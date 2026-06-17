@@ -2047,6 +2047,123 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertNotIn("overflow.csv", summary_text)
         self.assertNotIn("\n", summary["policy_failure_reason"])
 
+    def test_publisher_source_health_reports_artifact_attention_details(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            status_file = tmp_path / "status.json"
+            status_file.write_text(
+                json.dumps(
+                    {
+                        "status": "running",
+                        "updated_at": "2026-06-14T19:30:00Z",
+                        "artifacts": {
+                            "artifact_health": {
+                                "status": "degraded token=artifact-health-secret",
+                                "summary": (
+                                    "loaded=2/4 degraded=2 "
+                                    "https://artifact.example/debug?"
+                                    "token=artifact-summary-secret#trace"
+                                ),
+                                "artifact_count": "4",
+                                "loaded_artifact_count": "2",
+                                "statuses": {
+                                    "coverage token=coverage-key-secret": (
+                                        "missing token=coverage-status-secret"
+                                    ),
+                                    "contract": "loaded",
+                                    "pipeline": "loaded",
+                                    "workflow": (
+                                        "stale https://artifact.example/workflow?"
+                                        "token=workflow-status-secret#debug"
+                                    ),
+                                },
+                                "degraded_artifacts": [
+                                    "coverage token=coverage-problem-secret",
+                                    (
+                                        "workflow https://artifact.example/problem?"
+                                        "token=workflow-problem-secret#debug"
+                                    ),
+                                ],
+                            },
+                            "import_pipeline": {
+                                "execution_readiness": {
+                                    "status": "ready",
+                                    "blockers": [],
+                                    "ready_for_next_import_records": True,
+                                }
+                            },
+                        },
+                        "autonomy_policy": {
+                            "thin_group_count": 0,
+                            "thin_group_categories": [],
+                        },
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            self.publisher.utc_now = lambda: "2026-06-14T19:31:00Z"
+            self.publisher.local_loop_pid = lambda _pid_file: 4242
+
+            status = self.publisher.read_status(
+                status_file,
+                tmp_path / "loop.pid",
+                status_stale_after_seconds=120,
+                bridge_status_file=tmp_path / "missing-bridge-status.json",
+            )
+
+        source_health = self.publisher.publisher_source_health(status)
+        diagnostics = source_health["diagnostics"]
+        diagnostics_text = json.dumps(diagnostics, sort_keys=True)
+
+        self.assertEqual(source_health["reasons"], ["source_cockpit_attention"])
+        self.assertEqual(source_health["primary_reason"], "source_cockpit_attention")
+        self.assertEqual(source_health["label"], "Artifact health is not loaded")
+        self.assertEqual(
+            diagnostics["source_cockpit_attention_primary_reason"],
+            "artifact_health_not_loaded",
+        )
+        self.assertEqual(diagnostics["source_artifact_count"], 4)
+        self.assertEqual(diagnostics["source_loaded_artifact_count"], 2)
+        self.assertEqual(
+            diagnostics["source_artifact_health"],
+            "degraded token=[redacted]",
+        )
+        self.assertEqual(
+            diagnostics["source_artifact_health_summary"],
+            "loaded=2/4 degraded=2 "
+            "https://artifact.example/debug?[redacted]#[redacted]",
+        )
+        self.assertEqual(
+            diagnostics["source_artifact_statuses"],
+            {
+                "contract": "loaded",
+                "coverage token=[redacted]": "missing token=[redacted]",
+                "pipeline": "loaded",
+                "workflow": (
+                    "stale https://artifact.example/workflow?[redacted]#[redacted]"
+                ),
+            },
+        )
+        self.assertEqual(
+            diagnostics["source_artifact_problem_artifacts"],
+            [
+                "coverage token=[redacted]",
+                "workflow https://artifact.example/problem?[redacted]#[redacted]",
+                "workflow",
+            ],
+        )
+        for unsafe_text in (
+            "artifact-health-secret",
+            "artifact-summary-secret",
+            "coverage-key-secret",
+            "coverage-status-secret",
+            "workflow-status-secret",
+            "coverage-problem-secret",
+            "workflow-problem-secret",
+        ):
+            self.assertNotIn(unsafe_text, diagnostics_text)
+
     def test_read_status_uses_policy_diagnostic_samples_when_step_lists_absent(
         self,
     ) -> None:

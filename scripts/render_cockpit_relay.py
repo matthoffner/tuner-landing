@@ -297,6 +297,8 @@ def publisher_source_health(state: dict[str, Any]) -> dict[str, Any]:
         for key in (
             "source_cockpit_attention_primary_reason",
             "source_cockpit_attention_label",
+            "source_artifact_health",
+            "source_artifact_health_summary",
             "source_import_readiness",
             "source_policy_failure_reason",
             "source_policy_diagnostics_status",
@@ -343,6 +345,8 @@ def publisher_source_health(state: dict[str, Any]) -> dict[str, Any]:
                 diagnostics[key] = value
         for key in (
             "source_cockpit_attention_reason_count",
+            "source_artifact_count",
+            "source_loaded_artifact_count",
             "source_policy_raw_path_count",
             "source_policy_productive_path_count",
             "source_policy_non_productive_path_count",
@@ -391,6 +395,7 @@ def publisher_source_health(state: dict[str, Any]) -> dict[str, Any]:
             ("source_failure_productive_path_samples", 8, 160),
             ("source_failure_non_productive_path_samples", 8, 160),
             ("source_failure_synthetic_row_samples", 5, 240),
+            ("source_artifact_problem_artifacts", 8, 120),
             ("source_readiness_blockers", 8, 160),
             ("source_thin_group_categories", 8, 120),
             ("source_failure_environment_preflight_error_categories", 12, 80),
@@ -405,6 +410,22 @@ def publisher_source_health(state: dict[str, Any]) -> dict[str, Any]:
             )
             if value:
                 diagnostics[key] = value
+        artifact_statuses = raw_diagnostics.get("source_artifact_statuses")
+        if isinstance(artifact_statuses, dict):
+            compact_statuses: dict[str, str] = {}
+            for raw_key, raw_value in sorted(
+                artifact_statuses.items(),
+                key=lambda item: str(item[0]),
+            ):
+                key = compact_policy_detail(raw_key, max_length=80)
+                value = compact_policy_detail(raw_value, max_length=80)
+                if key is None or value is None:
+                    continue
+                compact_statuses[key] = value
+                if len(compact_statuses) >= 8:
+                    break
+            if compact_statuses:
+                diagnostics["source_artifact_statuses"] = compact_statuses
         coverage_latest_thin_counts = compact_count_map(
             raw_diagnostics.get("source_coverage_latest_thin_counts")
         )

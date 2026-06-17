@@ -1890,6 +1890,52 @@ def source_health_diagnostics(status: dict[str, Any]) -> dict[str, Any]:
                 diagnostics["source_ready_for_next_import_records"] = (
                     ready_for_next_import_records
                 )
+        if cockpit_attention_primary_reason == "artifact_health_not_loaded":
+            artifact_health = compact_policy_detail(
+                cockpit_summary.get("artifact_health"),
+                max_length=80,
+            )
+            if artifact_health is not None:
+                diagnostics["source_artifact_health"] = artifact_health
+            artifact_health_summary = compact_policy_detail(
+                cockpit_summary.get("artifact_health_summary"),
+                max_length=240,
+            )
+            if artifact_health_summary is not None:
+                diagnostics["source_artifact_health_summary"] = (
+                    artifact_health_summary
+                )
+            for key, diagnostic_key in (
+                ("artifact_count", "source_artifact_count"),
+                ("loaded_artifact_count", "source_loaded_artifact_count"),
+            ):
+                compact_value = compact_int(cockpit_summary.get(key))
+                if compact_value is not None:
+                    diagnostics[diagnostic_key] = compact_value
+            artifact_statuses: dict[str, str] = {}
+            raw_artifact_statuses = as_dict(cockpit_summary.get("artifact_statuses"))
+            for raw_key, raw_value in sorted(
+                raw_artifact_statuses.items(),
+                key=lambda item: str(item[0]),
+            ):
+                artifact_name = compact_policy_detail(raw_key, max_length=80)
+                artifact_status = compact_policy_detail(raw_value, max_length=80)
+                if artifact_name is None or artifact_status is None:
+                    continue
+                artifact_statuses[artifact_name] = artifact_status
+                if len(artifact_statuses) >= POLICY_RAW_PATH_SAMPLE_LIMIT:
+                    break
+            if artifact_statuses:
+                diagnostics["source_artifact_statuses"] = artifact_statuses
+            artifact_problem_artifacts = compact_policy_detail_list(
+                cockpit_summary.get("artifact_problem_artifacts"),
+                max_items=POLICY_RAW_PATH_SAMPLE_LIMIT,
+                max_length=120,
+            )
+            if artifact_problem_artifacts:
+                diagnostics["source_artifact_problem_artifacts"] = list(
+                    dict.fromkeys(artifact_problem_artifacts)
+                )
         if cockpit_attention_primary_reason == "coverage_thin_groups_present":
             for key, diagnostic_key in (
                 ("thin_group_count", "source_thin_group_count"),

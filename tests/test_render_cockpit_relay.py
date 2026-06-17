@@ -604,6 +604,106 @@ class RenderCockpitRelayTest(unittest.TestCase):
         self.assertNotIn("category-secret", response_text)
         self.assertNotIn("count-secret", response_text)
 
+    def test_status_and_health_preserve_artifact_source_health_diagnostics(self) -> None:
+        self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
+        self.relay.update_state(
+            {
+                "pushed_at": "2026-06-14T19:59:30Z",
+                "status": {
+                    "status": "running",
+                    "loop_running": True,
+                },
+                "log_tail": "publisher summarized artifact health attention\n",
+                "publisher": {
+                    "source_health": {
+                        "status": "degraded",
+                        "ok": False,
+                        "reasons": ["source_cockpit_attention"],
+                        "primary_reason": "source_cockpit_attention",
+                        "label": "Artifact health is not loaded",
+                        "diagnostics": {
+                            "source_cockpit_attention_primary_reason": (
+                                "artifact_health_not_loaded token=reason-secret"
+                            ),
+                            "source_artifact_health": (
+                                "degraded token=artifact-health-secret"
+                            ),
+                            "source_artifact_health_summary": (
+                                "loaded=2/4 degraded=2 "
+                                "https://artifact.example/debug?"
+                                "token=artifact-summary-secret#trace"
+                            ),
+                            "source_artifact_count": "4",
+                            "source_loaded_artifact_count": "2",
+                            "source_artifact_statuses": {
+                                "coverage token=coverage-key-secret": (
+                                    "missing token=coverage-status-secret"
+                                ),
+                                "workflow": (
+                                    "stale https://artifact.example/workflow?"
+                                    "token=workflow-status-secret#debug"
+                                ),
+                            },
+                            "source_artifact_problem_artifacts": [
+                                "coverage token=coverage-problem-secret",
+                                (
+                                    "workflow https://artifact.example/problem?"
+                                    "token=workflow-problem-secret#debug"
+                                ),
+                            ],
+                        },
+                    },
+                },
+            }
+        )
+        self.relay.utc_now = lambda: "2026-06-14T20:00:00Z"
+
+        health = self.relay.health_payload()
+        status = self.relay.relay_status_payload()
+
+        expected_diagnostics = {
+            "source_cockpit_attention_primary_reason": (
+                "artifact_health_not_loaded token=[redacted]"
+            ),
+            "source_artifact_health": "degraded token=[redacted]",
+            "source_artifact_health_summary": (
+                "loaded=2/4 degraded=2 "
+                "https://artifact.example/debug?[redacted]#[redacted]"
+            ),
+            "source_artifact_count": 4,
+            "source_loaded_artifact_count": 2,
+            "source_artifact_statuses": {
+                "coverage token=[redacted]": "missing token=[redacted]",
+                "workflow": (
+                    "stale https://artifact.example/workflow?[redacted]#[redacted]"
+                ),
+            },
+            "source_artifact_problem_artifacts": [
+                "coverage token=[redacted]",
+                "workflow https://artifact.example/problem?[redacted]#[redacted]",
+            ],
+        }
+        self.assertEqual(
+            health["cockpit_health"]["source_health"]["diagnostics"],
+            expected_diagnostics,
+        )
+        self.assertEqual(
+            status["relay"]["publisher"]["source_health"]["diagnostics"],
+            expected_diagnostics,
+        )
+        response_text = json.dumps({"health": health, "status": status}, sort_keys=True)
+        for unsafe_text in (
+            "reason-secret",
+            "artifact-health-secret",
+            "artifact-summary-secret",
+            "coverage-key-secret",
+            "coverage-status-secret",
+            "workflow-status-secret",
+            "coverage-problem-secret",
+            "workflow-problem-secret",
+        ):
+            self.assertNotIn(unsafe_text, response_text)
+
     def test_status_and_health_preserve_publisher_source_health_diagnostics(self) -> None:
         self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
         self.relay.update_state(
