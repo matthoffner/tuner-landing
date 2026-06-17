@@ -3700,7 +3700,7 @@ class RenderCockpitRelayTest(unittest.TestCase):
 
         with self.assertRaisesRegex(
             ValueError,
-            "Out of range float values are not JSON compliant",
+            r"status object includes non-finite JSON number at \$\.status\.bad_metric",
         ):
             self.relay.update_state(
                 {
@@ -3801,7 +3801,7 @@ class RenderCockpitRelayTest(unittest.TestCase):
 
         with self.assertRaisesRegex(
             ValueError,
-            "Out of range float values are not JSON compliant",
+            r"publisher metadata includes non-finite JSON number at \$\.publisher\.bad_metric",
         ):
             self.relay.update_state(
                 {

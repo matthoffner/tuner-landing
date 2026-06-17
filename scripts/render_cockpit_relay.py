@@ -1904,6 +1904,12 @@ def update_state(payload: dict[str, Any]) -> dict[str, Any]:
         status = {"status": "publisher_missing_status"}
     status = dict(status)
     status.setdefault("status", "unknown")
+    non_finite_status_path = first_non_finite_json_number_path(status, "$.status")
+    if non_finite_status_path is not None:
+        raise ValueError(
+            "status object includes non-finite JSON number at "
+            f"{non_finite_status_path}"
+        )
     status_size_bytes = encoded_json_size(status)
     max_status_bytes = int(CONFIG["max_status_bytes"])
     if status_size_bytes > max_status_bytes:
@@ -1924,6 +1930,15 @@ def update_state(payload: dict[str, Any]) -> dict[str, Any]:
     publisher = dict(publisher)
     if payload.get("pushed_at"):
         publisher["pushed_at"] = payload["pushed_at"]
+    non_finite_publisher_path = first_non_finite_json_number_path(
+        publisher,
+        "$.publisher",
+    )
+    if non_finite_publisher_path is not None:
+        raise ValueError(
+            "publisher metadata includes non-finite JSON number at "
+            f"{non_finite_publisher_path}"
+        )
     publisher_size_bytes = encoded_json_size(publisher)
     max_publisher_bytes = int(CONFIG["max_publisher_bytes"])
     if publisher_size_bytes > max_publisher_bytes:
