@@ -1879,16 +1879,18 @@ class CockpitApiProxyTest(unittest.TestCase):
             const upstreamPayload = {
               status: "running",
               relay_token: "relay-field-secret",
+              OPENAI_API_KEY: "env-field-secret",
               cockpit_summary: {
                 operator_attention_label: "Authorization: Bearer bearer-secret",
                 failure_summary: {
                   message: "posting https://user:url-secret@relay.example/api/status?token=query-secret#debug",
-                  detail: "api_key=assignment-secret password : spaced-secret",
-                  nested: "{\\"github_token\\": \\"json-secret\\", \\"safe\\": \\"visible\\"}",
+                  detail: "api_key=assignment-secret password : spaced-secret AUTOMOAT_RELAY_TOKEN=env-relay-secret OPENAI_API_KEY: env-openai-secret",
+                  nested: "{\\"github_token\\": \\"json-secret\\", \\"AUTOMOAT_RELAY_TOKEN\\": \\"json-env-secret\\", \\"safe\\": \\"visible\\"}",
                 },
               },
               items: [
                 { "x-automoat-relay-token": "relay-header-secret" },
+                { AUTOMOAT_RELAY_TOKEN: "env-object-secret" },
                 "raw\\x00control",
               ],
             };
@@ -1911,16 +1913,18 @@ class CockpitApiProxyTest(unittest.TestCase):
               assert.deepStrictEqual(body, {
                 status: "running",
                 relay_token: "[redacted]",
+                OPENAI_API_KEY: "[redacted]",
                 cockpit_summary: {
                   operator_attention_label: "Authorization: Bearer [redacted]",
                   failure_summary: {
                     message: "posting https://relay.example/api/status?[redacted]#[redacted]",
-                    detail: "api_key=[redacted] password=[redacted]",
-                    nested: "{\\"github_token\\":\\"[redacted]\\", \\"safe\\": \\"visible\\"}",
+                    detail: "api_key=[redacted] password=[redacted] AUTOMOAT_RELAY_TOKEN=[redacted] OPENAI_API_KEY=[redacted]",
+                    nested: "{\\"github_token\\":\\"[redacted]\\", \\"AUTOMOAT_RELAY_TOKEN\\":\\"[redacted]\\", \\"safe\\": \\"visible\\"}",
                   },
                 },
                 items: [
                   { "x-automoat-relay-token": "[redacted]" },
+                  { AUTOMOAT_RELAY_TOKEN: "[redacted]" },
                   "raw control",
                 ],
               });
@@ -1932,16 +1936,26 @@ class CockpitApiProxyTest(unittest.TestCase):
                 statusHandler.sanitizeStatusText("'api_key': 'single-json-secret'"),
                 "'api_key':'[redacted]'",
               );
+              assert.strictEqual(
+                statusHandler.sanitizeStatusText("'OPENAI_API_KEY': 'single-env-secret'"),
+                "'OPENAI_API_KEY':'[redacted]'",
+              );
               for (const secret of [
                 "relay-field-secret",
+                "env-field-secret",
                 "bearer-secret",
                 "url-secret",
                 "query-secret",
                 "assignment-secret",
                 "spaced-secret",
+                "env-relay-secret",
+                "env-openai-secret",
                 "json-secret",
+                "json-env-secret",
                 "relay-header-secret",
+                "env-object-secret",
                 "single-json-secret",
+                "single-env-secret",
                 "\\x00",
               ]) {
                 assert(!statusResponse.body.includes(secret), secret);

@@ -16,10 +16,15 @@ const {
 const MAX_STATUS_BODY_CHARS = 512 * 1024;
 const EMBEDDED_URL_RE = /https?:\/\/[^\s,;|]+/gi;
 const BEARER_SECRET_RE = /\b(authorization\s*[:=]\s*bearer)\s+[^\s,;|]+/gi;
-const SENSITIVE_ASSIGNMENT_RE = /\b(access_token|api_key|codex_access_token|gh_token|github_token|password|passwd|relay_token|secret|token|key|x-automoat-relay-token)\s*[:=]\s*[^\s,;|]+/gi;
-const SENSITIVE_DOUBLE_QUOTED_FIELD_RE = /"(access_token|api_key|codex_access_token|gh_token|github_token|password|passwd|relay_token|secret|token|key|x-automoat-relay-token)"\s*:\s*"(?:\\.|[^"\\\r\n])*"/gi;
-const SENSITIVE_SINGLE_QUOTED_FIELD_RE = /'(access_token|api_key|codex_access_token|gh_token|github_token|password|passwd|relay_token|secret|token|key|x-automoat-relay-token)'\s*:\s*'(?:\\.|[^'\\\r\n])*'/gi;
-const SENSITIVE_STATUS_KEY_RE = /^(access_token|api_key|codex_access_token|gh_token|github_token|password|passwd|relay_token|secret|token|key|x-automoat-relay-token)$/i;
+const SENSITIVE_KEY_PATTERN = [
+  "(?:[A-Za-z0-9]+[_-])*",
+  "(?:access[_-]?token|api[_-]?key|codex[_-]?access[_-]?token|gh[_-]?token|github[_-]?token|password|passwd|relay[_-]?token|secret|token|key|x-automoat-relay-token)",
+  "(?:[_-][A-Za-z0-9]+)*",
+].join("");
+const SENSITIVE_ASSIGNMENT_RE = new RegExp(`\\b(${SENSITIVE_KEY_PATTERN})\\s*[:=]\\s*[^\\s,;|]+`, "gi");
+const SENSITIVE_DOUBLE_QUOTED_FIELD_RE = new RegExp(`"(${SENSITIVE_KEY_PATTERN})"\\s*:\\s*"(?:\\\\.|[^"\\\\\\r\\n])*"`, "gi");
+const SENSITIVE_SINGLE_QUOTED_FIELD_RE = new RegExp(`'(${SENSITIVE_KEY_PATTERN})'\\s*:\\s*'(?:\\\\.|[^'\\\\\\r\\n])*'`, "gi");
+const SENSITIVE_STATUS_KEY_RE = new RegExp(`^${SENSITIVE_KEY_PATTERN}$`, "i");
 
 function parseStatusPayload(body) {
   const normalized = body.trimStart().toLowerCase();
