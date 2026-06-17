@@ -195,11 +195,16 @@ def read_json_limited(path: Path, max_bytes: int) -> tuple[Any | None, str | Non
     except UnicodeDecodeError as exc:
         return None, "invalid_json", f"invalid UTF-8 at byte {exc.start}"
     try:
-        return json.loads(payload_text, parse_constant=reject_json_constant), None, None
+        payload = json.loads(payload_text, parse_constant=reject_json_constant)
     except json.JSONDecodeError as exc:
         return None, "invalid_json", f"line {exc.lineno} column {exc.colno}: {exc.msg}"
     except ValueError as exc:
         return None, "invalid_json", compact_text(str(exc)) or type(exc).__name__
+
+    non_finite_path = first_non_finite_json_number_path(payload)
+    if non_finite_path is not None:
+        return None, "invalid_json", f"non-finite JSON number at {non_finite_path}"
+    return payload, None, None
 
 
 def read_json_with_status(path: Path) -> tuple[dict[str, Any] | None, dict[str, Any]]:
@@ -229,6 +234,34 @@ def read_json(path: Path) -> dict[str, Any] | None:
 
 def reject_json_constant(value: str) -> None:
     raise ValueError(f"invalid JSON constant {value}")
+
+
+def json_path_component(value: Any) -> str:
+    key = compact_policy_detail(value, max_length=80)
+    if key is None:
+        return "<?>"
+    if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", key):
+        return f".{key}"
+    return f"[{json.dumps(key)}]"
+
+
+def first_non_finite_json_number_path(value: Any, path: str = "$") -> str | None:
+    if isinstance(value, float) and not math.isfinite(value):
+        return path
+    if isinstance(value, dict):
+        for key, item in value.items():
+            nested_path = first_non_finite_json_number_path(
+                item,
+                f"{path}{json_path_component(key)}",
+            )
+            if nested_path is not None:
+                return nested_path
+    if isinstance(value, list):
+        for index, item in enumerate(value):
+            nested_path = first_non_finite_json_number_path(item, f"{path}[{index}]")
+            if nested_path is not None:
+                return nested_path
+    return None
 
 
 def parse_utc_timestamp(value: Any) -> datetime | None:

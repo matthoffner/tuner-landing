@@ -2807,6 +2807,35 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertTrue(status["source_status_stale"])
         self.assertNotIn("passed_checks", status_text)
 
+    def test_read_status_rejects_overflowed_json_numbers(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            status_file = tmp_path / "status.json"
+            status_file.write_text(
+                (
+                    '{"status":"passing","updated_at":"2026-06-14T19:30:00Z",'
+                    '"artifacts":{"contract":{"passed_checks":1e999}}}\n'
+                ),
+                encoding="utf-8",
+            )
+
+            status = self.publisher.read_status(
+                status_file,
+                tmp_path / "missing.pid",
+                status_stale_after_seconds=120,
+            )
+            status_text = json.dumps(status, sort_keys=True, allow_nan=False)
+
+        self.assertEqual(status["status"], "invalid-status-json")
+        self.assertEqual(status["source_status_file_status"], "invalid_json")
+        self.assertIn(
+            "non-finite JSON number at $.artifacts.contract.passed_checks",
+            status["source_status_file_error"],
+        )
+        self.assertTrue(status["source_status_stale"])
+        self.assertNotIn("Infinity", status_text)
+        self.assertNotIn("1e999", status_text)
+
     def test_read_status_marks_oversized_status_file_unavailable(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
