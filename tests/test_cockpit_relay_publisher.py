@@ -3124,9 +3124,17 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertTrue(summary["status_value_invalid"])
         self.assertEqual(summary["operator_attention_reasons"], ["status_failing"])
         self.assertEqual(summary["operator_attention_label"], "Loop status is failing")
+        source_health = self.publisher.publisher_source_health(status)
         self.assertEqual(
-            self.publisher.publisher_source_health(status)["reasons"],
+            source_health["reasons"],
             ["source_status_failing", "source_cockpit_attention"],
+        )
+        self.assertEqual(
+            source_health["diagnostics"],
+            {
+                "source_status": "invalid-status-value",
+                "source_status_value_invalid": True,
+            },
         )
         self.assertNotIn("status-secret", status_text)
 

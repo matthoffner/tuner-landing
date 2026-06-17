@@ -1591,6 +1591,12 @@ def source_health_diagnostics(status: dict[str, Any]) -> dict[str, Any]:
         or status.get("source_status_timestamp_invalid") is True
         or status.get("source_status_timestamp_future") is True
     )
+    status_value, status_value_invalid = normalize_source_status_value(
+        status.get("status")
+    )
+    source_status_value_invalid = (
+        status.get("source_status_value_invalid") is True or status_value_invalid
+    )
     bridge_freshness_attention = (
         bridge_summary.get("available") is True
         and (
@@ -1616,6 +1622,12 @@ def source_health_diagnostics(status: dict[str, Any]) -> dict[str, Any]:
             value = status.get(key)
             if isinstance(value, bool):
                 diagnostics[key] = value
+
+    if source_status_value_invalid:
+        compact_status = compact_policy_detail(status_value, max_length=120)
+        if compact_status is not None:
+            diagnostics["source_status"] = compact_status
+        diagnostics["source_status_value_invalid"] = True
 
     if source_status_unavailable:
         text_fields = {
