@@ -1,5 +1,6 @@
 const {
   NOT_CONFIGURED_UPSTREAMS_HEADER,
+  compactUpstreamHeaderPart,
   fetchUpstreamText,
   invalidUpstreamDiagnostics,
   invalidUpstreamKeysHeader,
@@ -187,6 +188,7 @@ module.exports = async function handler(request, response) {
   }
 
   const attempts = [];
+  const payloadErrors = [];
   for (const upstreamConfig of configured) {
     try {
       const upstream = await fetchUpstreamText(
@@ -216,6 +218,10 @@ module.exports = async function handler(request, response) {
       }
       const parsed = parseStatusPayload(upstream.body);
       if (!parsed.ok) {
+        payloadErrors.push(
+          `${compactUpstreamHeaderPart(upstreamConfig.kind)}:${compactUpstreamHeaderPart(parsed.error)}`,
+        );
+        response.setHeader("X-Automoat-Upstream-Payload-Errors", payloadErrors.join(","));
         attempts.push({
           kind: upstreamConfig.kind,
           status: upstream.status,

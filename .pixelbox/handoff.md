@@ -3,6 +3,13 @@
 Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
+- timestamp: 2026-06-17T21:07:41Z
+- lane: editor
+- status: exposed Vercel cockpit upstream payload-contract failures as `X-Automoat-Upstream-Payload-Errors`; status and log proxies now set compact `upstream:error` values when a reachable upstream returns malformed status/log payloads, including fallback and all-upstreams-failed paths, so browser clients can distinguish payload-shape failures from transport, config, and body-cap failures without parsing the full attempts header; no Dallas raw CSV rows were edited
+- files: api/cockpit-upstreams.js, api/cockpit-status.js, api/cockpit-log.js, tests/test_cockpit_api_proxy.py, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- checks: `python3 -m unittest tests.test_cockpit_api_proxy -v`; `node --check api/cockpit-upstreams.js && node --check api/cockpit-status.js && node --check api/cockpit-log.js`; `python3 -m py_compile tests/test_cockpit_api_proxy.py`; `python3 -m unittest discover -s tests -v`; `cmp -s generated/landing.html index.html`; `git diff --name-only -- generated/raw .pxcode/preview.json generated/landing.html index.html generated/pipeline/dallas-import-pipeline-summary-v1`; `git diff --check`; local `run_autonomy_policy_check(Path('/tmp/automoat-payload-errors-header-policy-rerun.log'))` assertion for `exit_status=0`, zero synthetic rows, zero raw Dallas CSV paths, four productive paths, and no preview change; `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json > /tmp/automoat-payload-errors-header-ready-final.json` plus JSON assertion for readiness `ready`, `535` permits, `1082` inspections, `1625` source records, `1093` tasks, `541` label reviews, `535/535` operator corrections, `13/13` contract checks, and zero latest thin-count buckets
+- next: when `/api/status` or `/api/log` falls back or reports unreachable with payload contract errors, inspect `X-Automoat-Upstream-Payload-Errors` before debugging relay transport, Vercel config, or body-size limits
+
 - timestamp: 2026-06-17T20:58:38Z
 - lane: editor
 - status: marked oversized Vercel cockpit status upstream responses with the existing CORS-visible body truncation diagnostic; `/api/status` now sets `X-Automoat-Upstream-Body-Truncated: true` when any attempted upstream is rejected as `upstream_body_too_large`, including successful fallback and all-upstreams-failed paths, so browser clients can distinguish body-cap rejection from generic unreachable status; no Dallas raw CSV rows were edited
