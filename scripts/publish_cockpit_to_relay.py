@@ -2500,6 +2500,14 @@ def source_status_log_fields(payload: dict[str, Any]) -> dict[str, Any]:
             cockpit_summary.get("policy_route_hint"),
             max_length=120,
         ),
+        "source_policy_diagnostics_decision_reason": compact_policy_detail(
+            cockpit_summary.get("policy_diagnostics_decision_reason"),
+            max_length=160,
+        ),
+        "source_policy_diagnostics_current_focus": compact_policy_detail(
+            cockpit_summary.get("policy_diagnostics_current_focus"),
+            max_length=120,
+        ),
         "source_policy_preview_json_changed": cockpit_summary.get(
             "policy_preview_json_changed"
         )
@@ -2762,6 +2770,8 @@ SOURCE_STATUS_LOG_FIELD_NAMES = (
     "source_policy_failure_reason",
     "source_policy_diagnostics_status",
     "source_policy_route_hint",
+    "source_policy_diagnostics_decision_reason",
+    "source_policy_diagnostics_current_focus",
     "source_policy_preview_json_changed",
     "source_policy_allows_synthetic_append",
     "source_policy_override",

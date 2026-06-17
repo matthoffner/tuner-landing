@@ -5314,6 +5314,13 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                         ),
                         "policy_diagnostics_status": "failed token=status-secret",
                         "policy_route_hint": "route token=route-secret",
+                        "policy_diagnostics_decision_reason": (
+                            "dallas_ready_no_thin_groups token=policy-decision-secret"
+                        ),
+                        "policy_diagnostics_current_focus": (
+                            "autonomy_visibility_or_real_ingest "
+                            "token=policy-focus-secret"
+                        ),
                         "policy_preview_json_changed": "false",
                         "policy_allows_synthetic_append": True,
                         "policy_override": False,
@@ -5471,6 +5478,16 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         )
         self.assertIn("source_policy_diagnostics_status=failed token=[redacted]", log_text)
         self.assertIn("source_policy_route_hint=route token=[redacted]", log_text)
+        self.assertIn(
+            "source_policy_diagnostics_decision_reason="
+            "dallas_ready_no_thin_groups token=[redacted]",
+            log_text,
+        )
+        self.assertIn(
+            "source_policy_diagnostics_current_focus="
+            "autonomy_visibility_or_real_ingest token=[redacted]",
+            log_text,
+        )
         self.assertIn("source_policy_preview_json_changed=None", log_text)
         self.assertIn("source_policy_allows_synthetic_append=True", log_text)
         self.assertIn("source_policy_override=False", log_text)
@@ -5570,6 +5587,8 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertNotIn("host-secret", log_text)
         self.assertNotIn("label-secret", log_text)
         self.assertNotIn("head-secret", log_text)
+        self.assertNotIn("policy-decision-secret", log_text)
+        self.assertNotIn("policy-focus-secret", log_text)
         self.assertNotIn("failure-phase-secret", log_text)
         self.assertNotIn("coord-file-status-secret", log_text)
         self.assertNotIn("coord-error-secret", log_text)
