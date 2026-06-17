@@ -2527,6 +2527,24 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 ],
                 "operator_attention_primary_reason": "autonomy_policy_failed",
                 "operator_attention_label": "Autonomy policy failed",
+                "policy_failure_reason": (
+                    "synthetic append rejected token=policy-secret"
+                ),
+                "policy_diagnostics_status": "failed",
+                "policy_route_hint": (
+                    "raw_dallas_csv_changed_without_productive_companion"
+                ),
+                "policy_diagnostics_decision_reason": "dallas_ready_no_thin_groups",
+                "policy_diagnostics_current_focus": (
+                    "autonomy_visibility_or_real_ingest"
+                ),
+                "policy_raw_dallas_csv_changed_path_count": "7",
+                "policy_productive_changed_path_count": 2,
+                "policy_non_productive_companion_path_count": 3,
+                "policy_synthetic_row_count": 9,
+                "policy_preview_json_changed": False,
+                "policy_allows_synthetic_append": False,
+                "policy_override": True,
             },
         }
 
@@ -2540,8 +2558,31 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 "reasons": ["source_autonomy_policy_failed"],
                 "primary_reason": "source_autonomy_policy_failed",
                 "label": "Autonomy policy failed",
+                "diagnostics": {
+                    "source_policy_failure_reason": (
+                        "synthetic append rejected token=[redacted]"
+                    ),
+                    "source_policy_diagnostics_status": "failed",
+                    "source_policy_route_hint": (
+                        "raw_dallas_csv_changed_without_productive_companion"
+                    ),
+                    "source_policy_diagnostics_decision_reason": (
+                        "dallas_ready_no_thin_groups"
+                    ),
+                    "source_policy_diagnostics_current_focus": (
+                        "autonomy_visibility_or_real_ingest"
+                    ),
+                    "source_policy_raw_path_count": 7,
+                    "source_policy_productive_path_count": 2,
+                    "source_policy_non_productive_path_count": 3,
+                    "source_policy_synthetic_row_count": 9,
+                    "source_policy_preview_json_changed": False,
+                    "source_policy_allows_synthetic_append": False,
+                    "source_policy_override": True,
+                },
             },
         )
+        self.assertNotIn("policy-secret", json.dumps(health, sort_keys=True))
 
     def test_publisher_source_health_routes_coordination_attention(self) -> None:
         cases = (

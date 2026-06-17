@@ -286,6 +286,9 @@ def publisher_source_health(state: dict[str, Any]) -> dict[str, Any]:
             "source_status_stale",
             "source_status_timestamp_invalid",
             "source_status_timestamp_future",
+            "source_policy_preview_json_changed",
+            "source_policy_allows_synthetic_append",
+            "source_policy_override",
         ):
             value = raw_diagnostics.get(key)
             if isinstance(value, bool):
@@ -293,6 +296,11 @@ def publisher_source_health(state: dict[str, Any]) -> dict[str, Any]:
         for key in (
             "source_cockpit_attention_primary_reason",
             "source_cockpit_attention_label",
+            "source_policy_failure_reason",
+            "source_policy_diagnostics_status",
+            "source_policy_route_hint",
+            "source_policy_diagnostics_decision_reason",
+            "source_policy_diagnostics_current_focus",
             "source_failure_phase",
             "source_failure_category",
             "source_failure_route_hint",
@@ -304,6 +312,10 @@ def publisher_source_health(state: dict[str, Any]) -> dict[str, Any]:
                 diagnostics[key] = value
         for key in (
             "source_cockpit_attention_reason_count",
+            "source_policy_raw_path_count",
+            "source_policy_productive_path_count",
+            "source_policy_non_productive_path_count",
+            "source_policy_synthetic_row_count",
             "source_bridge_status_age_seconds",
             "source_bridge_status_stale_after_seconds",
             "source_handoff_age_seconds",

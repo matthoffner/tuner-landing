@@ -586,6 +586,27 @@ class RenderCockpitRelayTest(unittest.TestCase):
                                 "Import readiness token=label-secret"
                             ),
                             "source_cockpit_attention_reason_count": "2",
+                            "source_policy_failure_reason": (
+                                "policy rejected token=policy-secret"
+                            ),
+                            "source_policy_diagnostics_status": "failed token=status-secret",
+                            "source_policy_route_hint": (
+                                "raw_dallas_csv_changed_without_productive_companion "
+                                "token=route-secret"
+                            ),
+                            "source_policy_diagnostics_decision_reason": (
+                                "dallas_ready_no_thin_groups"
+                            ),
+                            "source_policy_diagnostics_current_focus": (
+                                "autonomy_visibility_or_real_ingest"
+                            ),
+                            "source_policy_raw_path_count": "7",
+                            "source_policy_productive_path_count": 2,
+                            "source_policy_non_productive_path_count": 3,
+                            "source_policy_synthetic_row_count": 9,
+                            "source_policy_preview_json_changed": False,
+                            "source_policy_allows_synthetic_append": False,
+                            "source_policy_override": True,
                             "source_failure_phase": (
                                 "artifact_health_failed token=phase-secret"
                             ),
@@ -650,6 +671,26 @@ class RenderCockpitRelayTest(unittest.TestCase):
                 "Import readiness token=[redacted]"
             ),
             "source_cockpit_attention_reason_count": 2,
+            "source_policy_failure_reason": (
+                "policy rejected token=[redacted]"
+            ),
+            "source_policy_diagnostics_status": "failed token=[redacted]",
+            "source_policy_route_hint": (
+                "raw_dallas_csv_changed_without_productive_companion token=[redacted]"
+            ),
+            "source_policy_diagnostics_decision_reason": (
+                "dallas_ready_no_thin_groups"
+            ),
+            "source_policy_diagnostics_current_focus": (
+                "autonomy_visibility_or_real_ingest"
+            ),
+            "source_policy_raw_path_count": 7,
+            "source_policy_productive_path_count": 2,
+            "source_policy_non_productive_path_count": 3,
+            "source_policy_synthetic_row_count": 9,
+            "source_policy_preview_json_changed": False,
+            "source_policy_allows_synthetic_append": False,
+            "source_policy_override": True,
             "source_failure_phase": "artifact_health_failed token=[redacted]",
             "source_failure_category": "artifact_health token=[redacted]",
             "source_failure_route_hint": "cockpit_artifact_health token=[redacted]",

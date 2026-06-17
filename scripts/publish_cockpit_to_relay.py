@@ -1827,6 +1827,44 @@ def source_health_diagnostics(status: dict[str, Any]) -> dict[str, Any]:
                 cockpit_attention_reason_count
             )
 
+    if "autonomy_policy_failed" in cockpit_attention_reasons:
+        for key, max_length in (
+            ("policy_failure_reason", 160),
+            ("policy_diagnostics_status", 80),
+            ("policy_route_hint", 120),
+            ("policy_diagnostics_decision_reason", 160),
+            ("policy_diagnostics_current_focus", 120),
+        ):
+            compact_value = compact_policy_detail(
+                cockpit_summary.get(key),
+                max_length=max_length,
+            )
+            if compact_value is not None:
+                diagnostics[f"source_{key}"] = compact_value
+        for key, diagnostic_key in (
+            ("policy_raw_dallas_csv_changed_path_count", "source_policy_raw_path_count"),
+            ("policy_productive_changed_path_count", "source_policy_productive_path_count"),
+            (
+                "policy_non_productive_companion_path_count",
+                "source_policy_non_productive_path_count",
+            ),
+            ("policy_synthetic_row_count", "source_policy_synthetic_row_count"),
+        ):
+            compact_value = compact_int(cockpit_summary.get(key))
+            if compact_value is not None:
+                diagnostics[diagnostic_key] = compact_value
+        for key, diagnostic_key in (
+            ("policy_preview_json_changed", "source_policy_preview_json_changed"),
+            (
+                "policy_allows_synthetic_append",
+                "source_policy_allows_synthetic_append",
+            ),
+            ("policy_override", "source_policy_override"),
+        ):
+            value = cockpit_summary.get(key)
+            if isinstance(value, bool):
+                diagnostics[diagnostic_key] = value
+
     if failure.get("available") is True:
         for key, max_length in (
             ("source_failure_phase", 120),
