@@ -927,6 +927,32 @@ def failure_summary(status: dict[str, Any]) -> dict[str, Any]:
     if artifact_statuses:
         summary["artifact_statuses"] = artifact_statuses
 
+    environment_preflight = as_dict(failure.get("environment_preflight"))
+    if environment_preflight:
+        compact_preflight: dict[str, Any] = {}
+        status_value = compact_policy_detail(environment_preflight.get("status"), max_length=80)
+        if status_value is not None:
+            compact_preflight["status"] = status_value
+        error_count = compact_int(environment_preflight.get("error_count"))
+        if error_count is not None:
+            compact_preflight["error_count"] = error_count
+        error_categories = compact_policy_detail_list(
+            environment_preflight.get("error_categories"),
+            max_items=12,
+            max_length=80,
+        )
+        if error_categories:
+            compact_preflight["error_categories"] = error_categories
+        failed_keys = compact_policy_detail_list(
+            environment_preflight.get("failed_configuration_keys"),
+            max_items=12,
+            max_length=120,
+        )
+        if failed_keys:
+            compact_preflight["failed_configuration_keys"] = failed_keys
+        if compact_preflight:
+            summary["environment_preflight"] = compact_preflight
+
     publisher_preflight = as_dict(failure.get("publisher_preflight"))
     if publisher_preflight:
         compact_preflight: dict[str, Any] = {}
@@ -1818,6 +1844,9 @@ def source_status_log_fields(payload: dict[str, Any]) -> dict[str, Any]:
     publisher_preflight = failure.get("publisher_preflight")
     if not isinstance(publisher_preflight, dict):
         publisher_preflight = {}
+    environment_preflight = failure.get("environment_preflight")
+    if not isinstance(environment_preflight, dict):
+        environment_preflight = {}
     publisher = payload.get("publisher")
     if not isinstance(publisher, dict):
         publisher = {}
@@ -2055,6 +2084,23 @@ def source_status_log_fields(payload: dict[str, Any]) -> dict[str, Any]:
         "source_failure_child_status_available": failure.get("child_status_available")
         if isinstance(failure.get("child_status_available"), bool)
         else None,
+        "source_failure_environment_preflight_status": compact_policy_detail(
+            environment_preflight.get("status"),
+            max_length=80,
+        ),
+        "source_failure_environment_preflight_error_count": compact_int(
+            environment_preflight.get("error_count")
+        ),
+        "source_failure_environment_preflight_error_categories": compact_log_detail_list(
+            environment_preflight.get("error_categories"),
+            max_items=5,
+            max_length=80,
+        ),
+        "source_failure_environment_preflight_failed_keys": compact_log_detail_list(
+            environment_preflight.get("failed_configuration_keys"),
+            max_items=5,
+            max_length=120,
+        ),
         "source_failure_publisher_preflight_status": compact_policy_detail(
             publisher_preflight.get("status"),
             max_length=80,
@@ -2211,6 +2257,10 @@ SOURCE_STATUS_LOG_FIELD_NAMES = (
     "source_failure_publisher_exit_status",
     "source_failure_child_exit_status",
     "source_failure_child_status_available",
+    "source_failure_environment_preflight_status",
+    "source_failure_environment_preflight_error_count",
+    "source_failure_environment_preflight_error_categories",
+    "source_failure_environment_preflight_failed_keys",
     "source_failure_publisher_preflight_status",
     "source_failure_publisher_preflight_exit_status",
     "source_failure_publisher_preflight_error_count",

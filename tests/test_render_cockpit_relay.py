@@ -2404,6 +2404,19 @@ class RenderCockpitRelayTest(unittest.TestCase):
                             "child_exit_status": "6",
                             "worker_exit_status": "1",
                             "publisher_exit_status": "2",
+                            "environment_preflight": {
+                                "status": "failed token=env-status-secret",
+                                "error_count": "2",
+                                "error_categories": [
+                                    "missing_required token=env-category-secret",
+                                    "missing_command",
+                                ],
+                                "failed_configuration_keys": [
+                                    "AUTOMOAT_RELAY_URL",
+                                    "PATH:codex token=env-key-secret",
+                                ],
+                                "debug_blob": "token=env-ignored-secret",
+                            },
                             "publisher_preflight": {
                                 "status": "failed token=status-secret",
                                 "exit_status": "2",
@@ -2442,6 +2455,18 @@ class RenderCockpitRelayTest(unittest.TestCase):
             "child_exit_status": 6,
             "worker_exit_status": 1,
             "publisher_exit_status": 2,
+            "environment_preflight": {
+                "status": "failed token=[redacted]",
+                "error_count": 2,
+                "error_categories": [
+                    "missing_required token=[redacted]",
+                    "missing_command",
+                ],
+                "failed_configuration_keys": [
+                    "AUTOMOAT_RELAY_URL",
+                    "PATH:codex token=[redacted]",
+                ],
+            },
             "publisher_preflight": {
                 "status": "failed token=[redacted]",
                 "exit_status": 2,
@@ -2474,6 +2499,10 @@ class RenderCockpitRelayTest(unittest.TestCase):
             "reason-secret",
             "stage-secret",
             "child-secret",
+            "env-status-secret",
+            "env-category-secret",
+            "env-key-secret",
+            "env-ignored-secret",
             "status-secret",
             "category-secret",
             "key-secret",

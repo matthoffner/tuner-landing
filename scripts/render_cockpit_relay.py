@@ -1189,6 +1189,35 @@ def source_failure_summary(status: dict[str, Any]) -> dict[str, Any]:
         if compact_statuses:
             summary["artifact_statuses"] = compact_statuses
 
+    environment_preflight = failure.get("environment_preflight")
+    if isinstance(environment_preflight, dict):
+        compact_preflight: dict[str, Any] = {}
+        status_value = compact_policy_detail(
+            environment_preflight.get("status"),
+            max_length=80,
+        )
+        if status_value is not None:
+            compact_preflight["status"] = status_value
+        error_count = compact_int(environment_preflight.get("error_count"))
+        if error_count is not None:
+            compact_preflight["error_count"] = error_count
+        error_categories = compact_path_detail_list(
+            environment_preflight.get("error_categories"),
+            max_items=12,
+            max_length=80,
+        )
+        if error_categories:
+            compact_preflight["error_categories"] = error_categories
+        failed_keys = compact_path_detail_list(
+            environment_preflight.get("failed_configuration_keys"),
+            max_items=12,
+            max_length=120,
+        )
+        if failed_keys:
+            compact_preflight["failed_configuration_keys"] = failed_keys
+        if compact_preflight:
+            summary["environment_preflight"] = compact_preflight
+
     publisher_preflight = failure.get("publisher_preflight")
     if isinstance(publisher_preflight, dict):
         compact_preflight: dict[str, Any] = {}

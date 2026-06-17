@@ -1943,7 +1943,7 @@ def publisher_preflight_diagnostic_tokens(diagnostics: Any, key: str) -> list[st
             continue
         if value in seen:
             continue
-        if all(character.isalnum() or character in "_-|" for character in value):
+        if all(character.isalnum() or character in "_-|:" for character in value):
             tokens.append(value)
             seen.add(value)
         if len(tokens) >= PUBLISHER_PREFLIGHT_DIAGNOSTIC_TOKEN_LIMIT:
@@ -2348,6 +2348,13 @@ def compact_render_worker_failure_details(details: dict[str, object]) -> dict[st
     child_status_available = details.get("child_status_available")
     if isinstance(child_status_available, bool):
         compact["child_status_available"] = child_status_available
+    environment_preflight = details.get("environment_preflight")
+    if isinstance(environment_preflight, dict):
+        compact_environment_preflight = compact_publisher_preflight_details(
+            environment_preflight
+        )
+        if compact_environment_preflight:
+            compact["environment_preflight"] = compact_environment_preflight
     compact.update(compact_publisher_preflight_details(details))
     return compact
 
@@ -2395,6 +2402,9 @@ def write_render_worker_failure_status(
     child_status_available = compact_details.pop("child_status_available", None)
     if isinstance(child_status_available, bool):
         failure["child_status_available"] = child_status_available
+    environment_preflight = compact_details.pop("environment_preflight", None)
+    if isinstance(environment_preflight, dict):
+        failure["environment_preflight"] = environment_preflight
     if compact_details:
         failure["publisher_preflight"] = compact_details
     payload = {
@@ -2459,6 +2469,14 @@ def record_environment_preflight_failure_status(errors: list[str]) -> None:
         reason=ENVIRONMENT_PREFLIGHT_FAILED,
         worker_exit_status=2,
         message=message,
+        details={
+            "environment_preflight": {
+                "status": "failed",
+                "error_count": len(errors),
+                "error_categories": categories,
+                "failed_configuration_keys": failed_keys,
+            },
+        },
     )
 
 

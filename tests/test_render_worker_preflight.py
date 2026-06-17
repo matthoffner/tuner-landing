@@ -3682,6 +3682,21 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                         "error_count=2 error_categories=missing_required "
                         "failed_configuration_keys=AUTOMOAT_RELAY_URL,GITHUB_TOKEN|GH_TOKEN"
                     ),
+                    details={
+                        "environment_preflight": {
+                            "status": "failed",
+                            "error_count": 2,
+                            "error_categories": [
+                                "missing_required",
+                                "token=category-secret",
+                            ],
+                            "failed_configuration_keys": [
+                                "AUTOMOAT_RELAY_URL",
+                                "PATH:codex",
+                                "token=key-secret",
+                            ],
+                        },
+                    },
                 )
 
             status = json.loads(
@@ -3696,6 +3711,15 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertEqual(
             status["failure"]["failure_reason"],
             self.worker.ENVIRONMENT_PREFLIGHT_FAILED,
+        )
+        self.assertEqual(
+            status["failure"]["environment_preflight"],
+            {
+                "status": "failed",
+                "error_count": 2,
+                "error_categories": ["missing_required"],
+                "failed_configuration_keys": ["AUTOMOAT_RELAY_URL", "PATH:codex"],
+            },
         )
 
     def test_write_render_worker_failure_status_routes_setup_failures(self) -> None:
@@ -5576,6 +5600,17 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                 "error_count=2 error_categories=missing_required "
                 "failed_configuration_keys=AUTOMOAT_RELAY_URL,GITHUB_TOKEN|GH_TOKEN"
             ),
+            details={
+                "environment_preflight": {
+                    "status": "failed",
+                    "error_count": 2,
+                    "error_categories": ["missing_required"],
+                    "failed_configuration_keys": [
+                        "AUTOMOAT_RELAY_URL",
+                        "GITHUB_TOKEN|GH_TOKEN",
+                    ],
+                },
+            },
         )
 
     def test_environment_preflight_failure_skips_status_for_invalid_workdir(self) -> None:

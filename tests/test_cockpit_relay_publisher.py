@@ -1428,6 +1428,19 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                             "child_exit_status": "6",
                             "worker_exit_status": "1",
                             "publisher_exit_status": "2",
+                            "environment_preflight": {
+                                "status": "failed token=env-status-secret",
+                                "error_count": "2",
+                                "error_categories": [
+                                    "missing_required token=env-category-secret",
+                                    "missing_command",
+                                ],
+                                "failed_configuration_keys": [
+                                    "AUTOMOAT_RELAY_URL",
+                                    "PATH:codex token=env-key-secret",
+                                ],
+                                "debug_blob": "token=env-ignored-secret",
+                            },
                             "publisher_preflight": {
                                 "status": "failed token=status-secret",
                                 "exit_status": "2",
@@ -1477,6 +1490,18 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 "child_exit_status": 6,
                 "worker_exit_status": 1,
                 "publisher_exit_status": 2,
+                "environment_preflight": {
+                    "status": "failed token=[redacted]",
+                    "error_count": 2,
+                    "error_categories": [
+                        "missing_required token=[redacted]",
+                        "missing_command",
+                    ],
+                    "failed_configuration_keys": [
+                        "AUTOMOAT_RELAY_URL",
+                        "PATH:codex token=[redacted]",
+                    ],
+                },
                 "publisher_preflight": {
                     "status": "failed token=[redacted]",
                     "exit_status": 2,
@@ -1504,6 +1529,10 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             "status-secret",
             "category-secret",
             "key-secret",
+            "env-status-secret",
+            "env-category-secret",
+            "env-key-secret",
+            "env-ignored-secret",
             "ignored-secret",
         ):
             self.assertNotIn(unsafe_text, failure_text)
@@ -4506,6 +4535,18 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                             "child_exit_status": 6,
                             "worker_exit_status": 1,
                             "publisher_exit_status": 2,
+                            "environment_preflight": {
+                                "status": "failed token=env-status-secret",
+                                "error_count": 2,
+                                "error_categories": [
+                                    "missing_required token=env-category-secret",
+                                ],
+                                "failed_configuration_keys": [
+                                    "AUTOMOAT_RELAY_URL",
+                                    "PATH:codex token=env-key-secret",
+                                ],
+                                "debug_blob": "token=env-ignored-secret",
+                            },
                             "publisher_preflight": {
                                 "status": "failed token=status-secret",
                                 "exit_status": 2,
@@ -4559,6 +4600,21 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertIn("source_failure_worker_exit_status=1", log_text)
         self.assertIn("source_failure_publisher_exit_status=2", log_text)
         self.assertIn(
+            "source_failure_environment_preflight_status=failed token=[redacted]",
+            log_text,
+        )
+        self.assertIn("source_failure_environment_preflight_error_count=2", log_text)
+        self.assertIn(
+            "source_failure_environment_preflight_error_categories="
+            "missing_required token=[redacted]",
+            log_text,
+        )
+        self.assertIn(
+            "source_failure_environment_preflight_failed_keys="
+            "AUTOMOAT_RELAY_URL,PATH:codex token=[redacted]",
+            log_text,
+        )
+        self.assertIn(
             "source_failure_publisher_preflight_status=failed token=[redacted]",
             log_text,
         )
@@ -4578,6 +4634,10 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             "message-secret",
             "stage-secret",
             "child-secret",
+            "env-status-secret",
+            "env-category-secret",
+            "env-key-secret",
+            "env-ignored-secret",
             "status-secret",
             "category-secret",
             "key-secret",
