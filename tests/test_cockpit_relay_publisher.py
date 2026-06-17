@@ -2184,6 +2184,33 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertEqual(health["primary_reason"], "source_status_unavailable")
         self.assertEqual(health["label"], "Source status is unavailable")
 
+    def test_publisher_source_health_includes_unavailable_status_diagnostics(self) -> None:
+        status = {
+            "status": "waiting",
+            "loop_running": False,
+            "source_status_file": "/tmp/source-status-token.json",
+            "source_status_file_status": "read_failed",
+            "source_status_file_error": (
+                "failed to read /tmp/source-status-token.json token=secret"
+            ),
+        }
+
+        health = self.publisher.publisher_source_health(status)
+
+        self.assertEqual(health["primary_reason"], "source_status_unavailable")
+        self.assertEqual(
+            health["diagnostics"],
+            {
+                "source_status_file": "<external>/source-status-token.json",
+                "source_status_file_status": "read_failed",
+                "source_status_file_error": (
+                    "failed to read <external>/source-status-token.json "
+                    "token=[redacted]"
+                ),
+            },
+        )
+        self.assertNotIn("secret", json.dumps(health, sort_keys=True))
+
     def test_publisher_source_health_routes_invalid_source_timestamp(self) -> None:
         status = {
             "status": "passing",

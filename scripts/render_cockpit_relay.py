@@ -199,13 +199,40 @@ def publisher_source_health(state: dict[str, Any]) -> dict[str, Any]:
     if label is None:
         label = cockpit_health_label(primary_reason)
 
-    return {
+    summary = {
         "status": status,
         "ok": ok,
         "reasons": normalized_reasons,
         "primary_reason": primary_reason,
         "label": label,
     }
+    raw_diagnostics = source_health.get("diagnostics")
+    if isinstance(raw_diagnostics, dict):
+        diagnostics: dict[str, Any] = {}
+        status_file_status = compact_policy_detail(
+            raw_diagnostics.get("source_status_file_status"),
+            max_length=120,
+        )
+        if status_file_status is not None:
+            diagnostics["source_status_file_status"] = status_file_status
+        status_file = compact_path_label(
+            raw_diagnostics.get("source_status_file"),
+            max_length=240,
+        )
+        if status_file is not None:
+            diagnostics["source_status_file"] = compact_policy_detail(
+                status_file,
+                max_length=240,
+            )
+        status_file_error = compact_path_diagnostic(
+            raw_diagnostics.get("source_status_file_error"),
+            max_length=240,
+        )
+        if status_file_error is not None:
+            diagnostics["source_status_file_error"] = status_file_error
+        if diagnostics:
+            summary["diagnostics"] = diagnostics
+    return summary
 
 
 def compact_text(value: Any, *, max_length: int = 160) -> str | None:
@@ -273,7 +300,7 @@ def compact_path_detail_list(
 
 
 def compact_path_diagnostic(value: Any, *, max_length: int = 240) -> str | None:
-    text = compact_text(value, max_length=max_length * 2)
+    text = compact_policy_detail(value, max_length=max_length * 2)
     if text is None:
         return None
 

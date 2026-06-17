@@ -525,6 +525,59 @@ class RenderCockpitRelayTest(unittest.TestCase):
             expected_source_health,
         )
 
+    def test_status_and_health_preserve_publisher_source_health_diagnostics(self) -> None:
+        self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
+        self.relay.update_state(
+            {
+                "pushed_at": "2026-06-14T19:59:30Z",
+                "status": {
+                    "status": "waiting",
+                    "loop_running": False,
+                },
+                "log_tail": "publisher summarized an unavailable source status\n",
+                "publisher": {
+                    "source_health": {
+                        "status": "degraded",
+                        "ok": False,
+                        "reasons": ["source_status_unavailable"],
+                        "primary_reason": "source_status_unavailable",
+                        "label": "Source status is unavailable",
+                        "diagnostics": {
+                            "source_status_file": "/tmp/source-status-token.json",
+                            "source_status_file_status": "read_failed",
+                            "source_status_file_error": (
+                                "failed /tmp/source-status-token.json token=secret"
+                            ),
+                            "raw_status": "token=raw-secret",
+                        },
+                    },
+                },
+            }
+        )
+        self.relay.utc_now = lambda: "2026-06-14T20:00:00Z"
+
+        health = self.relay.health_payload()
+        status = self.relay.relay_status_payload()
+
+        expected_diagnostics = {
+            "source_status_file": "<external>/source-status-token.json",
+            "source_status_file_status": "read_failed",
+            "source_status_file_error": (
+                "failed <external>/source-status-token.json token=[redacted]"
+            ),
+        }
+        self.assertEqual(
+            health["cockpit_health"]["source_health"]["diagnostics"],
+            expected_diagnostics,
+        )
+        self.assertEqual(
+            status["relay"]["publisher"]["source_health"]["diagnostics"],
+            expected_diagnostics,
+        )
+        response_text = json.dumps({"health": health, "status": status}, sort_keys=True)
+        self.assertNotIn("secret", response_text)
+        self.assertNotIn("raw_status", response_text)
+
     def test_status_and_health_treat_business_hours_pause_as_scheduled(self) -> None:
         self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
         self.relay.update_state(

@@ -1522,6 +1522,42 @@ def source_health_label(reason: str | None) -> str:
     return SOURCE_HEALTH_LABELS.get(reason, reason.replace("_", " "))
 
 
+def source_health_diagnostics(status: dict[str, Any]) -> dict[str, Any]:
+    diagnostics: dict[str, Any] = {}
+    if status.get("source_status_file_status") not in {
+        "missing",
+        "read_failed",
+        "invalid_json",
+        "not_object",
+        "too_large",
+    }:
+        return diagnostics
+
+    text_fields = {
+        "source_status_file_status": status.get("source_status_file_status"),
+    }
+    for key, value in text_fields.items():
+        compact_value = compact_policy_detail(value, max_length=120)
+        if compact_value is not None:
+            diagnostics[key] = compact_value
+
+    path_value = compact_path_label(status.get("source_status_file"), max_length=240)
+    if path_value is not None:
+        diagnostics["source_status_file"] = compact_policy_detail(
+            path_value,
+            max_length=240,
+        )
+
+    error_value = compact_path_diagnostic(
+        status.get("source_status_file_error"),
+        max_length=240,
+    )
+    if error_value is not None:
+        diagnostics["source_status_file_error"] = error_value
+
+    return diagnostics
+
+
 def publisher_source_health(status: dict[str, Any]) -> dict[str, Any]:
     reasons: list[str] = []
     cockpit_summary = as_dict(status.get("cockpit_summary"))
@@ -1638,13 +1674,17 @@ def publisher_source_health(status: dict[str, Any]) -> dict[str, Any]:
     cockpit_attention_label = compact_text(cockpit_summary.get("operator_attention_label"))
     if primary_reason == "source_cockpit_attention" and cockpit_attention_label is not None:
         label = cockpit_attention_label
-    return {
+    health = {
         "status": health_status,
         "ok": health_status == "live",
         "reasons": reasons,
         "primary_reason": primary_reason,
         "label": label,
     }
+    diagnostics = source_health_diagnostics(status)
+    if diagnostics:
+        health["diagnostics"] = diagnostics
+    return health
 
 
 def publisher_runtime_config(args: argparse.Namespace) -> dict[str, Any]:
