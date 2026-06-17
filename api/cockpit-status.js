@@ -149,6 +149,7 @@ function sanitizeEmbeddedUrlForStatus(rawUrl) {
 module.exports = async function handler(request, response) {
   setProxyHeaders(response, "application/json; charset=utf-8");
   response.setHeader("X-Automoat-Upstream-Body-Limit-Chars", String(MAX_STATUS_BODY_CHARS));
+  response.setHeader("X-Automoat-Upstream-Payload-Error-Count", "0");
 
   if (request.method === "OPTIONS") {
     sendOptionsResponse(response);
@@ -221,6 +222,7 @@ module.exports = async function handler(request, response) {
         payloadErrors.push(
           `${compactUpstreamHeaderPart(upstreamConfig.kind)}:${compactUpstreamHeaderPart(parsed.error)}`,
         );
+        response.setHeader("X-Automoat-Upstream-Payload-Error-Count", String(payloadErrors.length));
         response.setHeader("X-Automoat-Upstream-Payload-Errors", payloadErrors.join(","));
         attempts.push({
           kind: upstreamConfig.kind,

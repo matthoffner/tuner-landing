@@ -12,6 +12,7 @@ const EXPOSED_UPSTREAM_HEADERS = [
   "X-Automoat-Upstream-Attempt-Count",
   "X-Automoat-Upstream-Status-Code",
   "X-Automoat-Upstream-Error",
+  "X-Automoat-Upstream-Payload-Error-Count",
   "X-Automoat-Upstream-Payload-Errors",
   "X-Automoat-Upstream-Attempts",
   "X-Automoat-Upstream-Body-Limit-Chars",

@@ -3,6 +3,13 @@
 Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
+- timestamp: 2026-06-17T21:13:29Z
+- lane: editor
+- status: exposed a numeric Vercel cockpit proxy payload-contract failure count; status and log proxies now set CORS-visible `X-Automoat-Upstream-Payload-Error-Count` to `0` by default and increment it alongside `X-Automoat-Upstream-Payload-Errors` when reachable upstream payloads fail contract parsing, so browser clients can branch on malformed upstream payloads without parsing the compact error list; no Dallas raw CSV rows were edited
+- files: api/cockpit-upstreams.js, api/cockpit-status.js, api/cockpit-log.js, tests/test_cockpit_api_proxy.py, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- checks: `python3 -m unittest tests.test_cockpit_api_proxy -v`; `node --check api/cockpit-upstreams.js && node --check api/cockpit-status.js && node --check api/cockpit-log.js`; `python3 -m py_compile tests/test_cockpit_api_proxy.py`; `python3 -m unittest discover -s tests -v`; `cmp -s generated/landing.html index.html`; `git diff --name-only -- generated/raw .pxcode/preview.json generated/landing.html index.html generated/pipeline/dallas-import-pipeline-summary-v1`; `git diff --check`; local `run_autonomy_policy_check(Path('/tmp/automoat-payload-error-count-policy.log'))` assertion for `exit_status=0`, zero synthetic rows, zero raw Dallas CSV paths, four productive paths, and no preview change; `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json > /tmp/automoat-payload-error-count-ready.json` plus JSON assertion for readiness `ready`, `535` permits, `1082` inspections, `1625` source records, `1093` tasks, `541` label reviews, `535/535` operator corrections, `13/13` contract checks, and zero latest thin-count buckets
+- next: when `/api/status` or `/api/log` reports a reachable upstream payload-contract failure, inspect `X-Automoat-Upstream-Payload-Error-Count` first for a machine-branchable count, then use `X-Automoat-Upstream-Payload-Errors` for the compact upstream/error list
+
 - timestamp: 2026-06-17T21:07:41Z
 - lane: editor
 - status: exposed Vercel cockpit upstream payload-contract failures as `X-Automoat-Upstream-Payload-Errors`; status and log proxies now set compact `upstream:error` values when a reachable upstream returns malformed status/log payloads, including fallback and all-upstreams-failed paths, so browser clients can distinguish payload-shape failures from transport, config, and body-cap failures without parsing the full attempts header; no Dallas raw CSV rows were edited
