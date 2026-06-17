@@ -1558,6 +1558,7 @@ def source_health_label(reason: str | None) -> str:
 def source_health_diagnostics(status: dict[str, Any]) -> dict[str, Any]:
     diagnostics: dict[str, Any] = {}
     cockpit_summary = as_dict(status.get("cockpit_summary"))
+    failure = as_dict(cockpit_summary.get("failure_summary"))
     coordination = as_dict(cockpit_summary.get("coordination"))
     if not coordination:
         coordination = coordination_summary(status)
@@ -1713,6 +1714,22 @@ def source_health_diagnostics(status: dict[str, Any]) -> dict[str, Any]:
             value = coordination.get(key)
             if isinstance(value, bool):
                 diagnostics[diagnostic_key] = value
+
+    if failure.get("available") is True:
+        for key, max_length in (
+            ("source_failure_phase", 120),
+            ("source_failure_category", 120),
+            ("source_failure_route_hint", 120),
+            ("source_failure_failure_reason", 160),
+            ("source_failure_message", 160),
+        ):
+            source_key = key.removeprefix("source_failure_")
+            compact_value = compact_policy_detail(
+                failure.get(source_key),
+                max_length=max_length,
+            )
+            if compact_value is not None:
+                diagnostics[key] = compact_value
 
     return diagnostics
 

@@ -270,6 +270,16 @@ def publisher_source_health(state: dict[str, Any]) -> dict[str, Any]:
             if isinstance(value, bool):
                 diagnostics[key] = value
         for key in (
+            "source_failure_phase",
+            "source_failure_category",
+            "source_failure_route_hint",
+            "source_failure_failure_reason",
+            "source_failure_message",
+        ):
+            value = compact_policy_detail(raw_diagnostics.get(key), max_length=160)
+            if value is not None:
+                diagnostics[key] = value
+        for key in (
             "source_bridge_status_age_seconds",
             "source_bridge_status_stale_after_seconds",
             "source_status_age_seconds",

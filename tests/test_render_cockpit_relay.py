@@ -568,6 +568,22 @@ class RenderCockpitRelayTest(unittest.TestCase):
                             ),
                             "source_handoff_latest_section_found": True,
                             "source_handoff_latest_status_found": False,
+                            "source_failure_phase": (
+                                "artifact_health_failed token=phase-secret"
+                            ),
+                            "source_failure_category": (
+                                "artifact_health token=category-secret"
+                            ),
+                            "source_failure_route_hint": (
+                                "cockpit_artifact_health token=route-secret"
+                            ),
+                            "source_failure_failure_reason": (
+                                "artifact rejected token=reason-secret"
+                            ),
+                            "source_failure_message": (
+                                "review https://user:pass@example.local/status"
+                                "?token=message-secret#debug"
+                            ),
                             "raw_status": "token=raw-secret",
                         },
                     },
@@ -602,6 +618,13 @@ class RenderCockpitRelayTest(unittest.TestCase):
             ),
             "source_handoff_latest_section_found": True,
             "source_handoff_latest_status_found": False,
+            "source_failure_phase": "artifact_health_failed token=[redacted]",
+            "source_failure_category": "artifact_health token=[redacted]",
+            "source_failure_route_hint": "cockpit_artifact_health token=[redacted]",
+            "source_failure_failure_reason": "artifact rejected token=[redacted]",
+            "source_failure_message": (
+                "review https://example.local/status?[redacted]#[redacted]"
+            ),
         }
         self.assertEqual(
             health["cockpit_health"]["source_health"]["diagnostics"],

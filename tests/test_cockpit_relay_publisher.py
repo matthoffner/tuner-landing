@@ -2371,6 +2371,63 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             },
         )
 
+    def test_publisher_source_health_includes_failure_route_diagnostics(self) -> None:
+        status = {
+            "status": "failing",
+            "loop_running": True,
+            "source_status_stale": False,
+            "source_status_file_status": "loaded",
+            "cockpit_summary": {
+                "operator_attention": True,
+                "operator_attention_reasons": ["artifact_health_not_loaded"],
+                "operator_attention_primary_reason": "artifact_health_not_loaded",
+                "operator_attention_label": "Artifact health is not loaded",
+                "failure_summary": {
+                    "available": True,
+                    "phase": "artifact_health_failed token=phase-secret\nsecond line",
+                    "category": "artifact_health token=category-secret",
+                    "route_hint": "cockpit_artifact_health token=route-secret",
+                    "failure_reason": (
+                        "artifact health rejected token=reason-secret"
+                    ),
+                    "message": (
+                        "review https://user:pass@example.local/status"
+                        "?token=message-secret#debug"
+                    ),
+                    "debug_blob": "relay_token=hidden-debug",
+                },
+            },
+        }
+
+        health = self.publisher.publisher_source_health(status)
+
+        self.assertEqual(health["primary_reason"], "source_status_failing")
+        self.assertEqual(
+            health["diagnostics"],
+            {
+                "source_failure_phase": (
+                    "artifact_health_failed token=[redacted] second line"
+                ),
+                "source_failure_category": "artifact_health token=[redacted]",
+                "source_failure_route_hint": (
+                    "cockpit_artifact_health token=[redacted]"
+                ),
+                "source_failure_failure_reason": (
+                    "artifact health rejected token=[redacted]"
+                ),
+                "source_failure_message": (
+                    "review https://example.local/status?[redacted]#[redacted]"
+                ),
+            },
+        )
+        health_text = json.dumps(health, sort_keys=True)
+        self.assertNotIn("phase-secret", health_text)
+        self.assertNotIn("category-secret", health_text)
+        self.assertNotIn("route-secret", health_text)
+        self.assertNotIn("reason-secret", health_text)
+        self.assertNotIn("message-secret", health_text)
+        self.assertNotIn("hidden-debug", health_text)
+
     def test_publisher_source_health_promotes_autonomy_policy_attention(self) -> None:
         status = {
             "status": "passing",
