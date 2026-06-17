@@ -399,6 +399,19 @@ class MvpCockpitServerTest(unittest.TestCase):
                         "token=source-secret"
                     ),
                     "target_path": f"{tmp_path}/private/index.html token=target-secret",
+                    "synthetic_row_samples": [
+                        "ELZ-2026-9999 token=row-secret",
+                    ],
+                    "raw_dallas_csv_changed_path_samples": [
+                        "generated/raw/dallas-electrician-import-sample-v2/permits.csv "
+                        "token=raw-path-secret",
+                    ],
+                    "productive_changed_path_samples": [
+                        "scripts/run_autonomous_agent_loop.py token=productive-secret",
+                    ],
+                    "non_productive_companion_path_samples": [
+                        "README.md token=companion-secret",
+                    ],
                     "non_productive_companion_path_count": "2",
                     "environment_preflight": {
                         "status": "failed token=env-status-secret",
@@ -455,6 +468,19 @@ class MvpCockpitServerTest(unittest.TestCase):
                 "child_label": "relay publisher token=[redacted]",
                 "source_path": "<external>/landing.html token=[redacted]",
                 "target_path": "<external>/index.html token=[redacted]",
+                "synthetic_row_samples": [
+                    "ELZ-2026-9999 token=[redacted]",
+                ],
+                "raw_dallas_csv_changed_path_samples": [
+                    "generated/raw/dallas-electrician-import-sample-v2/permits.csv "
+                    "token=[redacted]",
+                ],
+                "productive_changed_path_samples": [
+                    "scripts/run_autonomous_agent_loop.py token=[redacted]",
+                ],
+                "non_productive_companion_path_samples": [
+                    "README.md token=[redacted]",
+                ],
                 "non_productive_companion_path_count": 2,
                 "child_pid": 101,
                 "worker_exit_status": 2,
@@ -496,6 +522,10 @@ class MvpCockpitServerTest(unittest.TestCase):
             "child-secret",
             "source-secret",
             "target-secret",
+            "row-secret",
+            "raw-path-secret",
+            "productive-secret",
+            "companion-secret",
             "env-status-secret",
             "env-category-secret",
             "env-key-secret",

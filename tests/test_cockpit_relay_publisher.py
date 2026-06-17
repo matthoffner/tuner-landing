@@ -2575,6 +2575,25 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                     "raw_dallas_csv_changed_path_count": "7",
                     "productive_changed_path_count": "2",
                     "non_productive_companion_path_count": "5",
+                    "synthetic_row_samples": [
+                        (
+                            "ELZ-2026-9999 "
+                            "https://row.example/export?token=row-secret#debug "
+                            "relay_token=sample-secret"
+                        ),
+                    ],
+                    "raw_dallas_csv_changed_path_samples": [
+                        (
+                            "generated/raw/dallas-electrician-import-sample-v2/"
+                            "permits.csv token=raw-path-secret"
+                        ),
+                    ],
+                    "productive_changed_path_samples": [
+                        "scripts/publish_cockpit_to_relay.py token=productive-secret",
+                    ],
+                    "non_productive_companion_path_samples": [
+                        "README.md token=companion-secret",
+                    ],
                     "import_pipeline_status": "loaded token=pipeline-secret",
                     "import_pipeline_summary_path": (
                         "/tmp/customer/pipeline/summary.json "
@@ -2644,6 +2663,25 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 "source_failure_raw_path_count": 7,
                 "source_failure_productive_path_count": 2,
                 "source_failure_non_productive_path_count": 5,
+                "source_failure_synthetic_row_samples": [
+                    (
+                        "ELZ-2026-9999 "
+                        "https://row.example/export?[redacted]#[redacted] "
+                        "relay_token=[redacted]"
+                    ),
+                ],
+                "source_failure_raw_path_samples": [
+                    (
+                        "generated/raw/dallas-electrician-import-sample-v2/"
+                        "permits.csv token=[redacted]"
+                    ),
+                ],
+                "source_failure_productive_path_samples": [
+                    "scripts/publish_cockpit_to_relay.py token=[redacted]",
+                ],
+                "source_failure_non_productive_path_samples": [
+                    "README.md token=[redacted]",
+                ],
                 "source_failure_readiness_blocker_count": 3,
                 "source_failure_degraded_artifact_count": 4,
                 "source_failure_sync_exit_status": 2,
@@ -2702,6 +2740,11 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertNotIn("publisher-status-secret", health_text)
         self.assertNotIn("publisher-category-secret", health_text)
         self.assertNotIn("publisher-key-secret", health_text)
+        self.assertNotIn("row-secret", health_text)
+        self.assertNotIn("sample-secret", health_text)
+        self.assertNotIn("raw-path-secret", health_text)
+        self.assertNotIn("productive-secret", health_text)
+        self.assertNotIn("companion-secret", health_text)
         self.assertNotIn("pipeline-secret", health_text)
         self.assertNotIn("summary-path-secret", health_text)
         self.assertNotIn("readiness-secret", health_text)
@@ -5355,6 +5398,29 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                             "raw_dallas_csv_changed_path_count": "9",
                             "productive_changed_path_count": "3",
                             "non_productive_companion_path_count": "2",
+                            "synthetic_row_samples": [
+                                (
+                                    "ELZ-2026-9999 "
+                                    "https://row.example/export"
+                                    "?token=failure-row-secret#debug "
+                                    "relay_token=failure-sample-secret"
+                                ),
+                            ],
+                            "raw_dallas_csv_changed_path_samples": [
+                                (
+                                    "generated/raw/dallas-electrician-import-sample-v2/"
+                                    "permits.csv token=failure-raw-path-secret"
+                                ),
+                            ],
+                            "productive_changed_path_samples": [
+                                (
+                                    "scripts/run_autonomous_agent_loop.py "
+                                    "token=failure-productive-secret"
+                                ),
+                            ],
+                            "non_productive_companion_path_samples": [
+                                "README.md token=failure-companion-secret",
+                            ],
                             "import_pipeline_status": (
                                 "loaded token=failure-pipeline-status-secret"
                             ),
@@ -5527,6 +5593,27 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertIn("source_failure_productive_path_count=3", log_text)
         self.assertIn("source_failure_non_productive_path_count=2", log_text)
         self.assertIn(
+            "source_failure_synthetic_row_samples=ELZ-2026-9999 "
+            "https://row.example/export?[redacted]#[redacted] "
+            "relay_token=[redacted]",
+            log_text,
+        )
+        self.assertIn(
+            "source_failure_raw_path_samples=generated/raw/"
+            "dallas-electrician-import-sample-v2/permits.csv token=[redacted]",
+            log_text,
+        )
+        self.assertIn(
+            "source_failure_productive_path_samples=scripts/"
+            "run_autonomous_agent_loop.py token=[redacted]",
+            log_text,
+        )
+        self.assertIn(
+            "source_failure_non_productive_path_samples=README.md "
+            "token=[redacted]",
+            log_text,
+        )
+        self.assertIn(
             "source_failure_import_pipeline_status=loaded token=[redacted]",
             log_text,
         )
@@ -5599,6 +5686,11 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertNotIn("failure-reason-secret", log_text)
         self.assertNotIn("failure-decision-secret", log_text)
         self.assertNotIn("failure-focus-secret", log_text)
+        self.assertNotIn("failure-row-secret", log_text)
+        self.assertNotIn("failure-sample-secret", log_text)
+        self.assertNotIn("failure-raw-path-secret", log_text)
+        self.assertNotIn("failure-productive-secret", log_text)
+        self.assertNotIn("failure-companion-secret", log_text)
         self.assertNotIn("failure-pipeline-status-secret", log_text)
         self.assertNotIn("failure-readiness-status-secret", log_text)
         self.assertNotIn("failure-artifact-status-secret", log_text)

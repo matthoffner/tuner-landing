@@ -744,6 +744,37 @@ def failure_summary(status: dict[str, object]) -> dict[str, object]:
                 len(value) if isinstance(value, list) else len(compact_value)
             )
 
+    sample_fields = {
+        "synthetic_row_samples": (
+            failure.get("synthetic_row_samples"),
+            POLICY_ROW_SAMPLE_LIMIT,
+            240,
+        ),
+        "raw_dallas_csv_changed_path_samples": (
+            failure.get("raw_dallas_csv_changed_path_samples"),
+            POLICY_RAW_PATH_SAMPLE_LIMIT,
+            160,
+        ),
+        "productive_changed_path_samples": (
+            failure.get("productive_changed_path_samples"),
+            POLICY_RAW_PATH_SAMPLE_LIMIT,
+            160,
+        ),
+        "non_productive_companion_path_samples": (
+            failure.get("non_productive_companion_path_samples"),
+            POLICY_RAW_PATH_SAMPLE_LIMIT,
+            160,
+        ),
+    }
+    for key, (value, max_items, max_length) in sample_fields.items():
+        compact_value = compact_policy_detail_list(
+            value,
+            max_items=max_items,
+            max_length=max_length,
+        )
+        if compact_value:
+            summary[key] = compact_value
+
     count_fields = {
         "synthetic_row_count": failure.get("synthetic_row_count"),
         "raw_dallas_csv_changed_path_count": failure.get(

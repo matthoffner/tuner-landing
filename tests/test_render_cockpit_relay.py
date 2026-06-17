@@ -711,6 +711,29 @@ class RenderCockpitRelayTest(unittest.TestCase):
                             "source_failure_raw_path_count": "9",
                             "source_failure_productive_path_count": "3",
                             "source_failure_non_productive_path_count": "2",
+                            "source_failure_raw_path_samples": [
+                                (
+                                    "generated/raw/dallas-electrician-import-sample-v2/"
+                                    "permits.csv token=failure-raw-path-secret"
+                                ),
+                            ],
+                            "source_failure_productive_path_samples": [
+                                (
+                                    "scripts/render_cockpit_relay.py "
+                                    "token=failure-productive-secret"
+                                ),
+                            ],
+                            "source_failure_non_productive_path_samples": [
+                                "README.md token=failure-companion-secret",
+                            ],
+                            "source_failure_synthetic_row_samples": [
+                                (
+                                    "ELZ-2026-9999 "
+                                    "https://row.example/export"
+                                    "?token=failure-row-secret#debug "
+                                    "relay_token=failure-sample-secret"
+                                ),
+                            ],
                             "source_failure_readiness_blocker_count": "2",
                             "source_failure_ready_for_next_import_records": True,
                             "source_failure_degraded_artifact_count": "4",
@@ -876,6 +899,25 @@ class RenderCockpitRelayTest(unittest.TestCase):
             "source_failure_raw_path_count": 9,
             "source_failure_productive_path_count": 3,
             "source_failure_non_productive_path_count": 2,
+            "source_failure_raw_path_samples": [
+                (
+                    "generated/raw/dallas-electrician-import-sample-v2/"
+                    "permits.csv token=[redacted]"
+                ),
+            ],
+            "source_failure_productive_path_samples": [
+                "scripts/render_cockpit_relay.py token=[redacted]",
+            ],
+            "source_failure_non_productive_path_samples": [
+                "README.md token=[redacted]",
+            ],
+            "source_failure_synthetic_row_samples": [
+                (
+                    "ELZ-2026-9999 "
+                    "https://row.example/export?[redacted]#[redacted] "
+                    "relay_token=[redacted]"
+                ),
+            ],
             "source_failure_readiness_blocker_count": 2,
             "source_failure_ready_for_next_import_records": True,
             "source_failure_degraded_artifact_count": 4,
@@ -2539,6 +2581,26 @@ class RenderCockpitRelayTest(unittest.TestCase):
                             "raw_dallas_csv_changed_path_count": "9",
                             "productive_changed_path_count": "3",
                             "non_productive_companion_path_count": "4",
+                            "synthetic_row_samples": [
+                                (
+                                    "ELZ-2026-9999 "
+                                    "https://row.example/export"
+                                    "?token=row-secret#debug "
+                                    "relay_token=sample-secret"
+                                ),
+                            ],
+                            "raw_dallas_csv_changed_path_samples": [
+                                (
+                                    "generated/raw/dallas-electrician-import-sample-v2/"
+                                    "permits.csv token=raw-path-secret"
+                                ),
+                            ],
+                            "productive_changed_path_samples": [
+                                "scripts/render_cockpit_relay.py token=productive-secret",
+                            ],
+                            "non_productive_companion_path_samples": [
+                                "README.md token=companion-secret",
+                            ],
                             "import_pipeline_status": (
                                 "loaded token=pipeline-secret"
                             ),
@@ -2619,6 +2681,29 @@ class RenderCockpitRelayTest(unittest.TestCase):
             "raw_dallas_csv_changed_path_count": 9,
             "productive_changed_path_count": 3,
             "non_productive_companion_path_count": 4,
+            "synthetic_row_samples": [
+                (
+                    "ELZ-2026-9999 "
+                    "https://row.example/export?[redacted]#[redacted] "
+                    "relay_token=[redacted]"
+                ),
+            ],
+            "synthetic_row_samples_count": 1,
+            "raw_dallas_csv_changed_path_samples": [
+                (
+                    "generated/raw/dallas-electrician-import-sample-v2/"
+                    "permits.csv token=[redacted]"
+                ),
+            ],
+            "raw_dallas_csv_changed_path_samples_count": 1,
+            "productive_changed_path_samples": [
+                "scripts/render_cockpit_relay.py token=[redacted]",
+            ],
+            "productive_changed_path_samples_count": 1,
+            "non_productive_companion_path_samples": [
+                "README.md token=[redacted]",
+            ],
+            "non_productive_companion_path_samples_count": 1,
             "readiness_blocker_count": 2,
             "degraded_artifact_count": 2,
             "sync_exit_status": 2,
@@ -2650,6 +2735,11 @@ class RenderCockpitRelayTest(unittest.TestCase):
             "summary-secret",
             "decision-secret",
             "focus-secret",
+            "row-secret",
+            "sample-secret",
+            "raw-path-secret",
+            "productive-secret",
+            "companion-secret",
             "pipeline-secret",
             "readiness-secret",
             "blocker-secret",

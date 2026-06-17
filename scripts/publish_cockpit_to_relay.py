@@ -938,6 +938,37 @@ def failure_summary(status: dict[str, Any]) -> dict[str, Any]:
         if compact_value:
             summary[key] = compact_value
 
+    sample_fields = {
+        "synthetic_row_samples": (
+            failure.get("synthetic_row_samples"),
+            POLICY_ROW_SAMPLE_LIMIT,
+            240,
+        ),
+        "raw_dallas_csv_changed_path_samples": (
+            failure.get("raw_dallas_csv_changed_path_samples"),
+            POLICY_RAW_PATH_SAMPLE_LIMIT,
+            160,
+        ),
+        "productive_changed_path_samples": (
+            failure.get("productive_changed_path_samples"),
+            POLICY_RAW_PATH_SAMPLE_LIMIT,
+            160,
+        ),
+        "non_productive_companion_path_samples": (
+            failure.get("non_productive_companion_path_samples"),
+            POLICY_RAW_PATH_SAMPLE_LIMIT,
+            160,
+        ),
+    }
+    for key, (value, max_items, max_length) in sample_fields.items():
+        compact_value = compact_policy_detail_list(
+            value,
+            max_items=max_items,
+            max_length=max_length,
+        )
+        if compact_value:
+            summary[key] = compact_value
+
     count_fields = {
         "synthetic_row_count": failure.get("synthetic_row_count"),
         "raw_dallas_csv_changed_path_count": failure.get(
@@ -1989,6 +2020,39 @@ def source_health_diagnostics(status: dict[str, Any]) -> dict[str, Any]:
             compact_value = compact_int(failure.get(source_key))
             if compact_value is not None:
                 diagnostics[key] = compact_value
+        for key, source_key, max_items, max_length in (
+            (
+                "source_failure_raw_path_samples",
+                "raw_dallas_csv_changed_path_samples",
+                POLICY_RAW_PATH_SAMPLE_LIMIT,
+                160,
+            ),
+            (
+                "source_failure_productive_path_samples",
+                "productive_changed_path_samples",
+                POLICY_RAW_PATH_SAMPLE_LIMIT,
+                160,
+            ),
+            (
+                "source_failure_non_productive_path_samples",
+                "non_productive_companion_path_samples",
+                POLICY_RAW_PATH_SAMPLE_LIMIT,
+                160,
+            ),
+            (
+                "source_failure_synthetic_row_samples",
+                "synthetic_row_samples",
+                POLICY_ROW_SAMPLE_LIMIT,
+                240,
+            ),
+        ):
+            compact_value = compact_policy_detail_list(
+                failure.get(source_key),
+                max_items=max_items,
+                max_length=max_length,
+            )
+            if compact_value:
+                diagnostics[key] = compact_value
         for key, source_key in (
             ("source_failure_codex_exit_status", "codex_exit_status"),
             ("source_failure_worker_exit_status", "worker_exit_status"),
@@ -2687,6 +2751,26 @@ def source_status_log_fields(payload: dict[str, Any]) -> dict[str, Any]:
         "source_failure_non_productive_path_count": compact_int(
             failure.get("non_productive_companion_path_count")
         ),
+        "source_failure_synthetic_row_samples": compact_log_detail_list(
+            failure.get("synthetic_row_samples"),
+            max_items=POLICY_ROW_SAMPLE_LIMIT,
+            max_length=240,
+        ),
+        "source_failure_raw_path_samples": compact_log_detail_list(
+            failure.get("raw_dallas_csv_changed_path_samples"),
+            max_items=POLICY_RAW_PATH_SAMPLE_LIMIT,
+            max_length=160,
+        ),
+        "source_failure_productive_path_samples": compact_log_detail_list(
+            failure.get("productive_changed_path_samples"),
+            max_items=POLICY_RAW_PATH_SAMPLE_LIMIT,
+            max_length=160,
+        ),
+        "source_failure_non_productive_path_samples": compact_log_detail_list(
+            failure.get("non_productive_companion_path_samples"),
+            max_items=POLICY_RAW_PATH_SAMPLE_LIMIT,
+            max_length=160,
+        ),
         "source_failure_import_pipeline_status": compact_policy_detail(
             failure.get("import_pipeline_status"),
             max_length=80,
@@ -2821,6 +2905,10 @@ SOURCE_STATUS_LOG_FIELD_NAMES = (
     "source_failure_raw_path_count",
     "source_failure_productive_path_count",
     "source_failure_non_productive_path_count",
+    "source_failure_synthetic_row_samples",
+    "source_failure_raw_path_samples",
+    "source_failure_productive_path_samples",
+    "source_failure_non_productive_path_samples",
     "source_failure_import_pipeline_status",
     "source_failure_readiness_status",
     "source_failure_readiness_blocker_count",

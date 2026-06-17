@@ -385,6 +385,10 @@ def publisher_source_health(state: dict[str, Any]) -> dict[str, Any]:
             ("source_policy_productive_path_samples", 8, 160),
             ("source_policy_non_productive_path_samples", 8, 160),
             ("source_policy_synthetic_row_samples", 5, 240),
+            ("source_failure_raw_path_samples", 8, 160),
+            ("source_failure_productive_path_samples", 8, 160),
+            ("source_failure_non_productive_path_samples", 8, 160),
+            ("source_failure_synthetic_row_samples", 5, 240),
             ("source_readiness_blockers", 8, 160),
             ("source_failure_environment_preflight_error_categories", 12, 80),
             ("source_failure_environment_preflight_failed_keys", 12, 120),
@@ -1394,17 +1398,37 @@ def source_failure_summary(status: dict[str, Any]) -> dict[str, Any]:
             summary[key] = compact_value
 
     list_fields = {
-        "readiness_blockers": failure.get("readiness_blockers"),
-        "degraded_artifacts": failure.get("degraded_artifacts"),
+        "readiness_blockers": (failure.get("readiness_blockers"), 5, 200),
+        "degraded_artifacts": (failure.get("degraded_artifacts"), 5, 200),
+        "synthetic_row_samples": (
+            failure.get("synthetic_row_samples"),
+            5,
+            240,
+        ),
+        "raw_dallas_csv_changed_path_samples": (
+            failure.get("raw_dallas_csv_changed_path_samples"),
+            8,
+            160,
+        ),
+        "productive_changed_path_samples": (
+            failure.get("productive_changed_path_samples"),
+            8,
+            160,
+        ),
+        "non_productive_companion_path_samples": (
+            failure.get("non_productive_companion_path_samples"),
+            8,
+            160,
+        ),
     }
-    for key, value in list_fields.items():
+    for key, (value, max_items, max_length) in list_fields.items():
         if not isinstance(value, list):
             continue
         compact_values = [
             compact_value
             for compact_value in (
-                compact_policy_detail(item, max_length=200)
-                for item in value[:5]
+                compact_policy_detail(item, max_length=max_length)
+                for item in value[:max_items]
             )
             if compact_value is not None
         ]
