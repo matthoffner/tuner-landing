@@ -5914,6 +5914,66 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         )
         self.assertNotIn("secret-token", output.getvalue())
 
+    def test_startup_loop_start_failure_records_worker_status_and_stops_publisher(
+        self,
+    ) -> None:
+        publisher = FakeProcess(pid=202)
+        output = io.StringIO()
+
+        with patch.object(self.worker, "parse_args") as parse_args, patch.object(
+            self.worker,
+            "emit_environment_preflight",
+            return_value=[],
+        ), patch.object(self.worker, "configure_git_auth"), patch.object(
+            self.worker,
+            "configure_codex_auth",
+        ), patch.object(
+            self.worker,
+            "sync_repo",
+        ), patch.object(
+            self.worker,
+            "check_relay_publisher_preflight",
+        ), patch.object(
+            self.worker,
+            "start_publisher",
+            return_value=publisher,
+        ), patch.object(
+            self.worker,
+            "start_loop",
+            side_effect=RuntimeError("could not start autonomous loop: OSError"),
+        ), patch.object(
+            self.worker,
+            "current_business_hours_state",
+            return_value={
+                "enabled": True,
+                "in_business_hours": True,
+                "local_time": "2026-06-15T10:00:00-05:00",
+            },
+        ), patch.object(
+            self.worker,
+            "record_render_worker_failure_status",
+        ) as record_failure_status, redirect_stdout(
+            output
+        ):
+            parse_args.return_value = type(
+                "Args",
+                (),
+                {"check_env": False, "format": "text"},
+            )()
+            self.worker.CHILDREN.append(publisher)
+
+            status = self.worker.main()
+
+        self.assertEqual(status, 1)
+        self.assertTrue(publisher.terminated)
+        record_failure_status.assert_called_once_with(
+            reason=self.worker.AUTONOMOUS_LOOP_START_FAILED,
+            worker_exit_status=1,
+            message="could not start autonomous loop: OSError",
+            details={"child_label": "autonomous loop"},
+        )
+        self.assertIn("business hours open; starting autonomous loop", output.getvalue())
+
     def test_stop_children_continues_when_child_poll_raises(self) -> None:
         missing_child = PollRaisesProcess(pid=202)
         running_child = FakeProcess(pid=101)

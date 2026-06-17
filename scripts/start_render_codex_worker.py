@@ -163,10 +163,12 @@ BUSINESS_HOURS_CLOSED = "business_hours_closed"
 LOOP_EXITED = "loop_exited"
 PUBLISHER_EXITED = "publisher_exited"
 RELAY_PUBLISHER_UNAVAILABLE = "relay_publisher_unavailable"
+AUTONOMOUS_LOOP_START_FAILED = "autonomous_loop_start_failed"
 AUTONOMOUS_LOOP_STARTUP_EXIT = "autonomous_loop_startup_exit"
 ENVIRONMENT_PREFLIGHT_FAILED = "environment_preflight_failed"
 RENDER_WORKER_SETUP_FAILED = "render_worker_setup_failed"
 RENDER_WORKER_FAILURE_ROUTE_HINTS = {
+    AUTONOMOUS_LOOP_START_FAILED,
     AUTONOMOUS_LOOP_STARTUP_EXIT,
     ENVIRONMENT_PREFLIGHT_FAILED,
     LOOP_EXITED,
@@ -2810,7 +2812,17 @@ def run_business_hours_schedule(
                 "business hours open; starting autonomous loop "
                 f"local_time={state.get('local_time')}"
             )
-            loop_process = start_loop()
+            try:
+                loop_process = start_loop()
+            except RuntimeError as exc:
+                record_render_worker_failure_status(
+                    reason=AUTONOMOUS_LOOP_START_FAILED,
+                    worker_exit_status=1,
+                    message=str(exc),
+                    details={"child_label": "autonomous loop"},
+                )
+                stop_children()
+                return 1
             loop_startup_status, loop_startup_details = child_startup_exit_result(
                 loop_process,
                 "autonomous loop",
