@@ -330,7 +330,7 @@ function upstreamAttemptError(attempt) {
     return "";
   }
   if (attempt.error) {
-    return String(attempt.error).replace(/[\r\n,]/g, " ").trim().slice(0, 120);
+    return compactUpstreamHeaderPart(attempt.error);
   }
   if (attempt.message) {
     return classifyUpstreamError(attempt);

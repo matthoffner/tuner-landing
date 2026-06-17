@@ -754,6 +754,13 @@ class CockpitApiProxyTest(unittest.TestCase):
               "bad value secret",
             );
             assert.strictEqual(
+              upstreamAttemptError({
+                kind: "relay",
+                error: "failed https://user:pass@relay.example/status?token=raw#debug authorization: bearer raw-token api_key=raw-key",
+              }),
+              "failed https://relay.example/status?[redacted]#[redacted] authorization: bearer [redacted] api_key=[redacted]",
+            );
+            assert.strictEqual(
               upstreamAttemptError({ kind: "relay", message: "timeout after 5ms" }),
               "timeout",
             );
@@ -812,6 +819,18 @@ class CockpitApiProxyTest(unittest.TestCase):
             assert.strictEqual(
               getResponse.headers["X-Automoat-Upstream-Attempts"],
               "relay extra:503:bad status next,legacy_bridge:fetch_error",
+            );
+
+            const secretErrorResponse = response();
+            setUpstreamSelectionHeaders(secretErrorResponse, "unreachable", 0, [
+              {
+                kind: "relay",
+                error: "failed https://user:pass@relay.example/status?token=raw#debug authorization: bearer raw-token api_key=raw-key",
+              },
+            ]);
+            assert.strictEqual(
+              secretErrorResponse.headers["X-Automoat-Upstream-Error"],
+              "failed https://relay.example/status?[redacted]#[redacted] authorization: bearer [redacted] api_key=[redacted]",
             );
             """
         )
