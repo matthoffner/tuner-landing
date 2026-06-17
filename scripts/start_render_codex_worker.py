@@ -2616,6 +2616,17 @@ def monitor_worker_children(
         if loop_status is not None:
             if loop_poll_ok:
                 emit(f"autonomous loop exited status={loop_status}")
+            if loop_status != 0 or not loop_poll_ok:
+                record_render_worker_failure_status(
+                    reason=LOOP_EXITED,
+                    worker_exit_status=loop_status,
+                    details=child_failure_details(
+                        "autonomous loop",
+                        loop_status,
+                        loop_poll_ok,
+                        child_pid=loop_process.pid,
+                    ),
+                )
             stop_children()
             return loop_status
 
@@ -2629,8 +2640,20 @@ def monitor_worker_children(
                     "relay publisher exited unexpectedly "
                     f"status={publisher_status}; stopping autonomous loop"
                 )
+            worker_exit_status = publisher_status if publisher_status != 0 else 1
+            record_render_worker_failure_status(
+                reason=PUBLISHER_EXITED,
+                worker_exit_status=worker_exit_status,
+                publisher_exit_status=publisher_status if publisher_poll_ok else None,
+                details=child_failure_details(
+                    "relay publisher",
+                    publisher_status,
+                    publisher_poll_ok,
+                    child_pid=publisher_process.pid,
+                ),
+            )
             stop_children()
-            return publisher_status if publisher_status != 0 else 1
+            return worker_exit_status
 
         time.sleep(poll_interval)
 

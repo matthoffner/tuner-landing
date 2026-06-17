@@ -5172,33 +5172,92 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         publisher = FakeProcess(pid=202)
         self.worker.CHILDREN.extend([publisher, loop])
 
-        status = self.worker.monitor_worker_children(loop, publisher, poll_interval=0)
+        with patch.object(
+            self.worker,
+            "record_render_worker_failure_status",
+        ) as record_failure_status:
+            status = self.worker.monitor_worker_children(loop, publisher, poll_interval=0)
 
         self.assertEqual(status, 7)
         self.assertFalse(loop.terminated)
         self.assertTrue(publisher.terminated)
         self.assertFalse(publisher.killed)
+        record_failure_status.assert_called_once_with(
+            reason=self.worker.LOOP_EXITED,
+            worker_exit_status=7,
+            details={
+                "child_label": "autonomous loop",
+                "child_pid": 101,
+                "child_status_available": True,
+                "child_exit_status": 7,
+            },
+        )
+
+    def test_monitor_does_not_record_failure_for_clean_loop_completion(self) -> None:
+        loop = FakeProcess(pid=101, initial_status=0)
+        publisher = FakeProcess(pid=202)
+        self.worker.CHILDREN.extend([publisher, loop])
+
+        with patch.object(
+            self.worker,
+            "record_render_worker_failure_status",
+        ) as record_failure_status:
+            status = self.worker.monitor_worker_children(loop, publisher, poll_interval=0)
+
+        self.assertEqual(status, 0)
+        self.assertTrue(publisher.terminated)
+        record_failure_status.assert_not_called()
 
     def test_monitor_fails_fast_when_publisher_exits_first(self) -> None:
         loop = FakeProcess(pid=101)
         publisher = FakeProcess(pid=202, initial_status=3)
         self.worker.CHILDREN.extend([publisher, loop])
 
-        status = self.worker.monitor_worker_children(loop, publisher, poll_interval=0)
+        with patch.object(
+            self.worker,
+            "record_render_worker_failure_status",
+        ) as record_failure_status:
+            status = self.worker.monitor_worker_children(loop, publisher, poll_interval=0)
 
         self.assertEqual(status, 3)
         self.assertTrue(loop.terminated)
         self.assertFalse(loop.killed)
+        record_failure_status.assert_called_once_with(
+            reason=self.worker.PUBLISHER_EXITED,
+            worker_exit_status=3,
+            publisher_exit_status=3,
+            details={
+                "child_label": "relay publisher",
+                "child_pid": 202,
+                "child_status_available": True,
+                "child_exit_status": 3,
+            },
+        )
 
     def test_monitor_treats_clean_publisher_exit_as_worker_failure(self) -> None:
         loop = FakeProcess(pid=101)
         publisher = FakeProcess(pid=202, initial_status=0)
         self.worker.CHILDREN.extend([publisher, loop])
 
-        status = self.worker.monitor_worker_children(loop, publisher, poll_interval=0)
+        with patch.object(
+            self.worker,
+            "record_render_worker_failure_status",
+        ) as record_failure_status:
+            status = self.worker.monitor_worker_children(loop, publisher, poll_interval=0)
 
         self.assertEqual(status, 1)
         self.assertTrue(loop.terminated)
+        record_failure_status.assert_called_once_with(
+            reason=self.worker.PUBLISHER_EXITED,
+            worker_exit_status=1,
+            publisher_exit_status=0,
+            details={
+                "child_label": "relay publisher",
+                "child_pid": 202,
+                "child_status_available": True,
+                "child_exit_status": 0,
+            },
+        )
 
     def test_monitor_handles_loop_poll_failure_without_exception_text(self) -> None:
         loop = PollRaisesProcess(pid=101)
@@ -5206,11 +5265,23 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.worker.CHILDREN.extend([publisher, loop])
         output = io.StringIO()
 
-        with patch.object(self.worker.time, "sleep"), redirect_stdout(output):
+        with patch.object(self.worker.time, "sleep"), patch.object(
+            self.worker,
+            "record_render_worker_failure_status",
+        ) as record_failure_status, redirect_stdout(output):
             status = self.worker.monitor_worker_children(loop, publisher, poll_interval=0)
 
         self.assertEqual(status, 1)
         self.assertTrue(publisher.terminated)
+        record_failure_status.assert_called_once_with(
+            reason=self.worker.LOOP_EXITED,
+            worker_exit_status=self.worker.CHILD_POLL_FAILURE_EXIT_STATUS,
+            details={
+                "child_label": "autonomous loop",
+                "child_pid": 101,
+                "child_status_available": False,
+            },
+        )
         self.assertIn(
             "could not poll autonomous loop pid=101: OSError; worker_exit_status=1",
             output.getvalue(),
@@ -5223,11 +5294,24 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.worker.CHILDREN.extend([publisher, loop])
         output = io.StringIO()
 
-        with patch.object(self.worker.time, "sleep"), redirect_stdout(output):
+        with patch.object(self.worker.time, "sleep"), patch.object(
+            self.worker,
+            "record_render_worker_failure_status",
+        ) as record_failure_status, redirect_stdout(output):
             status = self.worker.monitor_worker_children(loop, publisher, poll_interval=0)
 
         self.assertEqual(status, 1)
         self.assertTrue(loop.terminated)
+        record_failure_status.assert_called_once_with(
+            reason=self.worker.PUBLISHER_EXITED,
+            worker_exit_status=self.worker.CHILD_POLL_FAILURE_EXIT_STATUS,
+            publisher_exit_status=None,
+            details={
+                "child_label": "relay publisher",
+                "child_pid": 202,
+                "child_status_available": False,
+            },
+        )
         self.assertIn(
             "could not poll relay publisher pid=202: OSError; worker_exit_status=1",
             output.getvalue(),
