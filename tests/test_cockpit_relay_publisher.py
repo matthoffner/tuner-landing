@@ -5221,6 +5221,10 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                         },
                     },
                     "cockpit_summary": {
+                        "operator_attention": True,
+                        "operator_attention_primary_reason": "artifact_health_not_loaded",
+                        "operator_attention_label": "Artifact health is not loaded",
+                        "operator_attention_reasons_count": 2,
                         "policy_failure_reason": "raw_dallas_csv_without_productive_work",
                         "policy_diagnostics_status": "failed",
                         "policy_route_hint": "dallas_raw_fixture_without_productive_companion",
@@ -5291,6 +5295,16 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertIn("source_health_status=degraded", log_text)
         self.assertIn("source_health_primary_reason=source_status_stale", log_text)
         self.assertIn("source_health_label=Source status is stale", log_text)
+        self.assertIn("source_cockpit_attention=True", log_text)
+        self.assertIn(
+            "source_cockpit_attention_primary_reason=artifact_health_not_loaded",
+            log_text,
+        )
+        self.assertIn(
+            "source_cockpit_attention_label=Artifact health is not loaded",
+            log_text,
+        )
+        self.assertIn("source_cockpit_attention_reason_count=2", log_text)
         self.assertIn(
             "source_status_file_error=line 1 column 2: bad status JSON",
             log_text,
@@ -5536,6 +5550,16 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                         },
                     },
                     "cockpit_summary": {
+                        "operator_attention": True,
+                        "operator_attention_primary_reason": (
+                            "artifact token=attention-primary-secret\nneeds review"
+                        ),
+                        "operator_attention_label": (
+                            "Attention authorization: Bearer attention-label-secret "
+                            "https://attention.example/debug"
+                            "?token=attention-url-secret#trace"
+                        ),
+                        "operator_attention_reasons_count": "4",
                         "policy_failure_reason": (
                             "synthetic append rejected\n"
                             "authorization: Bearer policy-secret "
@@ -5723,6 +5747,18 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             log_text,
         )
         self.assertIn("source_health_label=Source token=[redacted] status", log_text)
+        self.assertIn("source_cockpit_attention=True", log_text)
+        self.assertIn(
+            "source_cockpit_attention_primary_reason=artifact token=[redacted] "
+            "needs review",
+            log_text,
+        )
+        self.assertIn(
+            "source_cockpit_attention_label=Attention authorization: Bearer "
+            "[redacted] https://attention.example/debug?[redacted]#[redacted]",
+            log_text,
+        )
+        self.assertIn("source_cockpit_attention_reason_count=4", log_text)
         self.assertIn(
             "source_policy_failure_reason=synthetic append rejected "
             "authorization: Bearer [redacted] token=[redacted] "
@@ -5860,6 +5896,9 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertNotIn("url-secret", log_text)
         self.assertNotIn("host-secret", log_text)
         self.assertNotIn("label-secret", log_text)
+        self.assertNotIn("attention-primary-secret", log_text)
+        self.assertNotIn("attention-label-secret", log_text)
+        self.assertNotIn("attention-url-secret", log_text)
         self.assertNotIn("head-secret", log_text)
         self.assertNotIn("policy-decision-secret", log_text)
         self.assertNotIn("policy-focus-secret", log_text)

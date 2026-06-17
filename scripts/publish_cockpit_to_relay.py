@@ -2490,6 +2490,30 @@ def source_status_log_fields(payload: dict[str, Any]) -> dict[str, Any]:
     cockpit_summary = status.get("cockpit_summary")
     if not isinstance(cockpit_summary, dict):
         cockpit_summary = {}
+    cockpit_attention_reasons = cockpit_summary.get("operator_attention_reasons")
+    cockpit_attention_reason_count = compact_int(
+        cockpit_summary.get("operator_attention_reasons_count")
+    )
+    if cockpit_attention_reason_count is None and isinstance(
+        cockpit_attention_reasons,
+        list,
+    ):
+        cockpit_attention_reason_count = len(cockpit_attention_reasons)
+    cockpit_attention_primary_reason = compact_policy_detail(
+        cockpit_summary.get("operator_attention_primary_reason"),
+        max_length=120,
+    )
+    if cockpit_attention_primary_reason is None and isinstance(
+        cockpit_attention_reasons,
+        list,
+    ):
+        for reason in cockpit_attention_reasons:
+            cockpit_attention_primary_reason = compact_policy_detail(
+                reason,
+                max_length=120,
+            )
+            if cockpit_attention_primary_reason is not None:
+                break
     business_hours = cockpit_summary.get("business_hours")
     if not isinstance(business_hours, dict):
         business_hours = {}
@@ -2577,6 +2601,15 @@ def source_status_log_fields(payload: dict[str, Any]) -> dict[str, Any]:
             max_length=120,
         ),
         "source_health_label": compact_policy_detail(source_health.get("label"), max_length=160),
+        "source_cockpit_attention": cockpit_summary.get("operator_attention")
+        if isinstance(cockpit_summary.get("operator_attention"), bool)
+        else None,
+        "source_cockpit_attention_primary_reason": cockpit_attention_primary_reason,
+        "source_cockpit_attention_label": compact_policy_detail(
+            cockpit_summary.get("operator_attention_label"),
+            max_length=160,
+        ),
+        "source_cockpit_attention_reason_count": cockpit_attention_reason_count,
         "bridge_available": bridge_summary.get("available")
         if isinstance(bridge_summary.get("available"), bool)
         else None,
@@ -2910,6 +2943,10 @@ SOURCE_STATUS_LOG_FIELD_NAMES = (
     "source_health_status",
     "source_health_primary_reason",
     "source_health_label",
+    "source_cockpit_attention",
+    "source_cockpit_attention_primary_reason",
+    "source_cockpit_attention_label",
+    "source_cockpit_attention_reason_count",
     "bridge_available",
     "bridge_status",
     "bridge_status_file_status",
