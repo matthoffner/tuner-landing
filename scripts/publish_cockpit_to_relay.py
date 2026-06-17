@@ -2610,6 +2610,23 @@ def source_status_log_fields(payload: dict[str, Any]) -> dict[str, Any]:
             max_length=160,
         ),
         "source_cockpit_attention_reason_count": cockpit_attention_reason_count,
+        "source_import_readiness": compact_policy_detail(
+            cockpit_summary.get("import_readiness"),
+            max_length=80,
+        ),
+        "source_readiness_blocker_count": compact_int(
+            cockpit_summary.get("readiness_blocker_count")
+        ),
+        "source_readiness_blockers": compact_log_detail_list(
+            cockpit_summary.get("readiness_blockers"),
+            max_items=POLICY_RAW_PATH_SAMPLE_LIMIT,
+            max_length=160,
+        ),
+        "source_ready_for_next_import_records": cockpit_summary.get(
+            "ready_for_next_import_records"
+        )
+        if isinstance(cockpit_summary.get("ready_for_next_import_records"), bool)
+        else None,
         "bridge_available": bridge_summary.get("available")
         if isinstance(bridge_summary.get("available"), bool)
         else None,
@@ -2947,6 +2964,10 @@ SOURCE_STATUS_LOG_FIELD_NAMES = (
     "source_cockpit_attention_primary_reason",
     "source_cockpit_attention_label",
     "source_cockpit_attention_reason_count",
+    "source_import_readiness",
+    "source_readiness_blocker_count",
+    "source_readiness_blockers",
+    "source_ready_for_next_import_records",
     "bridge_available",
     "bridge_status",
     "bridge_status_file_status",

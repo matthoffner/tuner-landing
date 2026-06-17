@@ -5225,6 +5225,13 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                         "operator_attention_primary_reason": "artifact_health_not_loaded",
                         "operator_attention_label": "Artifact health is not loaded",
                         "operator_attention_reasons_count": 2,
+                        "import_readiness": "blocked",
+                        "readiness_blocker_count": 2,
+                        "readiness_blockers": [
+                            "operator correction missing",
+                            "coverage thin groups present",
+                        ],
+                        "ready_for_next_import_records": False,
                         "policy_failure_reason": "raw_dallas_csv_without_productive_work",
                         "policy_diagnostics_status": "failed",
                         "policy_route_hint": "dallas_raw_fixture_without_productive_companion",
@@ -5305,6 +5312,14 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             log_text,
         )
         self.assertIn("source_cockpit_attention_reason_count=2", log_text)
+        self.assertIn("source_import_readiness=blocked", log_text)
+        self.assertIn("source_readiness_blocker_count=2", log_text)
+        self.assertIn(
+            "source_readiness_blockers=operator correction missing,"
+            "coverage thin groups present",
+            log_text,
+        )
+        self.assertIn("source_ready_for_next_import_records=False", log_text)
         self.assertIn(
             "source_status_file_error=line 1 column 2: bad status JSON",
             log_text,
@@ -5582,6 +5597,17 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                         "policy_productive_changed_path_count": "3",
                         "policy_non_productive_companion_path_count": "2",
                         "policy_synthetic_row_count": "12",
+                        "import_readiness": "blocked token=readiness-secret",
+                        "readiness_blocker_count": "2",
+                        "readiness_blockers": [
+                            (
+                                "coverage gap token=readiness-blocker-secret "
+                                "https://ready.example/check"
+                                "?token=readiness-url-secret#trace"
+                            ),
+                            "operator correction token=operator-blocker-secret",
+                        ],
+                        "ready_for_next_import_records": False,
                         "failure_summary": {
                             "available": True,
                             "phase": (
@@ -5783,6 +5809,15 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertIn("source_policy_raw_path_count=9", log_text)
         self.assertIn("source_policy_productive_path_count=3", log_text)
         self.assertIn("source_policy_synthetic_row_count=12", log_text)
+        self.assertIn("source_import_readiness=blocked token=[redacted]", log_text)
+        self.assertIn("source_readiness_blocker_count=2", log_text)
+        self.assertIn(
+            "source_readiness_blockers=coverage gap token=[redacted] "
+            "https://ready.example/check?[redacted]#[redacted],"
+            "operator correction token=[redacted]",
+            log_text,
+        )
+        self.assertIn("source_ready_for_next_import_records=False", log_text)
         self.assertIn(
             "source_failure_category=landing_sync token=[redacted]",
             log_text,
@@ -5943,6 +5978,10 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertNotIn("reason-secret", log_text)
         self.assertNotIn("policy-url-secret", log_text)
         self.assertNotIn("route-secret", log_text)
+        self.assertNotIn("readiness-secret", log_text)
+        self.assertNotIn("readiness-blocker-secret", log_text)
+        self.assertNotIn("readiness-url-secret", log_text)
+        self.assertNotIn("operator-blocker-secret", log_text)
         self.assertNotIn("coord-path-secret", log_text)
         self.assertNotIn("coord-status-secret", log_text)
         self.assertNotIn("coord-url-secret", log_text)
