@@ -35,6 +35,7 @@ POLICY_ROW_SAMPLE_LIMIT = 5
 IMPORT_APPEND_SEQUENCE_SAMPLE_LIMIT = 4
 BRIDGE_HEALTH_REASON_SAMPLE_LIMIT = 5
 URL_TEXT_PATTERN = re.compile(r"https?://[^\s'\"<>]+")
+PATH_TEXT_PATTERN = re.compile(r"(?<![\w:/])(?:~|/)[^\s,;|'\"\])}]+")
 BEARER_SECRET_PATTERN = re.compile(
     r"\b(authorization\s*[:=]\s*bearer)\s+[^\s,;]+",
     re.IGNORECASE,
@@ -182,6 +183,17 @@ def compact_policy_detail(value: object, *, max_length: int = 240) -> str | None
     return text[:max_length] if text else None
 
 
+def compact_path_diagnostic(value: object, *, max_length: int = 240) -> str | None:
+    text = compact_policy_detail(value, max_length=max_length * 2)
+    if text is None:
+        return None
+    text = PATH_TEXT_PATTERN.sub(
+        lambda match: repo_relative(Path(match.group(0))),
+        text,
+    )
+    return compact_text(text, max_length=max_length)
+
+
 def compact_policy_detail_list(
     value: object,
     *,
@@ -208,6 +220,15 @@ def compact_int(value: object) -> int | None:
     except (TypeError, ValueError):
         return None
     return parsed if parsed >= 0 else None
+
+
+def compact_exit_status(value: object) -> int | None:
+    if isinstance(value, bool):
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
 
 
 def first_compact_int(*values: object) -> int | None:
@@ -587,6 +608,166 @@ def business_hours_summary(value: object) -> dict[str, object]:
     return summary
 
 
+def preflight_failure_summary(
+    value: object,
+    *,
+    include_exit_status: bool = False,
+) -> dict[str, object]:
+    preflight = as_dict(value)
+    if not preflight:
+        return {}
+
+    summary: dict[str, object] = {}
+    status_value = compact_policy_detail(preflight.get("status"), max_length=80)
+    if status_value is not None:
+        summary["status"] = status_value
+    if include_exit_status:
+        exit_status = compact_exit_status(preflight.get("exit_status"))
+        if exit_status is not None:
+            summary["exit_status"] = exit_status
+    error_count = compact_int(preflight.get("error_count"))
+    if error_count is not None:
+        summary["error_count"] = error_count
+    error_categories = compact_policy_detail_list(
+        preflight.get("error_categories"),
+        max_items=12,
+        max_length=80,
+    )
+    if error_categories:
+        summary["error_categories"] = error_categories
+    failed_keys = compact_policy_detail_list(
+        preflight.get("failed_configuration_keys"),
+        max_items=12,
+        max_length=120,
+    )
+    if failed_keys:
+        summary["failed_configuration_keys"] = failed_keys
+    return summary
+
+
+def failure_summary(status: dict[str, object]) -> dict[str, object]:
+    failure = as_dict(status.get("failure"))
+    if not failure:
+        return {"available": False}
+
+    summary: dict[str, object] = {"available": True}
+    text_fields = {
+        "phase": failure.get("phase"),
+        "category": failure.get("category"),
+        "route_hint": failure.get("route_hint"),
+        "message": failure.get("message"),
+        "failure_reason": failure.get("failure_reason"),
+        "summary": failure.get("summary"),
+        "decision_reason": failure.get("decision_reason"),
+        "current_focus": failure.get("current_focus"),
+        "import_pipeline_status": failure.get("import_pipeline_status"),
+        "readiness_status": failure.get("readiness_status"),
+        "artifact_health_status": failure.get("artifact_health_status"),
+        "command": failure.get("command"),
+        "termination_reason": failure.get("termination_reason"),
+        "failed_step": failure.get("failed_step"),
+        "failed_substep": failure.get("failed_substep"),
+        "setup_stage": failure.get("setup_stage"),
+        "child_label": failure.get("child_label"),
+    }
+    for key, value in text_fields.items():
+        compact_value = compact_policy_detail(value)
+        if compact_value is not None:
+            summary[key] = compact_value
+
+    path_fields = {
+        "import_pipeline_summary_path": failure.get("import_pipeline_summary_path"),
+        "source_path": failure.get("source_path"),
+        "target_path": failure.get("target_path"),
+    }
+    for key, value in path_fields.items():
+        compact_value = compact_path_diagnostic(value)
+        if compact_value is not None:
+            summary[key] = compact_value
+
+    list_fields = {
+        "readiness_blockers": failure.get("readiness_blockers"),
+        "degraded_artifacts": failure.get("degraded_artifacts"),
+    }
+    for key, value in list_fields.items():
+        compact_value = compact_policy_detail_list(value, max_items=5, max_length=200)
+        if compact_value:
+            summary[key] = compact_value
+            summary[f"{key}_count"] = (
+                len(value) if isinstance(value, list) else len(compact_value)
+            )
+
+    count_fields = {
+        "synthetic_row_count": failure.get("synthetic_row_count"),
+        "raw_dallas_csv_changed_path_count": failure.get(
+            "raw_dallas_csv_changed_path_count"
+        ),
+        "productive_changed_path_count": failure.get("productive_changed_path_count"),
+        "readiness_blocker_count": failure.get("readiness_blocker_count"),
+        "degraded_artifact_count": failure.get("degraded_artifact_count"),
+        "sync_exit_status": failure.get("sync_exit_status"),
+        "child_pid": failure.get("child_pid"),
+    }
+    for key, value in count_fields.items():
+        compact_value = compact_int(value)
+        if compact_value is not None:
+            summary[key] = compact_value
+
+    exit_status_fields = {
+        "codex_exit_status": failure.get("codex_exit_status"),
+        "failed_step_exit_status": failure.get("failed_step_exit_status"),
+        "failed_substep_exit_status": failure.get("failed_substep_exit_status"),
+        "worker_exit_status": failure.get("worker_exit_status"),
+        "publisher_exit_status": failure.get("publisher_exit_status"),
+        "child_exit_status": failure.get("child_exit_status"),
+    }
+    for key, value in exit_status_fields.items():
+        compact_value = compact_exit_status(value)
+        if compact_value is not None:
+            summary[key] = compact_value
+
+    for key in ("timed_out", "killed_after_terminate"):
+        value = failure.get(key)
+        if isinstance(value, bool):
+            summary[key] = value
+
+    child_status_available = failure.get("child_status_available")
+    if isinstance(child_status_available, bool):
+        summary["child_status_available"] = child_status_available
+
+    ready_for_next_import_records = failure.get("ready_for_next_import_records")
+    if isinstance(ready_for_next_import_records, bool):
+        summary["ready_for_next_import_records"] = ready_for_next_import_records
+
+    artifact_statuses = as_dict(failure.get("artifact_statuses"))
+    compact_statuses: dict[str, str] = {}
+    for key, value in sorted(artifact_statuses.items(), key=lambda item: str(item[0])):
+        compact_key = compact_policy_detail(key, max_length=80)
+        compact_value = compact_policy_detail(value, max_length=80)
+        if compact_key is None or compact_value is None:
+            continue
+        compact_statuses[compact_key] = compact_value
+        if len(compact_statuses) >= 8:
+            break
+    if compact_statuses:
+        summary["artifact_statuses"] = compact_statuses
+
+    environment_preflight = preflight_failure_summary(
+        failure.get("environment_preflight")
+    )
+    if environment_preflight:
+        summary["environment_preflight"] = environment_preflight
+
+    publisher_preflight = preflight_failure_summary(
+        failure.get("publisher_preflight"),
+        include_exit_status=True,
+    )
+    if publisher_preflight:
+        summary["publisher_preflight"] = publisher_preflight
+
+    return summary
+
+
 def cockpit_summary(status: dict[str, object]) -> dict[str, object]:
     artifacts = as_dict(status.get("artifacts"))
     artifact_health = as_dict(artifacts.get("artifact_health"))
@@ -853,6 +1034,7 @@ def cockpit_summary(status: dict[str, object]) -> dict[str, object]:
         "operator_attention_label": operator_attention_label(primary_attention_reason),
         "business_hours": business_hours,
         "business_hours_pause": business_hours_pause,
+        "failure_summary": failure_summary(status),
         "artifact_health": artifact_health_status,
         "artifact_health_summary": artifact_health_text,
         "artifact_count": artifact_counts["artifact_count"],

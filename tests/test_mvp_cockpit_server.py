@@ -371,6 +371,139 @@ class MvpCockpitServerTest(unittest.TestCase):
             summary["thin_group_categories"], ["failure_reasons", "result_states"]
         )
 
+    def test_cockpit_summary_preserves_render_worker_failure_details(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            status = {
+                "status": "failing",
+                "phase": "environment_preflight_failed",
+                "updated_at": "2026-06-15T00:00:00Z",
+                "loop_running": False,
+                "failure": {
+                    "phase": "environment_preflight_failed",
+                    "category": "render_worker",
+                    "route_hint": "environment_preflight_failed",
+                    "message": "missing configuration token=message-secret",
+                    "failure_reason": (
+                        "environment preflight failed token=reason-secret"
+                    ),
+                    "setup_stage": "repo_sync token=stage-secret",
+                    "child_label": "relay publisher token=child-secret",
+                    "child_pid": "101",
+                    "child_status_available": False,
+                    "child_exit_status": "-9",
+                    "worker_exit_status": "2",
+                    "publisher_exit_status": "1",
+                    "source_path": (
+                        f"{tmp_path}/private/generated/landing.html "
+                        "token=source-secret"
+                    ),
+                    "target_path": f"{tmp_path}/private/index.html token=target-secret",
+                    "environment_preflight": {
+                        "status": "failed token=env-status-secret",
+                        "error_count": "2",
+                        "error_categories": [
+                            "missing_required token=env-category-secret",
+                            "missing_command",
+                        ],
+                        "failed_configuration_keys": [
+                            "AUTOMOAT_RELAY_URL",
+                            "PATH:codex token=env-key-secret",
+                        ],
+                        "debug_blob": "token=ignored-env-secret",
+                    },
+                    "publisher_preflight": {
+                        "status": "failed token=publisher-status-secret",
+                        "exit_status": "2",
+                        "error_count": "1",
+                        "error_categories": [
+                            "invalid_relay_url token=publisher-category-secret",
+                        ],
+                        "failed_configuration_keys": [
+                            "AUTOMOAT_RELAY_URL|--relay-url",
+                        ],
+                        "debug_blob": "token=ignored-publisher-secret",
+                    },
+                },
+                "artifacts": {
+                    "artifact_health": {"status": "loaded"},
+                    "import_pipeline": {
+                        "execution_readiness": {
+                            "status": "ready",
+                            "blockers": [],
+                        }
+                    },
+                },
+            }
+
+            summary = self.cockpit.cockpit_summary(status)
+
+        failure = summary["failure_summary"]
+        self.assertEqual(
+            failure,
+            {
+                "available": True,
+                "phase": "environment_preflight_failed",
+                "category": "render_worker",
+                "route_hint": "environment_preflight_failed",
+                "message": "missing configuration token=[redacted]",
+                "failure_reason": (
+                    "environment preflight failed token=[redacted]"
+                ),
+                "setup_stage": "repo_sync token=[redacted]",
+                "child_label": "relay publisher token=[redacted]",
+                "source_path": "<external>/landing.html token=[redacted]",
+                "target_path": "<external>/index.html token=[redacted]",
+                "child_pid": 101,
+                "worker_exit_status": 2,
+                "publisher_exit_status": 1,
+                "child_exit_status": -9,
+                "child_status_available": False,
+                "environment_preflight": {
+                    "status": "failed token=[redacted]",
+                    "error_count": 2,
+                    "error_categories": [
+                        "missing_required token=[redacted]",
+                        "missing_command",
+                    ],
+                    "failed_configuration_keys": [
+                        "AUTOMOAT_RELAY_URL",
+                        "PATH:codex token=[redacted]",
+                    ],
+                },
+                "publisher_preflight": {
+                    "status": "failed token=[redacted]",
+                    "exit_status": 2,
+                    "error_count": 1,
+                    "error_categories": [
+                        "invalid_relay_url token=[redacted]",
+                    ],
+                    "failed_configuration_keys": [
+                        "AUTOMOAT_RELAY_URL|--relay-url",
+                    ],
+                },
+            },
+        )
+        self.assertIn("status_failing", summary["operator_attention_reasons"])
+        failure_text = json.dumps(failure, sort_keys=True)
+        for unsafe_text in (
+            str(tmp_path),
+            "message-secret",
+            "reason-secret",
+            "stage-secret",
+            "child-secret",
+            "source-secret",
+            "target-secret",
+            "env-status-secret",
+            "env-category-secret",
+            "env-key-secret",
+            "publisher-status-secret",
+            "publisher-category-secret",
+            "ignored-env-secret",
+            "ignored-publisher-secret",
+        ):
+            self.assertNotIn(unsafe_text, failure_text)
+
     def test_cockpit_summary_routes_coordination_handoff_attention(self) -> None:
         base_status = {
             "status": "running",
