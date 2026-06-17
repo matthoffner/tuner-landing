@@ -553,6 +553,16 @@ class RenderCockpitRelayTest(unittest.TestCase):
                             "source_bridge_status_file_error": (
                                 "failed /tmp/bridge-status-token.json token=bridge-secret"
                             ),
+                            "source_handoff_path": (
+                                "/tmp/customer/.pixelbox/handoff.md token=handoff-path-secret"
+                            ),
+                            "source_handoff_file_status": "too_large token=handoff-status-secret",
+                            "source_handoff_error": (
+                                "failed /tmp/customer/.pixelbox/handoff.md "
+                                "token=handoff-error-secret"
+                            ),
+                            "source_handoff_latest_section_found": True,
+                            "source_handoff_latest_status_found": False,
                             "raw_status": "token=raw-secret",
                         },
                     },
@@ -575,6 +585,13 @@ class RenderCockpitRelayTest(unittest.TestCase):
             "source_bridge_status_file_error": (
                 "failed <external>/bridge-status-token.json token=[redacted]"
             ),
+            "source_handoff_path": "<external>/handoff.md token=[redacted]",
+            "source_handoff_file_status": "too_large token=[redacted]",
+            "source_handoff_error": (
+                "failed <external>/handoff.md token=[redacted]"
+            ),
+            "source_handoff_latest_section_found": True,
+            "source_handoff_latest_status_found": False,
         }
         self.assertEqual(
             health["cockpit_health"]["source_health"]["diagnostics"],
@@ -587,6 +604,7 @@ class RenderCockpitRelayTest(unittest.TestCase):
         response_text = json.dumps({"health": health, "status": status}, sort_keys=True)
         self.assertNotIn("secret", response_text)
         self.assertNotIn("raw_status", response_text)
+        self.assertNotIn("/tmp/customer", response_text)
 
     def test_status_and_health_treat_business_hours_pause_as_scheduled(self) -> None:
         self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"

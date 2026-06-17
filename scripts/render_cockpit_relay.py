@@ -216,6 +216,11 @@ def publisher_source_health(state: dict[str, Any]) -> dict[str, Any]:
                 "source_bridge_status_file",
                 "source_bridge_status_file_error",
             ),
+            (
+                "source_handoff_file_status",
+                "source_handoff_path",
+                "source_handoff_error",
+            ),
         )
         for status_key, path_key, error_key in status_fields:
             status_file_status = compact_policy_detail(
@@ -239,6 +244,13 @@ def publisher_source_health(state: dict[str, Any]) -> dict[str, Any]:
             )
             if status_file_error is not None:
                 diagnostics[error_key] = status_file_error
+        for key in (
+            "source_handoff_latest_section_found",
+            "source_handoff_latest_status_found",
+        ):
+            value = raw_diagnostics.get(key)
+            if isinstance(value, bool):
+                diagnostics[key] = value
         if diagnostics:
             summary["diagnostics"] = diagnostics
     return summary

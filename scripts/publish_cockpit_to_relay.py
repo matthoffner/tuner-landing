@@ -1557,6 +1557,10 @@ def source_health_label(reason: str | None) -> str:
 
 def source_health_diagnostics(status: dict[str, Any]) -> dict[str, Any]:
     diagnostics: dict[str, Any] = {}
+    cockpit_summary = as_dict(status.get("cockpit_summary"))
+    coordination = as_dict(cockpit_summary.get("coordination"))
+    if not coordination:
+        coordination = coordination_summary(status)
     source_status_unavailable = status.get("source_status_file_status") in {
         "missing",
         "read_failed",
@@ -1571,6 +1575,16 @@ def source_health_diagnostics(status: dict[str, Any]) -> dict[str, Any]:
         "not_object",
         "too_large",
     }
+    coordination_unavailable = coordination.get("handoff_file_status") in {
+        "missing",
+        "read_failed",
+        "invalid_encoding",
+        "too_large",
+    }
+    coordination_incomplete = coordination.get("available") is True and (
+        coordination.get("latest_section_found") is False
+        or coordination.get("latest_status_found") is False
+    )
 
     if source_status_unavailable:
         text_fields = {
@@ -1616,6 +1630,36 @@ def source_health_diagnostics(status: dict[str, Any]) -> dict[str, Any]:
         )
         if bridge_error is not None:
             diagnostics["source_bridge_status_file_error"] = bridge_error
+
+    if coordination_unavailable or coordination_incomplete:
+        handoff_status = compact_policy_detail(
+            coordination.get("handoff_file_status"),
+            max_length=120,
+        )
+        if handoff_status is not None:
+            diagnostics["source_handoff_file_status"] = handoff_status
+
+        handoff_path = compact_path_label(coordination.get("handoff_path"), max_length=240)
+        if handoff_path is not None:
+            diagnostics["source_handoff_path"] = compact_policy_detail(
+                handoff_path,
+                max_length=240,
+            )
+
+        handoff_error = compact_path_diagnostic(
+            coordination.get("handoff_error"),
+            max_length=240,
+        )
+        if handoff_error is not None:
+            diagnostics["source_handoff_error"] = handoff_error
+
+        for key, diagnostic_key in (
+            ("latest_section_found", "source_handoff_latest_section_found"),
+            ("latest_status_found", "source_handoff_latest_status_found"),
+        ):
+            value = coordination.get(key)
+            if isinstance(value, bool):
+                diagnostics[diagnostic_key] = value
 
     return diagnostics
 

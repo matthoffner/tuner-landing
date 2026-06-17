@@ -2350,8 +2350,13 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 {
                     "cockpit_summary": {
                         "coordination": {
+                            "handoff_path": "/tmp/customer/.pixelbox/handoff.md",
                             "available": True,
                             "handoff_file_status": "too_large",
+                            "handoff_error": (
+                                "could not read /tmp/customer/.pixelbox/handoff.md "
+                                "token=secret"
+                            ),
                             "latest_section_found": True,
                             "latest_status_found": True,
                         },
@@ -2359,6 +2364,15 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 },
                 "source_handoff_coordination_unavailable",
                 "Source coordination handoff is unavailable",
+                {
+                    "source_handoff_file_status": "too_large",
+                    "source_handoff_path": "<external>/handoff.md",
+                    "source_handoff_error": (
+                        "could not read <external>/handoff.md token=[redacted]"
+                    ),
+                    "source_handoff_latest_section_found": True,
+                    "source_handoff_latest_status_found": True,
+                },
             ),
             (
                 "incomplete",
@@ -2371,9 +2385,20 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 },
                 "source_handoff_coordination_incomplete",
                 "Source coordination handoff is incomplete",
+                {
+                    "source_handoff_file_status": "loaded",
+                    "source_handoff_latest_section_found": True,
+                    "source_handoff_latest_status_found": False,
+                },
             ),
         )
-        for name, coordination_fields, expected_reason, expected_label in cases:
+        for (
+            name,
+            coordination_fields,
+            expected_reason,
+            expected_label,
+            expected_diagnostics,
+        ) in cases:
             with self.subTest(name=name):
                 status = {
                     "status": "passing",
@@ -2393,8 +2418,10 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                         "reasons": [expected_reason],
                         "primary_reason": expected_reason,
                         "label": expected_label,
+                        "diagnostics": expected_diagnostics,
                     },
                 )
+                self.assertNotIn("secret", json.dumps(health, sort_keys=True))
 
     def test_publisher_cockpit_summary_routes_coordination_attention(self) -> None:
         cases = (
