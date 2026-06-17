@@ -548,6 +548,11 @@ class RenderCockpitRelayTest(unittest.TestCase):
                             "source_status_file_error": (
                                 "failed /tmp/source-status-token.json token=secret"
                             ),
+                            "source_bridge_status_file": "/tmp/bridge-status-token.json",
+                            "source_bridge_status_file_status": "invalid_json",
+                            "source_bridge_status_file_error": (
+                                "failed /tmp/bridge-status-token.json token=bridge-secret"
+                            ),
                             "raw_status": "token=raw-secret",
                         },
                     },
@@ -564,6 +569,11 @@ class RenderCockpitRelayTest(unittest.TestCase):
             "source_status_file_status": "read_failed",
             "source_status_file_error": (
                 "failed <external>/source-status-token.json token=[redacted]"
+            ),
+            "source_bridge_status_file": "<external>/bridge-status-token.json",
+            "source_bridge_status_file_status": "invalid_json",
+            "source_bridge_status_file_error": (
+                "failed <external>/bridge-status-token.json token=[redacted]"
             ),
         }
         self.assertEqual(

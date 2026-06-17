@@ -1557,36 +1557,65 @@ def source_health_label(reason: str | None) -> str:
 
 def source_health_diagnostics(status: dict[str, Any]) -> dict[str, Any]:
     diagnostics: dict[str, Any] = {}
-    if status.get("source_status_file_status") not in {
+    source_status_unavailable = status.get("source_status_file_status") in {
         "missing",
         "read_failed",
         "invalid_json",
         "not_object",
         "too_large",
-    }:
-        return diagnostics
-
-    text_fields = {
-        "source_status_file_status": status.get("source_status_file_status"),
     }
-    for key, value in text_fields.items():
-        compact_value = compact_policy_detail(value, max_length=120)
-        if compact_value is not None:
-            diagnostics[key] = compact_value
+    bridge_summary = as_dict(status.get("bridge_summary"))
+    bridge_status_unavailable = bridge_summary.get("status_file_status") in {
+        "read_failed",
+        "invalid_json",
+        "not_object",
+        "too_large",
+    }
 
-    path_value = compact_path_label(status.get("source_status_file"), max_length=240)
-    if path_value is not None:
-        diagnostics["source_status_file"] = compact_policy_detail(
-            path_value,
+    if source_status_unavailable:
+        text_fields = {
+            "source_status_file_status": status.get("source_status_file_status"),
+        }
+        for key, value in text_fields.items():
+            compact_value = compact_policy_detail(value, max_length=120)
+            if compact_value is not None:
+                diagnostics[key] = compact_value
+
+        path_value = compact_path_label(status.get("source_status_file"), max_length=240)
+        if path_value is not None:
+            diagnostics["source_status_file"] = compact_policy_detail(
+                path_value,
+                max_length=240,
+            )
+
+        error_value = compact_path_diagnostic(
+            status.get("source_status_file_error"),
             max_length=240,
         )
+        if error_value is not None:
+            diagnostics["source_status_file_error"] = error_value
 
-    error_value = compact_path_diagnostic(
-        status.get("source_status_file_error"),
-        max_length=240,
-    )
-    if error_value is not None:
-        diagnostics["source_status_file_error"] = error_value
+    if bridge_status_unavailable:
+        compact_status = compact_policy_detail(
+            bridge_summary.get("status_file_status"),
+            max_length=120,
+        )
+        if compact_status is not None:
+            diagnostics["source_bridge_status_file_status"] = compact_status
+
+        bridge_path = compact_path_label(bridge_summary.get("status_file"), max_length=240)
+        if bridge_path is not None:
+            diagnostics["source_bridge_status_file"] = compact_policy_detail(
+                bridge_path,
+                max_length=240,
+            )
+
+        bridge_error = compact_path_diagnostic(
+            bridge_summary.get("status_file_error"),
+            max_length=240,
+        )
+        if bridge_error is not None:
+            diagnostics["source_bridge_status_file_error"] = bridge_error
 
     return diagnostics
 

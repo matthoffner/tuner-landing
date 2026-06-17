@@ -2211,6 +2211,37 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         )
         self.assertNotIn("secret", json.dumps(health, sort_keys=True))
 
+    def test_publisher_source_health_includes_unavailable_bridge_diagnostics(self) -> None:
+        status = {
+            "status": "waiting",
+            "loop_running": True,
+            "source_status_file_status": "loaded",
+            "bridge_summary": {
+                "available": False,
+                "status_file": "/tmp/bridge-status-token.json",
+                "status_file_status": "invalid_json",
+                "status_file_error": (
+                    "failed to parse /tmp/bridge-status-token.json token=secret"
+                ),
+            },
+        }
+
+        health = self.publisher.publisher_source_health(status)
+
+        self.assertEqual(health["primary_reason"], "source_bridge_status_unavailable")
+        self.assertEqual(
+            health["diagnostics"],
+            {
+                "source_bridge_status_file": "<external>/bridge-status-token.json",
+                "source_bridge_status_file_status": "invalid_json",
+                "source_bridge_status_file_error": (
+                    "failed to parse <external>/bridge-status-token.json "
+                    "token=[redacted]"
+                ),
+            },
+        )
+        self.assertNotIn("secret", json.dumps(health, sort_keys=True))
+
     def test_publisher_source_health_routes_invalid_source_timestamp(self) -> None:
         status = {
             "status": "passing",
@@ -2530,6 +2561,9 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 "reasons": ["source_bridge_status_unavailable"],
                 "primary_reason": "source_bridge_status_unavailable",
                 "label": "Source bridge status is unavailable",
+                "diagnostics": {
+                    "source_bridge_status_file_status": "invalid_json",
+                },
             },
         )
 

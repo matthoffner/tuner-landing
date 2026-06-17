@@ -209,27 +209,36 @@ def publisher_source_health(state: dict[str, Any]) -> dict[str, Any]:
     raw_diagnostics = source_health.get("diagnostics")
     if isinstance(raw_diagnostics, dict):
         diagnostics: dict[str, Any] = {}
-        status_file_status = compact_policy_detail(
-            raw_diagnostics.get("source_status_file_status"),
-            max_length=120,
+        status_fields = (
+            ("source_status_file_status", "source_status_file", "source_status_file_error"),
+            (
+                "source_bridge_status_file_status",
+                "source_bridge_status_file",
+                "source_bridge_status_file_error",
+            ),
         )
-        if status_file_status is not None:
-            diagnostics["source_status_file_status"] = status_file_status
-        status_file = compact_path_label(
-            raw_diagnostics.get("source_status_file"),
-            max_length=240,
-        )
-        if status_file is not None:
-            diagnostics["source_status_file"] = compact_policy_detail(
-                status_file,
+        for status_key, path_key, error_key in status_fields:
+            status_file_status = compact_policy_detail(
+                raw_diagnostics.get(status_key),
+                max_length=120,
+            )
+            if status_file_status is not None:
+                diagnostics[status_key] = status_file_status
+            status_file = compact_path_label(
+                raw_diagnostics.get(path_key),
                 max_length=240,
             )
-        status_file_error = compact_path_diagnostic(
-            raw_diagnostics.get("source_status_file_error"),
-            max_length=240,
-        )
-        if status_file_error is not None:
-            diagnostics["source_status_file_error"] = status_file_error
+            if status_file is not None:
+                diagnostics[path_key] = compact_policy_detail(
+                    status_file,
+                    max_length=240,
+                )
+            status_file_error = compact_path_diagnostic(
+                raw_diagnostics.get(error_key),
+                max_length=240,
+            )
+            if status_file_error is not None:
+                diagnostics[error_key] = status_file_error
         if diagnostics:
             summary["diagnostics"] = diagnostics
     return summary
