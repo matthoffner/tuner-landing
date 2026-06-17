@@ -263,8 +263,15 @@ def publisher_source_health(state: dict[str, Any]) -> dict[str, Any]:
         )
         if source_status is not None:
             diagnostics["source_status"] = source_status
+        source_bridge_status = compact_policy_detail(
+            raw_diagnostics.get("source_bridge_status"),
+            max_length=120,
+        )
+        if source_bridge_status is not None:
+            diagnostics["source_bridge_status"] = source_bridge_status
         for key in (
             "source_status_value_invalid",
+            "source_bridge_status_value_invalid",
             "source_handoff_latest_section_found",
             "source_handoff_latest_status_found",
             "source_bridge_status_stale",

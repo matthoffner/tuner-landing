@@ -555,6 +555,10 @@ class RenderCockpitRelayTest(unittest.TestCase):
                             "source_bridge_status_file_error": (
                                 "failed /tmp/bridge-status-token.json token=bridge-secret"
                             ),
+                            "source_bridge_status": (
+                                "invalid-status-value token=bridge-status-secret"
+                            ),
+                            "source_bridge_status_value_invalid": True,
                             "source_bridge_status_age_seconds": "901",
                             "source_bridge_status_stale_after_seconds": 660,
                             "source_bridge_status_stale": True,
@@ -617,6 +621,8 @@ class RenderCockpitRelayTest(unittest.TestCase):
             "source_bridge_status_file_error": (
                 "failed <external>/bridge-status-token.json token=[redacted]"
             ),
+            "source_bridge_status": "invalid-status-value token=[redacted]",
+            "source_bridge_status_value_invalid": True,
             "source_bridge_status_age_seconds": 901,
             "source_bridge_status_stale_after_seconds": 660,
             "source_bridge_status_stale": True,

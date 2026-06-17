@@ -1641,6 +1641,13 @@ def source_health_diagnostics(status: dict[str, Any]) -> dict[str, Any]:
             or bridge_summary.get("bridge_status_timestamp_future") is True
         )
     )
+    bridge_status_value, bridge_status_value_invalid = normalize_source_status_value(
+        bridge_summary.get("status")
+    )
+    source_bridge_status_value_invalid = (
+        bridge_summary.get("bridge_status_value_invalid") is True
+        or bridge_status_value_invalid
+    )
 
     if source_freshness_attention and not source_status_unavailable:
         for key in (
@@ -1709,6 +1716,12 @@ def source_health_diagnostics(status: dict[str, Any]) -> dict[str, Any]:
         )
         if bridge_error is not None:
             diagnostics["source_bridge_status_file_error"] = bridge_error
+
+    if source_bridge_status_value_invalid:
+        compact_status = compact_policy_detail(bridge_status_value, max_length=120)
+        if compact_status is not None:
+            diagnostics["source_bridge_status"] = compact_status
+        diagnostics["source_bridge_status_value_invalid"] = True
 
     if bridge_freshness_attention and not bridge_status_unavailable:
         for key, diagnostic_key in (
@@ -1836,6 +1849,9 @@ def publisher_source_health(status: dict[str, Any]) -> dict[str, Any]:
     status_value, status_value_invalid = normalize_source_status_value(
         status.get("status")
     )
+    bridge_status_value, bridge_status_value_invalid = normalize_source_status_value(
+        bridge_summary.get("status")
+    )
     cockpit_attention_reasons = as_string_list(
         cockpit_summary.get("operator_attention_reasons")
     )
@@ -1909,9 +1925,6 @@ def publisher_source_health(status: dict[str, Any]) -> dict[str, Any]:
         "too_large",
     }:
         reasons.append("source_bridge_status_unavailable")
-    bridge_status_value, bridge_status_value_invalid = normalize_source_status_value(
-        bridge_summary.get("status")
-    )
     if (
         bridge_summary.get("available") is True
         and (

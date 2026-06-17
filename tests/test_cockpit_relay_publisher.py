@@ -930,6 +930,10 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 "reasons": ["source_bridge_status_failing"],
                 "primary_reason": "source_bridge_status_failing",
                 "label": "Source bridge status is failing",
+                "diagnostics": {
+                    "source_bridge_status": "invalid-status-value",
+                    "source_bridge_status_value_invalid": True,
+                },
             },
         )
         self.assertNotIn("bridge-status-secret", summary_text)
