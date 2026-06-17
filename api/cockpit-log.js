@@ -17,7 +17,7 @@ const {
 const MAX_LOG_BODY_CHARS = 160 * 1024;
 const EMBEDDED_URL_RE = /https?:\/\/[^\s,;|]+/gi;
 const BEARER_SECRET_RE = /\b(authorization\s*[:=]\s*bearer)\s+[^\s,;|]+/gi;
-const SENSITIVE_ASSIGNMENT_RE = /\b(access_token|api_key|codex_access_token|gh_token|github_token|password|passwd|relay_token|secret|token|key)=\S+/gi;
+const SENSITIVE_ASSIGNMENT_RE = /\b(access_token|api_key|codex_access_token|gh_token|github_token|password|passwd|relay_token|secret|token|key|x-automoat-relay-token)\s*[:=]\s*[^\s,;|]+/gi;
 
 function parseLogPayload(body) {
   const normalized = body.trimStart().toLowerCase();

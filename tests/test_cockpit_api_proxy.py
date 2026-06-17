@@ -2014,6 +2014,8 @@ class CockpitApiProxyTest(unittest.TestCase):
             const body = [
               "posting https://user:url-secret@relay.example/api/log?token=query-secret#debug",
               "Authorization: Bearer bearer-secret api_key=assignment-secret",
+              "X-Automoat-Relay-Token: relay-header-secret github_token:github-secret",
+              "password : spaced-secret",
               "raw\\x00control",
               "",
             ].join("\\n");
@@ -2024,6 +2026,9 @@ class CockpitApiProxyTest(unittest.TestCase):
             assert(parsed.body.includes("https://relay.example/api/log?[redacted]#[redacted]"));
             assert(parsed.body.includes("Authorization: Bearer [redacted]"));
             assert(parsed.body.includes("api_key=[redacted]"));
+            assert(parsed.body.includes("X-Automoat-Relay-Token=[redacted]"));
+            assert(parsed.body.includes("github_token=[redacted]"));
+            assert(parsed.body.includes("password=[redacted]"));
             assert(parsed.body.includes("raw control"));
             assert.strictEqual(parsed.body, sanitizeLogText(body));
             for (const secret of [
@@ -2031,6 +2036,9 @@ class CockpitApiProxyTest(unittest.TestCase):
               "query-secret",
               "bearer-secret",
               "assignment-secret",
+              "relay-header-secret",
+              "github-secret",
+              "spaced-secret",
               "\\x00",
             ]) {
               assert(!parsed.body.includes(secret), secret);
