@@ -570,6 +570,13 @@ class RenderCockpitRelayTest(unittest.TestCase):
                             ),
                             "source_handoff_latest_section_found": True,
                             "source_handoff_latest_status_found": False,
+                            "source_cockpit_attention_primary_reason": (
+                                "import_readiness_not_ready token=attention-secret"
+                            ),
+                            "source_cockpit_attention_label": (
+                                "Import readiness token=label-secret"
+                            ),
+                            "source_cockpit_attention_reason_count": "2",
                             "source_failure_phase": (
                                 "artifact_health_failed token=phase-secret"
                             ),
@@ -622,6 +629,13 @@ class RenderCockpitRelayTest(unittest.TestCase):
             ),
             "source_handoff_latest_section_found": True,
             "source_handoff_latest_status_found": False,
+            "source_cockpit_attention_primary_reason": (
+                "import_readiness_not_ready token=[redacted]"
+            ),
+            "source_cockpit_attention_label": (
+                "Import readiness token=[redacted]"
+            ),
+            "source_cockpit_attention_reason_count": 2,
             "source_failure_phase": "artifact_health_failed token=[redacted]",
             "source_failure_category": "artifact_health token=[redacted]",
             "source_failure_route_hint": "cockpit_artifact_health token=[redacted]",

@@ -1727,6 +1727,48 @@ def source_health_diagnostics(status: dict[str, Any]) -> dict[str, Any]:
             if isinstance(value, bool):
                 diagnostics[diagnostic_key] = value
 
+    cockpit_attention_primary_reason = compact_policy_detail(
+        cockpit_summary.get("operator_attention_primary_reason"),
+        max_length=120,
+    )
+    cockpit_attention_reasons = as_string_list(
+        cockpit_summary.get("operator_attention_reasons")
+    )
+    if cockpit_attention_primary_reason is None and cockpit_attention_reasons:
+        cockpit_attention_primary_reason = compact_policy_detail(
+            cockpit_attention_reasons[0],
+            max_length=120,
+        )
+    if (
+        cockpit_summary.get("operator_attention") is True
+        and failure.get("available") is not True
+        and cockpit_attention_primary_reason
+        in {
+            "artifact_health_not_loaded",
+            "import_readiness_not_ready",
+            "import_readiness_blocked",
+            "coverage_thin_groups_present",
+        }
+    ):
+        if cockpit_attention_primary_reason is not None:
+            diagnostics["source_cockpit_attention_primary_reason"] = (
+                cockpit_attention_primary_reason
+            )
+        cockpit_attention_label = compact_policy_detail(
+            cockpit_summary.get("operator_attention_label"),
+            max_length=160,
+        )
+        if cockpit_attention_label is not None:
+            diagnostics["source_cockpit_attention_label"] = cockpit_attention_label
+        cockpit_attention_reason_count = first_compact_int(
+            cockpit_summary.get("operator_attention_reasons_count"),
+            len(cockpit_attention_reasons),
+        )
+        if cockpit_attention_reason_count is not None:
+            diagnostics["source_cockpit_attention_reason_count"] = (
+                cockpit_attention_reason_count
+            )
+
     if failure.get("available") is True:
         for key, max_length in (
             ("source_failure_phase", 120),

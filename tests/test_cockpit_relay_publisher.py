@@ -2368,6 +2368,15 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 "reasons": ["source_cockpit_attention"],
                 "primary_reason": "source_cockpit_attention",
                 "label": "Import readiness is not ready",
+                "diagnostics": {
+                    "source_cockpit_attention_primary_reason": (
+                        "import_readiness_not_ready"
+                    ),
+                    "source_cockpit_attention_label": (
+                        "Import readiness is not ready"
+                    ),
+                    "source_cockpit_attention_reason_count": 1,
+                },
             },
         )
 

@@ -277,6 +277,8 @@ def publisher_source_health(state: dict[str, Any]) -> dict[str, Any]:
             if isinstance(value, bool):
                 diagnostics[key] = value
         for key in (
+            "source_cockpit_attention_primary_reason",
+            "source_cockpit_attention_label",
             "source_failure_phase",
             "source_failure_category",
             "source_failure_route_hint",
@@ -287,6 +289,7 @@ def publisher_source_health(state: dict[str, Any]) -> dict[str, Any]:
             if value is not None:
                 diagnostics[key] = value
         for key in (
+            "source_cockpit_attention_reason_count",
             "source_bridge_status_age_seconds",
             "source_bridge_status_stale_after_seconds",
             "source_status_age_seconds",
