@@ -4889,6 +4889,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                     "source_status_timestamp_future": True,
                     "source_status_value_invalid": True,
                     "source_status_age_seconds": 700,
+                    "source_status_stale_after_seconds": 660,
                 },
                 "log_tail": "loop log\n",
             }
@@ -4913,6 +4914,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertIn("source_status_timestamp_future=True", log_text)
         self.assertIn("source_status_value_invalid=True", log_text)
         self.assertIn("source_status_age_seconds=700", log_text)
+        self.assertIn("source_status_stale_after_seconds=660", log_text)
         self.assertIn("source_status_file_status=None", log_text)
         self.assertIn("source_status_file_error=None", log_text)
         self.assertIn("source_status_remote_omitted_field_count=None", log_text)
@@ -4958,7 +4960,12 @@ class CockpitRelayPublisherTest(unittest.TestCase):
 
         self.assertEqual(
             result,
-            {"published": True, "source_status_stale": False},
+            {
+                "published": True,
+                "source_status_stale": False,
+                "source_status_age_seconds": 4,
+                "source_status_stale_after_seconds": None,
+            },
         )
         self.assertIn("published relay snapshot ok=True", log_text)
         self.assertIn(
@@ -4998,7 +5005,12 @@ class CockpitRelayPublisherTest(unittest.TestCase):
 
         self.assertEqual(
             result,
-            {"published": False, "source_status_stale": False},
+            {
+                "published": False,
+                "source_status_stale": False,
+                "source_status_age_seconds": 4,
+                "source_status_stale_after_seconds": None,
+            },
         )
         self.assertIn("publish failed relay_ok=False", log_text)
         self.assertIn("failure_kind=relay_response_not_ok", log_text)
@@ -5750,7 +5762,12 @@ class CockpitRelayPublisherTest(unittest.TestCase):
 
         self.assertEqual(
             result,
-            {"published": False, "source_status_stale": False},
+            {
+                "published": False,
+                "source_status_stale": False,
+                "source_status_age_seconds": 10,
+                "source_status_stale_after_seconds": None,
+            },
         )
         self.assertIn("publish failed relay_ok=False", log_text)
         self.assertIn("failure_kind=relay_response_not_ok", log_text)
@@ -5791,7 +5808,12 @@ class CockpitRelayPublisherTest(unittest.TestCase):
 
         self.assertEqual(
             result,
-            {"published": False, "source_status_stale": False},
+            {
+                "published": False,
+                "source_status_stale": False,
+                "source_status_age_seconds": 10,
+                "source_status_stale_after_seconds": None,
+            },
         )
         self.assertIn("publish failed relay_ok=False", log_text)
         self.assertIn("failure_kind=relay_response_not_ok", log_text)
@@ -5827,7 +5849,12 @@ class CockpitRelayPublisherTest(unittest.TestCase):
 
         self.assertEqual(
             result,
-            {"published": False, "source_status_stale": False},
+            {
+                "published": False,
+                "source_status_stale": False,
+                "source_status_age_seconds": 10,
+                "source_status_stale_after_seconds": None,
+            },
         )
         self.assertIn("publish failed relay_ok=False", log_text)
         self.assertIn("failure_kind=relay_response_not_ok", log_text)
@@ -5872,7 +5899,12 @@ class CockpitRelayPublisherTest(unittest.TestCase):
 
         self.assertEqual(
             result,
-            {"published": False, "source_status_stale": False},
+            {
+                "published": False,
+                "source_status_stale": False,
+                "source_status_age_seconds": 10,
+                "source_status_stale_after_seconds": None,
+            },
         )
         self.assertIn(
             "publish failed failure_kind=invalid_relay_json "
@@ -5925,7 +5957,12 @@ class CockpitRelayPublisherTest(unittest.TestCase):
 
         self.assertEqual(
             result,
-            {"published": False, "source_status_stale": False},
+            {
+                "published": False,
+                "source_status_stale": False,
+                "source_status_age_seconds": 10,
+                "source_status_stale_after_seconds": None,
+            },
         )
         self.assertIn("publish failed relay_ok=False", log_text)
         self.assertIn("failure_kind=relay_response_not_ok", log_text)
@@ -5967,7 +6004,12 @@ class CockpitRelayPublisherTest(unittest.TestCase):
 
         self.assertEqual(
             result,
-            {"published": False, "source_status_stale": False},
+            {
+                "published": False,
+                "source_status_stale": False,
+                "source_status_age_seconds": 12,
+                "source_status_stale_after_seconds": None,
+            },
         )
         self.assertIn("publish failed failure_kind=http_error http_status=401", log_text)
         self.assertIn("http_reason=Unauthorized", log_text)
@@ -6008,7 +6050,12 @@ class CockpitRelayPublisherTest(unittest.TestCase):
 
         self.assertEqual(
             result,
-            {"published": False, "source_status_stale": False},
+            {
+                "published": False,
+                "source_status_stale": False,
+                "source_status_age_seconds": 9,
+                "source_status_stale_after_seconds": None,
+            },
         )
         self.assertIn("publish failed failure_kind=url_error error=", log_text)
         self.assertIn(
@@ -6092,6 +6139,8 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             self.publisher.publish_once_result = lambda _args: calls.append(True) or {
                 "published": True,
                 "source_status_stale": True,
+                "source_status_age_seconds": 901,
+                "source_status_stale_after_seconds": 660,
             }
             self.publisher.time.sleep = lambda _seconds: None
 
@@ -6102,7 +6151,9 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertEqual(calls, [True, True])
         self.assertIn(
             "exiting after consecutive stale source statuses "
-            "failure_kind=consecutive_stale_source_statuses count=2 limit=2",
+            "failure_kind=consecutive_stale_source_statuses count=2 limit=2 "
+            "source_status_age_seconds=901 "
+            "source_status_stale_after_seconds=660",
             log_text,
         )
 
@@ -6119,6 +6170,8 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             self.publisher.publish_once_result = lambda _args: {
                 "published": True,
                 "source_status_stale": next(stale_outcomes),
+                "source_status_age_seconds": 721,
+                "source_status_stale_after_seconds": 660,
             }
             self.publisher.time.sleep = lambda _seconds: None
 
@@ -6128,7 +6181,9 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertEqual(status, 1)
         self.assertIn(
             "exiting after consecutive stale source statuses "
-            "failure_kind=consecutive_stale_source_statuses count=2 limit=2",
+            "failure_kind=consecutive_stale_source_statuses count=2 limit=2 "
+            "source_status_age_seconds=721 "
+            "source_status_stale_after_seconds=660",
             log_text,
         )
 

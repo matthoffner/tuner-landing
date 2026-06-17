@@ -2475,6 +2475,9 @@ def source_status_log_fields(payload: dict[str, Any]) -> dict[str, Any]:
         if isinstance(status.get("source_status_value_invalid"), bool)
         else None,
         "source_status_age_seconds": compact_int(status.get("source_status_age_seconds")),
+        "source_status_stale_after_seconds": compact_int(
+            status.get("source_status_stale_after_seconds")
+        ),
         "source_status_file_status": compact_policy_detail(
             status.get("source_status_file_status"),
             max_length=80,
@@ -2829,6 +2832,7 @@ SOURCE_STATUS_LOG_FIELD_NAMES = (
     "source_status_timestamp_future",
     "source_status_value_invalid",
     "source_status_age_seconds",
+    "source_status_stale_after_seconds",
     "source_status_file_status",
     "source_status_file_error",
     "source_status_remote_omitted_field_count",
@@ -3028,6 +3032,10 @@ def publish_once_result(args: argparse.Namespace) -> dict[str, Any]:
         return {
             "published": False,
             "source_status_stale": source_fields.get("source_status_stale"),
+            "source_status_age_seconds": source_fields.get("source_status_age_seconds"),
+            "source_status_stale_after_seconds": source_fields.get(
+                "source_status_stale_after_seconds"
+            ),
         }
     except (
         OSError,
@@ -3046,6 +3054,10 @@ def publish_once_result(args: argparse.Namespace) -> dict[str, Any]:
         return {
             "published": False,
             "source_status_stale": source_fields.get("source_status_stale"),
+            "source_status_age_seconds": source_fields.get("source_status_age_seconds"),
+            "source_status_stale_after_seconds": source_fields.get(
+                "source_status_stale_after_seconds"
+            ),
         }
     if not relay_response_ok(response):
         emit(
@@ -3058,6 +3070,10 @@ def publish_once_result(args: argparse.Namespace) -> dict[str, Any]:
         return {
             "published": False,
             "source_status_stale": source_fields["source_status_stale"],
+            "source_status_age_seconds": source_fields.get("source_status_age_seconds"),
+            "source_status_stale_after_seconds": source_fields.get(
+                "source_status_stale_after_seconds"
+            ),
         }
     emit(
         "published relay snapshot ok=True "
@@ -3068,6 +3084,10 @@ def publish_once_result(args: argparse.Namespace) -> dict[str, Any]:
     return {
         "published": True,
         "source_status_stale": source_fields["source_status_stale"],
+        "source_status_age_seconds": source_fields.get("source_status_age_seconds"),
+        "source_status_stale_after_seconds": source_fields.get(
+            "source_status_stale_after_seconds"
+        ),
     }
 
 
@@ -3088,11 +3108,26 @@ def run_publish_loop(args: argparse.Namespace) -> int:
                     args.max_consecutive_stale_statuses > 0
                     and consecutive_stale_statuses >= args.max_consecutive_stale_statuses
                 ):
+                    stale_age_seconds = compact_int(
+                        result.get("source_status_age_seconds")
+                    )
+                    stale_after_seconds = compact_int(
+                        result.get("source_status_stale_after_seconds")
+                    )
+                    freshness_fields = ""
+                    if stale_age_seconds is not None:
+                        freshness_fields += f" source_status_age_seconds={stale_age_seconds}"
+                    if stale_after_seconds is not None:
+                        freshness_fields += (
+                            " source_status_stale_after_seconds="
+                            f"{stale_after_seconds}"
+                        )
                     emit(
                         "exiting after consecutive stale source statuses "
                         "failure_kind=consecutive_stale_source_statuses "
                         f"count={consecutive_stale_statuses} "
-                        f"limit={args.max_consecutive_stale_statuses}",
+                        f"limit={args.max_consecutive_stale_statuses}"
+                        f"{freshness_fields}",
                         log_path=args.publisher_log,
                     )
                     return 1

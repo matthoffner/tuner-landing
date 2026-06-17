@@ -3,6 +3,13 @@
 Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
+- timestamp: 2026-06-17T20:09:04Z
+- lane: editor
+- status: added source-status stale-threshold visibility to standalone cockpit relay publisher logs and stale self-exit diagnostics; publish success/failure suffixes now include `source_status_stale_after_seconds`, and configured consecutive-stale publisher exits log the last observed source status age and threshold next to the count/limit; no Dallas raw CSV rows were edited
+- files: scripts/publish_cockpit_to_relay.py, tests/test_cockpit_relay_publisher.py, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- checks: `python3 -m unittest tests.test_cockpit_relay_publisher -v`; `python3 -m py_compile scripts/publish_cockpit_to_relay.py tests/test_cockpit_relay_publisher.py`; `cmp -s generated/landing.html index.html`; `git diff --name-only -- generated/raw .pxcode/preview.json generated/landing.html index.html generated/pipeline/dallas-import-pipeline-summary-v1`; `python3 -m unittest discover -s tests -v`; `git diff --check`; `node --check api/cockpit-upstreams.js && node --check api/cockpit-status.js && node --check api/cockpit-log.js`; `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json > /tmp/automoat-publisher-stale-threshold-ready.json` plus JSON assertion for readiness `ready`, `535` permits, `1082` inspections, `1625` source records, `1093` tasks, `541` label reviews, `535/535` operator corrections, `13/13` contract checks, and zero latest thin-count buckets; local `run_autonomy_policy_check(Path('/tmp/automoat-publisher-stale-threshold-policy.log'))` with `exit_status=0`, zero synthetic rows, zero raw Dallas CSV paths, two productive paths, and no preview change
+- next: if Render worker logs show the relay publisher exiting after consecutive stale source statuses, inspect the adjacent publisher log line for `source_status_age_seconds` and `source_status_stale_after_seconds` before debugging Dallas readiness, relay auth, or bridge transport
+
 - timestamp: 2026-06-17T20:02:09Z
 - lane: editor
 - status: preserved bounded top-level failure samples through local cockpit summaries, standalone publisher source-health diagnostics/logs, and Render relay summaries; failure summaries now carry redacted `synthetic_row_samples`, raw Dallas CSV path samples, productive path samples, and ignored companion path samples alongside the existing counts, so rejected autonomy-policy or final-check failures are inspectable without opening full loop status JSON; no Dallas raw CSV rows were edited
