@@ -2538,6 +2538,7 @@ class RenderCockpitRelayTest(unittest.TestCase):
                             "synthetic_row_count": "12",
                             "raw_dallas_csv_changed_path_count": "9",
                             "productive_changed_path_count": "3",
+                            "non_productive_companion_path_count": "4",
                             "import_pipeline_status": (
                                 "loaded token=pipeline-secret"
                             ),
@@ -2617,6 +2618,7 @@ class RenderCockpitRelayTest(unittest.TestCase):
             "synthetic_row_count": 12,
             "raw_dallas_csv_changed_path_count": 9,
             "productive_changed_path_count": 3,
+            "non_productive_companion_path_count": 4,
             "readiness_blocker_count": 2,
             "degraded_artifact_count": 2,
             "sync_exit_status": 2,

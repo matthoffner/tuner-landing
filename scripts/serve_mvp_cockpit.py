@@ -750,6 +750,9 @@ def failure_summary(status: dict[str, object]) -> dict[str, object]:
             "raw_dallas_csv_changed_path_count"
         ),
         "productive_changed_path_count": failure.get("productive_changed_path_count"),
+        "non_productive_companion_path_count": failure.get(
+            "non_productive_companion_path_count"
+        ),
         "readiness_blocker_count": failure.get("readiness_blocker_count"),
         "degraded_artifact_count": failure.get("degraded_artifact_count"),
         "sync_exit_status": failure.get("sync_exit_status"),

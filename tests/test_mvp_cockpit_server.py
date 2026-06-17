@@ -399,6 +399,7 @@ class MvpCockpitServerTest(unittest.TestCase):
                         "token=source-secret"
                     ),
                     "target_path": f"{tmp_path}/private/index.html token=target-secret",
+                    "non_productive_companion_path_count": "2",
                     "environment_preflight": {
                         "status": "failed token=env-status-secret",
                         "error_count": "2",
@@ -454,6 +455,7 @@ class MvpCockpitServerTest(unittest.TestCase):
                 "child_label": "relay publisher token=[redacted]",
                 "source_path": "<external>/landing.html token=[redacted]",
                 "target_path": "<external>/index.html token=[redacted]",
+                "non_productive_companion_path_count": 2,
                 "child_pid": 101,
                 "worker_exit_status": 2,
                 "publisher_exit_status": 1,
