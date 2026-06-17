@@ -1092,6 +1092,7 @@ def source_failure_summary(status: dict[str, Any]) -> dict[str, Any]:
         "failed_step": failure.get("failed_step"),
         "failed_substep": failure.get("failed_substep"),
         "setup_stage": failure.get("setup_stage"),
+        "child_label": failure.get("child_label"),
     }
     for key, value in text_fields.items():
         compact_value = compact_policy_detail(value, max_length=240)
@@ -1155,6 +1156,7 @@ def source_failure_summary(status: dict[str, Any]) -> dict[str, Any]:
         "failed_substep_exit_status": failure.get("failed_substep_exit_status"),
         "worker_exit_status": failure.get("worker_exit_status"),
         "publisher_exit_status": failure.get("publisher_exit_status"),
+        "child_exit_status": failure.get("child_exit_status"),
     }
     for key, value in exit_status_fields.items():
         compact_value = compact_exit_status(value)
@@ -1165,6 +1167,9 @@ def source_failure_summary(status: dict[str, Any]) -> dict[str, Any]:
         value = failure.get(key)
         if isinstance(value, bool):
             summary[key] = value
+    child_status_available = failure.get("child_status_available")
+    if isinstance(child_status_available, bool):
+        summary["child_status_available"] = child_status_available
 
     ready_for_next_import_records = failure.get("ready_for_next_import_records")
     if isinstance(ready_for_next_import_records, bool):

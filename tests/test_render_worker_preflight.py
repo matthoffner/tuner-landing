@@ -3623,6 +3623,9 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                             "AUTOMOAT_RELAY_URL|--relay-url",
                             "https://relay-secret.example/status",
                         ],
+                        "child_label": "relay publisher",
+                        "child_status_available": True,
+                        "child_exit_status": 2,
                         "message": "token=relay-secret",
                     },
                 )
@@ -3637,6 +3640,9 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             status["failure"],
             {
                 "category": "render_worker",
+                "child_exit_status": 2,
+                "child_label": "relay publisher",
+                "child_status_available": True,
                 "failure_reason": "relay_publisher_startup_exit token=[redacted]",
                 "message": "publisher failed token=[redacted]",
                 "publisher_exit_status": 0,
@@ -5244,6 +5250,11 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             reason="relay_publisher_startup_exit",
             worker_exit_status=4,
             publisher_exit_status=4,
+            details={
+                "child_label": "relay publisher",
+                "child_status_available": True,
+                "child_exit_status": 4,
+            },
         )
         self.assertIn(
             "relay publisher exited during startup status=4; worker_exit_status=4",
@@ -5300,6 +5311,10 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             reason="relay_publisher_startup_exit",
             worker_exit_status=1,
             publisher_exit_status=None,
+            details={
+                "child_label": "relay publisher",
+                "child_status_available": False,
+            },
         )
         self.assertIn(
             "could not poll relay publisher pid=202: OSError; worker_exit_status=1",
@@ -5625,6 +5640,11 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             reason="relay_publisher_startup_exit",
             worker_exit_status=1,
             publisher_exit_status=0,
+            details={
+                "child_label": "relay publisher",
+                "child_status_available": True,
+                "child_exit_status": 0,
+            },
         )
         self.assertIn(
             "relay publisher exited during startup status=0; worker_exit_status=1",
@@ -5690,6 +5710,11 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         record_failure_status.assert_called_once_with(
             reason=self.worker.AUTONOMOUS_LOOP_STARTUP_EXIT,
             worker_exit_status=6,
+            details={
+                "child_label": "autonomous loop",
+                "child_status_available": True,
+                "child_exit_status": 6,
+            },
         )
         stop_children.assert_called_once()
         self.assertIn(
@@ -5756,6 +5781,10 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         record_failure_status.assert_called_once_with(
             reason=self.worker.AUTONOMOUS_LOOP_STARTUP_EXIT,
             worker_exit_status=self.worker.CHILD_POLL_FAILURE_EXIT_STATUS,
+            details={
+                "child_label": "autonomous loop",
+                "child_status_available": False,
+            },
         )
         stop_children.assert_called_once()
         self.assertIn(

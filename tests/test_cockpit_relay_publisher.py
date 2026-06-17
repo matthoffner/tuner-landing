@@ -1422,6 +1422,9 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                             ),
                             "message": "publisher rejected token=message-secret",
                             "setup_stage": "repo_sync token=stage-secret",
+                            "child_label": "autonomous loop token=child-secret",
+                            "child_status_available": True,
+                            "child_exit_status": "6",
                             "worker_exit_status": "1",
                             "publisher_exit_status": "2",
                             "publisher_preflight": {
@@ -1467,6 +1470,9 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                     "relay publisher preflight failed token=[redacted]"
                 ),
                 "setup_stage": "repo_sync token=[redacted]",
+                "child_label": "autonomous loop token=[redacted]",
+                "child_status_available": True,
+                "child_exit_status": 6,
                 "worker_exit_status": 1,
                 "publisher_exit_status": 2,
                 "publisher_preflight": {
@@ -4490,6 +4496,9 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                             "route_hint": "relay_publisher_preflight_failed",
                             "message": "publisher rejected token=message-secret",
                             "setup_stage": "repo_sync token=stage-secret",
+                            "child_label": "autonomous loop token=child-secret",
+                            "child_status_available": True,
+                            "child_exit_status": 6,
                             "worker_exit_status": 1,
                             "publisher_exit_status": 2,
                             "publisher_preflight": {
@@ -4535,6 +4544,12 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         )
         self.assertIn("source_failure_message=publisher rejected token=[redacted]", log_text)
         self.assertIn("source_failure_setup_stage=repo_sync token=[redacted]", log_text)
+        self.assertIn(
+            "source_failure_child_label=autonomous loop token=[redacted]",
+            log_text,
+        )
+        self.assertIn("source_failure_child_exit_status=6", log_text)
+        self.assertIn("source_failure_child_status_available=True", log_text)
         self.assertIn("source_failure_worker_exit_status=1", log_text)
         self.assertIn("source_failure_publisher_exit_status=2", log_text)
         self.assertIn(
@@ -4556,6 +4571,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         for unsafe_text in (
             "message-secret",
             "stage-secret",
+            "child-secret",
             "status-secret",
             "category-secret",
             "key-secret",

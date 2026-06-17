@@ -2398,6 +2398,9 @@ class RenderCockpitRelayTest(unittest.TestCase):
                                 "relay publisher preflight failed token=reason-secret"
                             ),
                             "setup_stage": "repo_sync token=stage-secret",
+                            "child_label": "autonomous loop token=child-secret",
+                            "child_status_available": True,
+                            "child_exit_status": "6",
                             "worker_exit_status": "1",
                             "publisher_exit_status": "2",
                             "publisher_preflight": {
@@ -2432,6 +2435,9 @@ class RenderCockpitRelayTest(unittest.TestCase):
             "message": "publisher rejected token=[redacted]",
             "failure_reason": "relay publisher preflight failed token=[redacted]",
             "setup_stage": "repo_sync token=[redacted]",
+            "child_label": "autonomous loop token=[redacted]",
+            "child_status_available": True,
+            "child_exit_status": 6,
             "worker_exit_status": 1,
             "publisher_exit_status": 2,
             "publisher_preflight": {
@@ -2465,6 +2471,7 @@ class RenderCockpitRelayTest(unittest.TestCase):
             "message-secret",
             "reason-secret",
             "stage-secret",
+            "child-secret",
             "status-secret",
             "category-secret",
             "key-secret",

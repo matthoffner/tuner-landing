@@ -2321,6 +2321,19 @@ def compact_render_worker_failure_details(details: dict[str, object]) -> dict[st
         setup_stage_label = publisher_preflight_status_label(setup_stage)
         if setup_stage_label not in {"missing", "invalid"}:
             compact["setup_stage"] = setup_stage_label
+    child_label = details.get("child_label")
+    if isinstance(child_label, str):
+        safe_child_label = sanitize_worker_log_text(child_label)[
+            :MAX_BUSINESS_HOURS_CONFIG_VALUE_CHARS
+        ]
+        if safe_child_label:
+            compact["child_label"] = safe_child_label
+    child_exit_status = compact_worker_exit_status(details.get("child_exit_status"))
+    if child_exit_status is not None:
+        compact["child_exit_status"] = child_exit_status
+    child_status_available = details.get("child_status_available")
+    if isinstance(child_status_available, bool):
+        compact["child_status_available"] = child_status_available
     compact.update(compact_publisher_preflight_details(details))
     return compact
 
@@ -2356,6 +2369,15 @@ def write_render_worker_failure_status(
     setup_stage = compact_details.pop("setup_stage", None)
     if setup_stage:
         failure["setup_stage"] = setup_stage
+    child_label = compact_details.pop("child_label", None)
+    if child_label:
+        failure["child_label"] = child_label
+    child_exit_status = compact_details.pop("child_exit_status", None)
+    if child_exit_status is not None:
+        failure["child_exit_status"] = child_exit_status
+    child_status_available = compact_details.pop("child_status_available", None)
+    if isinstance(child_status_available, bool):
+        failure["child_status_available"] = child_status_available
     if compact_details:
         failure["publisher_preflight"] = compact_details
     payload = {
@@ -2498,20 +2520,42 @@ def child_startup_exit_status(
     grace_seconds: float = STARTUP_CHILD_GRACE_SECONDS,
 ) -> int | None:
     """Return a child exit status if it dies during startup, otherwise None."""
+    worker_status, _details = child_startup_exit_result(
+        process,
+        label,
+        clean_exit_status=clean_exit_status,
+        grace_seconds=grace_seconds,
+    )
+    return worker_status
+
+
+def child_startup_exit_result(
+    process: subprocess.Popen[object],
+    label: str,
+    *,
+    clean_exit_status: int | None = None,
+    grace_seconds: float = STARTUP_CHILD_GRACE_SECONDS,
+) -> tuple[int | None, dict[str, object]]:
+    """Return a worker status plus bounded child diagnostics for startup exits."""
     if grace_seconds > 0:
         time.sleep(grace_seconds)
     status, poll_ok = safe_child_poll(process, label)
     if status is None:
-        return None
+        return None, {}
+    details: dict[str, object] = {
+        "child_label": label,
+        "child_status_available": poll_ok,
+    }
     if not poll_ok:
-        return CHILD_POLL_FAILURE_EXIT_STATUS
+        return CHILD_POLL_FAILURE_EXIT_STATUS, details
 
     worker_status = clean_exit_status if status == 0 and clean_exit_status is not None else status
+    details["child_exit_status"] = status
     emit(
         f"{label} exited during startup status={status}; "
         f"worker_exit_status={worker_status}"
     )
-    return worker_status
+    return worker_status, details
 
 
 def safe_child_poll(
@@ -2693,11 +2737,15 @@ def run_business_hours_schedule(
                 f"local_time={state.get('local_time')}"
             )
             loop_process = start_loop()
-            loop_startup_status = child_startup_exit_status(loop_process, "autonomous loop")
+            loop_startup_status, loop_startup_details = child_startup_exit_result(
+                loop_process,
+                "autonomous loop",
+            )
             if loop_startup_status is not None:
                 record_render_worker_failure_status(
                     reason=AUTONOMOUS_LOOP_STARTUP_EXIT,
                     worker_exit_status=loop_startup_status,
+                    details=loop_startup_details,
                 )
                 stop_children()
                 return loop_startup_status
@@ -2822,7 +2870,7 @@ def main() -> int:
             message=str(exc),
         )
         return 1
-    publisher_startup_status = child_startup_exit_status(
+    publisher_startup_status, publisher_startup_details = child_startup_exit_result(
         publisher,
         "relay publisher",
         clean_exit_status=1,
@@ -2832,6 +2880,7 @@ def main() -> int:
             reason="relay_publisher_startup_exit",
             worker_exit_status=publisher_startup_status,
             publisher_exit_status=publisher.returncode,
+            details=publisher_startup_details,
         )
         stop_children()
         return publisher_startup_status

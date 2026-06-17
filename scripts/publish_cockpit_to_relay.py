@@ -844,6 +844,7 @@ def failure_summary(status: dict[str, Any]) -> dict[str, Any]:
         "failed_step": failure.get("failed_step"),
         "failed_substep": failure.get("failed_substep"),
         "setup_stage": failure.get("setup_stage"),
+        "child_label": failure.get("child_label"),
     }
     for key, value in text_fields.items():
         compact_value = compact_policy_detail(value)
@@ -890,6 +891,7 @@ def failure_summary(status: dict[str, Any]) -> dict[str, Any]:
         "failed_substep_exit_status": failure.get("failed_substep_exit_status"),
         "worker_exit_status": failure.get("worker_exit_status"),
         "publisher_exit_status": failure.get("publisher_exit_status"),
+        "child_exit_status": failure.get("child_exit_status"),
     }
     for key, value in exit_status_fields.items():
         compact_value = compact_exit_status(value)
@@ -900,6 +902,9 @@ def failure_summary(status: dict[str, Any]) -> dict[str, Any]:
         value = failure.get(key)
         if isinstance(value, bool):
             summary[key] = value
+    child_status_available = failure.get("child_status_available")
+    if isinstance(child_status_available, bool):
+        summary["child_status_available"] = child_status_available
 
     ready_for_next_import_records = failure.get("ready_for_next_import_records")
     if isinstance(ready_for_next_import_records, bool):
@@ -2026,6 +2031,10 @@ def source_status_log_fields(payload: dict[str, Any]) -> dict[str, Any]:
             failure.get("setup_stage"),
             max_length=120,
         ),
+        "source_failure_child_label": compact_policy_detail(
+            failure.get("child_label"),
+            max_length=120,
+        ),
         "source_failure_codex_exit_status": compact_exit_status(
             failure.get("codex_exit_status")
         ),
@@ -2035,6 +2044,12 @@ def source_status_log_fields(payload: dict[str, Any]) -> dict[str, Any]:
         "source_failure_publisher_exit_status": compact_exit_status(
             failure.get("publisher_exit_status")
         ),
+        "source_failure_child_exit_status": compact_exit_status(
+            failure.get("child_exit_status")
+        ),
+        "source_failure_child_status_available": failure.get("child_status_available")
+        if isinstance(failure.get("child_status_available"), bool)
+        else None,
         "source_failure_publisher_preflight_status": compact_policy_detail(
             publisher_preflight.get("status"),
             max_length=80,
@@ -2183,9 +2198,12 @@ SOURCE_STATUS_LOG_FIELD_NAMES = (
     "source_failure_failed_step",
     "source_failure_failed_substep",
     "source_failure_setup_stage",
+    "source_failure_child_label",
     "source_failure_codex_exit_status",
     "source_failure_worker_exit_status",
     "source_failure_publisher_exit_status",
+    "source_failure_child_exit_status",
+    "source_failure_child_status_available",
     "source_failure_publisher_preflight_status",
     "source_failure_publisher_preflight_exit_status",
     "source_failure_publisher_preflight_error_count",
