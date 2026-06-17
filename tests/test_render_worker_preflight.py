@@ -5708,6 +5708,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             reason="relay_publisher_start_failed",
             worker_exit_status=1,
             message="could not start relay publisher: OSError",
+            details={"child_label": "relay publisher"},
         )
 
     def test_startup_clean_publisher_exit_is_worker_failure(self) -> None:

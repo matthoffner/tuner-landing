@@ -2954,6 +2954,7 @@ def main() -> int:
             reason="relay_publisher_start_failed",
             worker_exit_status=1,
             message=str(exc),
+            details={"child_label": "relay publisher"},
         )
         return 1
     publisher_startup_status, publisher_startup_details = child_startup_exit_result(
