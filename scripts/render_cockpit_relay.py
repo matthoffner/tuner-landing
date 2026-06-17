@@ -289,6 +289,7 @@ def publisher_source_health(state: dict[str, Any]) -> dict[str, Any]:
             "source_policy_preview_json_changed",
             "source_policy_allows_synthetic_append",
             "source_policy_override",
+            "source_ready_for_next_import_records",
         ):
             value = raw_diagnostics.get(key)
             if isinstance(value, bool):
@@ -296,6 +297,7 @@ def publisher_source_health(state: dict[str, Any]) -> dict[str, Any]:
         for key in (
             "source_cockpit_attention_primary_reason",
             "source_cockpit_attention_label",
+            "source_import_readiness",
             "source_policy_failure_reason",
             "source_policy_diagnostics_status",
             "source_policy_route_hint",
@@ -345,6 +347,7 @@ def publisher_source_health(state: dict[str, Any]) -> dict[str, Any]:
             "source_bridge_status_age_seconds",
             "source_bridge_status_stale_after_seconds",
             "source_handoff_age_seconds",
+            "source_readiness_blocker_count",
             "source_status_age_seconds",
             "source_status_remote_omitted_field_count",
             "source_status_stale_after_seconds",
@@ -357,6 +360,7 @@ def publisher_source_health(state: dict[str, Any]) -> dict[str, Any]:
             ("source_policy_productive_path_samples", 8, 160),
             ("source_policy_non_productive_path_samples", 8, 160),
             ("source_policy_synthetic_row_samples", 5, 240),
+            ("source_readiness_blockers", 8, 160),
         ):
             value = compact_policy_detail_list(
                 raw_diagnostics.get(key),

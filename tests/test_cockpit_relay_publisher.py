@@ -2461,6 +2461,13 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 "operator_attention_reasons": ["import_readiness_not_ready"],
                 "operator_attention_primary_reason": "import_readiness_not_ready",
                 "operator_attention_label": "Import readiness is not ready",
+                "import_readiness": "blocked token=readiness-secret",
+                "readiness_blocker_count": "2",
+                "readiness_blockers": [
+                    "ledger incomplete token=blocker-secret",
+                    "review https://example.local/dallas?token=url-secret#debug",
+                ],
+                "ready_for_next_import_records": False,
             },
         }
 
@@ -2482,9 +2489,20 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                         "Import readiness is not ready"
                     ),
                     "source_cockpit_attention_reason_count": 1,
+                    "source_import_readiness": "blocked token=[redacted]",
+                    "source_readiness_blocker_count": 2,
+                    "source_readiness_blockers": [
+                        "ledger incomplete token=[redacted]",
+                        "review https://example.local/dallas?[redacted]#[redacted]",
+                    ],
+                    "source_ready_for_next_import_records": False,
                 },
             },
         )
+        health_text = json.dumps(health, sort_keys=True)
+        self.assertNotIn("readiness-secret", health_text)
+        self.assertNotIn("blocker-secret", health_text)
+        self.assertNotIn("url-secret", health_text)
 
     def test_publisher_source_health_includes_failure_route_diagnostics(self) -> None:
         status = {

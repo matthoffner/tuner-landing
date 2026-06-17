@@ -586,6 +586,18 @@ class RenderCockpitRelayTest(unittest.TestCase):
                                 "Import readiness token=label-secret"
                             ),
                             "source_cockpit_attention_reason_count": "2",
+                            "source_import_readiness": (
+                                "blocked token=readiness-secret"
+                            ),
+                            "source_readiness_blocker_count": "2",
+                            "source_readiness_blockers": [
+                                "ledger incomplete token=blocker-secret",
+                                (
+                                    "review https://example.local/dallas"
+                                    "?token=readiness-url-secret#debug"
+                                ),
+                            ],
+                            "source_ready_for_next_import_records": False,
                             "source_policy_failure_reason": (
                                 "policy rejected token=policy-secret"
                             ),
@@ -736,6 +748,13 @@ class RenderCockpitRelayTest(unittest.TestCase):
                 "Import readiness token=[redacted]"
             ),
             "source_cockpit_attention_reason_count": 2,
+            "source_import_readiness": "blocked token=[redacted]",
+            "source_readiness_blocker_count": 2,
+            "source_readiness_blockers": [
+                "ledger incomplete token=[redacted]",
+                "review https://example.local/dallas?[redacted]#[redacted]",
+            ],
+            "source_ready_for_next_import_records": False,
             "source_policy_failure_reason": (
                 "policy rejected token=[redacted]"
             ),

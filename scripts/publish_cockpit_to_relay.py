@@ -1830,6 +1830,36 @@ def source_health_diagnostics(status: dict[str, Any]) -> dict[str, Any]:
                 cockpit_attention_reason_count
             )
 
+        if cockpit_attention_primary_reason in {
+            "import_readiness_not_ready",
+            "import_readiness_blocked",
+        }:
+            import_readiness = compact_policy_detail(
+                cockpit_summary.get("import_readiness"),
+                max_length=80,
+            )
+            if import_readiness is not None:
+                diagnostics["source_import_readiness"] = import_readiness
+            readiness_blocker_count = compact_int(
+                cockpit_summary.get("readiness_blocker_count")
+            )
+            if readiness_blocker_count is not None:
+                diagnostics["source_readiness_blocker_count"] = readiness_blocker_count
+            readiness_blockers = compact_policy_detail_list(
+                cockpit_summary.get("readiness_blockers"),
+                max_items=POLICY_RAW_PATH_SAMPLE_LIMIT,
+                max_length=160,
+            )
+            if readiness_blockers:
+                diagnostics["source_readiness_blockers"] = readiness_blockers
+            ready_for_next_import_records = cockpit_summary.get(
+                "ready_for_next_import_records"
+            )
+            if isinstance(ready_for_next_import_records, bool):
+                diagnostics["source_ready_for_next_import_records"] = (
+                    ready_for_next_import_records
+                )
+
     if "autonomy_policy_failed" in cockpit_attention_reasons:
         for key, max_length in (
             ("policy_failure_reason", 160),
