@@ -3755,6 +3755,36 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         )
         self.assertEqual(status["failure"]["worker_exit_status"], 6)
 
+    def test_write_render_worker_failure_status_routes_loop_exit(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            self.worker.WORKDIR = Path(temp_dir) / "repo"
+            self.worker.WORKDIR.mkdir(parents=True)
+
+            with patch.object(
+                self.worker,
+                "worker_git_snapshot",
+                return_value={"branch": "main", "head": "abc123"},
+            ):
+                self.worker.write_render_worker_failure_status(
+                    reason=self.worker.LOOP_EXITED,
+                    worker_exit_status=6,
+                    details={
+                        "child_label": "autonomous loop",
+                        "child_status_available": True,
+                        "child_exit_status": 6,
+                    },
+                )
+
+            status = json.loads(
+                self.worker.cockpit_status_file().read_text(encoding="utf-8")
+            )
+
+        self.assertEqual(status["phase"], self.worker.LOOP_EXITED)
+        self.assertEqual(status["failure"]["route_hint"], self.worker.LOOP_EXITED)
+        self.assertEqual(status["failure"]["child_label"], "autonomous loop")
+        self.assertEqual(status["failure"]["child_status_available"], True)
+        self.assertEqual(status["failure"]["child_exit_status"], 6)
+
     def test_write_render_worker_failure_status_keeps_unknown_route_generic(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             self.worker.WORKDIR = Path(temp_dir) / "repo"
@@ -5857,6 +5887,10 @@ class RenderWorkerPreflightTest(unittest.TestCase):
 
         with (
             patch.object(self.worker, "current_business_hours_state", return_value=state),
+            patch.object(
+                self.worker,
+                "record_render_worker_failure_status",
+            ) as record_failure_status,
             patch.object(self.worker, "stop_children") as stop_children,
             redirect_stdout(output),
         ):
@@ -5869,8 +5903,93 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertEqual(reason, self.worker.LOOP_EXITED)
         self.assertEqual(status, self.worker.CHILD_POLL_FAILURE_EXIT_STATUS)
         stop_children.assert_called_once()
+        record_failure_status.assert_called_once_with(
+            reason=self.worker.LOOP_EXITED,
+            worker_exit_status=self.worker.CHILD_POLL_FAILURE_EXIT_STATUS,
+            details={
+                "child_label": "autonomous loop",
+                "child_status_available": False,
+            },
+        )
         self.assertIn("could not poll autonomous loop pid=101: OSError", output.getvalue())
         self.assertNotIn("secret-token", output.getvalue())
+
+    def test_scheduled_monitor_records_failure_status_when_loop_exits(self) -> None:
+        loop = FakeProcess(pid=101, initial_status=6)
+        publisher = FakeProcess(pid=202)
+        state = {
+            "enabled": True,
+            "in_business_hours": True,
+            "local_time": "2026-06-15T10:00:00-05:00",
+            "next_start_at": None,
+        }
+        output = io.StringIO()
+
+        with (
+            patch.object(self.worker, "current_business_hours_state", return_value=state),
+            patch.object(
+                self.worker,
+                "record_render_worker_failure_status",
+            ) as record_failure_status,
+            patch.object(self.worker, "stop_children") as stop_children,
+            redirect_stdout(output),
+        ):
+            reason, status = self.worker.monitor_scheduled_loop(
+                loop,
+                publisher,
+                poll_interval=0,
+            )
+
+        self.assertEqual(reason, self.worker.LOOP_EXITED)
+        self.assertEqual(status, 6)
+        stop_children.assert_called_once()
+        record_failure_status.assert_called_once_with(
+            reason=self.worker.LOOP_EXITED,
+            worker_exit_status=6,
+            details={
+                "child_label": "autonomous loop",
+                "child_status_available": True,
+                "child_exit_status": 6,
+            },
+        )
+        self.assertIn("autonomous loop exited status=6", output.getvalue())
+
+    def test_scheduled_monitor_treats_clean_loop_exit_as_worker_failure(self) -> None:
+        loop = FakeProcess(pid=101, initial_status=0)
+        publisher = FakeProcess(pid=202)
+        state = {
+            "enabled": True,
+            "in_business_hours": True,
+            "local_time": "2026-06-15T10:00:00-05:00",
+            "next_start_at": None,
+        }
+
+        with (
+            patch.object(self.worker, "current_business_hours_state", return_value=state),
+            patch.object(
+                self.worker,
+                "record_render_worker_failure_status",
+            ) as record_failure_status,
+            patch.object(self.worker, "stop_children") as stop_children,
+        ):
+            reason, status = self.worker.monitor_scheduled_loop(
+                loop,
+                publisher,
+                poll_interval=0,
+            )
+
+        self.assertEqual(reason, self.worker.LOOP_EXITED)
+        self.assertEqual(status, 1)
+        stop_children.assert_called_once()
+        record_failure_status.assert_called_once_with(
+            reason=self.worker.LOOP_EXITED,
+            worker_exit_status=1,
+            details={
+                "child_label": "autonomous loop",
+                "child_status_available": True,
+                "child_exit_status": 0,
+            },
+        )
 
     def test_scheduled_monitor_writes_failure_status_when_publisher_exits(self) -> None:
         loop = FakeProcess(pid=101)

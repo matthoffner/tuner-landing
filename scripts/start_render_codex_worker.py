@@ -169,6 +169,7 @@ RENDER_WORKER_SETUP_FAILED = "render_worker_setup_failed"
 RENDER_WORKER_FAILURE_ROUTE_HINTS = {
     AUTONOMOUS_LOOP_STARTUP_EXIT,
     ENVIRONMENT_PREFLIGHT_FAILED,
+    LOOP_EXITED,
     RENDER_WORKER_SETUP_FAILED,
     "relay_publisher_preflight_failed",
     "relay_publisher_start_failed",
@@ -2668,9 +2669,18 @@ def monitor_scheduled_loop(
         if loop_status is not None:
             if loop_poll_ok:
                 emit(f"autonomous loop exited status={loop_status}")
-            else:
-                stop_children()
-            return LOOP_EXITED, loop_status
+            worker_exit_status = loop_status if loop_status != 0 else 1
+            record_render_worker_failure_status(
+                reason=LOOP_EXITED,
+                worker_exit_status=worker_exit_status,
+                details=child_failure_details(
+                    "autonomous loop",
+                    loop_status,
+                    loop_poll_ok,
+                ),
+            )
+            stop_children()
+            return LOOP_EXITED, worker_exit_status
 
         publisher_status, publisher_poll_ok = safe_child_poll(
             publisher_process,
