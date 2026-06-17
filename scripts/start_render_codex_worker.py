@@ -47,8 +47,23 @@ BEARER_SECRET_PATTERN = re.compile(
     r"\b(authorization\s*[:=]\s*bearer)\s+[^\s,;]+",
     re.IGNORECASE,
 )
+SENSITIVE_KEY_PATTERN = (
+    r"(?:[A-Za-z0-9]+[_-])*"
+    r"(?:access[_-]?token|api[_-]?key|codex[_-]?access[_-]?token|gh[_-]?token|"
+    r"github[_-]?token|password|passwd|relay[_-]?token|secret|token|key|"
+    r"x-automoat-relay-token)"
+    r"(?:[_-][A-Za-z0-9]+)*"
+)
 SECRET_ASSIGNMENT_PATTERN = re.compile(
-    r"\b(token|relay_token|access_token|api_key|x-automoat-relay-token)\s*[:=]\s*[^\s,;]+",
+    rf"\b({SENSITIVE_KEY_PATTERN})\s*[:=]\s*([^\s,;|]+)",
+    re.IGNORECASE,
+)
+SENSITIVE_DOUBLE_QUOTED_FIELD_PATTERN = re.compile(
+    rf'"{SENSITIVE_KEY_PATTERN}"\s*:\s*"(?:\\.|[^"\\\r\n])*"',
+    re.IGNORECASE,
+)
+SENSITIVE_SINGLE_QUOTED_FIELD_PATTERN = re.compile(
+    rf"'{SENSITIVE_KEY_PATTERN}'\s*:\s*'(?:\\.|[^'\\\r\n])*'",
     re.IGNORECASE,
 )
 URL_SCHEME_PATTERN = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*://")
@@ -241,6 +256,7 @@ def sanitize_worker_log_text(
         sanitized,
     )
     sanitized = BEARER_SECRET_PATTERN.sub(r"\1 [redacted]", sanitized)
+    sanitized = sanitize_sensitive_worker_fields(sanitized)
     sanitized = SECRET_ASSIGNMENT_PATTERN.sub(
         lambda match: f"{match.group(1)}=[redacted]",
         sanitized,
@@ -268,6 +284,25 @@ def sanitize_worker_log_text(
     for identity_value in identity_values:
         sanitized = sanitized.replace(identity_value, "[redacted]")
     return sanitized
+
+
+def sanitize_sensitive_worker_fields(text: str) -> str:
+    text = SENSITIVE_DOUBLE_QUOTED_FIELD_PATTERN.sub(
+        lambda match: re.sub(
+            r'"\s*:\s*"(?:\\.|[^"\\\r\n])*"$',
+            '":"[redacted]"',
+            match.group(0),
+        ),
+        text,
+    )
+    return SENSITIVE_SINGLE_QUOTED_FIELD_PATTERN.sub(
+        lambda match: re.sub(
+            r"'\s*:\s*'(?:\\.|[^'\\\r\n])*'$",
+            "':'[redacted]'",
+            match.group(0),
+        ),
+        text,
+    )
 
 
 def sanitize_worker_config_text(

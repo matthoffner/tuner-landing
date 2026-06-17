@@ -4818,6 +4818,9 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             [
                 "authorization: Bearer bearer-secret",
                 "token=token-secret relay_token=relay-assignment-secret",
+                "OPENAI_API_KEY=openai-command-secret GITHUB_TOKEN:github-command-secret",
+                '{"relay_token":"json-relay-secret","status":"live"}',
+                "{'api_key':'single-quoted-secret','status':'live'}",
                 "https://user:url-secret@relay.example/status?token=url-secret#debug",
                 "plain copied relay-secret and github-secret",
             ]
@@ -4850,11 +4853,21 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertIn("authorization: Bearer [redacted]", log_output)
         self.assertIn("token=[redacted]", log_output)
         self.assertIn("relay_token=[redacted]", log_output)
+        self.assertIn("OPENAI_API_KEY=[redacted]", log_output)
+        self.assertIn("GITHUB_TOKEN=[redacted]", log_output)
+        self.assertIn('"relay_token":"[redacted]"', log_output)
+        self.assertIn("'api_key':'[redacted]'", log_output)
+        self.assertIn('"status":"live"', log_output)
+        self.assertIn("'status':'live'", log_output)
         self.assertIn("https://relay.example/status?[redacted]#[redacted]", log_output)
         self.assertIn("plain copied [redacted] and [redacted]", log_output)
         self.assertNotIn("bearer-secret", log_output)
         self.assertNotIn("token-secret", log_output)
         self.assertNotIn("relay-assignment-secret", log_output)
+        self.assertNotIn("openai-command-secret", log_output)
+        self.assertNotIn("github-command-secret", log_output)
+        self.assertNotIn("json-relay-secret", log_output)
+        self.assertNotIn("single-quoted-secret", log_output)
         self.assertNotIn("url-secret", log_output)
         self.assertNotIn("github-secret", log_output)
         self.assertNotIn("relay-secret", log_output)
