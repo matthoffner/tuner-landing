@@ -804,6 +804,7 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
     def test_productive_changed_paths_reports_companion_work_paths(self) -> None:
         paths = [
             "README.md",
+            "vercel.json",
             "scripts/run_autonomous_agent_loop.py",
             "tests/test_autonomous_agent_policy.py",
             "implementation-spec.md",
@@ -817,6 +818,7 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
                 "implementation-spec.md",
                 "scripts/run_autonomous_agent_loop.py",
                 "tests/test_autonomous_agent_policy.py",
+                "vercel.json",
             ],
         )
 

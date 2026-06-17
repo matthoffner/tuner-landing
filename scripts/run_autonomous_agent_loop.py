@@ -87,6 +87,7 @@ PRODUCTIVE_CHANGE_FILES = {
     "use-cases.md",
     "mvp.md",
     "render.yaml",
+    "vercel.json",
 }
 DALLAS_RAW_CSV_PREFIX = "generated/raw/dallas-electrician-import-sample-"
 DALLAS_RAW_CSV_DIFF_PATHSPEC = (
