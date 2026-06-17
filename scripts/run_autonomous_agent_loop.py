@@ -1613,6 +1613,7 @@ def autonomy_policy_summary(policy_diagnostics: dict[str, Any]) -> str:
         ("synthetic_row_count", "synthetic_rows"),
         ("raw_dallas_csv_changed_path_count", "raw_csv_paths"),
         ("productive_changed_path_count", "productive_paths"),
+        ("non_productive_companion_path_count", "ignored_paths"),
     ):
         parts.append(f"{label}={int(policy_diagnostics.get(key) or 0)}")
     for key, label in (

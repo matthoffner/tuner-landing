@@ -1513,7 +1513,7 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
             "reason=synthetic_append_disallowed_by_snapshot "
             "decision=dallas_ready_no_thin_groups "
             "focus=autonomy_visibility_or_real_ingest synthetic_rows=1 "
-            "raw_csv_paths=1 productive_paths=0 preview_changed=false "
+            "raw_csv_paths=1 productive_paths=0 ignored_paths=2 preview_changed=false "
             "allows_synthetic=false override=false",
         )
 
@@ -1717,7 +1717,7 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
             result["policy_summary"],
             "status=passed route=ok decision=dallas_ready_no_thin_groups "
             "focus=autonomy_visibility_or_real_ingest synthetic_rows=0 "
-            "raw_csv_paths=1 productive_paths=1 preview_changed=false "
+            "raw_csv_paths=1 productive_paths=1 ignored_paths=0 preview_changed=false "
             "allows_synthetic=false override=false",
         )
 
@@ -1801,6 +1801,7 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
                 "synthetic_row_count": 7,
                 "raw_dallas_csv_changed_path_count": 8,
                 "productive_changed_path_count": 9,
+                "non_productive_companion_path_count": 10,
                 "preview_json_changed": True,
                 "policy_allows_synthetic_append": False,
                 "policy_override": True,
@@ -1814,6 +1815,7 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
         self.assertIn("synthetic_rows=7", summary)
         self.assertIn("raw_csv_paths=8", summary)
         self.assertIn("productive_paths=9", summary)
+        self.assertIn("ignored_paths=10", summary)
         self.assertIn("preview_changed=true", summary)
         self.assertIn("override=true", summary)
         self.assertNotIn("super-secret", summary)

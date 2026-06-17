@@ -3,6 +3,13 @@
 Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
+- timestamp: 2026-06-17T21:24:10Z
+- lane: editor
+- status: added ignored companion path counts to autonomous supervisor policy summaries; `scripts/run_autonomous_agent_loop.py` now includes `ignored_paths=<count>` in the compact one-line policy summary so Render logs/status snippets show when README/NEXT_TASK/handoff-style files did not count as productive companion work; no Dallas raw CSV rows were edited
+- files: scripts/run_autonomous_agent_loop.py, tests/test_autonomous_agent_policy.py, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- checks: `python3 -m unittest tests.test_autonomous_agent_policy -v`; `python3 -m py_compile scripts/run_autonomous_agent_loop.py tests/test_autonomous_agent_policy.py`; `python3 -m unittest discover -s tests -v`; `node --check api/cockpit-upstreams.js && node --check api/cockpit-status.js && node --check api/cockpit-log.js`; `cmp -s generated/landing.html index.html`; `git diff --check`; `git diff --name-only -- generated/raw .pxcode/preview.json generated/landing.html index.html generated/pipeline/dallas-import-pipeline-summary-v1`; final local `run_autonomy_policy_check(Path('/tmp/automoat-policy-summary-ignored-paths-final.log'))` with zero synthetic rows, zero raw Dallas CSV paths, two productive paths, two ignored coordination paths, and no preview change; `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json > /tmp/automoat-policy-summary-ignored-paths-ready.json` plus JSON assertion for readiness `ready`, zero blockers, `ready_for_next_import_records=true`, `535` permits, `1082` inspections, `1625` source records, `535/535` operator corrections, `13/13` contract checks, and zero latest thin-count buckets
+- next: when autonomy policy summaries show `ignored_paths>0`, inspect the policy diagnostic samples for the ignored companion files before assuming a docs/handoff/landing change satisfied the productive-work gate
+
 - timestamp: 2026-06-17T21:13:29Z
 - lane: editor
 - status: exposed a numeric Vercel cockpit proxy payload-contract failure count; status and log proxies now set CORS-visible `X-Automoat-Upstream-Payload-Error-Count` to `0` by default and increment it alongside `X-Automoat-Upstream-Payload-Errors` when reachable upstream payloads fail contract parsing, so browser clients can branch on malformed upstream payloads without parsing the compact error list; no Dallas raw CSV rows were edited
