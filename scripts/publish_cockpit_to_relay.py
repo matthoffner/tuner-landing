@@ -1585,6 +1585,28 @@ def source_health_diagnostics(status: dict[str, Any]) -> dict[str, Any]:
         coordination.get("latest_section_found") is False
         or coordination.get("latest_status_found") is False
     )
+    source_freshness_attention = (
+        status.get("source_status_stale") is True
+        or status.get("source_status_timestamp_invalid") is True
+        or status.get("source_status_timestamp_future") is True
+    )
+
+    if source_freshness_attention and not source_status_unavailable:
+        for key in (
+            "source_status_age_seconds",
+            "source_status_stale_after_seconds",
+        ):
+            compact_value = compact_int(status.get(key))
+            if compact_value is not None:
+                diagnostics[key] = compact_value
+        for key in (
+            "source_status_stale",
+            "source_status_timestamp_invalid",
+            "source_status_timestamp_future",
+        ):
+            value = status.get(key)
+            if isinstance(value, bool):
+                diagnostics[key] = value
 
     if source_status_unavailable:
         text_fields = {

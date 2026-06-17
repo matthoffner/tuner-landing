@@ -849,6 +849,15 @@ class RenderCockpitRelayTest(unittest.TestCase):
                             "Source https://user:source-label-secret@example.local"
                             "/status?token=source-label-token#debug"
                         ),
+                        "diagnostics": {
+                            "source_status_age_seconds": "901",
+                            "source_status_stale_after_seconds": 660,
+                            "source_status_stale": True,
+                            "source_status_timestamp_invalid": False,
+                            "source_status_timestamp_future": False,
+                            "source_status_file": "/tmp/customer/source-health.json",
+                            "unknown_token": "source-diagnostic-secret",
+                        },
                     },
                 },
             }
@@ -883,6 +892,14 @@ class RenderCockpitRelayTest(unittest.TestCase):
             ],
             "primary_reason": "source token=[redacted] needs review",
             "label": "Source https://example.local/status?[redacted]#[redacted]",
+            "diagnostics": {
+                "source_status_file": "<external>/source-health.json",
+                "source_status_age_seconds": 901,
+                "source_status_stale_after_seconds": 660,
+                "source_status_stale": True,
+                "source_status_timestamp_invalid": False,
+                "source_status_timestamp_future": False,
+            },
         }
         self.assertEqual(
             health["cockpit_health"]["source_bridge"]["bridge_health"],
@@ -922,6 +939,7 @@ class RenderCockpitRelayTest(unittest.TestCase):
             "source-primary-secret",
             "source-label-secret",
             "source-label-token",
+            "source-diagnostic-secret",
             "extra_source_reason_two",
         ):
             self.assertNotIn(unsafe_text, response_text)

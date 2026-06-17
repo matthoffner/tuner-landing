@@ -2247,7 +2247,10 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             "status": "passing",
             "loop_running": True,
             "source_status_stale": True,
+            "source_status_age_seconds": "not-a-number token=age-secret",
+            "source_status_stale_after_seconds": 660,
             "source_status_timestamp_invalid": True,
+            "source_status_timestamp_future": False,
             "source_status_file_status": "loaded",
         }
 
@@ -2261,14 +2264,24 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 "reasons": ["source_status_timestamp_invalid"],
                 "primary_reason": "source_status_timestamp_invalid",
                 "label": "Source status timestamp is invalid",
+                "diagnostics": {
+                    "source_status_stale_after_seconds": 660,
+                    "source_status_stale": True,
+                    "source_status_timestamp_invalid": True,
+                    "source_status_timestamp_future": False,
+                },
             },
         )
+        self.assertNotIn("age-secret", json.dumps(health, sort_keys=True))
 
     def test_publisher_source_health_routes_future_source_timestamp(self) -> None:
         status = {
             "status": "passing",
             "loop_running": True,
             "source_status_stale": True,
+            "source_status_age_seconds": 0,
+            "source_status_stale_after_seconds": 660,
+            "source_status_timestamp_invalid": False,
             "source_status_timestamp_future": True,
             "source_status_file_status": "loaded",
         }
@@ -2283,6 +2296,45 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 "reasons": ["source_status_timestamp_future"],
                 "primary_reason": "source_status_timestamp_future",
                 "label": "Source status timestamp is in the future",
+                "diagnostics": {
+                    "source_status_age_seconds": 0,
+                    "source_status_stale_after_seconds": 660,
+                    "source_status_stale": True,
+                    "source_status_timestamp_invalid": False,
+                    "source_status_timestamp_future": True,
+                },
+            },
+        )
+
+    def test_publisher_source_health_includes_stale_source_freshness_diagnostics(self) -> None:
+        status = {
+            "status": "passing",
+            "loop_running": True,
+            "source_status_stale": True,
+            "source_status_age_seconds": 901,
+            "source_status_stale_after_seconds": 660,
+            "source_status_timestamp_invalid": False,
+            "source_status_timestamp_future": False,
+            "source_status_file_status": "loaded",
+        }
+
+        health = self.publisher.publisher_source_health(status)
+
+        self.assertEqual(
+            health,
+            {
+                "status": "degraded",
+                "ok": False,
+                "reasons": ["source_status_stale"],
+                "primary_reason": "source_status_stale",
+                "label": "Source status is stale",
+                "diagnostics": {
+                    "source_status_age_seconds": 901,
+                    "source_status_stale_after_seconds": 660,
+                    "source_status_stale": True,
+                    "source_status_timestamp_invalid": False,
+                    "source_status_timestamp_future": False,
+                },
             },
         )
 

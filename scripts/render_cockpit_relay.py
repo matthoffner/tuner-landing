@@ -247,9 +247,19 @@ def publisher_source_health(state: dict[str, Any]) -> dict[str, Any]:
         for key in (
             "source_handoff_latest_section_found",
             "source_handoff_latest_status_found",
+            "source_status_stale",
+            "source_status_timestamp_invalid",
+            "source_status_timestamp_future",
         ):
             value = raw_diagnostics.get(key)
             if isinstance(value, bool):
+                diagnostics[key] = value
+        for key in (
+            "source_status_age_seconds",
+            "source_status_stale_after_seconds",
+        ):
+            value = compact_int(raw_diagnostics.get(key))
+            if value is not None:
                 diagnostics[key] = value
         if diagnostics:
             summary["diagnostics"] = diagnostics
