@@ -525,6 +525,85 @@ class RenderCockpitRelayTest(unittest.TestCase):
             expected_source_health,
         )
 
+    def test_status_and_health_preserve_coverage_source_health_diagnostics(self) -> None:
+        self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
+        self.relay.update_state(
+            {
+                "pushed_at": "2026-06-14T19:59:30Z",
+                "status": {
+                    "status": "running",
+                    "loop_running": True,
+                },
+                "log_tail": "publisher summarized coverage attention\n",
+                "publisher": {
+                    "source_health": {
+                        "status": "degraded",
+                        "ok": False,
+                        "reasons": ["source_cockpit_attention"],
+                        "primary_reason": "source_cockpit_attention",
+                        "label": "Coverage has thin groups",
+                        "diagnostics": {
+                            "source_cockpit_attention_primary_reason": (
+                                "coverage_thin_groups_present token=reason-secret"
+                            ),
+                            "source_cockpit_attention_label": (
+                                "Coverage has thin groups token=label-secret"
+                            ),
+                            "source_cockpit_attention_reason_count": "1",
+                            "source_thin_group_count": "3",
+                            "source_thin_group_category_count": "2",
+                            "source_thin_group_categories": [
+                                "failure_reasons token=category-secret",
+                                "next_action_groups",
+                            ],
+                            "source_coverage_latest_thin_counts": {
+                                "failure_reasons": "2",
+                                "next_action_groups": 1,
+                                "pattern_slices": "token=count-secret",
+                            },
+                        },
+                    },
+                },
+            }
+        )
+        self.relay.utc_now = lambda: "2026-06-14T20:00:00Z"
+
+        health = self.relay.health_payload()
+        status = self.relay.relay_status_payload()
+
+        expected_diagnostics = {
+            "source_cockpit_attention_primary_reason": (
+                "coverage_thin_groups_present token=[redacted]"
+            ),
+            "source_cockpit_attention_label": (
+                "Coverage has thin groups token=[redacted]"
+            ),
+            "source_cockpit_attention_reason_count": 1,
+            "source_thin_group_count": 3,
+            "source_thin_group_category_count": 2,
+            "source_thin_group_categories": [
+                "failure_reasons token=[redacted]",
+                "next_action_groups",
+            ],
+            "source_coverage_latest_thin_counts": {
+                "failure_reasons": 2,
+                "next_action_groups": 1,
+            },
+        }
+        self.assertEqual(
+            health["cockpit_health"]["source_health"]["diagnostics"],
+            expected_diagnostics,
+        )
+        self.assertEqual(
+            status["relay"]["publisher"]["source_health"]["diagnostics"],
+            expected_diagnostics,
+        )
+        response_text = json.dumps(status, sort_keys=True)
+        self.assertNotIn("reason-secret", response_text)
+        self.assertNotIn("label-secret", response_text)
+        self.assertNotIn("category-secret", response_text)
+        self.assertNotIn("count-secret", response_text)
+
     def test_status_and_health_preserve_publisher_source_health_diagnostics(self) -> None:
         self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
         self.relay.update_state(

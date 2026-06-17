@@ -1890,6 +1890,28 @@ def source_health_diagnostics(status: dict[str, Any]) -> dict[str, Any]:
                 diagnostics["source_ready_for_next_import_records"] = (
                     ready_for_next_import_records
                 )
+        if cockpit_attention_primary_reason == "coverage_thin_groups_present":
+            for key, diagnostic_key in (
+                ("thin_group_count", "source_thin_group_count"),
+                ("thin_group_category_count", "source_thin_group_category_count"),
+            ):
+                compact_value = compact_int(cockpit_summary.get(key))
+                if compact_value is not None:
+                    diagnostics[diagnostic_key] = compact_value
+            thin_group_categories = compact_policy_detail_list(
+                cockpit_summary.get("thin_group_categories"),
+                max_items=POLICY_RAW_PATH_SAMPLE_LIMIT,
+                max_length=120,
+            )
+            if thin_group_categories:
+                diagnostics["source_thin_group_categories"] = thin_group_categories
+            coverage_latest_thin_counts = compact_count_map(
+                cockpit_summary.get("coverage_latest_thin_counts")
+            )
+            if coverage_latest_thin_counts:
+                diagnostics["source_coverage_latest_thin_counts"] = (
+                    coverage_latest_thin_counts
+                )
 
     if "autonomy_policy_failed" in cockpit_attention_reasons:
         for key, max_length in (

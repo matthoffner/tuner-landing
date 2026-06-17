@@ -361,6 +361,8 @@ def publisher_source_health(state: dict[str, Any]) -> dict[str, Any]:
             "source_bridge_status_stale_after_seconds",
             "source_handoff_age_seconds",
             "source_readiness_blocker_count",
+            "source_thin_group_count",
+            "source_thin_group_category_count",
             "source_status_age_seconds",
             "source_status_remote_omitted_field_count",
             "source_status_stale_after_seconds",
@@ -390,6 +392,7 @@ def publisher_source_health(state: dict[str, Any]) -> dict[str, Any]:
             ("source_failure_non_productive_path_samples", 8, 160),
             ("source_failure_synthetic_row_samples", 5, 240),
             ("source_readiness_blockers", 8, 160),
+            ("source_thin_group_categories", 8, 120),
             ("source_failure_environment_preflight_error_categories", 12, 80),
             ("source_failure_environment_preflight_failed_keys", 12, 120),
             ("source_failure_publisher_preflight_error_categories", 12, 80),
@@ -402,6 +405,13 @@ def publisher_source_health(state: dict[str, Any]) -> dict[str, Any]:
             )
             if value:
                 diagnostics[key] = value
+        coverage_latest_thin_counts = compact_count_map(
+            raw_diagnostics.get("source_coverage_latest_thin_counts")
+        )
+        if coverage_latest_thin_counts:
+            diagnostics["source_coverage_latest_thin_counts"] = (
+                coverage_latest_thin_counts
+            )
         if diagnostics:
             summary["diagnostics"] = diagnostics
     return summary

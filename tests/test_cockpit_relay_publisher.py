@@ -2504,6 +2504,64 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertNotIn("blocker-secret", health_text)
         self.assertNotIn("url-secret", health_text)
 
+    def test_publisher_source_health_reports_coverage_attention(self) -> None:
+        status = {
+            "status": "passing",
+            "loop_running": True,
+            "source_status_stale": False,
+            "source_status_file_status": "loaded",
+            "cockpit_summary": {
+                "operator_attention": True,
+                "operator_attention_reasons": ["coverage_thin_groups_present"],
+                "operator_attention_primary_reason": "coverage_thin_groups_present",
+                "operator_attention_label": "Coverage has thin groups",
+                "thin_group_count": "3",
+                "thin_group_category_count": "2",
+                "thin_group_categories": [
+                    "failure_reasons token=category-secret",
+                    "next_action_groups",
+                ],
+                "coverage_latest_thin_counts": {
+                    "failure_reasons": "2",
+                    "next_action_groups": 1,
+                    "pattern_slices": "token=count-secret",
+                },
+            },
+        }
+
+        health = self.publisher.publisher_source_health(status)
+
+        self.assertEqual(
+            health,
+            {
+                "status": "degraded",
+                "ok": False,
+                "reasons": ["source_cockpit_attention"],
+                "primary_reason": "source_cockpit_attention",
+                "label": "Coverage has thin groups",
+                "diagnostics": {
+                    "source_cockpit_attention_primary_reason": (
+                        "coverage_thin_groups_present"
+                    ),
+                    "source_cockpit_attention_label": "Coverage has thin groups",
+                    "source_cockpit_attention_reason_count": 1,
+                    "source_thin_group_count": 3,
+                    "source_thin_group_category_count": 2,
+                    "source_thin_group_categories": [
+                        "failure_reasons token=[redacted]",
+                        "next_action_groups",
+                    ],
+                    "source_coverage_latest_thin_counts": {
+                        "failure_reasons": 2,
+                        "next_action_groups": 1,
+                    },
+                },
+            },
+        )
+        health_text = json.dumps(health, sort_keys=True)
+        self.assertNotIn("category-secret", health_text)
+        self.assertNotIn("count-secret", health_text)
+
     def test_publisher_source_health_includes_failure_route_diagnostics(self) -> None:
         status = {
             "status": "failing",
