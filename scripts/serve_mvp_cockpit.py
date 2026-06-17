@@ -29,6 +29,8 @@ STATUS_FILE = ROOT / ".automoat" / "state" / "mvp-loop-status.json"
 PID_FILE = ROOT / ".automoat" / "state" / "mvp-loop.pid"
 BRIDGE_STATUS_FILE = ROOT / ".automoat" / "state" / "mvp-bridge-status.json"
 MAX_CORRECTION_BYTES = 8192
+MAX_LOCAL_STATUS_JSON_BYTES = 128 * 1024
+MAX_LOCAL_BRIDGE_STATUS_JSON_BYTES = 128 * 1024
 STATUS_STALE_AFTER_SECONDS = 120
 POLICY_RAW_PATH_SAMPLE_LIMIT = 8
 POLICY_ROW_SAMPLE_LIMIT = 5
@@ -192,6 +194,66 @@ def compact_path_diagnostic(value: object, *, max_length: int = 240) -> str | No
         text,
     )
     return compact_text(text, max_length=max_length)
+
+
+def json_path_component(value: object) -> str:
+    key = compact_policy_detail(value, max_length=80)
+    if key is None:
+        return "<?>"
+    if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", key):
+        return f".{key}"
+    return f"[{json.dumps(key)}]"
+
+
+def first_non_finite_json_number_path(value: object, path: str = "$") -> str | None:
+    if isinstance(value, float) and not math.isfinite(value):
+        return path
+    if isinstance(value, dict):
+        for key, item in value.items():
+            nested_path = first_non_finite_json_number_path(
+                item,
+                f"{path}{json_path_component(key)}",
+            )
+            if nested_path is not None:
+                return nested_path
+    if isinstance(value, list):
+        for index, item in enumerate(value):
+            nested_path = first_non_finite_json_number_path(item, f"{path}[{index}]")
+            if nested_path is not None:
+                return nested_path
+    return None
+
+
+def read_json_limited(
+    path: Path,
+    max_bytes: int,
+) -> tuple[object | None, str | None, str | None]:
+    try:
+        with path.open("rb") as handle:
+            payload_bytes = handle.read(max_bytes + 1)
+    except OSError as exc:
+        return None, "read_failed", compact_path_error(exc, path)
+    if len(payload_bytes) > max_bytes:
+        return (
+            None,
+            "too_large",
+            f"file exceeds max JSON bytes ({len(payload_bytes)} > {max_bytes})",
+        )
+    try:
+        payload_text = payload_bytes.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        return None, "invalid_json", f"invalid UTF-8 at byte {exc.start}"
+    try:
+        payload = json.loads(payload_text, parse_constant=reject_json_constant)
+    except json.JSONDecodeError as exc:
+        return None, "invalid_json", f"line {exc.lineno} column {exc.colno}: {exc.msg}"
+    except ValueError as exc:
+        return None, "invalid_json", compact_text(str(exc)) or type(exc).__name__
+
+    non_finite_path = first_non_finite_json_number_path(payload)
+    if non_finite_path is not None:
+        return None, "invalid_json", f"non-finite JSON number at {non_finite_path}"
+    return payload, None, None
 
 
 def compact_policy_detail_list(
@@ -413,31 +475,16 @@ def read_bridge_summary() -> dict[str, object]:
             "status_file": status_file,
             "status_file_status": "missing",
         }
-    try:
-        payload = json.loads(
-            BRIDGE_STATUS_FILE.read_text(encoding="utf-8"),
-            parse_constant=reject_json_constant,
-        )
-    except OSError as exc:
+    payload, payload_status, payload_error = read_json_limited(
+        BRIDGE_STATUS_FILE,
+        MAX_LOCAL_BRIDGE_STATUS_JSON_BYTES,
+    )
+    if payload_status is not None:
         return {
             "available": False,
             "status_file": status_file,
-            "status_file_status": "read_failed",
-            "status_file_error": compact_path_error(exc, BRIDGE_STATUS_FILE),
-        }
-    except json.JSONDecodeError as exc:
-        return {
-            "available": False,
-            "status_file": status_file,
-            "status_file_status": "invalid_json",
-            "status_file_error": f"line {exc.lineno} column {exc.colno}: {exc.msg}",
-        }
-    except ValueError as exc:
-        return {
-            "available": False,
-            "status_file": status_file,
-            "status_file_status": "invalid_json",
-            "status_file_error": compact_text(str(exc)) or type(exc).__name__,
+            "status_file_status": payload_status,
+            "status_file_error": payload_error or payload_status,
         }
     if not isinstance(payload, dict):
         return {
@@ -1081,31 +1128,16 @@ def cockpit_summary(status: dict[str, object]) -> dict[str, object]:
 def read_status() -> dict[str, object]:
     status_file = repo_relative(STATUS_FILE)
     if STATUS_FILE.exists():
-        try:
-            payload = json.loads(
-                STATUS_FILE.read_text(encoding="utf-8"),
-                parse_constant=reject_json_constant,
-            )
-        except OSError as exc:
+        payload, payload_status, payload_error = read_json_limited(
+            STATUS_FILE,
+            MAX_LOCAL_STATUS_JSON_BYTES,
+        )
+        if payload_status is not None:
             status = {
                 "status": "invalid-status-json",
                 "source_status_file": status_file,
-                "source_status_file_status": "read_failed",
-                "source_status_file_error": compact_path_error(exc, STATUS_FILE),
-            }
-        except json.JSONDecodeError as exc:
-            status = {
-                "status": "invalid-status-json",
-                "source_status_file": status_file,
-                "source_status_file_status": "invalid_json",
-                "source_status_file_error": f"line {exc.lineno} column {exc.colno}: {exc.msg}",
-            }
-        except ValueError as exc:
-            status = {
-                "status": "invalid-status-json",
-                "source_status_file": status_file,
-                "source_status_file_status": "invalid_json",
-                "source_status_file_error": compact_text(str(exc)) or type(exc).__name__,
+                "source_status_file_status": payload_status,
+                "source_status_file_error": payload_error or payload_status,
             }
         else:
             if isinstance(payload, dict):

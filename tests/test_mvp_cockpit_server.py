@@ -1252,6 +1252,26 @@ class MvpCockpitServerTest(unittest.TestCase):
         self.assertIn("invalid JSON constant Infinity", summary["status_file_error"])
         self.assertNotIn('"interval"', summary_text)
 
+    def test_read_bridge_summary_rejects_overflowed_json_numbers(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            self.cockpit.BRIDGE_STATUS_FILE = tmp_path / "mvp-bridge-status.json"
+            self.cockpit.BRIDGE_STATUS_FILE.write_text(
+                '{"status":"running","metrics":{"interval":1e999}}\n',
+                encoding="utf-8",
+            )
+
+            summary = self.cockpit.read_bridge_summary()
+            summary_text = json.dumps(summary, sort_keys=True, allow_nan=False)
+
+        self.assertFalse(summary["available"])
+        self.assertEqual(summary["status_file_status"], "invalid_json")
+        self.assertIn(
+            "non-finite JSON number at $.metrics.interval",
+            summary["status_file_error"],
+        )
+        self.assertNotIn("1e999", summary_text)
+
     def test_read_bridge_summary_handles_missing_and_invalid_status(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
@@ -1418,6 +1438,63 @@ class MvpCockpitServerTest(unittest.TestCase):
         self.assertEqual(status["cockpit_summary"]["status"], "invalid-status-json")
         self.assertIn("status_failing", status["cockpit_summary"]["operator_attention_reasons"])
         self.assertNotIn('"passed_checks": NaN', status_text)
+
+    def test_read_status_rejects_overflowed_json_numbers(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            self.cockpit.STATUS_FILE = tmp_path / "status.json"
+            self.cockpit.PID_FILE = tmp_path / "mvp-loop.pid"
+            self.cockpit.BRIDGE_STATUS_FILE = tmp_path / "mvp-bridge-status.json"
+            self.cockpit.LOOP_PROCESS = None
+            self.cockpit.STATUS_FILE.write_text(
+                (
+                    '{"status":"running","artifacts":{"contract":'
+                    '{"passed_checks":1e999}}}\n'
+                ),
+                encoding="utf-8",
+            )
+
+            status = self.cockpit.read_status()
+            status_text = json.dumps(status, sort_keys=True, allow_nan=False)
+
+        self.assertEqual(status["status"], "invalid-status-json")
+        self.assertEqual(status["source_status_file_status"], "invalid_json")
+        self.assertIn(
+            "non-finite JSON number at $.artifacts.contract.passed_checks",
+            status["source_status_file_error"],
+        )
+        self.assertEqual(status["cockpit_summary"]["status"], "invalid-status-json")
+        self.assertIn(
+            "status_failing",
+            status["cockpit_summary"]["operator_attention_reasons"],
+        )
+        self.assertNotIn("Infinity", status_text)
+
+    def test_read_status_reports_oversized_status_file(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            self.cockpit.STATUS_FILE = tmp_path / "status.json"
+            self.cockpit.PID_FILE = tmp_path / "mvp-loop.pid"
+            self.cockpit.BRIDGE_STATUS_FILE = tmp_path / "mvp-bridge-status.json"
+            self.cockpit.MAX_LOCAL_STATUS_JSON_BYTES = 24
+            self.cockpit.LOOP_PROCESS = None
+            self.cockpit.STATUS_FILE.write_text(
+                '{"status":"running","padding":"xxxxxxxxxxxxxxxxxxxxxxxx"}\n',
+                encoding="utf-8",
+            )
+
+            status = self.cockpit.read_status()
+            status_text = json.dumps(status, sort_keys=True, allow_nan=False)
+
+        self.assertEqual(status["status"], "invalid-status-json")
+        self.assertEqual(status["source_status_file_status"], "too_large")
+        self.assertIn("file exceeds max JSON bytes", status["source_status_file_error"])
+        self.assertEqual(status["cockpit_summary"]["status"], "invalid-status-json")
+        self.assertIn(
+            "status_failing",
+            status["cockpit_summary"]["operator_attention_reasons"],
+        )
+        self.assertNotIn("xxxxxxxx", status_text)
 
     def test_read_status_rejects_non_object_json_payload(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
