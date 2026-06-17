@@ -2273,6 +2273,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             "source_status_file_error": (
                 "failed to read /tmp/source-status-token.json token=secret"
             ),
+            "source_status_remote_omitted_field_count": "3",
         }
 
         health = self.publisher.publisher_source_health(status)
@@ -2287,6 +2288,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                     "failed to read <external>/source-status-token.json "
                     "token=[redacted]"
                 ),
+                "source_status_remote_omitted_field_count": 3,
             },
         )
         self.assertNotIn("secret", json.dumps(health, sort_keys=True))

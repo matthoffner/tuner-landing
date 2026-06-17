@@ -1843,6 +1843,12 @@ def source_health_diagnostics(status: dict[str, Any]) -> dict[str, Any]:
             if compact_value is not None:
                 diagnostics[key] = compact_value
 
+    omitted_field_count = compact_int(
+        status.get("source_status_remote_omitted_field_count")
+    )
+    if diagnostics and omitted_field_count is not None:
+        diagnostics["source_status_remote_omitted_field_count"] = omitted_field_count
+
     return diagnostics
 
 

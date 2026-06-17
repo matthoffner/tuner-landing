@@ -548,6 +548,7 @@ class RenderCockpitRelayTest(unittest.TestCase):
                             "source_status_file_error": (
                                 "failed /tmp/source-status-token.json token=secret"
                             ),
+                            "source_status_remote_omitted_field_count": "4",
                             "source_status": "invalid-status-value token=status-secret",
                             "source_status_value_invalid": True,
                             "source_bridge_status_file": "/tmp/bridge-status-token.json",
@@ -618,6 +619,7 @@ class RenderCockpitRelayTest(unittest.TestCase):
             "source_status_file_error": (
                 "failed <external>/source-status-token.json token=[redacted]"
             ),
+            "source_status_remote_omitted_field_count": 4,
             "source_status": "invalid-status-value token=[redacted]",
             "source_status_value_invalid": True,
             "source_bridge_status_file": "<external>/bridge-status-token.json",

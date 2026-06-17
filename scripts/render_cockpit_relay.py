@@ -308,6 +308,7 @@ def publisher_source_health(state: dict[str, Any]) -> dict[str, Any]:
             "source_bridge_status_stale_after_seconds",
             "source_handoff_age_seconds",
             "source_status_age_seconds",
+            "source_status_remote_omitted_field_count",
             "source_status_stale_after_seconds",
         ):
             value = compact_int(raw_diagnostics.get(key))
