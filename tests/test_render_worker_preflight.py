@@ -5904,6 +5904,11 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             reason=self.worker.PUBLISHER_EXITED,
             worker_exit_status=1,
             publisher_exit_status=0,
+            details={
+                "child_label": "relay publisher",
+                "child_status_available": True,
+                "child_exit_status": 0,
+            },
         )
         self.assertIn("relay publisher exited unexpectedly status=0", output.getvalue())
 
@@ -5939,6 +5944,10 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             reason=self.worker.PUBLISHER_EXITED,
             worker_exit_status=self.worker.CHILD_POLL_FAILURE_EXIT_STATUS,
             publisher_exit_status=None,
+            details={
+                "child_label": "relay publisher",
+                "child_status_available": False,
+            },
         )
         self.assertIn("could not poll relay publisher pid=202: OSError", output.getvalue())
         self.assertNotIn("secret-token", output.getvalue())
@@ -5975,6 +5984,11 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             reason=self.worker.PUBLISHER_EXITED,
             worker_exit_status=1,
             publisher_exit_status=0,
+            details={
+                "child_label": "relay publisher",
+                "child_status_available": True,
+                "child_exit_status": 0,
+            },
         )
         self.assertIn("relay publisher exited unexpectedly status=0", output.getvalue())
 

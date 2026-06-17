@@ -2542,20 +2542,26 @@ def child_startup_exit_result(
     status, poll_ok = safe_child_poll(process, label)
     if status is None:
         return None, {}
-    details: dict[str, object] = {
-        "child_label": label,
-        "child_status_available": poll_ok,
-    }
+    details = child_failure_details(label, status, poll_ok)
     if not poll_ok:
         return CHILD_POLL_FAILURE_EXIT_STATUS, details
 
     worker_status = clean_exit_status if status == 0 and clean_exit_status is not None else status
-    details["child_exit_status"] = status
     emit(
         f"{label} exited during startup status={status}; "
         f"worker_exit_status={worker_status}"
     )
     return worker_status, details
+
+
+def child_failure_details(label: str, status: int, poll_ok: bool) -> dict[str, object]:
+    details: dict[str, object] = {
+        "child_label": label,
+        "child_status_available": poll_ok,
+    }
+    if poll_ok:
+        details["child_exit_status"] = status
+    return details
 
 
 def safe_child_poll(
@@ -2681,6 +2687,11 @@ def monitor_scheduled_loop(
                 reason=PUBLISHER_EXITED,
                 worker_exit_status=publisher_status if publisher_status != 0 else 1,
                 publisher_exit_status=publisher_status if publisher_poll_ok else None,
+                details=child_failure_details(
+                    "relay publisher",
+                    publisher_status,
+                    publisher_poll_ok,
+                ),
             )
             if not publisher_poll_ok:
                 stop_children()
@@ -2714,6 +2725,11 @@ def sleep_outside_business_hours(
                 reason=PUBLISHER_EXITED,
                 worker_exit_status=worker_exit_status,
                 publisher_exit_status=publisher_status if publisher_poll_ok else None,
+                details=child_failure_details(
+                    "relay publisher",
+                    publisher_status,
+                    publisher_poll_ok,
+                ),
             )
             return PUBLISHER_EXITED, worker_exit_status
         time.sleep(min(poll_interval, max(0.0, deadline - time.monotonic())))
