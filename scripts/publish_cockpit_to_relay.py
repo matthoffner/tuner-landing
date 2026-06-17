@@ -439,6 +439,20 @@ def compact_policy_detail_list(
     return compacted
 
 
+def compact_log_detail_list(
+    value: Any,
+    *,
+    max_items: int = 5,
+    max_length: int = 80,
+) -> str | None:
+    compacted = compact_policy_detail_list(
+        value,
+        max_items=max_items,
+        max_length=max_length,
+    )
+    return ",".join(compacted) if compacted else None
+
+
 def compact_path_detail_list(
     value: Any,
     *,
@@ -829,6 +843,7 @@ def failure_summary(status: dict[str, Any]) -> dict[str, Any]:
         "termination_reason": failure.get("termination_reason"),
         "failed_step": failure.get("failed_step"),
         "failed_substep": failure.get("failed_substep"),
+        "setup_stage": failure.get("setup_stage"),
     }
     for key, value in text_fields.items():
         compact_value = compact_policy_detail(value)
@@ -873,6 +888,8 @@ def failure_summary(status: dict[str, Any]) -> dict[str, Any]:
         "codex_exit_status": failure.get("codex_exit_status"),
         "failed_step_exit_status": failure.get("failed_step_exit_status"),
         "failed_substep_exit_status": failure.get("failed_substep_exit_status"),
+        "worker_exit_status": failure.get("worker_exit_status"),
+        "publisher_exit_status": failure.get("publisher_exit_status"),
     }
     for key, value in exit_status_fields.items():
         compact_value = compact_exit_status(value)
@@ -903,6 +920,35 @@ def failure_summary(status: dict[str, Any]) -> dict[str, Any]:
             break
     if artifact_statuses:
         summary["artifact_statuses"] = artifact_statuses
+
+    publisher_preflight = as_dict(failure.get("publisher_preflight"))
+    if publisher_preflight:
+        compact_preflight: dict[str, Any] = {}
+        status_value = compact_policy_detail(publisher_preflight.get("status"), max_length=80)
+        if status_value is not None:
+            compact_preflight["status"] = status_value
+        exit_status = compact_exit_status(publisher_preflight.get("exit_status"))
+        if exit_status is not None:
+            compact_preflight["exit_status"] = exit_status
+        error_count = compact_int(publisher_preflight.get("error_count"))
+        if error_count is not None:
+            compact_preflight["error_count"] = error_count
+        error_categories = compact_policy_detail_list(
+            publisher_preflight.get("error_categories"),
+            max_items=12,
+            max_length=80,
+        )
+        if error_categories:
+            compact_preflight["error_categories"] = error_categories
+        failed_keys = compact_policy_detail_list(
+            publisher_preflight.get("failed_configuration_keys"),
+            max_items=12,
+            max_length=120,
+        )
+        if failed_keys:
+            compact_preflight["failed_configuration_keys"] = failed_keys
+        if compact_preflight:
+            summary["publisher_preflight"] = compact_preflight
 
     return summary
 
@@ -1763,6 +1809,9 @@ def source_status_log_fields(payload: dict[str, Any]) -> dict[str, Any]:
     failure = cockpit_summary.get("failure_summary")
     if not isinstance(failure, dict):
         failure = {}
+    publisher_preflight = failure.get("publisher_preflight")
+    if not isinstance(publisher_preflight, dict):
+        publisher_preflight = {}
     publisher = payload.get("publisher")
     if not isinstance(publisher, dict):
         publisher = {}
@@ -1973,8 +2022,38 @@ def source_status_log_fields(payload: dict[str, Any]) -> dict[str, Any]:
             failure.get("failed_substep"),
             max_length=120,
         ),
+        "source_failure_setup_stage": compact_policy_detail(
+            failure.get("setup_stage"),
+            max_length=120,
+        ),
         "source_failure_codex_exit_status": compact_exit_status(
             failure.get("codex_exit_status")
+        ),
+        "source_failure_worker_exit_status": compact_exit_status(
+            failure.get("worker_exit_status")
+        ),
+        "source_failure_publisher_exit_status": compact_exit_status(
+            failure.get("publisher_exit_status")
+        ),
+        "source_failure_publisher_preflight_status": compact_policy_detail(
+            publisher_preflight.get("status"),
+            max_length=80,
+        ),
+        "source_failure_publisher_preflight_exit_status": compact_exit_status(
+            publisher_preflight.get("exit_status")
+        ),
+        "source_failure_publisher_preflight_error_count": compact_int(
+            publisher_preflight.get("error_count")
+        ),
+        "source_failure_publisher_preflight_error_categories": compact_log_detail_list(
+            publisher_preflight.get("error_categories"),
+            max_items=5,
+            max_length=80,
+        ),
+        "source_failure_publisher_preflight_failed_keys": compact_log_detail_list(
+            publisher_preflight.get("failed_configuration_keys"),
+            max_items=5,
+            max_length=120,
         ),
         "source_failure_timed_out": failure.get("timed_out")
         if isinstance(failure.get("timed_out"), bool)
@@ -2103,7 +2182,15 @@ SOURCE_STATUS_LOG_FIELD_NAMES = (
     "source_failure_termination_reason",
     "source_failure_failed_step",
     "source_failure_failed_substep",
+    "source_failure_setup_stage",
     "source_failure_codex_exit_status",
+    "source_failure_worker_exit_status",
+    "source_failure_publisher_exit_status",
+    "source_failure_publisher_preflight_status",
+    "source_failure_publisher_preflight_exit_status",
+    "source_failure_publisher_preflight_error_count",
+    "source_failure_publisher_preflight_error_categories",
+    "source_failure_publisher_preflight_failed_keys",
     "source_failure_timed_out",
     "source_failure_killed_after_terminate",
     "source_failure_failed_step_exit_status",

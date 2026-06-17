@@ -2377,6 +2377,101 @@ class RenderCockpitRelayTest(unittest.TestCase):
         ):
             self.assertNotIn(unsafe_text, response_text)
 
+    def test_status_and_health_include_render_worker_failure_routing_fields(
+        self,
+    ) -> None:
+        self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
+        self.relay.update_state(
+            {
+                "pushed_at": "2026-06-14T19:59:30Z",
+                "status": {
+                    "status": "failing",
+                    "loop_running": False,
+                    "cockpit_summary": {
+                        "operator_attention": True,
+                        "failure_summary": {
+                            "available": True,
+                            "category": "render_worker",
+                            "route_hint": "relay_publisher_preflight_failed",
+                            "message": "publisher rejected token=message-secret",
+                            "failure_reason": (
+                                "relay publisher preflight failed token=reason-secret"
+                            ),
+                            "setup_stage": "repo_sync token=stage-secret",
+                            "worker_exit_status": "1",
+                            "publisher_exit_status": "2",
+                            "publisher_preflight": {
+                                "status": "failed token=status-secret",
+                                "exit_status": "2",
+                                "error_count": "3",
+                                "error_categories": [
+                                    "invalid_relay_url token=category-secret",
+                                    "missing_required",
+                                ],
+                                "failed_configuration_keys": [
+                                    "AUTOMOAT_RELAY_URL|--relay-url",
+                                    "token=key-secret",
+                                ],
+                                "debug_blob": "token=ignored-secret",
+                            },
+                        },
+                    },
+                },
+                "log_tail": "render worker failure surfaced\n",
+            }
+        )
+        self.relay.utc_now = lambda: "2026-06-14T20:00:00Z"
+
+        health = self.relay.health_payload()
+        status = self.relay.relay_status_payload()
+
+        expected_failure = {
+            "available": True,
+            "category": "render_worker",
+            "route_hint": "relay_publisher_preflight_failed",
+            "message": "publisher rejected token=[redacted]",
+            "failure_reason": "relay publisher preflight failed token=[redacted]",
+            "setup_stage": "repo_sync token=[redacted]",
+            "worker_exit_status": 1,
+            "publisher_exit_status": 2,
+            "publisher_preflight": {
+                "status": "failed token=[redacted]",
+                "exit_status": 2,
+                "error_count": 3,
+                "error_categories": [
+                    "invalid_relay_url token=[redacted]",
+                    "missing_required",
+                ],
+                "failed_configuration_keys": [
+                    "AUTOMOAT_RELAY_URL|--relay-url",
+                    "token=[redacted]",
+                ],
+            },
+        }
+        self.assertEqual(
+            health["cockpit_health"]["source_failure"],
+            expected_failure,
+        )
+        self.assertEqual(
+            status["cockpit_health"]["source_failure"],
+            expected_failure,
+        )
+        self.assertEqual(
+            status["cockpit_summary"]["failure_summary"],
+            expected_failure,
+        )
+        response_text = json.dumps({"health": health, "status": status}, sort_keys=True)
+        for unsafe_text in (
+            "message-secret",
+            "reason-secret",
+            "stage-secret",
+            "status-secret",
+            "category-secret",
+            "key-secret",
+            "ignored-secret",
+        ):
+            self.assertNotIn(unsafe_text, response_text)
+
     def test_status_and_health_promote_autonomy_policy_attention(self) -> None:
         self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
         self.relay.update_state(

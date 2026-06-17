@@ -1091,6 +1091,7 @@ def source_failure_summary(status: dict[str, Any]) -> dict[str, Any]:
         "termination_reason": failure.get("termination_reason"),
         "failed_step": failure.get("failed_step"),
         "failed_substep": failure.get("failed_substep"),
+        "setup_stage": failure.get("setup_stage"),
     }
     for key, value in text_fields.items():
         compact_value = compact_policy_detail(value, max_length=240)
@@ -1152,6 +1153,8 @@ def source_failure_summary(status: dict[str, Any]) -> dict[str, Any]:
         "codex_exit_status": failure.get("codex_exit_status"),
         "failed_step_exit_status": failure.get("failed_step_exit_status"),
         "failed_substep_exit_status": failure.get("failed_substep_exit_status"),
+        "worker_exit_status": failure.get("worker_exit_status"),
+        "publisher_exit_status": failure.get("publisher_exit_status"),
     }
     for key, value in exit_status_fields.items():
         compact_value = compact_exit_status(value)
@@ -1179,6 +1182,38 @@ def source_failure_summary(status: dict[str, Any]) -> dict[str, Any]:
                 break
         if compact_statuses:
             summary["artifact_statuses"] = compact_statuses
+
+    publisher_preflight = failure.get("publisher_preflight")
+    if isinstance(publisher_preflight, dict):
+        compact_preflight: dict[str, Any] = {}
+        status_value = compact_policy_detail(
+            publisher_preflight.get("status"),
+            max_length=80,
+        )
+        if status_value is not None:
+            compact_preflight["status"] = status_value
+        exit_status = compact_exit_status(publisher_preflight.get("exit_status"))
+        if exit_status is not None:
+            compact_preflight["exit_status"] = exit_status
+        error_count = compact_int(publisher_preflight.get("error_count"))
+        if error_count is not None:
+            compact_preflight["error_count"] = error_count
+        error_categories = compact_path_detail_list(
+            publisher_preflight.get("error_categories"),
+            max_items=12,
+            max_length=80,
+        )
+        if error_categories:
+            compact_preflight["error_categories"] = error_categories
+        failed_keys = compact_path_detail_list(
+            publisher_preflight.get("failed_configuration_keys"),
+            max_items=12,
+            max_length=120,
+        )
+        if failed_keys:
+            compact_preflight["failed_configuration_keys"] = failed_keys
+        if compact_preflight:
+            summary["publisher_preflight"] = compact_preflight
 
     summary["available"] = any(key != "available" for key in summary)
     return summary

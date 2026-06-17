@@ -1401,6 +1401,105 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertNotIn("step-secret", failure_text)
         self.assertNotIn("substep-secret", failure_text)
 
+    def test_read_status_preserves_render_worker_failure_routing_fields_for_relay(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            status_file = tmp_path / "status.json"
+            status_file.write_text(
+                json.dumps(
+                    {
+                        "status": "failed",
+                        "phase": "relay_publisher_preflight_failed",
+                        "mode": "autonomous_codex",
+                        "updated_at": "2026-06-14T19:30:00Z",
+                        "failure": {
+                            "category": "render_worker",
+                            "route_hint": "relay_publisher_preflight_failed",
+                            "failure_reason": (
+                                "relay publisher preflight failed token=reason-secret"
+                            ),
+                            "message": "publisher rejected token=message-secret",
+                            "setup_stage": "repo_sync token=stage-secret",
+                            "worker_exit_status": "1",
+                            "publisher_exit_status": "2",
+                            "publisher_preflight": {
+                                "status": "failed token=status-secret",
+                                "exit_status": "2",
+                                "error_count": "3",
+                                "error_categories": [
+                                    "invalid_relay_url token=category-secret",
+                                    "missing_required",
+                                ],
+                                "failed_configuration_keys": [
+                                    "AUTOMOAT_RELAY_URL|--relay-url",
+                                    "token=key-secret",
+                                ],
+                                "debug_blob": "token=ignored-secret",
+                            },
+                        },
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            self.publisher.utc_now = lambda: "2026-06-14T19:31:00Z"
+            self.publisher.local_loop_pid = lambda _pid_file: 4242
+
+            status = self.publisher.read_status(
+                status_file,
+                tmp_path / "loop.pid",
+                status_stale_after_seconds=120,
+                bridge_status_file=tmp_path / "missing-bridge-status.json",
+            )
+            remote_status = self.publisher.source_status_for_relay(status)
+
+        failure = status["cockpit_summary"]["failure_summary"]
+        self.assertEqual(
+            failure,
+            {
+                "available": True,
+                "category": "render_worker",
+                "route_hint": "relay_publisher_preflight_failed",
+                "message": "publisher rejected token=[redacted]",
+                "failure_reason": (
+                    "relay publisher preflight failed token=[redacted]"
+                ),
+                "setup_stage": "repo_sync token=[redacted]",
+                "worker_exit_status": 1,
+                "publisher_exit_status": 2,
+                "publisher_preflight": {
+                    "status": "failed token=[redacted]",
+                    "exit_status": 2,
+                    "error_count": 3,
+                    "error_categories": [
+                        "invalid_relay_url token=[redacted]",
+                        "missing_required",
+                    ],
+                    "failed_configuration_keys": [
+                        "AUTOMOAT_RELAY_URL|--relay-url",
+                        "token=[redacted]",
+                    ],
+                },
+            },
+        )
+        self.assertEqual(
+            remote_status["cockpit_summary"]["failure_summary"],
+            failure,
+        )
+        failure_text = json.dumps(failure, sort_keys=True)
+        for unsafe_text in (
+            "reason-secret",
+            "message-secret",
+            "stage-secret",
+            "status-secret",
+            "category-secret",
+            "key-secret",
+            "ignored-secret",
+        ):
+            self.assertNotIn(unsafe_text, failure_text)
+
     def test_read_status_sanitizes_failure_summary_paths_for_relay(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
@@ -4375,6 +4474,94 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertIn("publisher_snapshot_sequence=7", log_text)
         self.assertIn("publisher_git_head=abc1234", log_text)
         self.assertIn("publisher_git_dirty_path_count=2", log_text)
+
+    def test_publish_once_logs_render_worker_failure_routing_fields(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            publisher_log = Path(tmp) / "publisher.log"
+            args = Namespace(publisher_log=publisher_log)
+            payload = {
+                "status": {
+                    "status": "failing",
+                    "loop_running": False,
+                    "cockpit_summary": {
+                        "failure_summary": {
+                            "available": True,
+                            "category": "render_worker",
+                            "route_hint": "relay_publisher_preflight_failed",
+                            "message": "publisher rejected token=message-secret",
+                            "setup_stage": "repo_sync token=stage-secret",
+                            "worker_exit_status": 1,
+                            "publisher_exit_status": 2,
+                            "publisher_preflight": {
+                                "status": "failed token=status-secret",
+                                "exit_status": 2,
+                                "error_count": 3,
+                                "error_categories": [
+                                    "invalid_relay_url token=category-secret",
+                                ],
+                                "failed_configuration_keys": [
+                                    "AUTOMOAT_RELAY_URL|--relay-url",
+                                    "token=key-secret",
+                                ],
+                                "debug_blob": "token=ignored-secret",
+                            },
+                        },
+                    },
+                },
+                "log_tail": "loop log\n",
+                "publisher": {
+                    "source_health": {
+                        "status": "degraded",
+                        "ok": False,
+                        "primary_reason": "source_status_failing",
+                        "label": "Source status is failing",
+                    },
+                },
+            }
+            self.publisher.build_payload = lambda _args: payload
+            self.publisher.post_payload = lambda _args, _body: {
+                "ok": True,
+                "received_at": "2026-06-14T20:20:00Z",
+            }
+
+            status = self.publisher.publish_once(args)
+            log_text = publisher_log.read_text(encoding="utf-8")
+
+        self.assertTrue(status)
+        self.assertIn("source_failure_category=render_worker", log_text)
+        self.assertIn(
+            "source_failure_route_hint=relay_publisher_preflight_failed",
+            log_text,
+        )
+        self.assertIn("source_failure_message=publisher rejected token=[redacted]", log_text)
+        self.assertIn("source_failure_setup_stage=repo_sync token=[redacted]", log_text)
+        self.assertIn("source_failure_worker_exit_status=1", log_text)
+        self.assertIn("source_failure_publisher_exit_status=2", log_text)
+        self.assertIn(
+            "source_failure_publisher_preflight_status=failed token=[redacted]",
+            log_text,
+        )
+        self.assertIn("source_failure_publisher_preflight_exit_status=2", log_text)
+        self.assertIn("source_failure_publisher_preflight_error_count=3", log_text)
+        self.assertIn(
+            "source_failure_publisher_preflight_error_categories="
+            "invalid_relay_url token=[redacted]",
+            log_text,
+        )
+        self.assertIn(
+            "source_failure_publisher_preflight_failed_keys="
+            "AUTOMOAT_RELAY_URL|--relay-url,token=[redacted]",
+            log_text,
+        )
+        for unsafe_text in (
+            "message-secret",
+            "stage-secret",
+            "status-secret",
+            "category-secret",
+            "key-secret",
+            "ignored-secret",
+        ):
+            self.assertNotIn(unsafe_text, log_text)
 
     def test_publish_once_sanitizes_payload_fields_before_logging(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
