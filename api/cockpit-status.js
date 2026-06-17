@@ -147,6 +147,7 @@ function sanitizeEmbeddedUrlForStatus(rawUrl) {
 
 module.exports = async function handler(request, response) {
   setProxyHeaders(response, "application/json; charset=utf-8");
+  response.setHeader("X-Automoat-Upstream-Body-Limit-Chars", String(MAX_STATUS_BODY_CHARS));
 
   if (request.method === "OPTIONS") {
     sendOptionsResponse(response);
