@@ -4053,6 +4053,26 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             },
         )
 
+    def test_publisher_failure_fields_accept_common_boolean_tokens(self) -> None:
+        details = self.worker.publisher_failure_fields_from_log_line(
+            "exiting after terminal publish failure "
+            "failure_kind=relay_unavailable http_status=503 "
+            "http_body_truncated=YES source_loop_running=1 "
+            "source_status_stale=0 bridge_status_stale=no"
+        )
+
+        self.assertEqual(
+            details,
+            {
+                "publisher_failure_kind": "relay_unavailable",
+                "publisher_http_status": 503,
+                "publisher_http_body_truncated": True,
+                "publisher_source_loop_running": True,
+                "publisher_source_status_stale": False,
+                "publisher_bridge_status_stale": False,
+            },
+        )
+
     def test_publisher_failure_fields_preserve_latest_nonterminal_failure(self) -> None:
         details = self.worker.publisher_failure_fields_from_log_line(
             "exiting after consecutive publish failures "

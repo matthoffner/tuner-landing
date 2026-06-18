@@ -2891,7 +2891,7 @@ def publisher_failure_fields_from_log_line(line: str) -> dict[str, object]:
     )
     if http_body_bytes is not None:
         details["publisher_http_body_bytes"] = http_body_bytes
-    if fields.get("http_body_truncated") in {"True", "true"}:
+    if compact_worker_bool_from_text(fields.get("http_body_truncated")) is True:
         details["publisher_http_body_truncated"] = True
     retry_after = compact_publisher_retry_after(fields.get("retry_after"))
     if retry_after is not None:
@@ -2953,9 +2953,10 @@ def compact_worker_bool(value: object) -> bool | None:
 def compact_worker_bool_from_text(value: object) -> bool | None:
     if not isinstance(value, str):
         return None
-    if value in {"True", "true"}:
+    normalized = value.strip().lower()
+    if normalized in {"1", "true", "yes"}:
         return True
-    if value in {"False", "false"}:
+    if normalized in {"0", "false", "no"}:
         return False
     return None
 
