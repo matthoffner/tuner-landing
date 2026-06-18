@@ -30,6 +30,7 @@ PUBLISHER_LOG = ROOT / ".automoat" / "logs" / "cockpit-relay-publisher.log"
 BRIDGE_STATUS_FILE = ROOT / ".automoat" / "state" / "mvp-bridge-status.json"
 DEFAULT_MAX_CONSECUTIVE_FAILURES = 3
 DEFAULT_MAX_CONSECUTIVE_STALE_STATUSES = 0
+DEFAULT_MAX_CONSECUTIVE_STALE_BRIDGE_STATUSES = 0
 DEFAULT_STATUS_STALE_AFTER_SECONDS = 660
 DEFAULT_BRIDGE_STATUS_STALE_AFTER_SECONDS = 660
 MAX_RELAY_URL_CHARS = 500
@@ -44,6 +45,7 @@ PUBLISHER_RUNTIME_DEFAULTS = {
     "max_log_bytes": 256 * 1024,
     "max_consecutive_failures": DEFAULT_MAX_CONSECUTIVE_FAILURES,
     "max_consecutive_stale_statuses": DEFAULT_MAX_CONSECUTIVE_STALE_STATUSES,
+    "max_consecutive_stale_bridge_statuses": DEFAULT_MAX_CONSECUTIVE_STALE_BRIDGE_STATUSES,
     "status_stale_after_seconds": DEFAULT_STATUS_STALE_AFTER_SECONDS,
     "bridge_status_stale_after_seconds": DEFAULT_BRIDGE_STATUS_STALE_AFTER_SECONDS,
 }
@@ -61,6 +63,11 @@ PUBLISHER_RUNTIME_CONFIG_KEYS = (
         "max_consecutive_stale_statuses",
         "AUTOMOAT_RELAY_MAX_CONSECUTIVE_STALE_STATUSES",
         "--max-consecutive-stale-statuses",
+    ),
+    (
+        "max_consecutive_stale_bridge_statuses",
+        "AUTOMOAT_RELAY_MAX_CONSECUTIVE_STALE_BRIDGE_STATUSES",
+        "--max-consecutive-stale-bridge-statuses",
     ),
     (
         "status_stale_after_seconds",
@@ -92,6 +99,7 @@ PUBLISHER_CONFIG_LIMITS = {
     "max_log_bytes": 1024 * 1024,
     "max_consecutive_failures": 100,
     "max_consecutive_stale_statuses": 100,
+    "max_consecutive_stale_bridge_statuses": 100,
     "status_stale_after_seconds": 3600,
     "bridge_status_stale_after_seconds": 3600,
 }
@@ -2360,6 +2368,13 @@ def publisher_runtime_config(args: argparse.Namespace) -> dict[str, Any]:
         "max_consecutive_stale_statuses": int(
             args.max_consecutive_stale_statuses
         ),
+        "max_consecutive_stale_bridge_statuses": int(
+            getattr(
+                args,
+                "max_consecutive_stale_bridge_statuses",
+                DEFAULT_MAX_CONSECUTIVE_STALE_BRIDGE_STATUSES,
+            )
+        ),
     }
 
 
@@ -3221,6 +3236,29 @@ def relay_response_ok(response: Any) -> bool:
     return isinstance(response, dict) and response.get("ok") is True
 
 
+def publish_once_loop_result(
+    *,
+    published: bool,
+    source_fields: dict[str, Any],
+) -> dict[str, Any]:
+    result: dict[str, Any] = {
+        "published": published,
+        "source_status_stale": source_fields.get("source_status_stale"),
+        "source_status_age_seconds": source_fields.get("source_status_age_seconds"),
+        "source_status_stale_after_seconds": source_fields.get(
+            "source_status_stale_after_seconds"
+        ),
+    }
+    for field_name in (
+        "bridge_status_stale",
+        "bridge_status_age_seconds",
+        "bridge_status_stale_after_seconds",
+    ):
+        if source_fields.get(field_name) is not None:
+            result[field_name] = source_fields.get(field_name)
+    return result
+
+
 def publish_error_kind(exc: BaseException) -> str:
     if isinstance(exc, URLError):
         return "url_error"
@@ -3337,14 +3375,10 @@ def publish_once_result(args: argparse.Namespace) -> dict[str, Any]:
             f"{source_status_log_suffix(source_fields)}",
             log_path=args.publisher_log,
         )
-        return {
-            "published": False,
-            "source_status_stale": source_fields.get("source_status_stale"),
-            "source_status_age_seconds": source_fields.get("source_status_age_seconds"),
-            "source_status_stale_after_seconds": source_fields.get(
-                "source_status_stale_after_seconds"
-            ),
-        }
+        return publish_once_loop_result(
+            published=False,
+            source_fields=source_fields,
+        )
     except (
         OSError,
         URLError,
@@ -3361,14 +3395,10 @@ def publish_once_result(args: argparse.Namespace) -> dict[str, Any]:
             f"{source_status_log_suffix(source_fields)}",
             log_path=args.publisher_log,
         )
-        return {
-            "published": False,
-            "source_status_stale": source_fields.get("source_status_stale"),
-            "source_status_age_seconds": source_fields.get("source_status_age_seconds"),
-            "source_status_stale_after_seconds": source_fields.get(
-                "source_status_stale_after_seconds"
-            ),
-        }
+        return publish_once_loop_result(
+            published=False,
+            source_fields=source_fields,
+        )
     if not relay_response_ok(response):
         emit(
             "publish failed relay_ok=False "
@@ -3377,28 +3407,20 @@ def publish_once_result(args: argparse.Namespace) -> dict[str, Any]:
             f"{source_status_log_suffix(source_fields)}",
             log_path=args.publisher_log,
         )
-        return {
-            "published": False,
-            "source_status_stale": source_fields["source_status_stale"],
-            "source_status_age_seconds": source_fields.get("source_status_age_seconds"),
-            "source_status_stale_after_seconds": source_fields.get(
-                "source_status_stale_after_seconds"
-            ),
-        }
+        return publish_once_loop_result(
+            published=False,
+            source_fields=source_fields,
+        )
     emit(
         "published relay snapshot ok=True "
         f"received_at={compact_policy_detail(response.get('received_at'), max_length=240)} "
         f"{source_status_log_suffix(source_fields)}",
         log_path=args.publisher_log,
     )
-    return {
-        "published": True,
-        "source_status_stale": source_fields["source_status_stale"],
-        "source_status_age_seconds": source_fields.get("source_status_age_seconds"),
-        "source_status_stale_after_seconds": source_fields.get(
-            "source_status_stale_after_seconds"
-        ),
-    }
+    return publish_once_loop_result(
+        published=True,
+        source_fields=source_fields,
+    )
 
 
 def publish_once(args: argparse.Namespace) -> bool:
@@ -3408,6 +3430,7 @@ def publish_once(args: argparse.Namespace) -> bool:
 def run_publish_loop(args: argparse.Namespace) -> int:
     consecutive_failures = 0
     consecutive_stale_statuses = 0
+    consecutive_stale_bridge_statuses = 0
     while True:
         result = publish_once_result(args)
         if result["published"]:
@@ -3445,6 +3468,40 @@ def run_publish_loop(args: argparse.Namespace) -> int:
                     return 1
             else:
                 consecutive_stale_statuses = 0
+            if result.get("bridge_status_stale") is True:
+                consecutive_stale_bridge_statuses += 1
+                if (
+                    getattr(args, "max_consecutive_stale_bridge_statuses", 0) > 0
+                    and consecutive_stale_bridge_statuses
+                    >= args.max_consecutive_stale_bridge_statuses
+                ):
+                    source_status_suffix = publish_exit_source_status_log_suffix(args)
+                    stale_age_seconds = compact_int(
+                        result.get("bridge_status_age_seconds")
+                    )
+                    stale_after_seconds = compact_int(
+                        result.get("bridge_status_stale_after_seconds")
+                    )
+                    freshness_fields = ""
+                    if not source_status_suffix and stale_age_seconds is not None:
+                        freshness_fields += f" bridge_status_age_seconds={stale_age_seconds}"
+                    if not source_status_suffix and stale_after_seconds is not None:
+                        freshness_fields += (
+                            " bridge_status_stale_after_seconds="
+                            f"{stale_after_seconds}"
+                        )
+                    emit(
+                        "exiting after consecutive stale bridge statuses "
+                        "failure_kind=consecutive_stale_bridge_statuses "
+                        f"count={consecutive_stale_bridge_statuses} "
+                        f"limit={args.max_consecutive_stale_bridge_statuses}"
+                        f"{source_status_suffix}"
+                        f"{freshness_fields}",
+                        log_path=args.publisher_log,
+                    )
+                    return 1
+            else:
+                consecutive_stale_bridge_statuses = 0
         else:
             consecutive_failures += 1
             if (
@@ -3585,6 +3642,23 @@ def validate_publisher_configuration(args: argparse.Namespace) -> list[str]:
             "--max-consecutive-stale-statuses must be less than or equal to "
             f"{PUBLISHER_CONFIG_LIMITS['max_consecutive_stale_statuses']}"
         )
+    max_consecutive_stale_bridge_statuses = getattr(
+        args,
+        "max_consecutive_stale_bridge_statuses",
+        DEFAULT_MAX_CONSECUTIVE_STALE_BRIDGE_STATUSES,
+    )
+    if max_consecutive_stale_bridge_statuses < 0:
+        errors.append(
+            "--max-consecutive-stale-bridge-statuses must be greater than or equal to 0"
+        )
+    elif (
+        max_consecutive_stale_bridge_statuses
+        > PUBLISHER_CONFIG_LIMITS["max_consecutive_stale_bridge_statuses"]
+    ):
+        errors.append(
+            "--max-consecutive-stale-bridge-statuses must be less than or equal to "
+            f"{PUBLISHER_CONFIG_LIMITS['max_consecutive_stale_bridge_statuses']}"
+        )
     if args.status_stale_after_seconds <= 0:
         errors.append("--status-stale-after-seconds must be greater than 0")
     elif (
@@ -3689,6 +3763,7 @@ def publisher_preflight_error_category(error: str) -> str:
             "--max-log-bytes",
             "--max-consecutive-failures",
             "--max-consecutive-stale-statuses",
+            "--max-consecutive-stale-bridge-statuses",
             "--status-stale-after-seconds",
             "--bridge-status-stale-after-seconds",
         )
@@ -3730,6 +3805,10 @@ def publisher_preflight_error_key(error: str) -> str:
         "--max-consecutive-stale-statuses": (
             "AUTOMOAT_RELAY_MAX_CONSECUTIVE_STALE_STATUSES|"
             "--max-consecutive-stale-statuses"
+        ),
+        "--max-consecutive-stale-bridge-statuses": (
+            "AUTOMOAT_RELAY_MAX_CONSECUTIVE_STALE_BRIDGE_STATUSES|"
+            "--max-consecutive-stale-bridge-statuses"
         ),
         "--status-stale-after-seconds": (
             "AUTOMOAT_STATUS_STALE_AFTER_SECONDS|--status-stale-after-seconds"
@@ -3779,6 +3858,9 @@ def publisher_argument_error_to_config_error(message: str) -> str:
         ),
         "argument --max-consecutive-stale-statuses:": (
             "--max-consecutive-stale-statuses must be an integer"
+        ),
+        "argument --max-consecutive-stale-bridge-statuses:": (
+            "--max-consecutive-stale-bridge-statuses must be an integer"
         ),
         "argument --status-stale-after-seconds:": (
             "--status-stale-after-seconds must be an integer"
@@ -3915,6 +3997,13 @@ def publisher_preflight_summary(
         "max_consecutive_stale_statuses": int(
             args.max_consecutive_stale_statuses
         ),
+        "max_consecutive_stale_bridge_statuses": int(
+            getattr(
+                args,
+                "max_consecutive_stale_bridge_statuses",
+                DEFAULT_MAX_CONSECUTIVE_STALE_BRIDGE_STATUSES,
+            )
+        ),
         "runtime_configured_keys": publisher_runtime_configured_keys(args),
         "file_configured_keys": publisher_file_configured_keys(args),
         "status_file": repo_relative(args.status_file),
@@ -3962,6 +4051,7 @@ def emit_publisher_preflight(
         f"bridge_status_stale_after_seconds={getattr(args, 'bridge_status_stale_after_seconds', DEFAULT_BRIDGE_STATUS_STALE_AFTER_SECONDS)} "
         f"max_consecutive_failures={args.max_consecutive_failures} "
         f"max_consecutive_stale_statuses={args.max_consecutive_stale_statuses} "
+        f"max_consecutive_stale_bridge_statuses={getattr(args, 'max_consecutive_stale_bridge_statuses', DEFAULT_MAX_CONSECUTIVE_STALE_BRIDGE_STATUSES)} "
         f"runtime_configured_keys={json.dumps(publisher_runtime_configured_keys(args), sort_keys=True)} "
         f"file_configured_keys={json.dumps(publisher_file_configured_keys(args), sort_keys=True)} "
         f"status_file={repo_relative(args.status_file)} "
@@ -4076,6 +4166,18 @@ def parse_args() -> argparse.Namespace:
         help=(
             "exit nonzero after this many consecutive successful publishes whose "
             "source status is stale; set 0 to keep relaying stale status"
+        ),
+    )
+    parser.add_argument(
+        "--max-consecutive-stale-bridge-statuses",
+        type=parse_int_argument,
+        default=os.environ.get(
+            "AUTOMOAT_RELAY_MAX_CONSECUTIVE_STALE_BRIDGE_STATUSES",
+            str(PUBLISHER_RUNTIME_DEFAULTS["max_consecutive_stale_bridge_statuses"]),
+        ),
+        help=(
+            "exit nonzero after this many consecutive successful publishes whose "
+            "bridge status is stale; set 0 to keep relaying stale bridge status"
         ),
     )
     return parser.parse_args()

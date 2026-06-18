@@ -182,6 +182,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 "bridge_status_stale_after_seconds": 120,
                 "max_consecutive_failures": 5,
                 "max_consecutive_stale_statuses": 6,
+                "max_consecutive_stale_bridge_statuses": 0,
             },
         )
 
@@ -3931,6 +3932,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             "AUTOMOAT_RELAY_MAX_LOG_BYTES": "4096",
             "AUTOMOAT_RELAY_MAX_CONSECUTIVE_FAILURES": "5",
             "AUTOMOAT_RELAY_MAX_CONSECUTIVE_STALE_STATUSES": "6",
+            "AUTOMOAT_RELAY_MAX_CONSECUTIVE_STALE_BRIDGE_STATUSES": "7",
             "AUTOMOAT_STATUS_STALE_AFTER_SECONDS": "900",
             "AUTOMOAT_BRIDGE_STATUS_STALE_AFTER_SECONDS": "240",
             "AUTOMOAT_BRIDGE_STATUS_FILE": "/tmp/custom-bridge-status.json",
@@ -3951,6 +3953,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertEqual(args.max_log_bytes, 4096)
         self.assertEqual(args.max_consecutive_failures, 5)
         self.assertEqual(args.max_consecutive_stale_statuses, 6)
+        self.assertEqual(args.max_consecutive_stale_bridge_statuses, 7)
         self.assertEqual(args.status_stale_after_seconds, 900)
         self.assertEqual(args.bridge_status_stale_after_seconds, 240)
         self.assertEqual(args.bridge_status_file, Path("/tmp/custom-bridge-status.json"))
@@ -3969,6 +3972,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 max_log_bytes=0,
                 max_consecutive_failures=-1,
                 max_consecutive_stale_statuses=-1,
+                max_consecutive_stale_bridge_statuses=-1,
                 status_stale_after_seconds=0,
                 bridge_status_stale_after_seconds=0,
                 status_file=tmp_path / "status.json",
@@ -3991,6 +3995,10 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         )
         self.assertIn(
             "--max-consecutive-stale-statuses must be greater than or equal to 0",
+            errors,
+        )
+        self.assertIn(
+            "--max-consecutive-stale-bridge-statuses must be greater than or equal to 0",
             errors,
         )
         self.assertIn("--status-stale-after-seconds must be greater than 0", errors)
@@ -4045,6 +4053,9 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 max_consecutive_stale_statuses=limits[
                     "max_consecutive_stale_statuses"
                 ],
+                max_consecutive_stale_bridge_statuses=limits[
+                    "max_consecutive_stale_bridge_statuses"
+                ],
                 status_stale_after_seconds=limits["status_stale_after_seconds"],
                 bridge_status_stale_after_seconds=limits[
                     "bridge_status_stale_after_seconds"
@@ -4075,6 +4086,10 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                     "max_consecutive_stale_statuses"
                 ]
                 + 1,
+                max_consecutive_stale_bridge_statuses=limits[
+                    "max_consecutive_stale_bridge_statuses"
+                ]
+                + 1,
                 status_stale_after_seconds=limits["status_stale_after_seconds"] + 1,
                 bridge_status_stale_after_seconds=limits[
                     "bridge_status_stale_after_seconds"
@@ -4097,6 +4112,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 "--max-log-bytes must be less than or equal to 1048576",
                 "--max-consecutive-failures must be less than or equal to 100",
                 "--max-consecutive-stale-statuses must be less than or equal to 100",
+                "--max-consecutive-stale-bridge-statuses must be less than or equal to 100",
                 "--status-stale-after-seconds must be less than or equal to 3600",
                 "--bridge-status-stale-after-seconds must be less than or equal to 3600",
             ],
@@ -4847,6 +4863,8 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                     "5",
                     "--max-consecutive-stale-statuses",
                     "6",
+                    "--max-consecutive-stale-bridge-statuses",
+                    "7",
                     "--status-stale-after-seconds",
                     "900",
                     "--bridge-status-stale-after-seconds",
@@ -4880,6 +4898,10 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertEqual(payload["config"]["max_log_bytes"], 4096)
         self.assertEqual(payload["config"]["max_consecutive_failures"], 5)
         self.assertEqual(payload["config"]["max_consecutive_stale_statuses"], 6)
+        self.assertEqual(
+            payload["config"]["max_consecutive_stale_bridge_statuses"],
+            7,
+        )
         self.assertEqual(payload["config"]["status_stale_after_seconds"], 900)
         self.assertEqual(payload["config"]["bridge_status_stale_after_seconds"], 240)
         self.assertEqual(
@@ -4896,6 +4918,10 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 (
                     "AUTOMOAT_RELAY_MAX_CONSECUTIVE_STALE_STATUSES|"
                     "--max-consecutive-stale-statuses"
+                ),
+                (
+                    "AUTOMOAT_RELAY_MAX_CONSECUTIVE_STALE_BRIDGE_STATUSES|"
+                    "--max-consecutive-stale-bridge-statuses"
                 ),
                 (
                     "AUTOMOAT_STATUS_STALE_AFTER_SECONDS|"
@@ -6851,6 +6877,85 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertIn("source_health_primary_reason=source_status_stale", log_text)
         self.assertIn("source_health_reason_count=3", log_text)
         self.assertIn("source_loop_running=False", log_text)
+        self.assertNotIn(str(tmp_path), log_text)
+
+    def test_publish_loop_exit_logs_configured_bridge_context_after_stale_bridge_statuses(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            publisher_log = tmp_path / "publisher.log"
+            status_file = tmp_path / "status.json"
+            bridge_status_file = tmp_path / "bridge-status.json"
+            status_file.write_text(
+                json.dumps(
+                    {
+                        "status": "passing",
+                        "updated_at": "2026-06-14T19:32:00Z",
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            bridge_status_file.write_text(
+                json.dumps(
+                    {
+                        "status": "running",
+                        "updated_at": "2026-06-14T19:30:00Z",
+                        "bridge_health": {
+                            "status": "degraded",
+                            "ok": False,
+                            "primary_reason": "tunnel_stale",
+                            "label": "Bridge status is stale",
+                        },
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            args = Namespace(
+                publisher_log=publisher_log,
+                status_file=status_file,
+                pid_file=tmp_path / "missing.pid",
+                bridge_status_file=bridge_status_file,
+                interval=0,
+                max_consecutive_failures=3,
+                max_consecutive_stale_statuses=0,
+                max_consecutive_stale_bridge_statuses=2,
+                status_stale_after_seconds=120,
+                bridge_status_stale_after_seconds=120,
+            )
+            calls = []
+            self.publisher.utc_now = lambda: "2026-06-14T19:33:00Z"
+            self.publisher.publish_once_result = lambda _args: calls.append(True) or {
+                "published": True,
+                "source_status_stale": False,
+                "bridge_status_stale": True,
+                "bridge_status_age_seconds": 180,
+                "bridge_status_stale_after_seconds": 120,
+            }
+            self.publisher.time.sleep = lambda _seconds: None
+
+            status = self.publisher.run_publish_loop(args)
+            log_text = publisher_log.read_text(encoding="utf-8")
+
+        self.assertEqual(status, 1)
+        self.assertEqual(calls, [True, True])
+        self.assertIn(
+            "exiting after consecutive stale bridge statuses "
+            "failure_kind=consecutive_stale_bridge_statuses count=2 limit=2",
+            log_text,
+        )
+        self.assertIn("source_status=passing", log_text)
+        self.assertIn("source_status_stale=False", log_text)
+        self.assertIn("bridge_available=True", log_text)
+        self.assertIn("bridge_status=running", log_text)
+        self.assertIn("bridge_status_stale=True", log_text)
+        self.assertIn("bridge_status_age_seconds=180", log_text)
+        self.assertIn("bridge_status_stale_after_seconds=120", log_text)
+        self.assertIn("bridge_health_status=degraded", log_text)
+        self.assertIn("bridge_health_primary_reason=tunnel_stale", log_text)
+        self.assertIn("bridge_health_label=Bridge status is stale", log_text)
         self.assertNotIn(str(tmp_path), log_text)
 
     def test_publish_loop_resets_stale_status_count_after_fresh_status(self) -> None:
