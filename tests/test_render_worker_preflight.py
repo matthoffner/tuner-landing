@@ -4100,10 +4100,11 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             "failure_kind=consecutive_stale_bridge_statuses count=2 limit=2 "
             "source_status=running source_loop_running=True "
             "source_status_stale=False source_status_age_seconds=12 "
+            "source_status_stale_after_seconds=660 "
             "source_status_file_status=loaded "
             "source_health_primary_reason=bridge_status_stale "
             "bridge_status_file_status=loaded bridge_status_stale=True "
-            "bridge_status_age_seconds=901 "
+            "bridge_status_age_seconds=901 bridge_status_stale_after_seconds=900 "
             "bridge_health_primary_reason=bridge_status_stale token=relay-secret"
         )
 
@@ -4117,11 +4118,13 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                 "publisher_source_loop_running": True,
                 "publisher_source_status_stale": False,
                 "publisher_source_status_age_seconds": 12,
+                "publisher_source_status_stale_after_seconds": 660,
                 "publisher_source_status_file_status": "loaded",
                 "publisher_source_health_primary_reason": "bridge_status_stale",
                 "publisher_bridge_status_file_status": "loaded",
                 "publisher_bridge_status_stale": True,
                 "publisher_bridge_status_age_seconds": 901,
+                "publisher_bridge_status_stale_after_seconds": 900,
                 "publisher_bridge_health_primary_reason": "bridge_status_stale",
             },
         )
@@ -4164,11 +4167,13 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                         "publisher_source_loop_running": True,
                         "publisher_source_status_stale": False,
                         "publisher_source_status_age_seconds": 12,
+                        "publisher_source_status_stale_after_seconds": 660,
                         "publisher_source_status_file_status": "loaded",
                         "publisher_source_health_primary_reason": "bridge_status_stale",
                         "publisher_bridge_status_file_status": "loaded",
                         "publisher_bridge_status_stale": True,
                         "publisher_bridge_status_age_seconds": 901,
+                        "publisher_bridge_status_stale_after_seconds": 900,
                         "publisher_bridge_health_primary_reason": "bridge_status_stale",
                     },
                 )
@@ -4197,6 +4202,10 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertIs(status["failure"]["publisher_source_loop_running"], True)
         self.assertIs(status["failure"]["publisher_source_status_stale"], False)
         self.assertEqual(status["failure"]["publisher_source_status_age_seconds"], 12)
+        self.assertEqual(
+            status["failure"]["publisher_source_status_stale_after_seconds"],
+            660,
+        )
         self.assertEqual(status["failure"]["publisher_source_status_file_status"], "loaded")
         self.assertEqual(
             status["failure"]["publisher_source_health_primary_reason"],
@@ -4205,6 +4214,10 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertEqual(status["failure"]["publisher_bridge_status_file_status"], "loaded")
         self.assertIs(status["failure"]["publisher_bridge_status_stale"], True)
         self.assertEqual(status["failure"]["publisher_bridge_status_age_seconds"], 901)
+        self.assertEqual(
+            status["failure"]["publisher_bridge_status_stale_after_seconds"],
+            900,
+        )
         self.assertEqual(
             status["failure"]["publisher_bridge_health_primary_reason"],
             "bridge_status_stale",
@@ -4226,6 +4239,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertIn("publisher_source_loop_running=true", log_text)
         self.assertIn("publisher_source_status_stale=false", log_text)
         self.assertIn("publisher_source_status_age_seconds=12", log_text)
+        self.assertIn("publisher_source_status_stale_after_seconds=660", log_text)
         self.assertIn('publisher_source_status_file_status="loaded"', log_text)
         self.assertIn(
             'publisher_source_health_primary_reason="bridge_status_stale"',
@@ -4234,6 +4248,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertIn('publisher_bridge_status_file_status="loaded"', log_text)
         self.assertIn("publisher_bridge_status_stale=true", log_text)
         self.assertIn("publisher_bridge_status_age_seconds=901", log_text)
+        self.assertIn("publisher_bridge_status_stale_after_seconds=900", log_text)
         self.assertIn(
             'publisher_bridge_health_primary_reason="bridge_status_stale"',
             log_text,

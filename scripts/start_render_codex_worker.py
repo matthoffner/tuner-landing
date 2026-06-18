@@ -73,9 +73,11 @@ PUBLISHER_FAILURE_FIELD_PATTERN = re.compile(
     r"failure_kind|last_failure_kind|last_failure_reason|count|limit|"
     r"http_status|http_reason|http_body_bytes|http_body_truncated|retry_after|"
     r"source_status|source_loop_running|source_status_stale|"
-    r"source_status_age_seconds|source_status_file_status|"
+    r"source_status_age_seconds|source_status_stale_after_seconds|"
+    r"source_status_file_status|"
     r"source_health_primary_reason|bridge_status_file_status|"
-    r"bridge_status_stale|bridge_status_age_seconds|bridge_health_primary_reason"
+    r"bridge_status_stale|bridge_status_age_seconds|"
+    r"bridge_status_stale_after_seconds|bridge_health_primary_reason"
     r")="
     r"((?:(?!\s+[A-Za-z_][A-Za-z0-9_]*=).)+)"
 )
@@ -2503,7 +2505,12 @@ def compact_render_worker_failure_details(details: dict[str, object]) -> dict[st
         compact_value = compact_publisher_context_text(details.get(key))
         if compact_value is not None:
             compact[key] = compact_value
-    for key in ("publisher_source_status_age_seconds", "publisher_bridge_status_age_seconds"):
+    for key in (
+        "publisher_source_status_age_seconds",
+        "publisher_source_status_stale_after_seconds",
+        "publisher_bridge_status_age_seconds",
+        "publisher_bridge_status_stale_after_seconds",
+    ):
         compact_value = compact_worker_nonnegative_int(details.get(key))
         if compact_value is not None:
             compact[key] = compact_value
@@ -2651,7 +2658,12 @@ def write_render_worker_failure_status(
         value = compact_details.pop(key, None)
         if isinstance(value, str):
             failure[key] = value
-    for key in ("publisher_source_status_age_seconds", "publisher_bridge_status_age_seconds"):
+    for key in (
+        "publisher_source_status_age_seconds",
+        "publisher_source_status_stale_after_seconds",
+        "publisher_bridge_status_age_seconds",
+        "publisher_bridge_status_stale_after_seconds",
+    ):
         value = compact_details.pop(key, None)
         if value is not None:
             failure[key] = value
@@ -2711,11 +2723,13 @@ def write_render_worker_failure_status(
         "publisher_source_loop_running",
         "publisher_source_status_stale",
         "publisher_source_status_age_seconds",
+        "publisher_source_status_stale_after_seconds",
         "publisher_source_status_file_status",
         "publisher_source_health_primary_reason",
         "publisher_bridge_status_file_status",
         "publisher_bridge_status_stale",
         "publisher_bridge_status_age_seconds",
+        "publisher_bridge_status_stale_after_seconds",
         "publisher_bridge_health_primary_reason",
     ):
         value = failure.get(key)
@@ -2908,7 +2922,15 @@ def publisher_failure_fields_from_log_line(line: str) -> dict[str, object]:
             details[detail_name] = compact_value
     for field_name, detail_name in (
         ("source_status_age_seconds", "publisher_source_status_age_seconds"),
+        (
+            "source_status_stale_after_seconds",
+            "publisher_source_status_stale_after_seconds",
+        ),
         ("bridge_status_age_seconds", "publisher_bridge_status_age_seconds"),
+        (
+            "bridge_status_stale_after_seconds",
+            "publisher_bridge_status_stale_after_seconds",
+        ),
     ):
         compact_value = compact_worker_nonnegative_int_from_text(fields.get(field_name))
         if compact_value is not None:
