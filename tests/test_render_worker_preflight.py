@@ -3742,8 +3742,14 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             },
         )
         self.assertIn("render-worker failure:", log_text)
+        self.assertIn('reason="relay_publisher_startup_exit token=[redacted]"', log_text)
+        self.assertIn("route_hint=relay_publisher_startup_exit", log_text)
         self.assertIn("worker_exit_status=1", log_text)
         self.assertIn("publisher_exit_status=0", log_text)
+        self.assertIn('child_label="relay publisher"', log_text)
+        self.assertIn("child_pid=202", log_text)
+        self.assertIn("child_exit_status=2", log_text)
+        self.assertIn("child_status_available=true", log_text)
         self.assertNotIn("relay-secret", status_text)
         self.assertNotIn("relay-secret", log_text)
 
@@ -3786,6 +3792,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                 )
 
             status_text = self.worker.cockpit_status_file().read_text(encoding="utf-8")
+            log_text = self.worker.cockpit_log_file().read_text(encoding="utf-8")
             status = json.loads(status_text)
 
         self.assertEqual(status["phase"], self.worker.PUBLISHER_EXITED)
@@ -3804,8 +3811,14 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             },
         )
         self.assertNotIn("business_hours", status["failure"])
+        self.assertIn("business_hours_in_business_hours=false", log_text)
+        self.assertIn(
+            'business_hours_local_time="2026-06-15T17:01:00-05:00"',
+            log_text,
+        )
         self.assertNotIn("debug", status_text)
         self.assertNotIn("relay-secret", status_text)
+        self.assertNotIn("relay-secret", log_text)
 
     def test_write_render_worker_failure_status_routes_environment_preflight(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

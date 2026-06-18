@@ -2429,6 +2429,14 @@ def compact_business_hours_state(state: dict[str, object]) -> dict[str, object]:
     return compact
 
 
+def compact_worker_log_value(value: object) -> str:
+    if isinstance(value, bool):
+        return str(value).lower()
+    if isinstance(value, int):
+        return str(value)
+    return json.dumps(str(value), ensure_ascii=True)
+
+
 def write_render_worker_failure_status(
     *,
     reason: str,
@@ -2493,16 +2501,31 @@ def write_render_worker_failure_status(
     if isinstance(business_hours, dict):
         payload["business_hours"] = business_hours
     status_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    append_cockpit_log(
-        "render-worker failure: "
-        f"reason={safe_reason} "
-        f"worker_exit_status={worker_exit_status}"
-        + (
-            f" publisher_exit_status={compact_publisher_status}"
-            if compact_publisher_status is not None
-            else ""
-        )
-    )
+    log_parts = [
+        "render-worker failure:",
+        f"reason={compact_worker_log_value(safe_reason)}",
+        f"route_hint={route_hint}",
+        f"worker_exit_status={worker_exit_status}",
+    ]
+    if compact_publisher_status is not None:
+        log_parts.append(f"publisher_exit_status={compact_publisher_status}")
+    for key in ("child_label", "child_pid", "child_exit_status", "child_status_available"):
+        value = failure.get(key)
+        if value is not None:
+            log_parts.append(f"{key}={compact_worker_log_value(value)}")
+    if isinstance(business_hours, dict):
+        in_business_hours = business_hours.get("in_business_hours")
+        if isinstance(in_business_hours, bool):
+            log_parts.append(
+                "business_hours_in_business_hours="
+                f"{compact_worker_log_value(in_business_hours)}"
+            )
+        local_time = business_hours.get("local_time")
+        if isinstance(local_time, str) and local_time:
+            log_parts.append(
+                f"business_hours_local_time={compact_worker_log_value(local_time)}"
+            )
+    append_cockpit_log(" ".join(log_parts))
 
 
 def record_render_worker_failure_status(
