@@ -845,6 +845,57 @@ class RenderCockpitRelayTest(unittest.TestCase):
             expected_source_health,
         )
 
+    def test_publisher_source_health_treats_degraded_ok_as_not_ok(self) -> None:
+        self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
+        self.relay.update_state(
+            {
+                "pushed_at": "2026-06-14T19:59:30Z",
+                "status": {
+                    "status": "running",
+                    "loop_running": True,
+                },
+                "log_tail": "legacy publisher reported degraded but ok source health\n",
+                "publisher": {
+                    "host": "worker-1",
+                    "source_health": {
+                        "status": "degraded",
+                        "ok": True,
+                        "label": "Legacy publisher degraded",
+                    },
+                },
+            }
+        )
+        self.relay.utc_now = lambda: "2026-06-14T20:00:00Z"
+
+        health = self.relay.health_payload()
+        status = self.relay.relay_status_payload()
+
+        expected_source_health = {
+            "status": "degraded",
+            "ok": False,
+            "reasons": ["source_publisher_health_degraded"],
+            "primary_reason": "source_publisher_health_degraded",
+            "label": "Legacy publisher degraded",
+        }
+        self.assertFalse(health["cockpit_ok"])
+        self.assertEqual(health["cockpit_status"], "degraded")
+        self.assertEqual(
+            health["cockpit_health"]["reasons"],
+            ["source_publisher_health_degraded"],
+        )
+        self.assertEqual(
+            health["cockpit_health_label"],
+            "Source publisher health is degraded",
+        )
+        self.assertEqual(
+            health["cockpit_health"]["source_health"],
+            expected_source_health,
+        )
+        self.assertEqual(
+            status["relay"]["publisher"]["source_health"],
+            expected_source_health,
+        )
+
     def test_source_health_derives_reason_count_for_truncated_legacy_reasons(self) -> None:
         self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
         self.relay.update_state(

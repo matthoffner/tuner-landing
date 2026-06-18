@@ -218,6 +218,11 @@ def publisher_source_health(state: dict[str, Any]) -> dict[str, Any]:
         status = "degraded" if normalized_reasons or ok is False else "live"
     if ok is False and status == "live":
         status = "degraded"
+    if status == "degraded" and not normalized_reasons:
+        normalized_reasons = ["source_publisher_health_degraded"]
+        primary_reason = normalized_reasons[0]
+    if status == "degraded" and ok is True:
+        ok = False
     if ok is None:
         ok = status == "live"
     label = compact_policy_detail(source_health.get("label"), max_length=160)
