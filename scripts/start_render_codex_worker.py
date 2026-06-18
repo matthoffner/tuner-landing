@@ -2329,6 +2329,13 @@ def write_business_hours_pause_status(state: dict[str, object]) -> None:
     )
 
 
+def record_business_hours_pause_status(state: dict[str, object]) -> None:
+    try:
+        write_business_hours_pause_status(state)
+    except OSError as exc:
+        emit(f"could not write business-hours pause status: {type(exc).__name__}")
+
+
 def compact_worker_exit_status(value: object) -> int | None:
     if isinstance(value, bool):
         return int(value)
@@ -2849,7 +2856,7 @@ def monitor_scheduled_loop(
                 f"next_start_at={state.get('next_start_at')}"
             )
             terminate_process(loop_process, label="autonomous loop")
-            write_business_hours_pause_status(state)
+            record_business_hours_pause_status(state)
             return BUSINESS_HOURS_CLOSED, 0
 
         loop_status, loop_poll_ok = safe_child_poll(loop_process, "autonomous loop")
@@ -2994,7 +3001,7 @@ def run_business_hours_schedule(
             f"local_time={state.get('local_time')} "
             f"next_start_at={state.get('next_start_at')}"
         )
-        write_business_hours_pause_status(state)
+        record_business_hours_pause_status(state)
         reason, status = sleep_outside_business_hours(publisher_process, state, env=env)
         if reason == PUBLISHER_EXITED:
             return status

@@ -3733,6 +3733,29 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertIn('"status": "paused"', status)
         self.assertIn("business-hours pause:", log)
 
+    def test_record_business_hours_pause_status_is_best_effort(self) -> None:
+        output = io.StringIO()
+
+        with patch.object(
+            self.worker,
+            "write_business_hours_pause_status",
+            side_effect=OSError("secret-token path failure"),
+        ), redirect_stdout(output):
+            self.worker.record_business_hours_pause_status(
+                {
+                    "enabled": True,
+                    "in_business_hours": False,
+                    "local_time": "2026-06-15T17:01:00-05:00",
+                    "next_start_at": "2026-06-16T09:00:00-05:00",
+                }
+            )
+
+        self.assertIn(
+            "could not write business-hours pause status: OSError",
+            output.getvalue(),
+        )
+        self.assertNotIn("secret-token", output.getvalue())
+
     def test_write_business_hours_pause_status_sanitizes_schedule_context(
         self,
     ) -> None:
@@ -6354,7 +6377,10 @@ class RenderWorkerPreflightTest(unittest.TestCase):
 
         with (
             patch.object(self.worker, "current_business_hours_state", return_value=state),
-            patch.object(self.worker, "write_business_hours_pause_status") as write_status,
+            patch.object(
+                self.worker,
+                "record_business_hours_pause_status",
+            ) as record_status,
         ):
             reason, status = self.worker.monitor_scheduled_loop(
                 loop,
@@ -6366,7 +6392,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertEqual(status, 0)
         self.assertTrue(loop.terminated)
         self.assertIsNone(publisher.poll())
-        write_status.assert_called_once_with(state)
+        record_status.assert_called_once_with(state)
 
     def test_scheduled_monitor_handles_loop_poll_failure_without_exception_text(self) -> None:
         loop = PollRaisesProcess(pid=101)
