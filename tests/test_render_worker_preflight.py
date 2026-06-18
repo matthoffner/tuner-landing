@@ -4101,10 +4101,21 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             "source_status=running source_loop_running=True "
             "source_status_stale=False source_status_age_seconds=12 "
             "source_status_stale_after_seconds=660 "
+            "source_status_timestamp_invalid=False "
+            "source_status_timestamp_future=False "
+            "source_status_value_invalid=False "
             "source_status_file_status=loaded "
+            "source_status_file_error=line 1 column 1: Expecting value "
+            "source_status_remote_omitted_field_count=4 "
             "source_health_primary_reason=bridge_status_stale "
-            "bridge_status_file_status=loaded bridge_status_stale=True "
+            "bridge_status=invalid-status-value "
+            "bridge_status_file_status=loaded "
+            "bridge_status_file_error=non-finite JSON number at $.updated_at "
+            "bridge_status_stale=True "
             "bridge_status_age_seconds=901 bridge_status_stale_after_seconds=900 "
+            "bridge_status_timestamp_invalid=True "
+            "bridge_status_timestamp_future=False "
+            "bridge_status_value_invalid=True "
             "bridge_health_primary_reason=bridge_status_stale token=relay-secret"
         )
 
@@ -4119,12 +4130,26 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                 "publisher_source_status_stale": False,
                 "publisher_source_status_age_seconds": 12,
                 "publisher_source_status_stale_after_seconds": 660,
+                "publisher_source_status_timestamp_invalid": False,
+                "publisher_source_status_timestamp_future": False,
+                "publisher_source_status_value_invalid": False,
                 "publisher_source_status_file_status": "loaded",
+                "publisher_source_status_file_error": (
+                    "line 1 column 1: Expecting value"
+                ),
+                "publisher_source_status_remote_omitted_field_count": 4,
                 "publisher_source_health_primary_reason": "bridge_status_stale",
+                "publisher_bridge_status": "invalid-status-value",
                 "publisher_bridge_status_file_status": "loaded",
+                "publisher_bridge_status_file_error": (
+                    "non-finite JSON number at $.updated_at"
+                ),
                 "publisher_bridge_status_stale": True,
                 "publisher_bridge_status_age_seconds": 901,
                 "publisher_bridge_status_stale_after_seconds": 900,
+                "publisher_bridge_status_timestamp_invalid": True,
+                "publisher_bridge_status_timestamp_future": False,
+                "publisher_bridge_status_value_invalid": True,
                 "publisher_bridge_health_primary_reason": "bridge_status_stale",
             },
         )
@@ -4166,12 +4191,26 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                         "publisher_source_status": "running",
                         "publisher_source_loop_running": True,
                         "publisher_source_status_stale": False,
+                        "publisher_source_status_timestamp_invalid": False,
+                        "publisher_source_status_timestamp_future": False,
+                        "publisher_source_status_value_invalid": False,
                         "publisher_source_status_age_seconds": 12,
                         "publisher_source_status_stale_after_seconds": 660,
                         "publisher_source_status_file_status": "loaded",
+                        "publisher_source_status_file_error": (
+                            "line 1 column 1: token=relay-secret"
+                        ),
+                        "publisher_source_status_remote_omitted_field_count": 4,
                         "publisher_source_health_primary_reason": "bridge_status_stale",
+                        "publisher_bridge_status": "invalid-status-value",
                         "publisher_bridge_status_file_status": "loaded",
+                        "publisher_bridge_status_file_error": (
+                            "non-finite JSON number at $.updated_at"
+                        ),
                         "publisher_bridge_status_stale": True,
+                        "publisher_bridge_status_timestamp_invalid": True,
+                        "publisher_bridge_status_timestamp_future": False,
+                        "publisher_bridge_status_value_invalid": True,
                         "publisher_bridge_status_age_seconds": 901,
                         "publisher_bridge_status_stale_after_seconds": 900,
                         "publisher_bridge_health_primary_reason": "bridge_status_stale",
@@ -4201,6 +4240,18 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertEqual(status["failure"]["publisher_source_status"], "running")
         self.assertIs(status["failure"]["publisher_source_loop_running"], True)
         self.assertIs(status["failure"]["publisher_source_status_stale"], False)
+        self.assertIs(
+            status["failure"]["publisher_source_status_timestamp_invalid"],
+            False,
+        )
+        self.assertIs(
+            status["failure"]["publisher_source_status_timestamp_future"],
+            False,
+        )
+        self.assertIs(
+            status["failure"]["publisher_source_status_value_invalid"],
+            False,
+        )
         self.assertEqual(status["failure"]["publisher_source_status_age_seconds"], 12)
         self.assertEqual(
             status["failure"]["publisher_source_status_stale_after_seconds"],
@@ -4208,11 +4259,39 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         )
         self.assertEqual(status["failure"]["publisher_source_status_file_status"], "loaded")
         self.assertEqual(
+            status["failure"]["publisher_source_status_file_error"],
+            "line 1 column 1: token=[redacted]",
+        )
+        self.assertEqual(
+            status["failure"]["publisher_source_status_remote_omitted_field_count"],
+            4,
+        )
+        self.assertEqual(
             status["failure"]["publisher_source_health_primary_reason"],
             "bridge_status_stale",
         )
+        self.assertEqual(
+            status["failure"]["publisher_bridge_status"],
+            "invalid-status-value",
+        )
         self.assertEqual(status["failure"]["publisher_bridge_status_file_status"], "loaded")
+        self.assertEqual(
+            status["failure"]["publisher_bridge_status_file_error"],
+            "non-finite JSON number at $.updated_at",
+        )
         self.assertIs(status["failure"]["publisher_bridge_status_stale"], True)
+        self.assertIs(
+            status["failure"]["publisher_bridge_status_timestamp_invalid"],
+            True,
+        )
+        self.assertIs(
+            status["failure"]["publisher_bridge_status_timestamp_future"],
+            False,
+        )
+        self.assertIs(
+            status["failure"]["publisher_bridge_status_value_invalid"],
+            True,
+        )
         self.assertEqual(status["failure"]["publisher_bridge_status_age_seconds"], 901)
         self.assertEqual(
             status["failure"]["publisher_bridge_status_stale_after_seconds"],
@@ -4238,15 +4317,32 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertIn('publisher_source_status="running"', log_text)
         self.assertIn("publisher_source_loop_running=true", log_text)
         self.assertIn("publisher_source_status_stale=false", log_text)
+        self.assertIn("publisher_source_status_timestamp_invalid=false", log_text)
+        self.assertIn("publisher_source_status_timestamp_future=false", log_text)
+        self.assertIn("publisher_source_status_value_invalid=false", log_text)
         self.assertIn("publisher_source_status_age_seconds=12", log_text)
         self.assertIn("publisher_source_status_stale_after_seconds=660", log_text)
         self.assertIn('publisher_source_status_file_status="loaded"', log_text)
         self.assertIn(
+            'publisher_source_status_file_error="line 1 column 1: token=[redacted]"',
+            log_text,
+        )
+        self.assertIn("publisher_source_status_remote_omitted_field_count=4", log_text)
+        self.assertIn(
             'publisher_source_health_primary_reason="bridge_status_stale"',
             log_text,
         )
+        self.assertIn('publisher_bridge_status="invalid-status-value"', log_text)
         self.assertIn('publisher_bridge_status_file_status="loaded"', log_text)
+        self.assertIn(
+            'publisher_bridge_status_file_error='
+            '"non-finite JSON number at $.updated_at"',
+            log_text,
+        )
         self.assertIn("publisher_bridge_status_stale=true", log_text)
+        self.assertIn("publisher_bridge_status_timestamp_invalid=true", log_text)
+        self.assertIn("publisher_bridge_status_timestamp_future=false", log_text)
+        self.assertIn("publisher_bridge_status_value_invalid=true", log_text)
         self.assertIn("publisher_bridge_status_age_seconds=901", log_text)
         self.assertIn("publisher_bridge_status_stale_after_seconds=900", log_text)
         self.assertIn(

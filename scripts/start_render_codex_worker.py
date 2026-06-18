@@ -73,11 +73,16 @@ PUBLISHER_FAILURE_FIELD_PATTERN = re.compile(
     r"failure_kind|last_failure_kind|last_failure_reason|count|limit|"
     r"http_status|http_reason|http_body_bytes|http_body_truncated|retry_after|"
     r"source_status|source_loop_running|source_status_stale|"
+    r"source_status_timestamp_invalid|source_status_timestamp_future|"
+    r"source_status_value_invalid|source_status_file_error|"
     r"source_status_age_seconds|source_status_stale_after_seconds|"
-    r"source_status_file_status|"
+    r"source_status_file_status|source_status_remote_omitted_field_count|"
     r"source_health_primary_reason|bridge_status_file_status|"
+    r"bridge_status|bridge_status_file_error|"
     r"bridge_status_stale|bridge_status_age_seconds|"
-    r"bridge_status_stale_after_seconds|bridge_health_primary_reason"
+    r"bridge_status_timestamp_invalid|bridge_status_timestamp_future|"
+    r"bridge_status_value_invalid|bridge_status_stale_after_seconds|"
+    r"bridge_health_primary_reason"
     r")="
     r"((?:(?!\s+[A-Za-z_][A-Za-z0-9_]*=).)+)"
 )
@@ -2499,6 +2504,7 @@ def compact_render_worker_failure_details(details: dict[str, object]) -> dict[st
         "publisher_source_status",
         "publisher_source_status_file_status",
         "publisher_source_health_primary_reason",
+        "publisher_bridge_status",
         "publisher_bridge_status_file_status",
         "publisher_bridge_health_primary_reason",
     ):
@@ -2506,8 +2512,16 @@ def compact_render_worker_failure_details(details: dict[str, object]) -> dict[st
         if compact_value is not None:
             compact[key] = compact_value
     for key in (
+        "publisher_source_status_file_error",
+        "publisher_bridge_status_file_error",
+    ):
+        compact_value = compact_publisher_file_error(details.get(key))
+        if compact_value is not None:
+            compact[key] = compact_value
+    for key in (
         "publisher_source_status_age_seconds",
         "publisher_source_status_stale_after_seconds",
+        "publisher_source_status_remote_omitted_field_count",
         "publisher_bridge_status_age_seconds",
         "publisher_bridge_status_stale_after_seconds",
     ):
@@ -2517,7 +2531,13 @@ def compact_render_worker_failure_details(details: dict[str, object]) -> dict[st
     for key in (
         "publisher_source_loop_running",
         "publisher_source_status_stale",
+        "publisher_source_status_timestamp_invalid",
+        "publisher_source_status_timestamp_future",
+        "publisher_source_status_value_invalid",
         "publisher_bridge_status_stale",
+        "publisher_bridge_status_timestamp_invalid",
+        "publisher_bridge_status_timestamp_future",
+        "publisher_bridge_status_value_invalid",
     ):
         compact_value = compact_worker_bool(details.get(key))
         if compact_value is not None:
@@ -2652,6 +2672,7 @@ def write_render_worker_failure_status(
         "publisher_source_status",
         "publisher_source_status_file_status",
         "publisher_source_health_primary_reason",
+        "publisher_bridge_status",
         "publisher_bridge_status_file_status",
         "publisher_bridge_health_primary_reason",
     ):
@@ -2659,8 +2680,16 @@ def write_render_worker_failure_status(
         if isinstance(value, str):
             failure[key] = value
     for key in (
+        "publisher_source_status_file_error",
+        "publisher_bridge_status_file_error",
+    ):
+        value = compact_details.pop(key, None)
+        if isinstance(value, str):
+            failure[key] = value
+    for key in (
         "publisher_source_status_age_seconds",
         "publisher_source_status_stale_after_seconds",
+        "publisher_source_status_remote_omitted_field_count",
         "publisher_bridge_status_age_seconds",
         "publisher_bridge_status_stale_after_seconds",
     ):
@@ -2670,7 +2699,13 @@ def write_render_worker_failure_status(
     for key in (
         "publisher_source_loop_running",
         "publisher_source_status_stale",
+        "publisher_source_status_timestamp_invalid",
+        "publisher_source_status_timestamp_future",
+        "publisher_source_status_value_invalid",
         "publisher_bridge_status_stale",
+        "publisher_bridge_status_timestamp_invalid",
+        "publisher_bridge_status_timestamp_future",
+        "publisher_bridge_status_value_invalid",
     ):
         value = compact_details.pop(key, None)
         if isinstance(value, bool):
@@ -2722,12 +2757,22 @@ def write_render_worker_failure_status(
         "publisher_source_status",
         "publisher_source_loop_running",
         "publisher_source_status_stale",
+        "publisher_source_status_timestamp_invalid",
+        "publisher_source_status_timestamp_future",
+        "publisher_source_status_value_invalid",
         "publisher_source_status_age_seconds",
         "publisher_source_status_stale_after_seconds",
         "publisher_source_status_file_status",
+        "publisher_source_status_file_error",
+        "publisher_source_status_remote_omitted_field_count",
         "publisher_source_health_primary_reason",
+        "publisher_bridge_status",
         "publisher_bridge_status_file_status",
+        "publisher_bridge_status_file_error",
         "publisher_bridge_status_stale",
+        "publisher_bridge_status_timestamp_invalid",
+        "publisher_bridge_status_timestamp_future",
+        "publisher_bridge_status_value_invalid",
         "publisher_bridge_status_age_seconds",
         "publisher_bridge_status_stale_after_seconds",
         "publisher_bridge_health_primary_reason",
@@ -2914,6 +2959,7 @@ def publisher_failure_fields_from_log_line(line: str) -> dict[str, object]:
         ("source_status", "publisher_source_status"),
         ("source_status_file_status", "publisher_source_status_file_status"),
         ("source_health_primary_reason", "publisher_source_health_primary_reason"),
+        ("bridge_status", "publisher_bridge_status"),
         ("bridge_status_file_status", "publisher_bridge_status_file_status"),
         ("bridge_health_primary_reason", "publisher_bridge_health_primary_reason"),
     ):
@@ -2921,10 +2967,21 @@ def publisher_failure_fields_from_log_line(line: str) -> dict[str, object]:
         if compact_value is not None:
             details[detail_name] = compact_value
     for field_name, detail_name in (
+        ("source_status_file_error", "publisher_source_status_file_error"),
+        ("bridge_status_file_error", "publisher_bridge_status_file_error"),
+    ):
+        compact_value = compact_publisher_file_error(fields.get(field_name))
+        if compact_value is not None:
+            details[detail_name] = compact_value
+    for field_name, detail_name in (
         ("source_status_age_seconds", "publisher_source_status_age_seconds"),
         (
             "source_status_stale_after_seconds",
             "publisher_source_status_stale_after_seconds",
+        ),
+        (
+            "source_status_remote_omitted_field_count",
+            "publisher_source_status_remote_omitted_field_count",
         ),
         ("bridge_status_age_seconds", "publisher_bridge_status_age_seconds"),
         (
@@ -2938,7 +2995,19 @@ def publisher_failure_fields_from_log_line(line: str) -> dict[str, object]:
     for field_name, detail_name in (
         ("source_loop_running", "publisher_source_loop_running"),
         ("source_status_stale", "publisher_source_status_stale"),
+        (
+            "source_status_timestamp_invalid",
+            "publisher_source_status_timestamp_invalid",
+        ),
+        ("source_status_timestamp_future", "publisher_source_status_timestamp_future"),
+        ("source_status_value_invalid", "publisher_source_status_value_invalid"),
         ("bridge_status_stale", "publisher_bridge_status_stale"),
+        (
+            "bridge_status_timestamp_invalid",
+            "publisher_bridge_status_timestamp_invalid",
+        ),
+        ("bridge_status_timestamp_future", "publisher_bridge_status_timestamp_future"),
+        ("bridge_status_value_invalid", "publisher_bridge_status_value_invalid"),
     ):
         compact_value = compact_worker_bool_from_text(fields.get(field_name))
         if compact_value is not None:
@@ -2990,6 +3059,22 @@ def compact_publisher_context_text(value: object) -> str | None:
     if not safe_value or safe_value == "None":
         return None
     if all(character.isalnum() or character in " _-." for character in safe_value):
+        return safe_value
+    return None
+
+
+def compact_publisher_file_error(value: object) -> str | None:
+    if not isinstance(value, str):
+        return None
+    safe_value = " ".join(sanitize_worker_log_text(value).split())[:160]
+    if not safe_value or safe_value == "None":
+        return None
+    if URL_SCHEME_PATTERN.search(safe_value):
+        return None
+    if all(
+        character.isalnum() or character in " _-[]:./=<>(),$"
+        for character in safe_value
+    ):
         return safe_value
     return None
 
