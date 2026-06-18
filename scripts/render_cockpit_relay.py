@@ -226,7 +226,11 @@ def publisher_source_health(state: dict[str, Any]) -> dict[str, Any]:
     if ok is None:
         ok = status == "live"
     label = compact_policy_detail(source_health.get("label"), max_length=160)
-    if label is None:
+    if label is None or (
+        status == "degraded"
+        and primary_reason is not None
+        and label.lower() == "live"
+    ):
         label = cockpit_health_label(primary_reason)
 
     summary = {
