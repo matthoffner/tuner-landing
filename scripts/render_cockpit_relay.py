@@ -64,6 +64,7 @@ COCKPIT_HEALTH_LABELS = {
     "source_status_timestamp_future": "Source status timestamp is in the future",
     "source_render_worker_failure": "Render worker failed",
     "source_autonomy_policy_failed": "Autonomy policy failed",
+    "source_publisher_health_degraded": "Source publisher health is degraded",
     "source_cockpit_attention": "Source cockpit needs attention",
     "source_handoff_coordination_unavailable": "Source coordination handoff is unavailable",
     "source_handoff_coordination_incomplete": "Source coordination handoff is incomplete",
@@ -202,12 +203,20 @@ def publisher_source_health(state: dict[str, Any]) -> dict[str, Any]:
     )
     if primary_reason is None:
         primary_reason = normalized_reasons[0] if normalized_reasons else None
+    if primary_reason is not None and not normalized_reasons:
+        normalized_reasons = [primary_reason]
+
+    ok = source_health.get("ok")
+    if not isinstance(ok, bool):
+        ok = None
+    if ok is False and not normalized_reasons:
+        normalized_reasons = ["source_publisher_health_degraded"]
+        primary_reason = normalized_reasons[0]
 
     status = source_health.get("status")
     if status not in {"live", "degraded"}:
-        status = "degraded" if normalized_reasons else "live"
-    ok = source_health.get("ok")
-    if not isinstance(ok, bool):
+        status = "degraded" if normalized_reasons or ok is False else "live"
+    if ok is None:
         ok = status == "live"
     label = compact_policy_detail(source_health.get("label"), max_length=160)
     if label is None:
