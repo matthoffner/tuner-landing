@@ -2388,6 +2388,55 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             },
         )
 
+    def test_publisher_source_health_prioritizes_render_worker_failure(self) -> None:
+        status = {
+            "status": "failed",
+            "loop_running": False,
+            "source_status_stale": False,
+            "source_status_file_status": "loaded",
+            "cockpit_summary": {
+                "operator_attention": True,
+                "operator_attention_reasons": [
+                    "loop_not_running",
+                    "status_failing",
+                ],
+                "failure_summary": {
+                    "available": True,
+                    "category": "render_worker",
+                    "route_hint": "relay_publisher_startup_exit",
+                    "failure_reason": "relay failed token=worker-secret",
+                    "worker_exit_status": "1",
+                    "publisher_exit_status": "2",
+                },
+            },
+        }
+
+        health = self.publisher.publisher_source_health(status)
+
+        self.assertEqual(health["status"], "degraded")
+        self.assertFalse(health["ok"])
+        self.assertEqual(health["primary_reason"], "source_render_worker_failure")
+        self.assertEqual(health["label"], "Render worker failed")
+        self.assertEqual(
+            health["reasons"],
+            [
+                "source_render_worker_failure",
+                "source_loop_not_running",
+                "source_cockpit_attention",
+            ],
+        )
+        self.assertEqual(
+            health["diagnostics"],
+            {
+                "source_failure_category": "render_worker",
+                "source_failure_route_hint": "relay_publisher_startup_exit",
+                "source_failure_failure_reason": "relay failed token=[redacted]",
+                "source_failure_worker_exit_status": 1,
+                "source_failure_publisher_exit_status": 2,
+            },
+        )
+        self.assertNotIn("worker-secret", json.dumps(health, sort_keys=True))
+
     def test_publisher_source_health_summarizes_degraded_source_status(self) -> None:
         status = {
             "status": "failing",

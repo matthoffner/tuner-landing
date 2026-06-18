@@ -3,6 +3,13 @@
 Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
+- timestamp: 2026-06-18T14:03:19Z
+- lane: editor
+- status: prioritized Render worker failures in standalone publisher source health; `publisher.source_health` now reports primary reason `source_render_worker_failure` with label `Render worker failed` when `cockpit_summary.failure_summary.category=render_worker`, while preserving the existing sanitized `source_failure_*` route and exit-status diagnostics; no Dallas raw CSV rows were edited
+- files: scripts/publish_cockpit_to_relay.py, tests/test_cockpit_relay_publisher.py, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- checks: `python3 -m unittest tests.test_cockpit_relay_publisher.CockpitRelayPublisherTest.test_publisher_source_health_prioritizes_render_worker_failure -v`; `python3 -m py_compile scripts/publish_cockpit_to_relay.py tests/test_cockpit_relay_publisher.py`; `python3 -m unittest tests.test_cockpit_relay_publisher -v`; `python3 -m unittest discover -s tests -v`; `node --check api/cockpit-upstreams.js && node --check api/cockpit-status.js && node --check api/cockpit-log.js`; `cmp -s generated/landing.html index.html`; `git diff --name-only -- generated/raw .pxcode/preview.json generated/landing.html index.html generated/pipeline/dallas-import-pipeline-summary-v1`; `git diff --check`; local `run_autonomy_policy_check(Path('/tmp/automoat-render-worker-source-health-policy.log'))` with zero synthetic rows, zero raw Dallas CSV paths, two productive paths, two ignored coordination paths, synced landing/index, and no preview change; `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json > /tmp/automoat-render-worker-source-health-ready.json` plus corrected JSON assertion for readiness `ready`, zero blockers, `ready_for_next_import_records=true`, `535` permits, `1082` inspections, `1625` source records, `1093` tasks, `541` label reviews, `535/535` operator corrections, `13/13` contract checks, and zero latest thin-count buckets
+- next: when remote `publisher.source_health.primary_reason=source_render_worker_failure`, inspect `publisher.source_health.diagnostics.source_failure_route_hint`, worker/publisher exit statuses, and preflight diagnostics before treating the snapshot as generic loop liveness
+
 - timestamp: 2026-06-17T21:50:53Z
 - lane: editor
 - status: added an autonomous policy guard for unsynced landing assets; standalone policy checks now compare `generated/landing.html` with `index.html`, fail with route `landing_index_sync` / reason `landing_index_out_of_sync`, expose compact `landing_synced=<bool>` summaries and routeable diagnostics, and keep the existing loop-time sync step as the first repair path; no Dallas raw CSV rows were edited

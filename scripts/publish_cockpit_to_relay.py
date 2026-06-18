@@ -121,6 +121,7 @@ SENSITIVE_SINGLE_QUOTED_FIELD_PATTERN = re.compile(
     re.IGNORECASE,
 )
 SOURCE_HEALTH_LABELS = {
+    "source_render_worker_failure": "Render worker failed",
     "source_autonomy_policy_failed": "Autonomy policy failed",
     "source_bridge_degraded": "Source bridge is degraded",
     "source_bridge_status_failing": "Source bridge status is failing",
@@ -2187,6 +2188,7 @@ def source_health_diagnostics(status: dict[str, Any]) -> dict[str, Any]:
 def publisher_source_health(status: dict[str, Any]) -> dict[str, Any]:
     reasons: list[str] = []
     cockpit_summary = as_dict(status.get("cockpit_summary"))
+    failure = as_dict(cockpit_summary.get("failure_summary"))
     bridge_summary = as_dict(status.get("bridge_summary"))
     bridge_health = as_dict(bridge_summary.get("bridge_health"))
     coordination = as_dict(cockpit_summary.get("coordination"))
@@ -2211,6 +2213,8 @@ def publisher_source_health(status: dict[str, Any]) -> dict[str, Any]:
     }
     if source_status_unavailable:
         reasons.append("source_status_unavailable")
+    if failure.get("available") is True and failure.get("category") == "render_worker":
+        reasons.append("source_render_worker_failure")
     source_timestamp_invalid = status.get("source_status_timestamp_invalid") is True
     source_timestamp_future = status.get("source_status_timestamp_future") is True
     if source_timestamp_invalid:
