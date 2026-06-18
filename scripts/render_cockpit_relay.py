@@ -62,6 +62,7 @@ COCKPIT_HEALTH_LABELS = {
     "source_loop_not_running": "Source loop is not running",
     "source_status_failing": "Source status is failing",
     "source_status_timestamp_future": "Source status timestamp is in the future",
+    "source_render_worker_failure": "Render worker failed",
     "source_autonomy_policy_failed": "Autonomy policy failed",
     "source_cockpit_attention": "Source cockpit needs attention",
     "source_handoff_coordination_unavailable": "Source coordination handoff is unavailable",

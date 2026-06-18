@@ -525,6 +525,54 @@ class RenderCockpitRelayTest(unittest.TestCase):
             expected_source_health,
         )
 
+    def test_status_and_health_label_render_worker_source_failure(self) -> None:
+        self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
+        self.relay.update_state(
+            {
+                "pushed_at": "2026-06-14T19:59:30Z",
+                "status": {
+                    "status": "running",
+                    "loop_running": True,
+                },
+                "log_tail": "render worker failed before completing loop setup\n",
+                "publisher": {
+                    "host": "worker-1",
+                    "source_health": {
+                        "status": "degraded",
+                        "ok": False,
+                        "reasons": ["source_render_worker_failure"],
+                        "primary_reason": "source_render_worker_failure",
+                    },
+                },
+            }
+        )
+        self.relay.utc_now = lambda: "2026-06-14T20:00:00Z"
+
+        health = self.relay.health_payload()
+        status = self.relay.relay_status_payload()
+
+        expected_source_health = {
+            "status": "degraded",
+            "ok": False,
+            "reasons": ["source_render_worker_failure"],
+            "primary_reason": "source_render_worker_failure",
+            "label": "Render worker failed",
+        }
+        self.assertEqual(
+            health["cockpit_health"]["reasons"],
+            ["source_render_worker_failure"],
+        )
+        self.assertEqual(health["cockpit_health_label"], "Render worker failed")
+        self.assertEqual(status["cockpit_health_label"], "Render worker failed")
+        self.assertEqual(
+            health["cockpit_health"]["source_health"],
+            expected_source_health,
+        )
+        self.assertEqual(
+            status["relay"]["publisher"]["source_health"],
+            expected_source_health,
+        )
+
     def test_status_and_health_preserve_coverage_source_health_diagnostics(self) -> None:
         self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
         self.relay.update_state(
