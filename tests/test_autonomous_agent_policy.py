@@ -252,11 +252,16 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
                         "# Pixelbox Agent Handoff",
                         "",
                         "## Latest",
+                        "- timestamp: 2026-06-18T19:00:00Z",
                         "- lane: editor",
                         (
                             "- status: running token=super-secret "
                             "https://user:pass@example.local/status?token=secret#debug"
                         ),
+                        "",
+                        "- timestamp: 2026-06-18T18:00:00Z",
+                        "- lane: runtime",
+                        "- status: older handoff entry",
                     ]
                 )
                 + "\n",
@@ -271,6 +276,8 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
         self.assertEqual(snapshot["handoff_file_status"], "loaded")
         self.assertTrue(snapshot["latest_section_found"])
         self.assertTrue(snapshot["latest_status_found"])
+        self.assertEqual(snapshot["latest_handoff_timestamp"], "2026-06-18T19:00:00Z")
+        self.assertEqual(snapshot["latest_handoff_lane"], "editor")
         self.assertIsInstance(snapshot["handoff_age_seconds"], int)
         self.assertIn("running token=<redacted>", snapshot["latest_handoff_status"])
         self.assertIn("https://example.local/status", snapshot["latest_handoff_status"])
@@ -307,6 +314,8 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
                         "# Pixelbox Agent Handoff",
                         "",
                         "## Latest",
+                        "- timestamp: 2026-06-18T19:05:00Z",
+                        "- lane: runtime",
                         (
                             "- status: running token=super-secret "
                             "https://user:pass@example.local/status?token=secret#debug"
@@ -328,6 +337,8 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
         self.assertEqual(snapshot["handoff_file_status"], "too_large")
         self.assertTrue(snapshot["latest_section_found"])
         self.assertTrue(snapshot["latest_status_found"])
+        self.assertEqual(snapshot["latest_handoff_timestamp"], "2026-06-18T19:05:00Z")
+        self.assertEqual(snapshot["latest_handoff_lane"], "runtime")
         self.assertEqual(latest_status, snapshot["latest_handoff_status"])
         self.assertIn("file exceeds max handoff bytes", snapshot["handoff_error"])
         self.assertIn("running token=<redacted>", snapshot["latest_handoff_status"])

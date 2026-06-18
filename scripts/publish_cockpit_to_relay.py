@@ -849,6 +849,8 @@ def coordination_summary(status: dict[str, Any]) -> dict[str, Any]:
     fields = {
         "handoff_path": coordination.get("handoff_path"),
         "handoff_file_status": coordination.get("handoff_file_status"),
+        "latest_handoff_timestamp": coordination.get("latest_handoff_timestamp"),
+        "latest_handoff_lane": coordination.get("latest_handoff_lane"),
         "latest_handoff_status": coordination.get("latest_handoff_status"),
         "handoff_error": coordination.get("handoff_error"),
     }
@@ -1837,6 +1839,18 @@ def source_health_diagnostics(status: dict[str, Any]) -> dict[str, Any]:
         )
         if handoff_status is not None:
             diagnostics["source_handoff_status"] = handoff_status
+        handoff_timestamp = compact_policy_detail(
+            coordination.get("latest_handoff_timestamp"),
+            max_length=120,
+        )
+        if handoff_timestamp is not None:
+            diagnostics["source_handoff_timestamp"] = handoff_timestamp
+        handoff_lane = compact_policy_detail(
+            coordination.get("latest_handoff_lane"),
+            max_length=80,
+        )
+        if handoff_lane is not None:
+            diagnostics["source_handoff_lane"] = handoff_lane
         handoff_age_seconds = compact_int(coordination.get("handoff_age_seconds"))
         if handoff_age_seconds is not None:
             diagnostics["source_handoff_age_seconds"] = handoff_age_seconds
@@ -2810,6 +2824,14 @@ def source_status_log_fields(payload: dict[str, Any]) -> dict[str, Any]:
             coordination.get("latest_handoff_status"),
             max_length=240,
         ),
+        "source_coordination_handoff_timestamp": compact_policy_detail(
+            coordination.get("latest_handoff_timestamp"),
+            max_length=120,
+        ),
+        "source_coordination_handoff_lane": compact_policy_detail(
+            coordination.get("latest_handoff_lane"),
+            max_length=80,
+        ),
         "source_coordination_latest_section_found": coordination.get(
             "latest_section_found"
         )
@@ -3096,6 +3118,8 @@ SOURCE_STATUS_LOG_FIELD_NAMES = (
     "source_coordination_handoff_path",
     "source_coordination_handoff_file_status",
     "source_coordination_handoff_status",
+    "source_coordination_handoff_timestamp",
+    "source_coordination_handoff_lane",
     "source_coordination_latest_section_found",
     "source_coordination_latest_status_found",
     "source_coordination_handoff_age_seconds",

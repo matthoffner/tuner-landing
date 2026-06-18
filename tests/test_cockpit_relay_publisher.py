@@ -3095,6 +3095,10 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                             "latest_handoff_status": (
                                 "worker handoff ready token=handoff-secret"
                             ),
+                            "latest_handoff_timestamp": (
+                                "2026-06-18T19:10:00Z token=timestamp-secret"
+                            ),
+                            "latest_handoff_lane": "editor token=lane-secret",
                             "handoff_age_seconds": "75",
                         },
                     },
@@ -3112,6 +3116,10 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                     "source_handoff_status": (
                         "worker handoff ready token=[redacted]"
                     ),
+                    "source_handoff_timestamp": (
+                        "2026-06-18T19:10:00Z token=[redacted]"
+                    ),
+                    "source_handoff_lane": "editor token=[redacted]",
                     "source_handoff_age_seconds": 75,
                 },
             ),
@@ -3125,6 +3133,10 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                         "latest_handoff_status": (
                             "missing latest status token=handoff-secret"
                         ),
+                        "latest_handoff_timestamp": (
+                            "2026-06-18T19:15:00Z token=timestamp-secret"
+                        ),
+                        "latest_handoff_lane": "runtime token=lane-secret",
                         "handoff_age_seconds": 91,
                     },
                 },
@@ -3137,6 +3149,10 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                     "source_handoff_status": (
                         "missing latest status token=[redacted]"
                     ),
+                    "source_handoff_timestamp": (
+                        "2026-06-18T19:15:00Z token=[redacted]"
+                    ),
+                    "source_handoff_lane": "runtime token=[redacted]",
                     "source_handoff_age_seconds": 91,
                 },
             ),
@@ -5442,6 +5458,8 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                             "latest_section_found": True,
                             "latest_status_found": True,
                             "handoff_age_seconds": 75,
+                            "latest_handoff_timestamp": "2026-06-18T19:20:00Z",
+                            "latest_handoff_lane": "editor",
                             "latest_handoff_status": "worker handoff ready",
                         },
                     },
@@ -5561,6 +5579,11 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             "source_coordination_handoff_status=worker handoff ready",
             log_text,
         )
+        self.assertIn(
+            "source_coordination_handoff_timestamp=2026-06-18T19:20:00Z",
+            log_text,
+        )
+        self.assertIn("source_coordination_handoff_lane=editor", log_text)
         self.assertIn("source_coordination_latest_section_found=True", log_text)
         self.assertIn("source_coordination_latest_status_found=True", log_text)
         self.assertIn("source_coordination_handoff_age_seconds=75", log_text)
@@ -5949,6 +5972,10 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                                 "running authorization: Bearer coord-status-secret "
                                 "https://coord.example/status?token=coord-url-secret#debug"
                             ),
+                            "latest_handoff_timestamp": (
+                                "2026-06-18T19:25:00Z token=coord-timestamp-secret"
+                            ),
+                            "latest_handoff_lane": "editor token=coord-lane-secret",
                         },
                     },
                 },
@@ -6202,6 +6229,15 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             "[redacted] https://coord.example/status?[redacted]#[redacted]",
             log_text,
         )
+        self.assertIn(
+            "source_coordination_handoff_timestamp=2026-06-18T19:25:00Z "
+            "token=[redacted]",
+            log_text,
+        )
+        self.assertIn(
+            "source_coordination_handoff_lane=editor token=[redacted]",
+            log_text,
+        )
         self.assertIn("source_coordination_latest_section_found=None", log_text)
         self.assertIn("source_coordination_latest_status_found=False", log_text)
         self.assertIn("source_coordination_handoff_age_seconds=91", log_text)
@@ -6213,6 +6249,8 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertNotIn("status-secret", log_text)
         self.assertNotIn("file-secret", log_text)
         self.assertNotIn("relay-user", log_text)
+        self.assertNotIn("coord-timestamp-secret", log_text)
+        self.assertNotIn("coord-lane-secret", log_text)
         self.assertNotIn("relay-pass", log_text)
         self.assertNotIn("url-secret", log_text)
         self.assertNotIn("host-secret", log_text)

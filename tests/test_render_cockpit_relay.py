@@ -1083,6 +1083,10 @@ class RenderCockpitRelayTest(unittest.TestCase):
                             "source_handoff_status": (
                                 "publishing token=handoff-status-secret"
                             ),
+                            "source_handoff_timestamp": (
+                                "2026-06-18T19:35:00Z token=handoff-timestamp-secret"
+                            ),
+                            "source_handoff_lane": "runtime token=handoff-lane-secret",
                             "source_handoff_age_seconds": "75",
                             "source_cockpit_attention_primary_reason": (
                                 "import_readiness_not_ready token=attention-secret"
@@ -1327,6 +1331,8 @@ class RenderCockpitRelayTest(unittest.TestCase):
             "source_handoff_latest_section_found": True,
             "source_handoff_latest_status_found": False,
             "source_handoff_status": "publishing token=[redacted]",
+            "source_handoff_timestamp": "2026-06-18T19:35:00Z token=[redacted]",
+            "source_handoff_lane": "runtime token=[redacted]",
             "source_handoff_age_seconds": 75,
             "source_cockpit_attention_primary_reason": (
                 "import_readiness_not_ready token=[redacted]"
@@ -2943,6 +2949,10 @@ class RenderCockpitRelayTest(unittest.TestCase):
                             "handoff_file_status": (
                                 "loaded token=status-secret"
                             ),
+                            "latest_handoff_timestamp": (
+                                "2026-06-18T19:30:00Z token=timestamp-secret"
+                            ),
+                            "latest_handoff_lane": "editor token=lane-secret",
                             "latest_handoff_status": (
                                 "publishing Authorization: Bearer bearer-secret "
                                 "https://relay.example/handoff?token=url-secret#debug"
@@ -2970,6 +2980,8 @@ class RenderCockpitRelayTest(unittest.TestCase):
             "available": True,
             "handoff_path": ".pixelbox/handoff.md token=[redacted]",
             "handoff_file_status": "loaded token=[redacted]",
+            "latest_handoff_timestamp": "2026-06-18T19:30:00Z token=[redacted]",
+            "latest_handoff_lane": "editor token=[redacted]",
             "latest_handoff_status": (
                 "publishing Authorization: Bearer [redacted] "
                 "https://relay.example/handoff?[redacted]#[redacted]"
@@ -2997,6 +3009,8 @@ class RenderCockpitRelayTest(unittest.TestCase):
             "status-secret",
             "bearer-secret",
             "url-secret",
+            "timestamp-secret",
+            "lane-secret",
             "error-secret",
             "ignored-secret",
             "/tmp/customer",

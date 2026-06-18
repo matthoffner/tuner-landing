@@ -283,6 +283,18 @@ def publisher_source_health(state: dict[str, Any]) -> dict[str, Any]:
         )
         if source_handoff_status is not None:
             diagnostics["source_handoff_status"] = source_handoff_status
+        source_handoff_timestamp = compact_policy_detail(
+            raw_diagnostics.get("source_handoff_timestamp"),
+            max_length=120,
+        )
+        if source_handoff_timestamp is not None:
+            diagnostics["source_handoff_timestamp"] = source_handoff_timestamp
+        source_handoff_lane = compact_policy_detail(
+            raw_diagnostics.get("source_handoff_lane"),
+            max_length=80,
+        )
+        if source_handoff_lane is not None:
+            diagnostics["source_handoff_lane"] = source_handoff_lane
         for key in (
             "source_status_value_invalid",
             "source_bridge_status_value_invalid",
@@ -1402,6 +1414,8 @@ def source_coordination_summary(status: dict[str, Any]) -> dict[str, Any]:
     text_fields = {
         "handoff_path": coordination.get("handoff_path"),
         "handoff_file_status": coordination.get("handoff_file_status"),
+        "latest_handoff_timestamp": coordination.get("latest_handoff_timestamp"),
+        "latest_handoff_lane": coordination.get("latest_handoff_lane"),
         "latest_handoff_status": coordination.get("latest_handoff_status"),
     }
     for key, value in text_fields.items():

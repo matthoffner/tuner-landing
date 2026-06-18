@@ -279,20 +279,7 @@ def import_readiness_command() -> list[str]:
 
 
 def latest_handoff_status() -> str:
-    lines, metadata = read_handoff_lines_limited(HANDOFF_PATH)
-    handoff_status = metadata["handoff_file_status"]
-    if handoff_status == "missing":
-        return "handoff missing"
-    if lines is None:
-        return "handoff unreadable"
-    for index, line in enumerate(lines):
-        if line.startswith("- status:"):
-            return str(sanitized_policy_scalar(line.replace("- status:", "", 1).strip()))
-        if line.strip() == "## Latest":
-            continue
-        if index > 24:
-            break
-    return "handoff too large" if handoff_status == "too_large" else "handoff present"
+    return str(handoff_line_snapshot(HANDOFF_PATH).get("latest_handoff_status"))
 
 
 def handoff_read_error(exc: BaseException, path: Path) -> str:
@@ -369,31 +356,43 @@ def handoff_line_snapshot(path: Path) -> dict[str, Any]:
         return metadata
 
     latest_section_found = False
+    latest_fields: dict[str, Any] = {}
     for index, line in enumerate(lines):
-        if line.strip() == "## Latest":
+        stripped = line.strip()
+        if stripped == "## Latest":
             latest_section_found = True
             continue
-        if line.startswith("- status:"):
-            return {
-                **metadata,
-                "latest_section_found": latest_section_found,
-                "latest_status_found": True,
-                "latest_handoff_status": sanitized_policy_scalar(
-                    line.replace("- status:", "", 1).strip()
-                ),
-                "handoff_age_seconds": handoff_age_seconds(path),
-            }
+        if stripped.startswith("## ") and latest_section_found:
+            break
+        if latest_section_found and stripped == "" and latest_fields:
+            break
+        if line.startswith("- timestamp:"):
+            latest_fields["latest_handoff_timestamp"] = sanitized_policy_scalar(
+                line.replace("- timestamp:", "", 1).strip()
+            )
+        elif line.startswith("- lane:"):
+            latest_fields["latest_handoff_lane"] = sanitized_policy_scalar(
+                line.replace("- lane:", "", 1).strip()
+            )
+        elif line.startswith("- status:"):
+            latest_fields["latest_handoff_status"] = sanitized_policy_scalar(
+                line.replace("- status:", "", 1).strip()
+            )
         if index > 24:
             break
     latest_handoff_status = (
-        "handoff too large"
-        if metadata["handoff_file_status"] == "too_large"
-        else "handoff present"
+        latest_fields.get("latest_handoff_status")
+        or (
+            "handoff too large"
+            if metadata["handoff_file_status"] == "too_large"
+            else "handoff present"
+        )
     )
     return {
         **metadata,
+        **latest_fields,
         "latest_section_found": latest_section_found,
-        "latest_status_found": False,
+        "latest_status_found": "latest_handoff_status" in latest_fields,
         "latest_handoff_status": latest_handoff_status,
         "handoff_age_seconds": handoff_age_seconds(path),
     }
