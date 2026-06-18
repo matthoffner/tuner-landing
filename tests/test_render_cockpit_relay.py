@@ -376,6 +376,92 @@ class RenderCockpitRelayTest(unittest.TestCase):
             ):
                 self.assertNotIn(unsafe_text, safe_text)
 
+    def test_load_state_sanitizes_legacy_persisted_snapshot_before_serving(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            state_file = Path(tmp) / "relay-state.json"
+            state_file.write_text(
+                json.dumps(
+                    {
+                        "relay_status": "live token=relay-secret",
+                        "received_at": "2026-06-14T19:59:30Z token=received-secret",
+                        "updated_at": "2026-06-14T19:59:30Z token=updated-secret",
+                        "status": {"status": "running", "loop_running": True},
+                        "log_tail": (
+                            "posting https://user:url-secret@example.test/path"
+                            "?token=query-secret#frag\n"
+                            "Authorization: Bearer bearer-secret "
+                            "AUTOMOAT_RELAY_TOKEN=env-relay-secret\n"
+                        ),
+                        "publisher": {
+                            "host": "worker-1 relay_token=host-secret",
+                            "runtime_config": {
+                                "relay_token": "direct-runtime-secret",
+                                "relay_url": (
+                                    "https://user:relay-secret@example.local"
+                                    "/relay?token=query-secret#debug"
+                                ),
+                            },
+                            "source_health": {
+                                "diagnostics": {
+                                    "source_failure_error": (
+                                        "OPENAI_API_KEY=sk-secret "
+                                        "authorization: bearer bearer-secret"
+                                    ),
+                                },
+                            },
+                        },
+                    },
+                    sort_keys=True,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            loaded_state = self.relay.load_state(state_file)
+
+        with self.relay.STATE_LOCK:
+            self.relay.STATE.clear()
+            self.relay.STATE.update(loaded_state)
+
+        health = self.relay.health_payload()
+        status = self.relay.relay_status_payload()
+        exposed_text = json.dumps(
+            {
+                "health": health,
+                "log_tail": self.relay.snapshot()["log_tail"],
+                "status": status,
+            },
+            sort_keys=True,
+        )
+
+        self.assertEqual(loaded_state["relay_status"], "live token=[redacted]")
+        self.assertIn(
+            "https://example.test/path?[redacted]#[redacted]",
+            loaded_state["log_tail"],
+        )
+        self.assertIn("Authorization: Bearer [redacted]", loaded_state["log_tail"])
+        self.assertIn("AUTOMOAT_RELAY_TOKEN=[redacted]", loaded_state["log_tail"])
+        self.assertEqual(
+            loaded_state["publisher"]["runtime_config"]["relay_token"],
+            "[redacted]",
+        )
+        self.assertIn(
+            "https://example.local/relay?[redacted]#[redacted]",
+            loaded_state["publisher"]["runtime_config"]["relay_url"],
+        )
+        for unsafe_text in (
+            "relay-secret",
+            "received-secret",
+            "updated-secret",
+            "url-secret",
+            "query-secret",
+            "bearer-secret",
+            "env-relay-secret",
+            "host-secret",
+            "direct-runtime-secret",
+            "sk-secret",
+        ):
+            self.assertNotIn(unsafe_text, exposed_text)
+
     def test_status_and_health_report_stale_snapshot(self) -> None:
         self.relay.utc_now = lambda: "2026-06-14T19:57:30Z"
         self.relay.update_state(

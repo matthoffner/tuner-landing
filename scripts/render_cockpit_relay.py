@@ -2050,6 +2050,43 @@ def read_json_with_error(path: Path) -> tuple[dict[str, Any] | None, str | None]
     return payload, None
 
 
+def configured_max_log_chars() -> int:
+    try:
+        max_log_chars = int(CONFIG.get("max_log_chars", DEFAULT_MAX_LOG_CHARS))
+    except (TypeError, ValueError):
+        return DEFAULT_MAX_LOG_CHARS
+    return max_log_chars if max_log_chars > 0 else DEFAULT_MAX_LOG_CHARS
+
+
+def sanitize_loaded_state_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    sanitized = dict(payload)
+    for key in ("relay_status", "received_at", "updated_at"):
+        if key not in sanitized:
+            continue
+        compact_value = compact_policy_detail(sanitized.get(key), max_length=240)
+        if compact_value is None:
+            sanitized.pop(key, None)
+        else:
+            sanitized[key] = compact_value
+
+    log_tail = sanitized.get("log_tail")
+    if isinstance(log_tail, str):
+        sanitized["log_tail"] = utf8_tail(
+            sanitize_log_tail_for_relay(log_tail),
+            configured_max_log_chars(),
+        )
+    else:
+        sanitized.pop("log_tail", None)
+
+    publisher = sanitized.get("publisher")
+    if isinstance(publisher, dict):
+        sanitized["publisher"] = sanitize_publisher_metadata_for_storage(publisher)
+    else:
+        sanitized.pop("publisher", None)
+
+    return sanitized
+
+
 def load_state(path: Path | None) -> dict[str, Any]:
     state = empty_state()
     if path is None:
@@ -2074,7 +2111,7 @@ def load_state(path: Path | None) -> dict[str, Any]:
             "state_load_error": error,
         }
         return state
-    state.update(payload)
+    state.update(sanitize_loaded_state_payload(payload))
     state["relay_startup"] = {
         "state_file": state_file,
         "state_load_status": "loaded",
