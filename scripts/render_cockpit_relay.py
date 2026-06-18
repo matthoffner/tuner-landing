@@ -352,6 +352,8 @@ def publisher_source_health(state: dict[str, Any]) -> dict[str, Any]:
             "source_failure_route_hint",
             "source_failure_failure_reason",
             "source_failure_message",
+            "source_failure_summary",
+            "source_failure_command",
             "source_failure_decision_reason",
             "source_failure_current_focus",
             "source_failure_termination_reason",

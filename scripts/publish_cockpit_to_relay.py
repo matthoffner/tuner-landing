@@ -2073,6 +2073,8 @@ def source_health_diagnostics(status: dict[str, Any]) -> dict[str, Any]:
             ("source_failure_route_hint", 120),
             ("source_failure_failure_reason", 160),
             ("source_failure_message", 160),
+            ("source_failure_summary", 160),
+            ("source_failure_command", 160),
             ("source_failure_decision_reason", 160),
             ("source_failure_current_focus", 120),
             ("source_failure_termination_reason", 120),
@@ -2877,6 +2879,14 @@ def source_status_log_fields(payload: dict[str, Any]) -> dict[str, Any]:
             failure.get("message"),
             max_length=160,
         ),
+        "source_failure_summary": compact_policy_detail(
+            failure.get("summary"),
+            max_length=160,
+        ),
+        "source_failure_command": compact_policy_detail(
+            failure.get("command"),
+            max_length=160,
+        ),
         "source_failure_failure_reason": compact_policy_detail(
             failure.get("failure_reason"),
             max_length=160,
@@ -3163,6 +3173,8 @@ SOURCE_STATUS_LOG_FIELD_NAMES = (
     "source_failure_route_hint",
     "source_failure_phase",
     "source_failure_message",
+    "source_failure_summary",
+    "source_failure_command",
     "source_failure_failure_reason",
     "source_failure_decision_reason",
     "source_failure_current_focus",

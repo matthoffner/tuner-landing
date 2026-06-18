@@ -2790,6 +2790,13 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                         "review https://user:pass@example.local/status"
                         "?token=message-secret#debug"
                     ),
+                    "summary": (
+                        "artifact summary authorization: Bearer summary-secret "
+                        "https://summary.example.local/report?token=summary-url-secret"
+                    ),
+                    "command": (
+                        "python3 scripts/run_check.py --relay-token=command-secret"
+                    ),
                     "decision_reason": (
                         "dallas_ready_no_thin_groups token=decision-secret"
                     ),
@@ -2909,6 +2916,13 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 "source_failure_message": (
                     "review https://example.local/status?[redacted]#[redacted]"
                 ),
+                "source_failure_summary": (
+                    "artifact summary authorization: Bearer [redacted] "
+                    "https://summary.example.local/report?[redacted]"
+                ),
+                "source_failure_command": (
+                    "python3 scripts/run_check.py --relay-token=[redacted]"
+                ),
                 "source_failure_decision_reason": (
                     "dallas_ready_no_thin_groups token=[redacted]"
                 ),
@@ -3010,6 +3024,9 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertNotIn("route-secret", health_text)
         self.assertNotIn("reason-secret", health_text)
         self.assertNotIn("message-secret", health_text)
+        self.assertNotIn("summary-secret", health_text)
+        self.assertNotIn("summary-url-secret", health_text)
+        self.assertNotIn("command-secret", health_text)
         self.assertNotIn("decision-secret", health_text)
         self.assertNotIn("focus-secret", health_text)
         self.assertNotIn("termination-secret", health_text)
@@ -5469,6 +5486,8 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                             "category": "artifact_health",
                             "route_hint": "cockpit_artifact_health",
                             "message": "artifact health degraded",
+                            "summary": "workflow check summary",
+                            "command": "python3 scripts/check_artifacts.py",
                             "import_pipeline_status": "loaded",
                             "readiness_status": "ready",
                             "readiness_blocker_count": 0,
@@ -5628,6 +5647,11 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertIn("source_failure_route_hint=cockpit_artifact_health", log_text)
         self.assertIn("source_failure_phase=artifact_health_failed", log_text)
         self.assertIn("source_failure_message=artifact health degraded", log_text)
+        self.assertIn("source_failure_summary=workflow check summary", log_text)
+        self.assertIn(
+            "source_failure_command=python3 scripts/check_artifacts.py",
+            log_text,
+        )
         self.assertIn("source_failure_import_pipeline_status=loaded", log_text)
         self.assertIn("source_failure_readiness_status=ready", log_text)
         self.assertIn("source_failure_readiness_blocker_count=0", log_text)

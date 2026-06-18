@@ -1428,6 +1428,16 @@ class RenderCockpitRelayTest(unittest.TestCase):
                                 "review https://user:pass@example.local/status"
                                 "?token=message-secret#debug"
                             ),
+                            "source_failure_summary": (
+                                "artifact summary authorization: Bearer "
+                                "failure-summary-secret "
+                                "https://summary.example.local/report"
+                                "?token=failure-summary-url-secret"
+                            ),
+                            "source_failure_command": (
+                                "python3 scripts/check.py "
+                                "--relay-token=failure-command-secret"
+                            ),
                             "source_failure_decision_reason": (
                                 "dallas_ready_no_thin_groups token=decision-secret"
                             ),
@@ -1659,6 +1669,13 @@ class RenderCockpitRelayTest(unittest.TestCase):
             "source_failure_failure_reason": "artifact rejected token=[redacted]",
             "source_failure_message": (
                 "review https://example.local/status?[redacted]#[redacted]"
+            ),
+            "source_failure_summary": (
+                "artifact summary authorization: Bearer [redacted] "
+                "https://summary.example.local/report?[redacted]"
+            ),
+            "source_failure_command": (
+                "python3 scripts/check.py --relay-token=[redacted]"
             ),
             "source_failure_decision_reason": (
                 "dallas_ready_no_thin_groups token=[redacted]"
