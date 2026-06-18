@@ -60,6 +60,10 @@ class MvpCockpitServerTest(unittest.TestCase):
             "Autonomy policy failed",
         )
         self.assertEqual(
+            self.cockpit.operator_attention_label("status_unavailable"),
+            "Status file is unavailable",
+        )
+        self.assertEqual(
             self.cockpit.operator_attention_label("status_timestamp_invalid"),
             "Status timestamp is invalid",
         )
@@ -588,6 +592,28 @@ class MvpCockpitServerTest(unittest.TestCase):
         self.assertEqual(
             incomplete_summary["operator_attention_label"],
             "Coordination handoff is incomplete",
+        )
+
+    def test_cockpit_summary_routes_missing_status_file_attention(self) -> None:
+        status = {
+            "status": "waiting",
+            "loop_running": True,
+            "source_status_file_status": "missing",
+            "artifacts": {
+                "artifact_health": {"status": "loaded"},
+                "import_pipeline": {
+                    "execution_readiness": {"status": "ready", "blockers": []}
+                },
+            },
+        }
+
+        summary = self.cockpit.cockpit_summary(status)
+
+        self.assertTrue(summary["operator_attention"])
+        self.assertEqual(summary["operator_attention_reasons"], ["status_unavailable"])
+        self.assertEqual(
+            summary["operator_attention_label"],
+            "Status file is unavailable",
         )
 
     def test_cockpit_summary_treats_business_hours_pause_as_scheduled(self) -> None:

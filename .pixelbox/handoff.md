@@ -3,6 +3,13 @@
 Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
+- timestamp: 2026-06-18T16:08:17Z
+- lane: editor
+- status: routed missing/unreadable local MVP cockpit status files into explicit operator attention; `scripts/serve_mvp_cockpit.py` now adds `status_unavailable` with label `Status file is unavailable` when `source_status_file_status` is `missing` or `read_failed`, while leaving malformed/non-object/oversized status JSON on the existing `status_failing` route; no Dallas raw CSV rows were edited
+- files: scripts/serve_mvp_cockpit.py, tests/test_mvp_cockpit_server.py, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- checks: `python3 -m unittest tests.test_mvp_cockpit_server.MvpCockpitServerTest.test_operator_attention_label_uses_stable_labels_and_fallback tests.test_mvp_cockpit_server.MvpCockpitServerTest.test_cockpit_summary_routes_missing_status_file_attention -v`; `python3 -m py_compile scripts/serve_mvp_cockpit.py tests/test_mvp_cockpit_server.py`; `python3 -m unittest tests.test_mvp_cockpit_server -v`; `node --check api/cockpit-upstreams.js && node --check api/cockpit-status.js && node --check api/cockpit-log.js`; `cmp -s generated/landing.html index.html`; `git diff --check`; `python3 -m unittest discover -s tests -v`; `git diff --name-only -- generated/raw .pxcode/preview.json generated/landing.html index.html generated/pipeline/dallas-import-pipeline-summary-v1`; local autonomy policy check via `run_autonomy_policy_check(Path('/tmp/automoat-local-status-unavailable-policy.log'))` with zero synthetic rows, zero raw Dallas CSV paths, two productive paths, two ignored coordination paths, no preview change, and `landing_index_synced=true`; `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json > /tmp/automoat-local-status-unavailable-ready.json` plus JSON assertion for readiness `ready`, zero blockers, `ready_for_next_import_records=true`, `535` permits, `1082` inspections, `1625` source records, `535/535` operator corrections, `13/13` contract checks, and zero latest thin-count buckets
+- next: if the local cockpit shows `operator_attention_primary_reason=status_unavailable`, inspect `.automoat/state/mvp-loop-status.json` existence/readability before debugging loop liveness or Dallas readiness; invalid status JSON should still route as `status_failing`
+
 - timestamp: 2026-06-18T16:02:08Z
 - lane: editor
 - status: made local autonomous and MVP cockpit status writes atomic; `scripts/run_autonomous_agent_loop.py` and `scripts/run_mvp_loop.py` now write status JSON through a sibling temp file plus replace with strict encoding and temp cleanup, so invalid payloads cannot truncate the last readable cockpit status; no Dallas raw CSV rows were edited

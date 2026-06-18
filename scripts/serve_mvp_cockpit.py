@@ -48,6 +48,7 @@ SECRET_ASSIGNMENT_PATTERN = re.compile(
 )
 OPERATOR_ATTENTION_LABELS = {
     "loop_not_running": "Loop is not running",
+    "status_unavailable": "Status file is unavailable",
     "status_failing": "Loop status is failing",
     "autonomy_policy_failed": "Autonomy policy failed",
     "status_stale": "Status is stale",
@@ -1067,6 +1068,8 @@ def cockpit_summary(status: dict[str, object]) -> dict[str, object]:
     attention_reasons: list[str] = []
     if not loop_running and not business_hours_pause:
         attention_reasons.append("loop_not_running")
+    if status.get("source_status_file_status") in {"missing", "read_failed"}:
+        attention_reasons.append("status_unavailable")
     if policy_failure:
         attention_reasons.append("autonomy_policy_failed")
     if status_value in {"error", "failing", "invalid-status-json"}:
