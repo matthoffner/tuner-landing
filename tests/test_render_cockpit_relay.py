@@ -320,6 +320,62 @@ class RenderCockpitRelayTest(unittest.TestCase):
         ):
             self.assertNotIn(unsafe_text, response_text)
 
+    def test_update_state_sanitizes_publisher_metadata_before_persisting(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            state_file = Path(tmp) / "relay-state.json"
+            self.relay.CONFIG["state_file"] = state_file
+            self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
+
+            self.relay.update_state(
+                {
+                    "pushed_at": "2026-06-14T19:59:30Z token=pushed-secret",
+                    "status": {"status": "running", "loop_running": True},
+                    "log_tail": "loop is working\n",
+                    "publisher": {
+                        "host": "worker-1",
+                        "runtime_config": {
+                            "relay_token": "direct-runtime-secret",
+                            "relay_url": (
+                                "https://user:relay-secret@example.local"
+                                "/relay?token=query-secret#debug"
+                            ),
+                        },
+                        "source_health": {
+                            "diagnostics": {
+                                "source_failure_error": (
+                                    "OPENAI_API_KEY=sk-secret "
+                                    "authorization: bearer bearer-secret"
+                                ),
+                                "samples": ["AUTOMOAT_RELAY_TOKEN=list-secret"],
+                            },
+                        },
+                    },
+                }
+            )
+
+            snapshot_text = json.dumps(self.relay.snapshot(), sort_keys=True)
+            persisted_text = state_file.read_text(encoding="utf-8")
+
+        for safe_text in (snapshot_text, persisted_text):
+            self.assertIn('"relay_token": "[redacted]"', safe_text)
+            self.assertIn(
+                "https://example.local/relay?[redacted]#[redacted]",
+                safe_text,
+            )
+            self.assertIn("OPENAI_API_KEY=[redacted]", safe_text)
+            self.assertIn("authorization: bearer [redacted]", safe_text)
+            self.assertIn("AUTOMOAT_RELAY_TOKEN=[redacted]", safe_text)
+            for unsafe_text in (
+                "direct-runtime-secret",
+                "relay-secret",
+                "query-secret",
+                "pushed-secret",
+                "sk-secret",
+                "bearer-secret",
+                "list-secret",
+            ):
+                self.assertNotIn(unsafe_text, safe_text)
+
     def test_status_and_health_report_stale_snapshot(self) -> None:
         self.relay.utc_now = lambda: "2026-06-14T19:57:30Z"
         self.relay.update_state(

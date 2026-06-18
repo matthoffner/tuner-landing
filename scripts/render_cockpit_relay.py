@@ -2132,6 +2132,31 @@ def sanitize_log_tail_for_relay(text: str, *, max_line_length: int = 1200) -> st
     return sanitized_text
 
 
+def sanitize_publisher_metadata_for_storage(value: Any, key: Any = None) -> Any:
+    if key is not None and re.fullmatch(
+        SENSITIVE_KEY_PATTERN,
+        str(key),
+        re.IGNORECASE,
+    ):
+        return "[redacted]"
+    if isinstance(value, str):
+        return compact_policy_detail(value, max_length=max(len(value), 1)) or ""
+    if isinstance(value, list):
+        return [sanitize_publisher_metadata_for_storage(item) for item in value]
+    if isinstance(value, dict):
+        sanitized: dict[str, Any] = {}
+        for raw_key, raw_value in value.items():
+            safe_key = compact_policy_detail(raw_key, max_length=240)
+            if safe_key is None:
+                continue
+            sanitized[safe_key] = sanitize_publisher_metadata_for_storage(
+                raw_value,
+                raw_key,
+            )
+        return sanitized
+    return value
+
+
 def snapshot() -> dict[str, Any]:
     with STATE_LOCK:
         return strict_json_clone(STATE)
@@ -2177,6 +2202,7 @@ def update_state(payload: dict[str, Any]) -> dict[str, Any]:
     publisher = dict(publisher)
     if payload.get("pushed_at"):
         publisher["pushed_at"] = payload["pushed_at"]
+    publisher = sanitize_publisher_metadata_for_storage(publisher)
     non_finite_publisher_path = first_non_finite_json_number_path(
         publisher,
         "$.publisher",
