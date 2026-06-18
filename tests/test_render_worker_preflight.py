@@ -3678,6 +3678,38 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertEqual(status_text, existing_status)
         self.assertEqual(remaining_tmp_files, [])
 
+    def test_append_cockpit_log_sanitizes_messages_at_write_boundary(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            self.worker.WORKDIR = Path(temp_dir) / "repo"
+            self.worker.WORKDIR.mkdir(parents=True)
+
+            with patch.dict(
+                self.worker.os.environ,
+                {
+                    "AUTOMOAT_RELAY_TOKEN": "relay-secret",
+                    "GITHUB_TOKEN": "github-secret",
+                },
+                clear=True,
+            ):
+                self.worker.append_cockpit_log(
+                    (
+                        "render-worker failure:\n"
+                        "Authorization: Bearer relay-secret "
+                        "token=github-secret\tsecond-line"
+                    )
+                )
+
+            log_text = self.worker.cockpit_log_file().read_text(encoding="utf-8")
+            log_lines = log_text.splitlines()
+
+        self.assertEqual(len(log_lines), 1)
+        self.assertIn("render-worker failure:", log_text)
+        self.assertIn("Authorization: Bearer [redacted]", log_text)
+        self.assertIn("token=[redacted]", log_text)
+        self.assertNotIn("relay-secret", log_text)
+        self.assertNotIn("github-secret", log_text)
+        self.assertNotIn("\t", log_text)
+
     def test_write_business_hours_pause_status_updates_cockpit_files(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             self.worker.WORKDIR = Path(temp_dir) / "repo"

@@ -55,7 +55,7 @@ SENSITIVE_KEY_PATTERN = (
     r"(?:[_-][A-Za-z0-9]+)*"
 )
 SECRET_ASSIGNMENT_PATTERN = re.compile(
-    rf"\b({SENSITIVE_KEY_PATTERN})\s*[:=]\s*([^\s,;|]+)",
+    rf"\b({SENSITIVE_KEY_PATTERN})\s*[:=]\s*([^\s,;|'\"`]+)",
     re.IGNORECASE,
 )
 SENSITIVE_DOUBLE_QUOTED_FIELD_PATTERN = re.compile(
@@ -2280,8 +2280,9 @@ def cockpit_status_file() -> Path:
 def append_cockpit_log(message: str) -> None:
     log_file = cockpit_log_file()
     log_file.parent.mkdir(parents=True, exist_ok=True)
+    safe_message = sanitize_worker_log_text(message)
     with log_file.open("a", encoding="utf-8") as handle:
-        handle.write(f"[{utc_now()}] {message}\n")
+        handle.write(f"[{utc_now()}] {safe_message}\n")
 
 
 def write_cockpit_status_payload(payload: dict[str, object]) -> None:
