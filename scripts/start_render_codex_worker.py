@@ -2910,6 +2910,33 @@ def child_failure_details(
     return details
 
 
+def publisher_child_failure_details(
+    label: str,
+    status: int,
+    poll_ok: bool,
+    *,
+    child_pid: int | None = None,
+    business_hours: dict[str, object] | None = None,
+    env: os._Environ[str] | dict[str, str] | None = None,
+    publisher_log_start_offset: int = 0,
+) -> dict[str, object]:
+    details = child_failure_details(
+        label,
+        status,
+        poll_ok,
+        child_pid=child_pid,
+        business_hours=business_hours,
+    )
+    if poll_ok:
+        details.update(
+            publisher_terminal_failure_details(
+                env if env is not None else os.environ,
+                start_offset=publisher_log_start_offset,
+            )
+        )
+    return details
+
+
 def safe_child_poll(
     process: subprocess.Popen[object],
     label: str,
@@ -2928,8 +2955,12 @@ def monitor_worker_children(
     loop_process: subprocess.Popen[object],
     publisher_process: subprocess.Popen[object],
     poll_interval: float = 5.0,
+    *,
+    env: os._Environ[str] | dict[str, str] | None = None,
+    publisher_log_start_offset: int = 0,
 ) -> int:
     """Return the loop status, or fail fast if cockpit publishing dies first."""
+    env = env if env is not None else os.environ
     while True:
         if STOP_REQUESTED:
             stop_children()
@@ -2968,11 +2999,13 @@ def monitor_worker_children(
                 reason=PUBLISHER_EXITED,
                 worker_exit_status=worker_exit_status,
                 publisher_exit_status=publisher_status if publisher_poll_ok else None,
-                details=child_failure_details(
+                details=publisher_child_failure_details(
                     "relay publisher",
                     publisher_status,
                     publisher_poll_ok,
                     child_pid=publisher_process.pid,
+                    env=env,
+                    publisher_log_start_offset=publisher_log_start_offset,
                 ),
             )
             stop_children()
@@ -3015,8 +3048,10 @@ def monitor_scheduled_loop(
     *,
     env: os._Environ[str] | dict[str, str] | None = None,
     poll_interval: float = 5.0,
+    publisher_log_start_offset: int = 0,
 ) -> tuple[str, int]:
     """Monitor a running loop and stop it when the configured business window closes."""
+    env = env if env is not None else os.environ
     while True:
         if STOP_REQUESTED:
             stop_children()
@@ -3067,12 +3102,14 @@ def monitor_scheduled_loop(
                 reason=PUBLISHER_EXITED,
                 worker_exit_status=publisher_status if publisher_status != 0 else 1,
                 publisher_exit_status=publisher_status if publisher_poll_ok else None,
-                details=child_failure_details(
+                details=publisher_child_failure_details(
                     "relay publisher",
                     publisher_status,
                     publisher_poll_ok,
                     child_pid=publisher_process.pid,
                     business_hours=state,
+                    env=env,
+                    publisher_log_start_offset=publisher_log_start_offset,
                 ),
             )
             if not publisher_poll_ok:
@@ -3088,6 +3125,7 @@ def sleep_outside_business_hours(
     *,
     env: os._Environ[str] | dict[str, str] | None = None,
     poll_interval: float = 5.0,
+    publisher_log_start_offset: int = 0,
 ) -> tuple[str, int]:
     env = env if env is not None else os.environ
     settings = business_hours_settings(env)
@@ -3107,12 +3145,14 @@ def sleep_outside_business_hours(
                 reason=PUBLISHER_EXITED,
                 worker_exit_status=worker_exit_status,
                 publisher_exit_status=publisher_status if publisher_poll_ok else None,
-                details=child_failure_details(
+                details=publisher_child_failure_details(
                     "relay publisher",
                     publisher_status,
                     publisher_poll_ok,
                     child_pid=publisher_process.pid,
                     business_hours=state,
+                    env=env,
+                    publisher_log_start_offset=publisher_log_start_offset,
                 ),
             )
             return PUBLISHER_EXITED, worker_exit_status
@@ -3127,6 +3167,7 @@ def run_business_hours_schedule(
     publisher_process: subprocess.Popen[object],
     *,
     env: os._Environ[str] | dict[str, str] | None = None,
+    publisher_log_start_offset: int = 0,
 ) -> int:
     env = env if env is not None else os.environ
     while not STOP_REQUESTED:
@@ -3165,7 +3206,12 @@ def run_business_hours_schedule(
                 )
                 stop_children()
                 return loop_startup_status
-            reason, status = monitor_scheduled_loop(loop_process, publisher_process, env=env)
+            reason, status = monitor_scheduled_loop(
+                loop_process,
+                publisher_process,
+                env=env,
+                publisher_log_start_offset=publisher_log_start_offset,
+            )
             if reason == BUSINESS_HOURS_CLOSED:
                 continue
             return status
@@ -3176,7 +3222,12 @@ def run_business_hours_schedule(
             f"next_start_at={state.get('next_start_at')}"
         )
         record_business_hours_pause_status(state)
-        reason, status = sleep_outside_business_hours(publisher_process, state, env=env)
+        reason, status = sleep_outside_business_hours(
+            publisher_process,
+            state,
+            env=env,
+            publisher_log_start_offset=publisher_log_start_offset,
+        )
         if reason == PUBLISHER_EXITED:
             return status
 
@@ -3309,7 +3360,10 @@ def main() -> int:
         stop_children()
         return publisher_startup_status
 
-    return run_business_hours_schedule(publisher)
+    return run_business_hours_schedule(
+        publisher,
+        publisher_log_start_offset=publisher_log_start_offset,
+    )
 
 
 if __name__ == "__main__":

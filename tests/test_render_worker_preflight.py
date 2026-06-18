@@ -6806,6 +6806,81 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         )
         self.assertIn("relay publisher exited unexpectedly status=0", output.getvalue())
 
+    def test_scheduled_monitor_preserves_publisher_terminal_failure_details(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workdir = Path(temp_dir) / "repo"
+            publisher_log = workdir / ".automoat" / "logs" / "publisher.log"
+            publisher_log.parent.mkdir(parents=True)
+            publisher_log.write_text(
+                "[old] exiting after terminal publish failure "
+                "failure_kind=relay_auth_failed http_status=401 "
+                "http_reason=Unauthorized\n",
+                encoding="utf-8",
+            )
+            start_offset = publisher_log.stat().st_size
+            publisher_log.write_text(
+                publisher_log.read_text(encoding="utf-8")
+                + "[new] exiting after terminal publish failure "
+                "failure_kind=relay_unavailable http_status=503 "
+                "http_reason=Service_Unavailable http_body_bytes=45 "
+                "retry_after=90 token=relay-secret\n",
+                encoding="utf-8",
+            )
+            loop = FakeProcess(pid=101)
+            publisher = FakeProcess(pid=202, initial_status=1)
+            state = {
+                "enabled": True,
+                "in_business_hours": True,
+                "local_time": "2026-06-15T10:00:00-05:00",
+                "next_start_at": None,
+            }
+            env = {
+                "AUTOMOAT_WORKDIR": str(workdir),
+                "AUTOMOAT_PUBLISHER_LOG_FILE": ".automoat/logs/publisher.log",
+            }
+
+            with (
+                patch.object(
+                    self.worker,
+                    "current_business_hours_state",
+                    return_value=state,
+                ),
+                patch.object(
+                    self.worker,
+                    "record_render_worker_failure_status",
+                ) as record_failure_status,
+                redirect_stdout(io.StringIO()),
+            ):
+                reason, status = self.worker.monitor_scheduled_loop(
+                    loop,
+                    publisher,
+                    env=env,
+                    poll_interval=0,
+                    publisher_log_start_offset=start_offset,
+                )
+
+        self.assertEqual(reason, self.worker.PUBLISHER_EXITED)
+        self.assertEqual(status, 1)
+        record_failure_status.assert_called_once_with(
+            reason=self.worker.PUBLISHER_EXITED,
+            worker_exit_status=1,
+            publisher_exit_status=1,
+            details={
+                "child_label": "relay publisher",
+                "child_pid": 202,
+                "child_status_available": True,
+                "child_exit_status": 1,
+                "business_hours": state,
+                "publisher_failure_kind": "relay_unavailable",
+                "publisher_http_status": 503,
+                "publisher_http_reason": "Service_Unavailable",
+                "publisher_http_body_bytes": 45,
+                "publisher_http_retry_after": "90",
+            },
+        )
+
     def test_business_hours_sleep_handles_publisher_poll_failure_without_exception_text(
         self,
     ) -> None:
@@ -6889,6 +6964,80 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             },
         )
         self.assertIn("relay publisher exited unexpectedly status=0", output.getvalue())
+
+    def test_business_hours_sleep_preserves_publisher_terminal_failure_details(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workdir = Path(temp_dir) / "repo"
+            publisher_log = workdir / ".automoat" / "logs" / "publisher.log"
+            publisher_log.parent.mkdir(parents=True)
+            publisher_log.write_text(
+                "[old] exiting after terminal publish failure "
+                "failure_kind=relay_auth_failed http_status=401 "
+                "http_reason=Unauthorized\n",
+                encoding="utf-8",
+            )
+            start_offset = publisher_log.stat().st_size
+            publisher_log.write_text(
+                publisher_log.read_text(encoding="utf-8")
+                + "[new] exiting after terminal publish failure "
+                "failure_kind=relay_rate_limited http_status=429 "
+                "http_reason=Too_Many_Requests http_body_bytes=31 "
+                "retry_after=120 token=relay-secret\n",
+                encoding="utf-8",
+            )
+            publisher = FakeProcess(pid=202, initial_status=1)
+            state = {
+                "enabled": True,
+                "in_business_hours": False,
+                "local_time": "2026-06-15T17:01:00-05:00",
+                "next_start_at": "2026-06-16T09:00:00-05:00",
+            }
+            env = {
+                "AUTOMOAT_WORKDIR": str(workdir),
+                "AUTOMOAT_PUBLISHER_LOG_FILE": ".automoat/logs/publisher.log",
+            }
+
+            with (
+                patch.object(
+                    self.worker,
+                    "seconds_until_next_business_start",
+                    return_value=60.0,
+                ),
+                patch.object(
+                    self.worker,
+                    "record_render_worker_failure_status",
+                ) as record_failure_status,
+                redirect_stdout(io.StringIO()),
+            ):
+                reason, status = self.worker.sleep_outside_business_hours(
+                    publisher,
+                    state,
+                    env=env,
+                    poll_interval=0,
+                    publisher_log_start_offset=start_offset,
+                )
+
+        self.assertEqual(reason, self.worker.PUBLISHER_EXITED)
+        self.assertEqual(status, 1)
+        record_failure_status.assert_called_once_with(
+            reason=self.worker.PUBLISHER_EXITED,
+            worker_exit_status=1,
+            publisher_exit_status=1,
+            details={
+                "child_label": "relay publisher",
+                "child_pid": 202,
+                "child_status_available": True,
+                "child_exit_status": 1,
+                "business_hours": state,
+                "publisher_failure_kind": "relay_rate_limited",
+                "publisher_http_status": 429,
+                "publisher_http_reason": "Too_Many_Requests",
+                "publisher_http_body_bytes": 31,
+                "publisher_http_retry_after": "120",
+            },
+        )
 
 
 class FakeProcess:
