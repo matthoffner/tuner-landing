@@ -6537,6 +6537,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 "source_status_age_seconds": 10,
                 "source_status_stale_after_seconds": None,
                 "failure_kind": "invalid_relay_json",
+                "failure_reason": "invalid JSON constant NaN",
             },
         )
         self.assertIn(
@@ -6848,6 +6849,12 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             result = self.publisher.publish_once_result(args)
             log_text = publisher_log.read_text(encoding="utf-8")
 
+        expected_reason = (
+            "<urlopen error failed to reach "
+            "https://automoat-cockpit-relay.example/ingest?[redacted]#[redacted] "
+            "Authorization: Bearer [redacted] "
+            "x-automoat-relay-token=[redacted]"
+        )
         self.assertEqual(
             result,
             {
@@ -6856,6 +6863,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 "source_status_age_seconds": 9,
                 "source_status_stale_after_seconds": None,
                 "failure_kind": "url_error",
+                "failure_reason": expected_reason,
             },
         )
         self.assertIn("publish failed failure_kind=url_error error=", log_text)
@@ -6916,16 +6924,13 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             result = self.publisher.publish_once_result(args)
             log_text = publisher_log.read_text(encoding="utf-8")
 
-        self.assertEqual(
-            result,
-            {
-                "published": False,
-                "source_status_stale": False,
-                "source_status_age_seconds": 60,
-                "source_status_stale_after_seconds": 120,
-                "failure_kind": "transport_error",
-            },
-        )
+        self.assertEqual(result["published"], False)
+        self.assertEqual(result["source_status_stale"], False)
+        self.assertEqual(result["source_status_age_seconds"], 60)
+        self.assertEqual(result["source_status_stale_after_seconds"], 120)
+        self.assertEqual(result["failure_kind"], "transport_error")
+        self.assertIn("loop-log-directory", result["failure_reason"])
+        self.assertNotIn(str(tmp_path), result["failure_reason"])
         self.assertIn("publish failed failure_kind=transport_error", log_text)
         self.assertIn("source_status=passing", log_text)
         self.assertIn("source_status_file_status=loaded", log_text)
@@ -6990,6 +6995,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                         "http_reason": "Internal Server Error",
                         "http_body_bytes": 37,
                         "http_body_truncated": True,
+                        "failure_reason": "upstream debug token=relay-secret",
                     },
                 ]
             )
@@ -7009,10 +7015,12 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             "failure_kind=consecutive_publish_failures count=2 limit=2 "
             "last_failure_kind=http_error http_status=500 "
             "http_reason=Internal Server Error http_body_bytes=37 "
-            "http_body_truncated=True",
+            "http_body_truncated=True "
+            "last_failure_reason=upstream debug token=[redacted]",
             log_text,
         )
         self.assertNotIn("last_failure_kind=url_error", log_text)
+        self.assertNotIn("relay-secret", log_text)
 
     def test_publish_loop_exits_immediately_after_relay_auth_failure(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

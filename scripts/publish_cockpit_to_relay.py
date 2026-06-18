@@ -3526,17 +3526,21 @@ def publish_once_result(args: argparse.Namespace) -> dict[str, Any]:
         if not source_fields:
             source_fields = fallback_source_status_log_fields(args)
         failure_kind = publish_error_kind(exc)
+        failure_reason = sanitize_exception_for_log(exc, args)
         emit(
             "publish failed "
             f"failure_kind={failure_kind} "
-            f"error={sanitize_exception_for_log(exc, args)} "
+            f"error={failure_reason} "
             f"{source_status_log_suffix(source_fields)}",
             log_path=args.publisher_log,
         )
         return publish_once_loop_result(
             published=False,
             source_fields=source_fields,
-            failure_fields={"failure_kind": failure_kind},
+            failure_fields={
+                "failure_kind": failure_kind,
+                "failure_reason": failure_reason,
+            },
         )
     if not relay_response_ok(response):
         failure_reason = relay_response_failure_reason(response)
