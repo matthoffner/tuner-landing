@@ -4142,6 +4142,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             "source_status_file_error=line 1 column 1: Expecting value "
             "source_status_remote_omitted_field_count=4 "
             "source_health_primary_reason=bridge_status_stale "
+            "source_health_label=Source bridge is degraded "
             "bridge_status=invalid-status-value "
             "bridge_status_file_status=loaded "
             "bridge_status_file_error=non-finite JSON number at $.updated_at "
@@ -4150,7 +4151,8 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             "bridge_status_timestamp_invalid=True "
             "bridge_status_timestamp_future=False "
             "bridge_status_value_invalid=True "
-            "bridge_health_primary_reason=bridge_status_stale token=relay-secret"
+            "bridge_health_primary_reason=bridge_status_stale "
+            "bridge_health_label=Bridge status is stale token=relay-secret"
         )
 
         self.assertEqual(
@@ -4173,6 +4175,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                 ),
                 "publisher_source_status_remote_omitted_field_count": 4,
                 "publisher_source_health_primary_reason": "bridge_status_stale",
+                "publisher_source_health_label": "Source bridge is degraded",
                 "publisher_bridge_status": "invalid-status-value",
                 "publisher_bridge_status_file_status": "loaded",
                 "publisher_bridge_status_file_error": (
@@ -4185,6 +4188,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                 "publisher_bridge_status_timestamp_future": False,
                 "publisher_bridge_status_value_invalid": True,
                 "publisher_bridge_health_primary_reason": "bridge_status_stale",
+                "publisher_bridge_health_label": "Bridge status is stale",
             },
         )
 
@@ -4236,6 +4240,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                         ),
                         "publisher_source_status_remote_omitted_field_count": 4,
                         "publisher_source_health_primary_reason": "bridge_status_stale",
+                        "publisher_source_health_label": "Source bridge is degraded",
                         "publisher_bridge_status": "invalid-status-value",
                         "publisher_bridge_status_file_status": "loaded",
                         "publisher_bridge_status_file_error": (
@@ -4248,6 +4253,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                         "publisher_bridge_status_age_seconds": 901,
                         "publisher_bridge_status_stale_after_seconds": 900,
                         "publisher_bridge_health_primary_reason": "bridge_status_stale",
+                        "publisher_bridge_health_label": "Bridge status is stale",
                     },
                 )
 
@@ -4305,6 +4311,10 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             "bridge_status_stale",
         )
         self.assertEqual(
+            status["failure"]["publisher_source_health_label"],
+            "Source bridge is degraded",
+        )
+        self.assertEqual(
             status["failure"]["publisher_bridge_status"],
             "invalid-status-value",
         )
@@ -4334,6 +4344,10 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertEqual(
             status["failure"]["publisher_bridge_health_primary_reason"],
             "bridge_status_stale",
+        )
+        self.assertEqual(
+            status["failure"]["publisher_bridge_health_label"],
+            "Bridge status is stale",
         )
         self.assertIn('publisher_failure_kind="relay_auth_failed"', log_text)
         self.assertIn('publisher_last_failure_kind="invalid_relay_json"', log_text)
@@ -4366,6 +4380,11 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             'publisher_source_health_primary_reason="bridge_status_stale"',
             log_text,
         )
+        self.assertIn(
+            'publisher_source_health_label='
+            '"Source bridge is degraded"',
+            log_text,
+        )
         self.assertIn('publisher_bridge_status="invalid-status-value"', log_text)
         self.assertIn('publisher_bridge_status_file_status="loaded"', log_text)
         self.assertIn(
@@ -4381,6 +4400,10 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertIn("publisher_bridge_status_stale_after_seconds=900", log_text)
         self.assertIn(
             'publisher_bridge_health_primary_reason="bridge_status_stale"',
+            log_text,
+        )
+        self.assertIn(
+            'publisher_bridge_health_label="Bridge status is stale"',
             log_text,
         )
         self.assertNotIn("relay-secret", status_text)
