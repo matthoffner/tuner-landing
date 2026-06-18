@@ -3318,6 +3318,8 @@ def relay_http_error_failure_kind(status_code: int) -> str:
         return "relay_auth_failed"
     if status_code == HTTPStatus.TOO_MANY_REQUESTS:
         return "relay_rate_limited"
+    if status_code == HTTPStatus.SERVICE_UNAVAILABLE:
+        return "relay_unavailable"
     return "http_error"
 
 
@@ -3594,7 +3596,11 @@ def run_publish_loop(args: argparse.Namespace) -> int:
                 result.get("failure_kind"),
                 max_length=120,
             )
-            if terminal_failure_kind in {"relay_auth_failed", "relay_rate_limited"}:
+            if terminal_failure_kind in {
+                "relay_auth_failed",
+                "relay_rate_limited",
+                "relay_unavailable",
+            }:
                 http_status = compact_int(result.get("http_status"))
                 http_reason = compact_policy_detail(
                     result.get("http_reason"),
