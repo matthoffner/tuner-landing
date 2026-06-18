@@ -6686,6 +6686,58 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         )
         self.assertNotIn("source_status_stale", log_text)
 
+    def test_publish_loop_exit_logs_configured_source_context_after_failures(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            publisher_log = tmp_path / "publisher.log"
+            status_file = tmp_path / "status.json"
+            status_file.write_text(
+                json.dumps(
+                    {
+                        "status": "failing",
+                        "updated_at": "2026-06-14T19:30:00Z",
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            args = Namespace(
+                publisher_log=publisher_log,
+                status_file=status_file,
+                pid_file=tmp_path / "missing.pid",
+                bridge_status_file=tmp_path / "missing-bridge-status.json",
+                interval=0,
+                max_consecutive_failures=2,
+                max_consecutive_stale_statuses=0,
+                status_stale_after_seconds=120,
+                bridge_status_stale_after_seconds=120,
+            )
+            calls = []
+            self.publisher.utc_now = lambda: "2026-06-14T19:31:00Z"
+            self.publisher.publish_once_result = lambda _args: calls.append(False) or {
+                "published": False,
+                "source_status_stale": False,
+            }
+            self.publisher.time.sleep = lambda _seconds: None
+
+            status = self.publisher.run_publish_loop(args)
+            log_text = publisher_log.read_text(encoding="utf-8")
+
+        self.assertEqual(status, 1)
+        self.assertEqual(calls, [False, False])
+        self.assertIn(
+            "exiting after consecutive publish failures "
+            "failure_kind=consecutive_publish_failures count=2 limit=2",
+            log_text,
+        )
+        self.assertIn("source_status=failing", log_text)
+        self.assertIn("source_status_file_status=loaded", log_text)
+        self.assertIn("source_health_status=degraded", log_text)
+        self.assertIn("source_health_primary_reason=source_loop_not_running", log_text)
+        self.assertIn("source_health_reason_count=3", log_text)
+        self.assertIn("source_loop_running=False", log_text)
+        self.assertNotIn(str(tmp_path), log_text)
+
     def test_publish_loop_resets_failure_count_after_success(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             publisher_log = Path(tmp) / "publisher.log"
@@ -6742,6 +6794,64 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             "source_status_stale_after_seconds=660",
             log_text,
         )
+
+    def test_publish_loop_exit_logs_configured_source_context_after_stale_statuses(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            publisher_log = tmp_path / "publisher.log"
+            status_file = tmp_path / "status.json"
+            status_file.write_text(
+                json.dumps(
+                    {
+                        "status": "passing",
+                        "updated_at": "2026-06-14T19:30:00Z",
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            args = Namespace(
+                publisher_log=publisher_log,
+                status_file=status_file,
+                pid_file=tmp_path / "missing.pid",
+                bridge_status_file=tmp_path / "missing-bridge-status.json",
+                interval=0,
+                max_consecutive_failures=3,
+                max_consecutive_stale_statuses=2,
+                status_stale_after_seconds=120,
+                bridge_status_stale_after_seconds=120,
+            )
+            calls = []
+            self.publisher.utc_now = lambda: "2026-06-14T19:33:00Z"
+            self.publisher.publish_once_result = lambda _args: calls.append(True) or {
+                "published": True,
+                "source_status_stale": True,
+                "source_status_age_seconds": 180,
+                "source_status_stale_after_seconds": 120,
+            }
+            self.publisher.time.sleep = lambda _seconds: None
+
+            status = self.publisher.run_publish_loop(args)
+            log_text = publisher_log.read_text(encoding="utf-8")
+
+        self.assertEqual(status, 1)
+        self.assertEqual(calls, [True, True])
+        self.assertIn(
+            "exiting after consecutive stale source statuses "
+            "failure_kind=consecutive_stale_source_statuses count=2 limit=2",
+            log_text,
+        )
+        self.assertIn("source_status=passing", log_text)
+        self.assertIn("source_status_stale=True", log_text)
+        self.assertIn("source_status_age_seconds=180", log_text)
+        self.assertIn("source_status_stale_after_seconds=120", log_text)
+        self.assertIn("source_health_status=degraded", log_text)
+        self.assertIn("source_health_primary_reason=source_status_stale", log_text)
+        self.assertIn("source_health_reason_count=3", log_text)
+        self.assertIn("source_loop_running=False", log_text)
+        self.assertNotIn(str(tmp_path), log_text)
 
     def test_publish_loop_resets_stale_status_count_after_fresh_status(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

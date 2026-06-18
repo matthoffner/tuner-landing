@@ -3188,6 +3188,21 @@ def fallback_source_status_log_fields(args: argparse.Namespace) -> dict[str, Any
         return {}
 
 
+def publish_exit_source_status_log_suffix(args: argparse.Namespace) -> str:
+    """Return compact source context for terminal publisher loop exit lines."""
+    required_fields = (
+        "status_file",
+        "pid_file",
+        "bridge_status_file",
+        "status_stale_after_seconds",
+        "bridge_status_stale_after_seconds",
+    )
+    if any(not hasattr(args, field_name) for field_name in required_fields):
+        return ""
+    source_fields = fallback_source_status_log_fields(args)
+    return f" {source_status_log_suffix(source_fields)}" if source_fields else ""
+
+
 def relay_response_failure_reason(response: Any) -> str:
     if not isinstance(response, dict):
         return "relay_response_not_object"
@@ -3403,6 +3418,7 @@ def run_publish_loop(args: argparse.Namespace) -> int:
                     args.max_consecutive_stale_statuses > 0
                     and consecutive_stale_statuses >= args.max_consecutive_stale_statuses
                 ):
+                    source_status_suffix = publish_exit_source_status_log_suffix(args)
                     stale_age_seconds = compact_int(
                         result.get("source_status_age_seconds")
                     )
@@ -3410,9 +3426,9 @@ def run_publish_loop(args: argparse.Namespace) -> int:
                         result.get("source_status_stale_after_seconds")
                     )
                     freshness_fields = ""
-                    if stale_age_seconds is not None:
+                    if not source_status_suffix and stale_age_seconds is not None:
                         freshness_fields += f" source_status_age_seconds={stale_age_seconds}"
-                    if stale_after_seconds is not None:
+                    if not source_status_suffix and stale_after_seconds is not None:
                         freshness_fields += (
                             " source_status_stale_after_seconds="
                             f"{stale_after_seconds}"
@@ -3422,6 +3438,7 @@ def run_publish_loop(args: argparse.Namespace) -> int:
                         "failure_kind=consecutive_stale_source_statuses "
                         f"count={consecutive_stale_statuses} "
                         f"limit={args.max_consecutive_stale_statuses}"
+                        f"{source_status_suffix}"
                         f"{freshness_fields}",
                         log_path=args.publisher_log,
                     )
@@ -3438,7 +3455,8 @@ def run_publish_loop(args: argparse.Namespace) -> int:
                     "exiting after consecutive publish failures "
                     "failure_kind=consecutive_publish_failures "
                     f"count={consecutive_failures} "
-                    f"limit={args.max_consecutive_failures}",
+                    f"limit={args.max_consecutive_failures}"
+                    f"{publish_exit_source_status_log_suffix(args)}",
                     log_path=args.publisher_log,
                 )
                 return 1
