@@ -69,7 +69,7 @@ SENSITIVE_SINGLE_QUOTED_FIELD_PATTERN = re.compile(
 )
 URL_SCHEME_PATTERN = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*://")
 PUBLISHER_FAILURE_FIELD_PATTERN = re.compile(
-    r"\b(failure_kind|http_status|http_reason|http_body_bytes|retry_after)=([^\s]+)"
+    r"\b(failure_kind|http_status|http_reason|http_body_bytes|http_body_truncated|retry_after)=([^\s]+)"
 )
 REQUIRED_COMMANDS = ("git", "codex")
 CODEX_CONFIG_ENV_DEFAULTS = {
@@ -2444,6 +2444,8 @@ def compact_render_worker_failure_details(details: dict[str, object]) -> dict[st
     )
     if publisher_http_body_bytes is not None:
         compact["publisher_http_body_bytes"] = publisher_http_body_bytes
+    if details.get("publisher_http_body_truncated") is True:
+        compact["publisher_http_body_truncated"] = True
     publisher_http_retry_after = compact_publisher_retry_after(
         details.get("publisher_http_retry_after")
     )
@@ -2550,6 +2552,12 @@ def write_render_worker_failure_status(
     publisher_http_body_bytes = compact_details.pop("publisher_http_body_bytes", None)
     if publisher_http_body_bytes is not None:
         failure["publisher_http_body_bytes"] = publisher_http_body_bytes
+    publisher_http_body_truncated = compact_details.pop(
+        "publisher_http_body_truncated",
+        None,
+    )
+    if publisher_http_body_truncated is True:
+        failure["publisher_http_body_truncated"] = True
     publisher_http_retry_after = compact_details.pop("publisher_http_retry_after", None)
     if isinstance(publisher_http_retry_after, str):
         failure["publisher_http_retry_after"] = publisher_http_retry_after
@@ -2591,6 +2599,7 @@ def write_render_worker_failure_status(
         "publisher_http_status",
         "publisher_http_reason",
         "publisher_http_body_bytes",
+        "publisher_http_body_truncated",
         "publisher_http_retry_after",
     ):
         value = failure.get(key)
@@ -2752,6 +2761,8 @@ def publisher_failure_fields_from_log_line(line: str) -> dict[str, object]:
     )
     if http_body_bytes is not None:
         details["publisher_http_body_bytes"] = http_body_bytes
+    if fields.get("http_body_truncated") in {"True", "true"}:
+        details["publisher_http_body_truncated"] = True
     retry_after = compact_publisher_retry_after(fields.get("retry_after"))
     if retry_after is not None:
         details["publisher_http_retry_after"] = retry_after

@@ -2080,6 +2080,9 @@ def source_health_diagnostics(status: dict[str, Any]) -> dict[str, Any]:
             ("source_failure_failed_substep", 120),
             ("source_failure_setup_stage", 120),
             ("source_failure_child_label", 120),
+            ("source_failure_publisher_failure_kind", 120),
+            ("source_failure_publisher_http_reason", 120),
+            ("source_failure_publisher_http_retry_after", 80),
             ("source_failure_import_pipeline_status", 80),
             ("source_failure_readiness_status", 80),
             ("source_failure_artifact_health_status", 80),
@@ -2120,6 +2123,11 @@ def source_health_diagnostics(status: dict[str, Any]) -> dict[str, Any]:
             ("source_failure_degraded_artifact_count", "degraded_artifact_count"),
             ("source_failure_sync_exit_status", "sync_exit_status"),
             ("source_failure_child_pid", "child_pid"),
+            ("source_failure_publisher_http_status", "publisher_http_status"),
+            (
+                "source_failure_publisher_http_body_bytes",
+                "publisher_http_body_bytes",
+            ),
         ):
             compact_value = compact_int(failure.get(source_key))
             if compact_value is not None:
@@ -2184,6 +2192,10 @@ def source_health_diagnostics(status: dict[str, Any]) -> dict[str, Any]:
             ("source_failure_timed_out", "timed_out"),
             ("source_failure_killed_after_terminate", "killed_after_terminate"),
             ("source_failure_child_status_available", "child_status_available"),
+            (
+                "source_failure_publisher_http_body_truncated",
+                "publisher_http_body_truncated",
+            ),
         ):
             value = failure.get(source_key)
             if isinstance(value, bool):
@@ -2897,6 +2909,29 @@ def source_status_log_fields(payload: dict[str, Any]) -> dict[str, Any]:
             failure.get("child_label"),
             max_length=120,
         ),
+        "source_failure_publisher_failure_kind": compact_policy_detail(
+            failure.get("publisher_failure_kind"),
+            max_length=120,
+        ),
+        "source_failure_publisher_http_status": compact_int(
+            failure.get("publisher_http_status")
+        ),
+        "source_failure_publisher_http_reason": compact_policy_detail(
+            failure.get("publisher_http_reason"),
+            max_length=120,
+        ),
+        "source_failure_publisher_http_body_bytes": compact_int(
+            failure.get("publisher_http_body_bytes")
+        ),
+        "source_failure_publisher_http_body_truncated": (
+            failure.get("publisher_http_body_truncated")
+            if isinstance(failure.get("publisher_http_body_truncated"), bool)
+            else None
+        ),
+        "source_failure_publisher_http_retry_after": compact_policy_detail(
+            failure.get("publisher_http_retry_after"),
+            max_length=80,
+        ),
         "source_failure_child_pid": compact_int(failure.get("child_pid")),
         "source_failure_codex_exit_status": compact_exit_status(
             failure.get("codex_exit_status")
@@ -3136,6 +3171,12 @@ SOURCE_STATUS_LOG_FIELD_NAMES = (
     "source_failure_failed_substep",
     "source_failure_setup_stage",
     "source_failure_child_label",
+    "source_failure_publisher_failure_kind",
+    "source_failure_publisher_http_status",
+    "source_failure_publisher_http_reason",
+    "source_failure_publisher_http_body_bytes",
+    "source_failure_publisher_http_body_truncated",
+    "source_failure_publisher_http_retry_after",
     "source_failure_child_pid",
     "source_failure_codex_exit_status",
     "source_failure_worker_exit_status",

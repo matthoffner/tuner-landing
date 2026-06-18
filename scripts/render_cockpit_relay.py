@@ -337,6 +337,9 @@ def publisher_source_health(state: dict[str, Any]) -> dict[str, Any]:
             "source_failure_failed_substep",
             "source_failure_setup_stage",
             "source_failure_child_label",
+            "source_failure_publisher_failure_kind",
+            "source_failure_publisher_http_reason",
+            "source_failure_publisher_http_retry_after",
             "source_failure_import_pipeline_status",
             "source_failure_readiness_status",
             "source_failure_artifact_health_status",
@@ -359,6 +362,7 @@ def publisher_source_health(state: dict[str, Any]) -> dict[str, Any]:
             "source_failure_timed_out",
             "source_failure_killed_after_terminate",
             "source_failure_child_status_available",
+            "source_failure_publisher_http_body_truncated",
         ):
             value = raw_diagnostics.get(key)
             if isinstance(value, bool):
@@ -379,6 +383,8 @@ def publisher_source_health(state: dict[str, Any]) -> dict[str, Any]:
             "source_failure_degraded_artifact_count",
             "source_failure_sync_exit_status",
             "source_failure_child_pid",
+            "source_failure_publisher_http_status",
+            "source_failure_publisher_http_body_bytes",
             "source_failure_environment_preflight_error_count",
             "source_failure_publisher_preflight_error_count",
             "source_bridge_status_age_seconds",
@@ -1474,6 +1480,9 @@ def source_failure_summary(status: dict[str, Any]) -> dict[str, Any]:
         "failed_substep": failure.get("failed_substep"),
         "setup_stage": failure.get("setup_stage"),
         "child_label": failure.get("child_label"),
+        "publisher_failure_kind": failure.get("publisher_failure_kind"),
+        "publisher_http_reason": failure.get("publisher_http_reason"),
+        "publisher_http_retry_after": failure.get("publisher_http_retry_after"),
     }
     for key, value in text_fields.items():
         compact_value = compact_policy_detail(value, max_length=240)
@@ -1549,6 +1558,8 @@ def source_failure_summary(status: dict[str, Any]) -> dict[str, Any]:
         "degraded_artifact_count": failure.get("degraded_artifact_count"),
         "sync_exit_status": failure.get("sync_exit_status"),
         "child_pid": failure.get("child_pid"),
+        "publisher_http_status": failure.get("publisher_http_status"),
+        "publisher_http_body_bytes": failure.get("publisher_http_body_bytes"),
     }
     for key, value in int_fields.items():
         compact_value = compact_int(value)
@@ -1575,6 +1586,9 @@ def source_failure_summary(status: dict[str, Any]) -> dict[str, Any]:
     child_status_available = failure.get("child_status_available")
     if isinstance(child_status_available, bool):
         summary["child_status_available"] = child_status_available
+    publisher_http_body_truncated = failure.get("publisher_http_body_truncated")
+    if isinstance(publisher_http_body_truncated, bool):
+        summary["publisher_http_body_truncated"] = publisher_http_body_truncated
 
     ready_for_next_import_records = failure.get("ready_for_next_import_records")
     if isinstance(ready_for_next_import_records, bool):

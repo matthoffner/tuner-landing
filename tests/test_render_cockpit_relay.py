@@ -1259,6 +1259,16 @@ class RenderCockpitRelayTest(unittest.TestCase):
                             ],
                             "source_failure_sync_exit_status": "2",
                             "source_failure_child_pid": "4242",
+                            "source_failure_publisher_failure_kind": (
+                                "relay_unavailable token=publisher-kind-secret"
+                            ),
+                            "source_failure_publisher_http_status": "503",
+                            "source_failure_publisher_http_reason": (
+                                "Service_Unavailable token=publisher-reason-secret"
+                            ),
+                            "source_failure_publisher_http_body_bytes": "65537",
+                            "source_failure_publisher_http_body_truncated": True,
+                            "source_failure_publisher_http_retry_after": "45",
                             "source_failure_codex_exit_status": "124",
                             "source_failure_worker_exit_status": "2",
                             "source_failure_publisher_exit_status": "3",
@@ -1456,6 +1466,16 @@ class RenderCockpitRelayTest(unittest.TestCase):
             ],
             "source_failure_sync_exit_status": 2,
             "source_failure_child_pid": 4242,
+            "source_failure_publisher_failure_kind": (
+                "relay_unavailable token=[redacted]"
+            ),
+            "source_failure_publisher_http_status": 503,
+            "source_failure_publisher_http_reason": (
+                "Service_Unavailable token=[redacted]"
+            ),
+            "source_failure_publisher_http_body_bytes": 65537,
+            "source_failure_publisher_http_body_truncated": True,
+            "source_failure_publisher_http_retry_after": "45",
             "source_failure_codex_exit_status": 124,
             "source_failure_worker_exit_status": 2,
             "source_failure_publisher_exit_status": 3,
@@ -3181,6 +3201,16 @@ class RenderCockpitRelayTest(unittest.TestCase):
                                 "token=target-path-secret"
                             ),
                             "sync_exit_status": "2",
+                            "publisher_failure_kind": (
+                                "relay_unavailable token=publisher-kind-secret"
+                            ),
+                            "publisher_http_status": "503",
+                            "publisher_http_reason": (
+                                "Service_Unavailable token=publisher-reason-secret"
+                            ),
+                            "publisher_http_body_bytes": "65537",
+                            "publisher_http_body_truncated": True,
+                            "publisher_http_retry_after": "45",
                             "ignored_debug": "token=ignored-secret",
                         },
                     },
@@ -3212,6 +3242,9 @@ class RenderCockpitRelayTest(unittest.TestCase):
             "import_pipeline_summary_path": "<external>/summary.json token=[redacted]",
             "source_path": "<external>/landing.html token=[redacted]",
             "target_path": "<external>/index.html token=[redacted]",
+            "publisher_failure_kind": "relay_unavailable token=[redacted]",
+            "publisher_http_reason": "Service_Unavailable token=[redacted]",
+            "publisher_http_retry_after": "45",
             "readiness_blockers": [
                 "first blocker token=[redacted]",
                 "see https://blocker.example/path?[redacted]#[redacted]",
@@ -3249,6 +3282,9 @@ class RenderCockpitRelayTest(unittest.TestCase):
             "readiness_blocker_count": 2,
             "degraded_artifact_count": 2,
             "sync_exit_status": 2,
+            "publisher_http_status": 503,
+            "publisher_http_body_bytes": 65537,
+            "publisher_http_body_truncated": True,
             "ready_for_next_import_records": True,
             "artifact_statuses": {
                 "landing token=[redacted]": "failed token=[redacted]",

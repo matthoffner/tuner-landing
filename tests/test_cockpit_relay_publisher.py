@@ -2434,6 +2434,12 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                     "failure_reason": "relay failed token=worker-secret",
                     "worker_exit_status": "1",
                     "publisher_exit_status": "2",
+                    "publisher_failure_kind": "relay_unavailable",
+                    "publisher_http_status": "503",
+                    "publisher_http_reason": "Service_Unavailable",
+                    "publisher_http_body_bytes": "65537",
+                    "publisher_http_body_truncated": True,
+                    "publisher_http_retry_after": "45",
                 },
             },
         }
@@ -2460,6 +2466,12 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 "source_failure_failure_reason": "relay failed token=[redacted]",
                 "source_failure_worker_exit_status": 1,
                 "source_failure_publisher_exit_status": 2,
+                "source_failure_publisher_failure_kind": "relay_unavailable",
+                "source_failure_publisher_http_status": 503,
+                "source_failure_publisher_http_reason": "Service_Unavailable",
+                "source_failure_publisher_http_body_bytes": 65537,
+                "source_failure_publisher_http_body_truncated": True,
+                "source_failure_publisher_http_retry_after": "45",
             },
         )
         self.assertNotIn("worker-secret", json.dumps(health, sort_keys=True))
@@ -2789,6 +2801,16 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                     "failed_substep": "run checks token=substep-secret",
                     "setup_stage": "publisher_preflight token=setup-secret",
                     "child_label": "codex token=child-secret",
+                    "publisher_failure_kind": (
+                        "relay_unavailable token=publisher-kind-secret"
+                    ),
+                    "publisher_http_status": "503",
+                    "publisher_http_reason": (
+                        "Service_Unavailable token=publisher-reason-secret"
+                    ),
+                    "publisher_http_body_bytes": "65537",
+                    "publisher_http_body_truncated": True,
+                    "publisher_http_retry_after": "45",
                     "child_pid": "4242",
                     "codex_exit_status": "124",
                     "worker_exit_status": "2",
@@ -2898,6 +2920,16 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 "source_failure_failed_substep": "run checks token=[redacted]",
                 "source_failure_setup_stage": "publisher_preflight token=[redacted]",
                 "source_failure_child_label": "codex token=[redacted]",
+                "source_failure_publisher_failure_kind": (
+                    "relay_unavailable token=[redacted]"
+                ),
+                "source_failure_publisher_http_status": 503,
+                "source_failure_publisher_http_reason": (
+                    "Service_Unavailable token=[redacted]"
+                ),
+                "source_failure_publisher_http_body_bytes": 65537,
+                "source_failure_publisher_http_body_truncated": True,
+                "source_failure_publisher_http_retry_after": "45",
                 "source_failure_import_pipeline_status": "loaded token=[redacted]",
                 "source_failure_readiness_status": "ready token=[redacted]",
                 "source_failure_artifact_health_status": "degraded token=[redacted]",
@@ -2985,6 +3017,8 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertNotIn("substep-secret", health_text)
         self.assertNotIn("setup-secret", health_text)
         self.assertNotIn("child-secret", health_text)
+        self.assertNotIn("publisher-kind-secret", health_text)
+        self.assertNotIn("publisher-reason-secret", health_text)
         self.assertNotIn("env-status-secret", health_text)
         self.assertNotIn("env-category-secret", health_text)
         self.assertNotIn("env-key-secret", health_text)

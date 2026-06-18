@@ -3964,7 +3964,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                 + "[new] exiting after terminal publish failure "
                 "failure_kind=relay_rate_limited http_status=429 "
                 "http_reason=Too_Many_Requests http_body_bytes=31 "
-                "retry_after=120 token=new-secret\n",
+                "http_body_truncated=True retry_after=120 token=new-secret\n",
                 encoding="utf-8",
             )
 
@@ -3983,6 +3983,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                 "publisher_http_status": 429,
                 "publisher_http_reason": "Too_Many_Requests",
                 "publisher_http_body_bytes": 31,
+                "publisher_http_body_truncated": True,
                 "publisher_http_retry_after": "120",
             },
         )
@@ -4013,6 +4014,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                         "publisher_http_status": 403,
                         "publisher_http_reason": "Forbidden",
                         "publisher_http_body_bytes": 19,
+                        "publisher_http_body_truncated": True,
                         "publisher_http_retry_after": "60",
                     },
                 )
@@ -4025,11 +4027,13 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertEqual(status["failure"]["publisher_http_status"], 403)
         self.assertEqual(status["failure"]["publisher_http_reason"], "Forbidden")
         self.assertEqual(status["failure"]["publisher_http_body_bytes"], 19)
+        self.assertIs(status["failure"]["publisher_http_body_truncated"], True)
         self.assertEqual(status["failure"]["publisher_http_retry_after"], "60")
         self.assertIn('publisher_failure_kind="relay_auth_failed"', log_text)
         self.assertIn("publisher_http_status=403", log_text)
         self.assertIn('publisher_http_reason="Forbidden"', log_text)
         self.assertIn("publisher_http_body_bytes=19", log_text)
+        self.assertIn("publisher_http_body_truncated=true", log_text)
         self.assertIn('publisher_http_retry_after="60"', log_text)
         self.assertNotIn("relay-secret", status_text)
         self.assertNotIn("relay-secret", log_text)
@@ -5905,7 +5909,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                         "[new] exiting after terminal publish failure "
                         "failure_kind=relay_rate_limited http_status=429 "
                         "http_reason=Too_Many_Requests http_body_bytes=31 "
-                        "retry_after=120 token=relay-secret\n"
+                        "http_body_truncated=True retry_after=120 token=relay-secret\n"
                     )
                 return publisher
 
@@ -5967,6 +5971,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                 "publisher_http_status": 429,
                 "publisher_http_reason": "Too_Many_Requests",
                 "publisher_http_body_bytes": 31,
+                "publisher_http_body_truncated": True,
                 "publisher_http_retry_after": "120",
             },
         )
@@ -6825,7 +6830,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                 + "[new] exiting after terminal publish failure "
                 "failure_kind=relay_unavailable http_status=503 "
                 "http_reason=Service_Unavailable http_body_bytes=45 "
-                "retry_after=90 token=relay-secret\n",
+                "http_body_truncated=True retry_after=90 token=relay-secret\n",
                 encoding="utf-8",
             )
             loop = FakeProcess(pid=101)
@@ -6877,6 +6882,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                 "publisher_http_status": 503,
                 "publisher_http_reason": "Service_Unavailable",
                 "publisher_http_body_bytes": 45,
+                "publisher_http_body_truncated": True,
                 "publisher_http_retry_after": "90",
             },
         )
@@ -6984,7 +6990,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                 + "[new] exiting after terminal publish failure "
                 "failure_kind=relay_rate_limited http_status=429 "
                 "http_reason=Too_Many_Requests http_body_bytes=31 "
-                "retry_after=120 token=relay-secret\n",
+                "http_body_truncated=True retry_after=120 token=relay-secret\n",
                 encoding="utf-8",
             )
             publisher = FakeProcess(pid=202, initial_status=1)
@@ -7035,6 +7041,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                 "publisher_http_status": 429,
                 "publisher_http_reason": "Too_Many_Requests",
                 "publisher_http_body_bytes": 31,
+                "publisher_http_body_truncated": True,
                 "publisher_http_retry_after": "120",
             },
         )
