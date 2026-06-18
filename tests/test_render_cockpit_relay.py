@@ -4322,6 +4322,36 @@ class RenderCockpitRelayTest(unittest.TestCase):
         self.assertNotIn("super-secret", log_line)
         self.assertNotIn("debug=1", log_line)
 
+    def test_relay_error_message_redacts_response_diagnostics(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            raw_message = (
+                f"failed to persist /tmp/render/private/state.json {tmp}/relay-state.json.tmp "
+                "while posting https://user:url-secret@example.test/ingest"
+                "?token=query-secret#debug "
+                "Authorization: Bearer bearer-secret "
+                "OPENAI_API_KEY=env-secret"
+            )
+
+            safe_message = self.relay.relay_error_message(raw_message)
+
+        self.assertIn("<external>/state.json", safe_message)
+        self.assertIn("<external>/relay-state.json.tmp", safe_message)
+        self.assertIn(
+            "https://example.test/ingest?[redacted]#[redacted]",
+            safe_message,
+        )
+        self.assertIn("Authorization: Bearer [redacted]", safe_message)
+        self.assertIn("OPENAI_API_KEY=[redacted]", safe_message)
+        for unsafe_text in (
+            "/tmp/render/private",
+            tmp,
+            "url-secret",
+            "query-secret",
+            "bearer-secret",
+            "env-secret",
+        ):
+            self.assertNotIn(unsafe_text, safe_message)
+
     def test_relay_preflight_rejects_missing_token_and_invalid_numeric_defaults(self) -> None:
         env = {
             "PORT": "not-a-port",

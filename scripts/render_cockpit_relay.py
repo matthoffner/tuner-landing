@@ -538,6 +538,17 @@ def compact_path_diagnostic(value: Any, *, max_length: int = 240) -> str | None:
     return compact_text(text, max_length=max_length)
 
 
+def relay_error_message(value: Any, *, max_length: int = 240) -> str:
+    if isinstance(value, BaseException):
+        raw_message = str(value) or type(value).__name__
+    else:
+        raw_message = value
+    return (
+        compact_path_diagnostic(raw_message, max_length=max_length)
+        or "relay_error"
+    )
+
+
 def compact_policy_detail(value: Any, *, max_length: int = 240) -> str | None:
     text = compact_text(value, max_length=max_length * 2)
     if text is None:
@@ -2941,11 +2952,14 @@ class RelayHandler(BaseHTTPRequestHandler):
         try:
             state = update_state(payload)
         except ValueError as exc:
-            self.send_json({"error": "invalid_payload", "message": str(exc)}, HTTPStatus.BAD_REQUEST)
+            self.send_json(
+                {"error": "invalid_payload", "message": relay_error_message(exc)},
+                HTTPStatus.BAD_REQUEST,
+            )
             return
         except RelayPersistenceError as exc:
             self.send_json(
-                {"error": "persistence_failed", "message": str(exc)},
+                {"error": "persistence_failed", "message": relay_error_message(exc)},
                 HTTPStatus.INTERNAL_SERVER_ERROR,
             )
             return
