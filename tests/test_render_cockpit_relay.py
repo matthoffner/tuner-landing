@@ -742,6 +742,67 @@ class RenderCockpitRelayTest(unittest.TestCase):
             expected_source_health,
         )
 
+    def test_source_health_derives_reason_count_for_truncated_legacy_reasons(self) -> None:
+        self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
+        self.relay.update_state(
+            {
+                "pushed_at": "2026-06-14T19:59:30Z",
+                "status": {
+                    "status": "running",
+                    "loop_running": True,
+                },
+                "log_tail": "legacy publisher sent many source-health reasons\n",
+                "publisher": {
+                    "host": "worker-1",
+                    "source_health": {
+                        "status": "degraded",
+                        "ok": False,
+                        "reasons": [
+                            "source_status_stale",
+                            "source_bridge_status_stale",
+                            "source_handoff_coordination_incomplete",
+                            "source_cockpit_attention",
+                            "source_loop_not_running",
+                            "source_autonomy_policy_failed",
+                        ],
+                        "primary_reason": "source_status_stale",
+                    },
+                },
+            }
+        )
+        self.relay.utc_now = lambda: "2026-06-14T20:00:00Z"
+
+        health = self.relay.health_payload()
+        status = self.relay.relay_status_payload()
+
+        expected_visible_reasons = [
+            "source_status_stale",
+            "source_bridge_status_stale",
+            "source_handoff_coordination_incomplete",
+            "source_cockpit_attention",
+            "source_loop_not_running",
+        ]
+        expected_source_health = {
+            "status": "degraded",
+            "ok": False,
+            "reasons": expected_visible_reasons,
+            "primary_reason": "source_status_stale",
+            "label": "Source status is stale",
+            "reason_count": 6,
+        }
+        self.assertEqual(
+            health["cockpit_health"]["reasons"],
+            expected_visible_reasons,
+        )
+        self.assertEqual(
+            health["cockpit_health"]["source_health"],
+            expected_source_health,
+        )
+        self.assertEqual(
+            status["relay"]["publisher"]["source_health"],
+            expected_source_health,
+        )
+
     def test_status_and_health_label_render_worker_source_failure(self) -> None:
         self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
         self.relay.update_state(
@@ -1719,6 +1780,7 @@ class RenderCockpitRelayTest(unittest.TestCase):
             ],
             "primary_reason": "source token=[redacted] needs review",
             "label": "Source https://example.local/status?[redacted]#[redacted]",
+            "reason_count": 6,
             "diagnostics": {
                 "source_status_file": "<external>/source-health.json",
                 "source_status_age_seconds": 901,

@@ -221,6 +221,10 @@ def publisher_source_health(state: dict[str, Any]) -> dict[str, Any]:
         "label": label,
     }
     reason_count = compact_int(source_health.get("reason_count"))
+    if reason_count is None:
+        derived_reason_count = source_health_reason_count(source_health.get("reasons"))
+        if derived_reason_count > len(normalized_reasons):
+            reason_count = derived_reason_count
     if reason_count is not None:
         summary["reason_count"] = reason_count
     raw_diagnostics = source_health.get("diagnostics")
@@ -593,6 +597,16 @@ def compact_health_reasons(value: Any, *, max_items: int = 5) -> list[str]:
         if len(compact_reasons) >= max_items:
             break
     return compact_reasons
+
+
+def source_health_reason_count(value: Any) -> int:
+    if not isinstance(value, list):
+        return 0
+    return sum(
+        1
+        for item in value
+        if compact_policy_detail(item, max_length=160) is not None
+    )
 
 
 def sanitize_url_value(value: str) -> str:
