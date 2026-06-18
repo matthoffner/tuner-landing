@@ -3962,8 +3962,9 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             publisher_log.write_text(
                 publisher_log.read_text(encoding="utf-8")
                 + "[new] exiting after terminal publish failure "
-                "failure_kind=relay_auth_failed http_status=403 "
-                "http_reason=Forbidden token=new-secret\n",
+                "failure_kind=relay_rate_limited http_status=429 "
+                "http_reason=Too_Many_Requests http_body_bytes=31 "
+                "retry_after=120 token=new-secret\n",
                 encoding="utf-8",
             )
 
@@ -3978,9 +3979,11 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertEqual(
             details,
             {
-                "publisher_failure_kind": "relay_auth_failed",
-                "publisher_http_status": 403,
-                "publisher_http_reason": "Forbidden",
+                "publisher_failure_kind": "relay_rate_limited",
+                "publisher_http_status": 429,
+                "publisher_http_reason": "Too_Many_Requests",
+                "publisher_http_body_bytes": 31,
+                "publisher_http_retry_after": "120",
             },
         )
 
@@ -4009,6 +4012,8 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                         "publisher_failure_kind": "relay_auth_failed",
                         "publisher_http_status": 403,
                         "publisher_http_reason": "Forbidden",
+                        "publisher_http_body_bytes": 19,
+                        "publisher_http_retry_after": "60",
                     },
                 )
 
@@ -4019,9 +4024,13 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertEqual(status["failure"]["publisher_failure_kind"], "relay_auth_failed")
         self.assertEqual(status["failure"]["publisher_http_status"], 403)
         self.assertEqual(status["failure"]["publisher_http_reason"], "Forbidden")
+        self.assertEqual(status["failure"]["publisher_http_body_bytes"], 19)
+        self.assertEqual(status["failure"]["publisher_http_retry_after"], "60")
         self.assertIn('publisher_failure_kind="relay_auth_failed"', log_text)
         self.assertIn("publisher_http_status=403", log_text)
         self.assertIn('publisher_http_reason="Forbidden"', log_text)
+        self.assertIn("publisher_http_body_bytes=19", log_text)
+        self.assertIn('publisher_http_retry_after="60"', log_text)
         self.assertNotIn("relay-secret", status_text)
         self.assertNotIn("relay-secret", log_text)
 
@@ -5894,8 +5903,9 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                 with publisher_log.open("a", encoding="utf-8") as handle:
                     handle.write(
                         "[new] exiting after terminal publish failure "
-                        "failure_kind=relay_auth_failed http_status=403 "
-                        "http_reason=Forbidden token=relay-secret\n"
+                        "failure_kind=relay_rate_limited http_status=429 "
+                        "http_reason=Too_Many_Requests http_body_bytes=31 "
+                        "retry_after=120 token=relay-secret\n"
                     )
                 return publisher
 
@@ -5953,9 +5963,11 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                 "child_pid": 202,
                 "child_status_available": True,
                 "child_exit_status": 1,
-                "publisher_failure_kind": "relay_auth_failed",
-                "publisher_http_status": 403,
-                "publisher_http_reason": "Forbidden",
+                "publisher_failure_kind": "relay_rate_limited",
+                "publisher_http_status": 429,
+                "publisher_http_reason": "Too_Many_Requests",
+                "publisher_http_body_bytes": 31,
+                "publisher_http_retry_after": "120",
             },
         )
 

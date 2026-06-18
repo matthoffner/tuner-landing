@@ -69,7 +69,7 @@ SENSITIVE_SINGLE_QUOTED_FIELD_PATTERN = re.compile(
 )
 URL_SCHEME_PATTERN = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*://")
 PUBLISHER_FAILURE_FIELD_PATTERN = re.compile(
-    r"\b(failure_kind|http_status|http_reason)=([^\s]+)"
+    r"\b(failure_kind|http_status|http_reason|http_body_bytes|retry_after)=([^\s]+)"
 )
 REQUIRED_COMMANDS = ("git", "codex")
 CODEX_CONFIG_ENV_DEFAULTS = {
@@ -2439,6 +2439,16 @@ def compact_render_worker_failure_details(details: dict[str, object]) -> dict[st
     )
     if publisher_http_reason is not None:
         compact["publisher_http_reason"] = publisher_http_reason
+    publisher_http_body_bytes = compact_worker_nonnegative_int(
+        details.get("publisher_http_body_bytes")
+    )
+    if publisher_http_body_bytes is not None:
+        compact["publisher_http_body_bytes"] = publisher_http_body_bytes
+    publisher_http_retry_after = compact_publisher_retry_after(
+        details.get("publisher_http_retry_after")
+    )
+    if publisher_http_retry_after is not None:
+        compact["publisher_http_retry_after"] = publisher_http_retry_after
     environment_preflight = details.get("environment_preflight")
     if isinstance(environment_preflight, dict):
         compact_environment_preflight = compact_publisher_preflight_details(
@@ -2537,6 +2547,12 @@ def write_render_worker_failure_status(
     publisher_http_reason = compact_details.pop("publisher_http_reason", None)
     if isinstance(publisher_http_reason, str):
         failure["publisher_http_reason"] = publisher_http_reason
+    publisher_http_body_bytes = compact_details.pop("publisher_http_body_bytes", None)
+    if publisher_http_body_bytes is not None:
+        failure["publisher_http_body_bytes"] = publisher_http_body_bytes
+    publisher_http_retry_after = compact_details.pop("publisher_http_retry_after", None)
+    if isinstance(publisher_http_retry_after, str):
+        failure["publisher_http_retry_after"] = publisher_http_retry_after
     environment_preflight = compact_details.pop("environment_preflight", None)
     if isinstance(environment_preflight, dict):
         failure["environment_preflight"] = environment_preflight
@@ -2574,6 +2590,8 @@ def write_render_worker_failure_status(
         "publisher_failure_kind",
         "publisher_http_status",
         "publisher_http_reason",
+        "publisher_http_body_bytes",
+        "publisher_http_retry_after",
     ):
         value = failure.get(key)
         if value is not None:
@@ -2729,6 +2747,14 @@ def publisher_failure_fields_from_log_line(line: str) -> dict[str, object]:
     http_reason = compact_publisher_http_reason(fields.get("http_reason"))
     if http_reason is not None:
         details["publisher_http_reason"] = http_reason
+    http_body_bytes = compact_worker_nonnegative_int_from_text(
+        fields.get("http_body_bytes")
+    )
+    if http_body_bytes is not None:
+        details["publisher_http_body_bytes"] = http_body_bytes
+    retry_after = compact_publisher_retry_after(fields.get("retry_after"))
+    if retry_after is not None:
+        details["publisher_http_retry_after"] = retry_after
     return details
 
 
@@ -2736,6 +2762,20 @@ def compact_worker_exit_status_from_text(value: object) -> int | None:
     if not isinstance(value, str) or not value.isdigit():
         return None
     return compact_worker_exit_status(int(value))
+
+
+def compact_worker_nonnegative_int(value: object) -> int | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int) and value >= 0:
+        return value
+    return None
+
+
+def compact_worker_nonnegative_int_from_text(value: object) -> int | None:
+    if not isinstance(value, str) or not value.isdigit():
+        return None
+    return compact_worker_nonnegative_int(int(value))
 
 
 def compact_publisher_http_reason(value: object) -> str | None:
@@ -2747,6 +2787,15 @@ def compact_publisher_http_reason(value: object) -> str | None:
     if all(character.isalnum() or character in "_-" for character in safe_value):
         return safe_value
     return None
+
+
+def compact_publisher_retry_after(value: object) -> str | None:
+    if not isinstance(value, str):
+        return None
+    safe_value = sanitize_worker_log_text(value)[:80]
+    if not safe_value or not safe_value.isdigit():
+        return None
+    return safe_value
 
 
 def publisher_terminal_failure_details(
