@@ -332,6 +332,29 @@ class LoopArtifactVisibilityTest(unittest.TestCase):
                 self.assertEqual(list(Path(tmp).glob("*.tmp")), [])
                 self.assertEqual(list(Path(tmp).glob(".*.tmp")), [])
 
+    def test_loop_status_writers_preserve_existing_file_on_fsync_failure(self) -> None:
+        for script_path in LOOP_SCRIPTS:
+            with self.subTest(script=script_path.name), tempfile.TemporaryDirectory() as tmp:
+                module = load_module(script_path)
+                status_path = Path(tmp) / "status.json"
+                module.write_json(status_path, {"status": "previous", "seconds": 1})
+                before = status_path.read_text(encoding="utf-8")
+                original_fsync = module.os.fsync
+
+                def fail_fsync(_fd: int) -> None:
+                    raise OSError("simulated fsync failure")
+
+                module.os.fsync = fail_fsync
+                try:
+                    with self.assertRaises(OSError):
+                        module.write_json(status_path, {"status": "new", "seconds": 2})
+                finally:
+                    module.os.fsync = original_fsync
+
+                self.assertEqual(status_path.read_text(encoding="utf-8"), before)
+                self.assertEqual(list(Path(tmp).glob("*.tmp")), [])
+                self.assertEqual(list(Path(tmp).glob(".*.tmp")), [])
+
     def test_mvp_iteration_fails_when_artifact_health_is_degraded(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)

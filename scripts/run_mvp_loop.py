@@ -157,6 +157,8 @@ def write_json(path: Path, payload: dict[str, Any]) -> None:
         with temp_path.open("w", encoding="utf-8") as handle:
             json.dump(payload, handle, indent=2, allow_nan=False)
             handle.write("\n")
+            handle.flush()
+            os.fsync(handle.fileno())
         temp_path.replace(path)
     except Exception:
         try:
