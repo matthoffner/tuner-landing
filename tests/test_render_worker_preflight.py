@@ -4073,6 +4073,40 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             },
         )
 
+    def test_publisher_failure_fields_preserve_http_date_retry_after(self) -> None:
+        details = self.worker.publisher_failure_fields_from_log_line(
+            "exiting after terminal publish failure "
+            "failure_kind=relay_unavailable http_status=503 "
+            "retry_after=Wed, 21 Oct 2015 07:28:00 GMT "
+            "source_status=running token=relay-secret"
+        )
+
+        self.assertEqual(
+            details,
+            {
+                "publisher_failure_kind": "relay_unavailable",
+                "publisher_http_status": 503,
+                "publisher_http_retry_after": "Wed, 21 Oct 2015 07:28:00 GMT",
+                "publisher_source_status": "running",
+            },
+        )
+
+    def test_publisher_failure_fields_reject_arbitrary_retry_after_text(self) -> None:
+        details = self.worker.publisher_failure_fields_from_log_line(
+            "exiting after terminal publish failure "
+            "failure_kind=relay_unavailable http_status=503 "
+            "retry_after=retry when token=relay-secret source_status=running"
+        )
+
+        self.assertEqual(
+            details,
+            {
+                "publisher_failure_kind": "relay_unavailable",
+                "publisher_http_status": 503,
+                "publisher_source_status": "running",
+            },
+        )
+
     def test_publisher_failure_fields_preserve_latest_nonterminal_failure(self) -> None:
         details = self.worker.publisher_failure_fields_from_log_line(
             "exiting after consecutive publish failures "

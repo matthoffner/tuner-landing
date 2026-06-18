@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import base64
+from email.utils import parsedate_to_datetime
 import ipaddress
 import json
 import math
@@ -3106,10 +3107,20 @@ def compact_publisher_failure_reason(value: object) -> str | None:
 def compact_publisher_retry_after(value: object) -> str | None:
     if not isinstance(value, str):
         return None
-    safe_value = sanitize_worker_log_text(value)[:80]
-    if not safe_value or not safe_value.isdigit():
+    safe_value = " ".join(sanitize_worker_log_text(value).split())[:80]
+    if not safe_value:
         return None
-    return safe_value
+    if safe_value.isdigit():
+        return safe_value
+    if URL_SCHEME_PATTERN.search(safe_value):
+        return None
+    try:
+        parsedate_to_datetime(safe_value)
+    except (TypeError, ValueError):
+        return None
+    if all(character.isalnum() or character in " ,:-" for character in safe_value):
+        return safe_value
+    return None
 
 
 def publisher_terminal_failure_details(
