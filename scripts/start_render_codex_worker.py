@@ -86,6 +86,7 @@ RUNTIME_CONFIG_LIMITS = {
     "AUTOMOAT_RELAY_TIMEOUT": 60,
     "AUTOMOAT_RELAY_MAX_CONSECUTIVE_FAILURES": 100,
     "AUTOMOAT_RELAY_MAX_CONSECUTIVE_STALE_STATUSES": 100,
+    "AUTOMOAT_RELAY_MAX_CONSECUTIVE_STALE_BRIDGE_STATUSES": 100,
     "AUTOMOAT_RELAY_TAIL_LINES": 2000,
     "AUTOMOAT_RELAY_MAX_LOG_BYTES": 1024 * 1024,
     "AUTOMOAT_STATUS_STALE_AFTER_SECONDS": 3600,
@@ -137,6 +138,11 @@ PUBLISHER_RUNTIME_ENV_ARGS = (
     (
         "AUTOMOAT_RELAY_MAX_CONSECUTIVE_STALE_STATUSES",
         "--max-consecutive-stale-statuses",
+        "0",
+    ),
+    (
+        "AUTOMOAT_RELAY_MAX_CONSECUTIVE_STALE_BRIDGE_STATUSES",
+        "--max-consecutive-stale-bridge-statuses",
         "0",
     ),
     (
@@ -953,6 +959,14 @@ def validate_worker_environment(
         "AUTOMOAT_RELAY_MAX_CONSECUTIVE_STALE_STATUSES",
         errors,
         maximum=RUNTIME_CONFIG_LIMITS["AUTOMOAT_RELAY_MAX_CONSECUTIVE_STALE_STATUSES"],
+    )
+    validate_nonnegative_int(
+        env,
+        "AUTOMOAT_RELAY_MAX_CONSECUTIVE_STALE_BRIDGE_STATUSES",
+        errors,
+        maximum=RUNTIME_CONFIG_LIMITS[
+            "AUTOMOAT_RELAY_MAX_CONSECUTIVE_STALE_BRIDGE_STATUSES"
+        ],
     )
     validate_positive_int(
         env,

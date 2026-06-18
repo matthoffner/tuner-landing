@@ -526,6 +526,9 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                 "AUTOMOAT_RELAY_MAX_CONSECUTIVE_STALE_STATUSES": str(
                     limits["AUTOMOAT_RELAY_MAX_CONSECUTIVE_STALE_STATUSES"]
                 ),
+                "AUTOMOAT_RELAY_MAX_CONSECUTIVE_STALE_BRIDGE_STATUSES": str(
+                    limits["AUTOMOAT_RELAY_MAX_CONSECUTIVE_STALE_BRIDGE_STATUSES"]
+                ),
                 "AUTOMOAT_RELAY_TAIL_LINES": str(limits["AUTOMOAT_RELAY_TAIL_LINES"]),
                 "AUTOMOAT_RELAY_MAX_LOG_BYTES": str(
                     limits["AUTOMOAT_RELAY_MAX_LOG_BYTES"]
@@ -561,6 +564,9 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                 "AUTOMOAT_RELAY_MAX_CONSECUTIVE_STALE_STATUSES": str(
                     limits["AUTOMOAT_RELAY_MAX_CONSECUTIVE_STALE_STATUSES"] + 1
                 ),
+                "AUTOMOAT_RELAY_MAX_CONSECUTIVE_STALE_BRIDGE_STATUSES": str(
+                    limits["AUTOMOAT_RELAY_MAX_CONSECUTIVE_STALE_BRIDGE_STATUSES"] + 1
+                ),
                 "AUTOMOAT_RELAY_TAIL_LINES": str(limits["AUTOMOAT_RELAY_TAIL_LINES"] + 1),
                 "AUTOMOAT_RELAY_MAX_LOG_BYTES": str(
                     limits["AUTOMOAT_RELAY_MAX_LOG_BYTES"] + 1
@@ -586,6 +592,10 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                 ),
                 (
                     "AUTOMOAT_RELAY_MAX_CONSECUTIVE_STALE_STATUSES must be "
+                    "less than or equal to 100"
+                ),
+                (
+                    "AUTOMOAT_RELAY_MAX_CONSECUTIVE_STALE_BRIDGE_STATUSES must be "
                     "less than or equal to 100"
                 ),
                 "AUTOMOAT_RELAY_TAIL_LINES must be less than or equal to 2000",
@@ -4954,6 +4964,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             "AUTOMOAT_STATUS_STALE_AFTER_SECONDS": "900",
             "AUTOMOAT_RELAY_MAX_CONSECUTIVE_FAILURES": "5",
             "AUTOMOAT_RELAY_MAX_CONSECUTIVE_STALE_STATUSES": "6",
+            "AUTOMOAT_RELAY_MAX_CONSECUTIVE_STALE_BRIDGE_STATUSES": "7",
             "AUTOMOAT_BRIDGE_STATUS_FILE": ".automoat/state/custom-bridge-status.json",
         }
 
@@ -4978,6 +4989,8 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                 "5",
                 "--max-consecutive-stale-statuses",
                 "6",
+                "--max-consecutive-stale-bridge-statuses",
+                "7",
                 "--bridge-status-stale-after-seconds",
                 "660",
                 "--status-file",
@@ -5010,6 +5023,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                 "AUTOMOAT_STATUS_STALE_AFTER_SECONDS": "900",
                 "AUTOMOAT_RELAY_MAX_CONSECUTIVE_FAILURES": "5",
                 "AUTOMOAT_RELAY_MAX_CONSECUTIVE_STALE_STATUSES": "6",
+                "AUTOMOAT_RELAY_MAX_CONSECUTIVE_STALE_BRIDGE_STATUSES": "7",
                 "AUTOMOAT_BRIDGE_STATUS_FILE": str(bridge_status_file),
             }
             fake_publisher = FakeProcess(pid=303)
@@ -5032,6 +5046,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertIn("started relay publisher pid=303", log_line)
         self.assertIn("publisher_timeout=11.25", log_line)
         self.assertIn("publisher_max_consecutive_stale_statuses=6", log_line)
+        self.assertIn("publisher_max_consecutive_stale_bridge_statuses=7", log_line)
         self.assertIn("publisher_bridge_status_stale_after_seconds=660", log_line)
         self.assertIn(
             "publisher_bridge_status_file=.automoat/state/bridge-status.json",
