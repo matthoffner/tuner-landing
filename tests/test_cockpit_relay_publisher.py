@@ -7049,6 +7049,119 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             log_text,
         )
 
+    def test_publish_loop_resets_stale_status_count_after_publish_failure(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            publisher_log = Path(tmp) / "publisher.log"
+            args = Namespace(
+                publisher_log=publisher_log,
+                interval=0,
+                max_consecutive_failures=10,
+                max_consecutive_stale_statuses=2,
+            )
+            outcomes = iter(
+                [
+                    {
+                        "published": True,
+                        "source_status_stale": True,
+                        "source_status_age_seconds": 721,
+                        "source_status_stale_after_seconds": 660,
+                    },
+                    {
+                        "published": False,
+                        "source_status_stale": True,
+                    },
+                    {
+                        "published": True,
+                        "source_status_stale": True,
+                        "source_status_age_seconds": 722,
+                        "source_status_stale_after_seconds": 660,
+                    },
+                    {
+                        "published": True,
+                        "source_status_stale": True,
+                        "source_status_age_seconds": 723,
+                        "source_status_stale_after_seconds": 660,
+                    },
+                ]
+            )
+            calls = []
+            self.publisher.publish_once_result = lambda _args: calls.append(True) or next(
+                outcomes
+            )
+            self.publisher.time.sleep = lambda _seconds: None
+
+            status = self.publisher.run_publish_loop(args)
+            log_text = publisher_log.read_text(encoding="utf-8")
+
+        self.assertEqual(status, 1)
+        self.assertEqual(calls, [True, True, True, True])
+        self.assertIn(
+            "exiting after consecutive stale source statuses "
+            "failure_kind=consecutive_stale_source_statuses count=2 limit=2 "
+            "source_status_age_seconds=723 "
+            "source_status_stale_after_seconds=660",
+            log_text,
+        )
+
+    def test_publish_loop_resets_stale_bridge_count_after_publish_failure(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            publisher_log = Path(tmp) / "publisher.log"
+            args = Namespace(
+                publisher_log=publisher_log,
+                interval=0,
+                max_consecutive_failures=10,
+                max_consecutive_stale_statuses=0,
+                max_consecutive_stale_bridge_statuses=2,
+            )
+            outcomes = iter(
+                [
+                    {
+                        "published": True,
+                        "source_status_stale": False,
+                        "bridge_status_stale": True,
+                        "bridge_status_age_seconds": 721,
+                        "bridge_status_stale_after_seconds": 660,
+                    },
+                    {
+                        "published": False,
+                        "source_status_stale": False,
+                        "bridge_status_stale": True,
+                    },
+                    {
+                        "published": True,
+                        "source_status_stale": False,
+                        "bridge_status_stale": True,
+                        "bridge_status_age_seconds": 722,
+                        "bridge_status_stale_after_seconds": 660,
+                    },
+                    {
+                        "published": True,
+                        "source_status_stale": False,
+                        "bridge_status_stale": True,
+                        "bridge_status_age_seconds": 723,
+                        "bridge_status_stale_after_seconds": 660,
+                    },
+                ]
+            )
+            calls = []
+            self.publisher.publish_once_result = lambda _args: calls.append(True) or next(
+                outcomes
+            )
+            self.publisher.time.sleep = lambda _seconds: None
+
+            status = self.publisher.run_publish_loop(args)
+            log_text = publisher_log.read_text(encoding="utf-8")
+
+        self.assertEqual(status, 1)
+        self.assertEqual(calls, [True, True, True, True])
+        self.assertIn(
+            "exiting after consecutive stale bridge statuses "
+            "failure_kind=consecutive_stale_bridge_statuses count=2 limit=2 "
+            "bridge_status_age_seconds=723 "
+            "bridge_status_stale_after_seconds=660",
+            log_text,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

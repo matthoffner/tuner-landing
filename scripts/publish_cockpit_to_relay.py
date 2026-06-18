@@ -3518,6 +3518,8 @@ def run_publish_loop(args: argparse.Namespace) -> int:
             else:
                 consecutive_stale_bridge_statuses = 0
         else:
+            consecutive_stale_statuses = 0
+            consecutive_stale_bridge_statuses = 0
             terminal_failure_kind = compact_policy_detail(
                 result.get("failure_kind"),
                 max_length=120,
