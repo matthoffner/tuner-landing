@@ -69,7 +69,8 @@ SENSITIVE_SINGLE_QUOTED_FIELD_PATTERN = re.compile(
 )
 URL_SCHEME_PATTERN = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*://")
 PUBLISHER_FAILURE_FIELD_PATTERN = re.compile(
-    r"\b(failure_kind|http_status|http_reason|http_body_bytes|http_body_truncated|retry_after)=([^\s]+)"
+    r"\b(failure_kind|http_status|http_reason|http_body_bytes|http_body_truncated|retry_after)="
+    r"((?:(?!\s+[A-Za-z_][A-Za-z0-9_]*=).)+)"
 )
 REQUIRED_COMMANDS = ("git", "codex")
 CODEX_CONFIG_ENV_DEFAULTS = {
@@ -2756,7 +2757,7 @@ def compact_publisher_failure_kind(value: object) -> str | None:
 
 def publisher_failure_fields_from_log_line(line: str) -> dict[str, object]:
     fields = {
-        match.group(1): match.group(2)
+        match.group(1): match.group(2).strip()
         for match in PUBLISHER_FAILURE_FIELD_PATTERN.finditer(line)
     }
     failure_kind = compact_publisher_failure_kind(fields.get("failure_kind"))
@@ -2806,10 +2807,10 @@ def compact_worker_nonnegative_int_from_text(value: object) -> int | None:
 def compact_publisher_http_reason(value: object) -> str | None:
     if not isinstance(value, str):
         return None
-    safe_value = sanitize_worker_log_text(value)[:80]
+    safe_value = " ".join(sanitize_worker_log_text(value).split())[:80]
     if not safe_value:
         return None
-    if all(character.isalnum() or character in "_-" for character in safe_value):
+    if all(character.isalnum() or character in " _-" for character in safe_value):
         return safe_value
     return None
 

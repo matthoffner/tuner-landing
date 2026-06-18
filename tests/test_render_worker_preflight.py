@@ -3998,6 +3998,59 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             },
         )
 
+    def test_publisher_terminal_failure_details_preserves_spaced_http_reason(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workdir = Path(temp_dir) / "repo"
+            publisher_log = workdir / ".automoat" / "logs" / "publisher.log"
+            publisher_log.parent.mkdir(parents=True)
+            publisher_log.write_text(
+                "[new] exiting after terminal publish failure "
+                "failure_kind=relay_unavailable http_status=503 "
+                "http_reason=Service Unavailable http_body_bytes=45 "
+                "http_body_truncated=True retry_after=90 source_status=passing\n",
+                encoding="utf-8",
+            )
+
+            details = self.worker.publisher_terminal_failure_details(
+                {
+                    "AUTOMOAT_WORKDIR": str(workdir),
+                    "AUTOMOAT_PUBLISHER_LOG_FILE": ".automoat/logs/publisher.log",
+                }
+            )
+
+        self.assertEqual(
+            details,
+            {
+                "publisher_failure_kind": "relay_unavailable",
+                "publisher_http_status": 503,
+                "publisher_http_reason": "Service Unavailable",
+                "publisher_http_body_bytes": 45,
+                "publisher_http_body_truncated": True,
+                "publisher_http_retry_after": "90",
+            },
+        )
+
+    def test_publisher_failure_fields_preserve_multiword_http_reason(self) -> None:
+        details = self.worker.publisher_failure_fields_from_log_line(
+            "exiting after terminal publish failure "
+            "failure_kind=relay_rate_limited http_status=429 "
+            "http_reason=Too Many Requests http_body_bytes=31 "
+            "retry_after=120 source_status=running token=relay-secret"
+        )
+
+        self.assertEqual(
+            details,
+            {
+                "publisher_failure_kind": "relay_rate_limited",
+                "publisher_http_status": 429,
+                "publisher_http_reason": "Too Many Requests",
+                "publisher_http_body_bytes": 31,
+                "publisher_http_retry_after": "120",
+            },
+        )
+
     def test_write_render_worker_failure_status_preserves_publisher_failure_route(
         self,
     ) -> None:
