@@ -2514,17 +2514,21 @@ def write_render_worker_failure_status(
         if value is not None:
             log_parts.append(f"{key}={compact_worker_log_value(value)}")
     if isinstance(business_hours, dict):
-        in_business_hours = business_hours.get("in_business_hours")
-        if isinstance(in_business_hours, bool):
-            log_parts.append(
-                "business_hours_in_business_hours="
-                f"{compact_worker_log_value(in_business_hours)}"
-            )
-        local_time = business_hours.get("local_time")
-        if isinstance(local_time, str) and local_time:
-            log_parts.append(
-                f"business_hours_local_time={compact_worker_log_value(local_time)}"
-            )
+        for key in (
+            "enabled",
+            "in_business_hours",
+            "timezone",
+            "days",
+            "start",
+            "end",
+            "local_time",
+            "next_start_at",
+        ):
+            value = business_hours.get(key)
+            if isinstance(value, bool) or (isinstance(value, str) and value):
+                log_parts.append(
+                    f"business_hours_{key}={compact_worker_log_value(value)}"
+                )
     append_cockpit_log(" ".join(log_parts))
 
 

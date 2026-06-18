@@ -3811,9 +3811,21 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             },
         )
         self.assertNotIn("business_hours", status["failure"])
+        self.assertIn("business_hours_enabled=true", log_text)
         self.assertIn("business_hours_in_business_hours=false", log_text)
         self.assertIn(
+            'business_hours_timezone="America/Chicago token=[redacted]"',
+            log_text,
+        )
+        self.assertIn('business_hours_days="mon-fri"', log_text)
+        self.assertIn('business_hours_start="09:00"', log_text)
+        self.assertIn('business_hours_end="17:00"', log_text)
+        self.assertIn(
             'business_hours_local_time="2026-06-15T17:01:00-05:00"',
+            log_text,
+        )
+        self.assertIn(
+            'business_hours_next_start_at="2026-06-16T09:00:00-05:00"',
             log_text,
         )
         self.assertNotIn("debug", status_text)
