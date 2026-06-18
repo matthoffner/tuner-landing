@@ -2064,12 +2064,46 @@ def empty_state() -> dict[str, Any]:
     }
 
 
-def read_json_with_error(path: Path) -> tuple[dict[str, Any] | None, str | None]:
+def configured_positive_int(key: str, default: int) -> int:
     try:
-        with path.open("r", encoding="utf-8") as handle:
-            payload = json.load(handle, parse_constant=reject_json_constant)
+        value = int(CONFIG.get(key, default))
+    except (TypeError, ValueError):
+        return default
+    return value if value > 0 else default
+
+
+def configured_max_state_file_bytes() -> int:
+    constituent_limit = (
+        configured_positive_int("max_log_chars", DEFAULT_MAX_LOG_CHARS)
+        + configured_positive_int("max_status_bytes", DEFAULT_MAX_STATUS_BYTES)
+        + configured_positive_int("max_publisher_bytes", DEFAULT_MAX_PUBLISHER_BYTES)
+        + 64 * 1024
+    )
+    return max(
+        configured_positive_int("max_ingest_bytes", DEFAULT_MAX_INGEST_BYTES),
+        constituent_limit,
+    )
+
+
+def read_json_with_error(path: Path) -> tuple[dict[str, Any] | None, str | None]:
+    max_bytes = configured_max_state_file_bytes()
+    try:
+        with path.open("rb") as handle:
+            payload_bytes = handle.read(max_bytes + 1)
     except OSError as exc:
         return None, f"failed_to_read_state_file: {compact_path_error(exc, path)}"
+    if len(payload_bytes) > max_bytes:
+        return (
+            None,
+            "state_file_too_large: "
+            f"file exceeds max JSON bytes ({len(payload_bytes)} > {max_bytes})",
+        )
+    try:
+        payload_text = payload_bytes.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        return None, f"invalid_state_json: invalid UTF-8 at byte {exc.start}"
+    try:
+        payload = json.loads(payload_text, parse_constant=reject_json_constant)
     except json.JSONDecodeError as exc:
         return None, f"invalid_state_json: line {exc.lineno} column {exc.colno}: {exc.msg}"
     except ValueError as exc:
