@@ -4029,6 +4029,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                 "publisher_http_body_bytes": 45,
                 "publisher_http_body_truncated": True,
                 "publisher_http_retry_after": "90",
+                "publisher_source_status": "passing",
             },
         )
 
@@ -4048,6 +4049,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                 "publisher_http_reason": "Too Many Requests",
                 "publisher_http_body_bytes": 31,
                 "publisher_http_retry_after": "120",
+                "publisher_source_status": "running",
             },
         )
 
@@ -4066,6 +4068,37 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                 "publisher_failure_kind": "consecutive_publish_failures",
                 "publisher_last_failure_kind": "invalid_relay_json",
                 "publisher_last_failure_reason": "line 1 column 1: Expecting value",
+                "publisher_source_status": "running",
+            },
+        )
+
+    def test_publisher_failure_fields_preserve_source_and_bridge_context(self) -> None:
+        details = self.worker.publisher_failure_fields_from_log_line(
+            "exiting after consecutive stale bridge statuses "
+            "failure_kind=consecutive_stale_bridge_statuses count=2 limit=2 "
+            "source_status=running source_loop_running=True "
+            "source_status_stale=False source_status_age_seconds=12 "
+            "source_status_file_status=loaded "
+            "source_health_primary_reason=bridge_status_stale "
+            "bridge_status_file_status=loaded bridge_status_stale=True "
+            "bridge_status_age_seconds=901 "
+            "bridge_health_primary_reason=bridge_status_stale token=relay-secret"
+        )
+
+        self.assertEqual(
+            details,
+            {
+                "publisher_failure_kind": "consecutive_stale_bridge_statuses",
+                "publisher_source_status": "running",
+                "publisher_source_loop_running": True,
+                "publisher_source_status_stale": False,
+                "publisher_source_status_age_seconds": 12,
+                "publisher_source_status_file_status": "loaded",
+                "publisher_source_health_primary_reason": "bridge_status_stale",
+                "publisher_bridge_status_file_status": "loaded",
+                "publisher_bridge_status_stale": True,
+                "publisher_bridge_status_age_seconds": 901,
+                "publisher_bridge_health_primary_reason": "bridge_status_stale",
             },
         )
 
@@ -4101,6 +4134,16 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                         "publisher_http_body_bytes": 19,
                         "publisher_http_body_truncated": True,
                         "publisher_http_retry_after": "60",
+                        "publisher_source_status": "running",
+                        "publisher_source_loop_running": True,
+                        "publisher_source_status_stale": False,
+                        "publisher_source_status_age_seconds": 12,
+                        "publisher_source_status_file_status": "loaded",
+                        "publisher_source_health_primary_reason": "bridge_status_stale",
+                        "publisher_bridge_status_file_status": "loaded",
+                        "publisher_bridge_status_stale": True,
+                        "publisher_bridge_status_age_seconds": 901,
+                        "publisher_bridge_health_primary_reason": "bridge_status_stale",
                     },
                 )
 
@@ -4122,6 +4165,22 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertEqual(status["failure"]["publisher_http_body_bytes"], 19)
         self.assertIs(status["failure"]["publisher_http_body_truncated"], True)
         self.assertEqual(status["failure"]["publisher_http_retry_after"], "60")
+        self.assertEqual(status["failure"]["publisher_source_status"], "running")
+        self.assertIs(status["failure"]["publisher_source_loop_running"], True)
+        self.assertIs(status["failure"]["publisher_source_status_stale"], False)
+        self.assertEqual(status["failure"]["publisher_source_status_age_seconds"], 12)
+        self.assertEqual(status["failure"]["publisher_source_status_file_status"], "loaded")
+        self.assertEqual(
+            status["failure"]["publisher_source_health_primary_reason"],
+            "bridge_status_stale",
+        )
+        self.assertEqual(status["failure"]["publisher_bridge_status_file_status"], "loaded")
+        self.assertIs(status["failure"]["publisher_bridge_status_stale"], True)
+        self.assertEqual(status["failure"]["publisher_bridge_status_age_seconds"], 901)
+        self.assertEqual(
+            status["failure"]["publisher_bridge_health_primary_reason"],
+            "bridge_status_stale",
+        )
         self.assertIn('publisher_failure_kind="relay_auth_failed"', log_text)
         self.assertIn('publisher_last_failure_kind="invalid_relay_json"', log_text)
         self.assertIn(
@@ -4133,6 +4192,22 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertIn("publisher_http_body_bytes=19", log_text)
         self.assertIn("publisher_http_body_truncated=true", log_text)
         self.assertIn('publisher_http_retry_after="60"', log_text)
+        self.assertIn('publisher_source_status="running"', log_text)
+        self.assertIn("publisher_source_loop_running=true", log_text)
+        self.assertIn("publisher_source_status_stale=false", log_text)
+        self.assertIn("publisher_source_status_age_seconds=12", log_text)
+        self.assertIn('publisher_source_status_file_status="loaded"', log_text)
+        self.assertIn(
+            'publisher_source_health_primary_reason="bridge_status_stale"',
+            log_text,
+        )
+        self.assertIn('publisher_bridge_status_file_status="loaded"', log_text)
+        self.assertIn("publisher_bridge_status_stale=true", log_text)
+        self.assertIn("publisher_bridge_status_age_seconds=901", log_text)
+        self.assertIn(
+            'publisher_bridge_health_primary_reason="bridge_status_stale"',
+            log_text,
+        )
         self.assertNotIn("relay-secret", status_text)
         self.assertNotIn("relay-secret", log_text)
 

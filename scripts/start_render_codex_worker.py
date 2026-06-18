@@ -71,7 +71,11 @@ URL_SCHEME_PATTERN = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*://")
 PUBLISHER_FAILURE_FIELD_PATTERN = re.compile(
     r"\b("
     r"failure_kind|last_failure_kind|last_failure_reason|"
-    r"http_status|http_reason|http_body_bytes|http_body_truncated|retry_after"
+    r"http_status|http_reason|http_body_bytes|http_body_truncated|retry_after|"
+    r"source_status|source_loop_running|source_status_stale|"
+    r"source_status_age_seconds|source_status_file_status|"
+    r"source_health_primary_reason|bridge_status_file_status|"
+    r"bridge_status_stale|bridge_status_age_seconds|bridge_health_primary_reason"
     r")="
     r"((?:(?!\s+[A-Za-z_][A-Za-z0-9_]*=).)+)"
 )
@@ -2479,6 +2483,28 @@ def compact_render_worker_failure_details(details: dict[str, object]) -> dict[st
     )
     if publisher_http_retry_after is not None:
         compact["publisher_http_retry_after"] = publisher_http_retry_after
+    for key in (
+        "publisher_source_status",
+        "publisher_source_status_file_status",
+        "publisher_source_health_primary_reason",
+        "publisher_bridge_status_file_status",
+        "publisher_bridge_health_primary_reason",
+    ):
+        compact_value = compact_publisher_context_text(details.get(key))
+        if compact_value is not None:
+            compact[key] = compact_value
+    for key in ("publisher_source_status_age_seconds", "publisher_bridge_status_age_seconds"):
+        compact_value = compact_worker_nonnegative_int(details.get(key))
+        if compact_value is not None:
+            compact[key] = compact_value
+    for key in (
+        "publisher_source_loop_running",
+        "publisher_source_status_stale",
+        "publisher_bridge_status_stale",
+    ):
+        compact_value = compact_worker_bool(details.get(key))
+        if compact_value is not None:
+            compact[key] = compact_value
     environment_preflight = details.get("environment_preflight")
     if isinstance(environment_preflight, dict):
         compact_environment_preflight = compact_publisher_preflight_details(
@@ -2601,6 +2627,28 @@ def write_render_worker_failure_status(
     publisher_http_retry_after = compact_details.pop("publisher_http_retry_after", None)
     if isinstance(publisher_http_retry_after, str):
         failure["publisher_http_retry_after"] = publisher_http_retry_after
+    for key in (
+        "publisher_source_status",
+        "publisher_source_status_file_status",
+        "publisher_source_health_primary_reason",
+        "publisher_bridge_status_file_status",
+        "publisher_bridge_health_primary_reason",
+    ):
+        value = compact_details.pop(key, None)
+        if isinstance(value, str):
+            failure[key] = value
+    for key in ("publisher_source_status_age_seconds", "publisher_bridge_status_age_seconds"):
+        value = compact_details.pop(key, None)
+        if value is not None:
+            failure[key] = value
+    for key in (
+        "publisher_source_loop_running",
+        "publisher_source_status_stale",
+        "publisher_bridge_status_stale",
+    ):
+        value = compact_details.pop(key, None)
+        if isinstance(value, bool):
+            failure[key] = value
     environment_preflight = compact_details.pop("environment_preflight", None)
     if isinstance(environment_preflight, dict):
         failure["environment_preflight"] = environment_preflight
@@ -2643,6 +2691,16 @@ def write_render_worker_failure_status(
         "publisher_http_body_bytes",
         "publisher_http_body_truncated",
         "publisher_http_retry_after",
+        "publisher_source_status",
+        "publisher_source_loop_running",
+        "publisher_source_status_stale",
+        "publisher_source_status_age_seconds",
+        "publisher_source_status_file_status",
+        "publisher_source_health_primary_reason",
+        "publisher_bridge_status_file_status",
+        "publisher_bridge_status_stale",
+        "publisher_bridge_status_age_seconds",
+        "publisher_bridge_health_primary_reason",
     ):
         value = failure.get(key)
         if value is not None:
@@ -2816,6 +2874,31 @@ def publisher_failure_fields_from_log_line(line: str) -> dict[str, object]:
     retry_after = compact_publisher_retry_after(fields.get("retry_after"))
     if retry_after is not None:
         details["publisher_http_retry_after"] = retry_after
+    for field_name, detail_name in (
+        ("source_status", "publisher_source_status"),
+        ("source_status_file_status", "publisher_source_status_file_status"),
+        ("source_health_primary_reason", "publisher_source_health_primary_reason"),
+        ("bridge_status_file_status", "publisher_bridge_status_file_status"),
+        ("bridge_health_primary_reason", "publisher_bridge_health_primary_reason"),
+    ):
+        compact_value = compact_publisher_context_text(fields.get(field_name))
+        if compact_value is not None:
+            details[detail_name] = compact_value
+    for field_name, detail_name in (
+        ("source_status_age_seconds", "publisher_source_status_age_seconds"),
+        ("bridge_status_age_seconds", "publisher_bridge_status_age_seconds"),
+    ):
+        compact_value = compact_worker_nonnegative_int_from_text(fields.get(field_name))
+        if compact_value is not None:
+            details[detail_name] = compact_value
+    for field_name, detail_name in (
+        ("source_loop_running", "publisher_source_loop_running"),
+        ("source_status_stale", "publisher_source_status_stale"),
+        ("bridge_status_stale", "publisher_bridge_status_stale"),
+    ):
+        compact_value = compact_worker_bool_from_text(fields.get(field_name))
+        if compact_value is not None:
+            details[detail_name] = compact_value
     return details
 
 
@@ -2837,6 +2920,33 @@ def compact_worker_nonnegative_int_from_text(value: object) -> int | None:
     if not isinstance(value, str) or not value.isdigit():
         return None
     return compact_worker_nonnegative_int(int(value))
+
+
+def compact_worker_bool(value: object) -> bool | None:
+    if isinstance(value, bool):
+        return value
+    return None
+
+
+def compact_worker_bool_from_text(value: object) -> bool | None:
+    if not isinstance(value, str):
+        return None
+    if value in {"True", "true"}:
+        return True
+    if value in {"False", "false"}:
+        return False
+    return None
+
+
+def compact_publisher_context_text(value: object) -> str | None:
+    if not isinstance(value, str):
+        return None
+    safe_value = " ".join(sanitize_worker_log_text(value).split())[:120]
+    if not safe_value or safe_value == "None":
+        return None
+    if all(character.isalnum() or character in " _-." for character in safe_value):
+        return safe_value
+    return None
 
 
 def compact_publisher_http_reason(value: object) -> str | None:
