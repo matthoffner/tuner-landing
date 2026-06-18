@@ -5352,6 +5352,8 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 "source_status_stale": False,
                 "source_status_age_seconds": 4,
                 "source_status_stale_after_seconds": None,
+                "failure_kind": "relay_response_not_ok",
+                "failure_reason": "relay_response_not_ok",
             },
         )
         self.assertIn("publish failed relay_ok=False", log_text)
@@ -6353,6 +6355,12 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 "source_status_stale": False,
                 "source_status_age_seconds": 10,
                 "source_status_stale_after_seconds": None,
+                "failure_kind": "relay_response_not_ok",
+                "failure_reason": (
+                    "relay_backpressure "
+                    "callback=https://relay.example/fail?[redacted]#[redacted] "
+                    "access_token=[redacted]"
+                ),
             },
         )
         self.assertIn("publish failed relay_ok=False", log_text)
@@ -6399,6 +6407,8 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 "source_status_stale": False,
                 "source_status_age_seconds": 10,
                 "source_status_stale_after_seconds": None,
+                "failure_kind": "relay_response_not_ok",
+                "failure_reason": "relay_response_not_object",
             },
         )
         self.assertIn("publish failed relay_ok=False", log_text)
@@ -6440,6 +6450,8 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 "source_status_stale": False,
                 "source_status_age_seconds": 10,
                 "source_status_stale_after_seconds": None,
+                "failure_kind": "relay_response_not_ok",
+                "failure_reason": "relay_response_error_not_scalar",
             },
         )
         self.assertIn("publish failed relay_ok=False", log_text)
@@ -6490,6 +6502,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 "source_status_stale": False,
                 "source_status_age_seconds": 10,
                 "source_status_stale_after_seconds": None,
+                "failure_kind": "invalid_relay_json",
             },
         )
         self.assertIn(
@@ -6548,6 +6561,8 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 "source_status_stale": False,
                 "source_status_age_seconds": 10,
                 "source_status_stale_after_seconds": None,
+                "failure_kind": "relay_response_not_ok",
+                "failure_reason": "relay_response_body_too_large",
             },
         )
         self.assertIn("publish failed relay_ok=False", log_text)
@@ -6701,6 +6716,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 "source_status_stale": False,
                 "source_status_age_seconds": 9,
                 "source_status_stale_after_seconds": None,
+                "failure_kind": "url_error",
             },
         )
         self.assertIn("publish failed failure_kind=url_error error=", log_text)
@@ -6768,6 +6784,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 "source_status_stale": False,
                 "source_status_age_seconds": 60,
                 "source_status_stale_after_seconds": 120,
+                "failure_kind": "transport_error",
             },
         )
         self.assertIn("publish failed failure_kind=transport_error", log_text)
@@ -6809,6 +6826,51 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             log_text,
         )
         self.assertNotIn("source_status_stale", log_text)
+
+    def test_publish_loop_exit_logs_latest_nonterminal_failure_metadata(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            publisher_log = Path(tmp) / "publisher.log"
+            args = Namespace(
+                publisher_log=publisher_log,
+                interval=0,
+                max_consecutive_failures=2,
+                max_consecutive_stale_statuses=0,
+            )
+            outcomes = iter(
+                [
+                    {
+                        "published": False,
+                        "source_status_stale": None,
+                        "failure_kind": "url_error",
+                    },
+                    {
+                        "published": False,
+                        "source_status_stale": None,
+                        "failure_kind": "http_error",
+                        "http_status": 500,
+                        "http_reason": "Internal Server Error",
+                    },
+                ]
+            )
+            calls = []
+            self.publisher.publish_once_result = lambda _args: calls.append(False) or next(
+                outcomes
+            )
+            self.publisher.time.sleep = lambda _seconds: None
+
+            status = self.publisher.run_publish_loop(args)
+            log_text = publisher_log.read_text(encoding="utf-8")
+
+        self.assertEqual(status, 1)
+        self.assertEqual(calls, [False, False])
+        self.assertIn(
+            "exiting after consecutive publish failures "
+            "failure_kind=consecutive_publish_failures count=2 limit=2 "
+            "last_failure_kind=http_error http_status=500 "
+            "http_reason=Internal Server Error",
+            log_text,
+        )
+        self.assertNotIn("last_failure_kind=url_error", log_text)
 
     def test_publish_loop_exits_immediately_after_relay_auth_failure(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

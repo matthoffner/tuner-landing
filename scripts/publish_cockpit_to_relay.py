@@ -3286,6 +3286,30 @@ def publish_once_loop_result(
     return result
 
 
+def latest_publish_failure_log_suffix(result: dict[str, Any]) -> str:
+    """Return compact metadata for the latest failed publish attempt."""
+    fields: list[str] = []
+    failure_kind = compact_policy_detail(result.get("failure_kind"), max_length=120)
+    if failure_kind is not None:
+        fields.append(f"last_failure_kind={failure_kind}")
+    http_status = compact_int(result.get("http_status"))
+    if http_status is not None:
+        fields.append(f"http_status={http_status}")
+    http_reason = compact_policy_detail(result.get("http_reason"), max_length=80)
+    if http_reason is not None:
+        fields.append(f"http_reason={http_reason}")
+    http_retry_after = compact_policy_detail(
+        result.get("http_retry_after"),
+        max_length=80,
+    )
+    if http_retry_after is not None:
+        fields.append(f"retry_after={http_retry_after}")
+    failure_reason = compact_policy_detail(result.get("failure_reason"), max_length=200)
+    if failure_reason is not None:
+        fields.append(f"last_failure_reason={failure_reason}")
+    return f" {' '.join(fields)}" if fields else ""
+
+
 def relay_http_error_failure_kind(status_code: int) -> str:
     if status_code in {HTTPStatus.UNAUTHORIZED, HTTPStatus.FORBIDDEN}:
         return "relay_auth_failed"
@@ -3438,9 +3462,10 @@ def publish_once_result(args: argparse.Namespace) -> dict[str, Any]:
     ) as exc:
         if not source_fields:
             source_fields = fallback_source_status_log_fields(args)
+        failure_kind = publish_error_kind(exc)
         emit(
             "publish failed "
-            f"failure_kind={publish_error_kind(exc)} "
+            f"failure_kind={failure_kind} "
             f"error={sanitize_exception_for_log(exc, args)} "
             f"{source_status_log_suffix(source_fields)}",
             log_path=args.publisher_log,
@@ -3448,18 +3473,24 @@ def publish_once_result(args: argparse.Namespace) -> dict[str, Any]:
         return publish_once_loop_result(
             published=False,
             source_fields=source_fields,
+            failure_fields={"failure_kind": failure_kind},
         )
     if not relay_response_ok(response):
+        failure_reason = relay_response_failure_reason(response)
         emit(
             "publish failed relay_ok=False "
             "failure_kind=relay_response_not_ok "
-            f"reason={relay_response_failure_reason(response)} "
+            f"reason={failure_reason} "
             f"{source_status_log_suffix(source_fields)}",
             log_path=args.publisher_log,
         )
         return publish_once_loop_result(
             published=False,
             source_fields=source_fields,
+            failure_fields={
+                "failure_kind": "relay_response_not_ok",
+                "failure_reason": failure_reason,
+            },
         )
     emit(
         "published relay snapshot ok=True "
@@ -3594,6 +3625,7 @@ def run_publish_loop(args: argparse.Namespace) -> int:
                     "failure_kind=consecutive_publish_failures "
                     f"count={consecutive_failures} "
                     f"limit={args.max_consecutive_failures}"
+                    f"{latest_publish_failure_log_suffix(result)}"
                     f"{publish_exit_source_status_log_suffix(args)}",
                     log_path=args.publisher_log,
                 )
