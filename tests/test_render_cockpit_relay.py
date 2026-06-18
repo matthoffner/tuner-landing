@@ -110,6 +110,7 @@ class RenderCockpitRelayTest(unittest.TestCase):
                         "bridge_status_stale_after_seconds": 240,
                         "max_consecutive_failures": "5",
                         "max_consecutive_stale_statuses": 6,
+                        "max_consecutive_stale_bridge_statuses": "4",
                         "relay_url": "https://relay.example?token=secret",
                     },
                     "repo": "/work/automoat",
@@ -169,6 +170,7 @@ class RenderCockpitRelayTest(unittest.TestCase):
             "bridge_status_stale_after_seconds": 240,
             "max_consecutive_failures": 5,
             "max_consecutive_stale_statuses": 6,
+            "max_consecutive_stale_bridge_statuses": 4,
         }
         self.assertEqual(health["publisher_runtime_config"], expected_runtime_config)
         self.assertEqual(status["publisher_runtime_config"], expected_runtime_config)
@@ -206,6 +208,7 @@ class RenderCockpitRelayTest(unittest.TestCase):
                     "bridge_status_stale_after_seconds": 240,
                     "max_consecutive_failures": 5,
                     "max_consecutive_stale_statuses": 6,
+                    "max_consecutive_stale_bridge_statuses": 4,
                 },
             },
         )

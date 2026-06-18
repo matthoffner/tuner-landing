@@ -863,6 +863,9 @@ def publisher_runtime_config(state: dict[str, Any]) -> dict[str, Any]:
         "max_consecutive_stale_statuses": runtime_config.get(
             "max_consecutive_stale_statuses"
         ),
+        "max_consecutive_stale_bridge_statuses": runtime_config.get(
+            "max_consecutive_stale_bridge_statuses"
+        ),
     }
     for key, value in int_fields.items():
         compact_value = compact_int(value)
