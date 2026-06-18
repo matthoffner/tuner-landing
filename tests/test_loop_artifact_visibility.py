@@ -314,6 +314,24 @@ class LoopArtifactVisibilityTest(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     module.write_json(Path(tmp) / "status.json", {"seconds": math.nan})
 
+    def test_loop_status_writers_preserve_existing_file_on_invalid_payload(self) -> None:
+        for script_path in LOOP_SCRIPTS:
+            with self.subTest(script=script_path.name), tempfile.TemporaryDirectory() as tmp:
+                module = load_module(script_path)
+                status_path = Path(tmp) / "status.json"
+                module.write_json(status_path, {"status": "previous", "seconds": 1})
+                before = status_path.read_text(encoding="utf-8")
+
+                with self.assertRaises(ValueError):
+                    module.write_json(
+                        status_path,
+                        {"status": "new", "seconds": math.nan},
+                    )
+
+                self.assertEqual(status_path.read_text(encoding="utf-8"), before)
+                self.assertEqual(list(Path(tmp).glob("*.tmp")), [])
+                self.assertEqual(list(Path(tmp).glob(".*.tmp")), [])
+
     def test_mvp_iteration_fails_when_artifact_health_is_degraded(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)

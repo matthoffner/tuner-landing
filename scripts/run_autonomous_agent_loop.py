@@ -153,9 +153,18 @@ def emit(log_file: Path, message: str) -> None:
 
 def write_json(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", encoding="utf-8") as handle:
-        json.dump(payload, handle, indent=2, allow_nan=False)
-        handle.write("\n")
+    temp_path = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+    try:
+        with temp_path.open("w", encoding="utf-8") as handle:
+            json.dump(payload, handle, indent=2, allow_nan=False)
+            handle.write("\n")
+        temp_path.replace(path)
+    except Exception:
+        try:
+            temp_path.unlink()
+        except OSError:
+            pass
+        raise
 
 
 def reject_json_constant(value: str) -> None:
