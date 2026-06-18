@@ -162,6 +162,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 ],
                 "primary_reason": "source_loop_not_running",
                 "label": "Source loop is not running",
+                "reason_count": 4,
                 "diagnostics": {
                     "source_bridge_status_stale_after_seconds": 120,
                     "source_bridge_status_stale": True,
@@ -3479,6 +3480,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 "reasons": [],
                 "primary_reason": None,
                 "label": "Scheduled pause",
+                "reason_count": 0,
                 "diagnostics": {
                     "source_status_remote_omitted_field_count": 1,
                 },
@@ -3550,6 +3552,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 "reasons": [],
                 "primary_reason": None,
                 "label": "Scheduled pause",
+                "reason_count": 0,
                 "diagnostics": {
                     "source_status_remote_omitted_field_count": 1,
                 },

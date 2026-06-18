@@ -220,6 +220,9 @@ def publisher_source_health(state: dict[str, Any]) -> dict[str, Any]:
         "primary_reason": primary_reason,
         "label": label,
     }
+    reason_count = compact_int(source_health.get("reason_count"))
+    if reason_count is not None:
+        summary["reason_count"] = reason_count
     raw_diagnostics = source_health.get("diagnostics")
     if isinstance(raw_diagnostics, dict):
         diagnostics: dict[str, Any] = {}

@@ -2460,6 +2460,8 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
         ),
     )
     remote_status = source_status_for_relay(status)
+    source_health = publisher_source_health(remote_status)
+    source_health["reason_count"] = len(source_health.get("reasons", []))
     return {
         "pushed_at": utc_now(),
         "status": remote_status,
@@ -2478,7 +2480,7 @@ def build_payload(args: argparse.Namespace) -> dict[str, Any]:
             "bridge_status_file": repo_relative(
                 getattr(args, "bridge_status_file", BRIDGE_STATUS_FILE)
             ),
-            "source_health": publisher_source_health(remote_status),
+            "source_health": source_health,
             "runtime_config": publisher_runtime_config(args),
             "git": publisher_git_summary(git_snapshot()),
         },

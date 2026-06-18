@@ -541,6 +541,7 @@ class RenderCockpitRelayTest(unittest.TestCase):
                         ],
                         "primary_reason": "source_status_stale",
                         "label": "Source status is stale",
+                        "reason_count": "2",
                     },
                 },
             }
@@ -559,6 +560,7 @@ class RenderCockpitRelayTest(unittest.TestCase):
             ],
             "primary_reason": "source_status_stale",
             "label": "Source status is stale",
+            "reason_count": 2,
         }
         self.assertTrue(health["ok"])
         self.assertFalse(health["cockpit_ok"])
