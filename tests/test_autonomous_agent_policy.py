@@ -1451,7 +1451,9 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
         ]
 
         with tempfile.TemporaryDirectory() as tmp:
-            result = self.loop.run_autonomy_policy_check(Path(tmp) / "policy.log")
+            log_path = Path(tmp) / "policy.log"
+            result = self.loop.run_autonomy_policy_check(log_path)
+            policy_log = log_path.read_text()
 
         self.assertEqual(result["exit_status"], 1)
         self.assertEqual(result["synthetic_row_count"], 1)
@@ -1543,6 +1545,8 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
             "raw_csv_paths=1 productive_paths=0 ignored_paths=2 preview_changed=false "
             "landing_synced=true allows_synthetic=false override=false",
         )
+        self.assertIn("ignored companion path: NEXT_TASK.md", policy_log)
+        self.assertIn("ignored companion path: README.md", policy_log)
 
     def test_synthetic_row_samples_are_bounded_and_secret_safe(self) -> None:
         rows = [
@@ -2037,11 +2041,38 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
                 "failure_reason": "synthetic_append_disallowed_by_snapshot",
                 "synthetic_row_count": 2,
                 "raw_dallas_csv_changed_paths": [],
+                "non_productive_companion_paths": [
+                    "README.md",
+                    "https://user:pass@example.local/ignored?token=secret#debug",
+                ],
             }
         )
 
         self.assertIn("2 synthetic Dallas example.local row append", message)
         self.assertIn("supervisor snapshot disallows hidden fixture growth", message)
+        self.assertIn("Ignored companion path(s): README.md", message)
+        self.assertIn("https://example.local/ignored", message)
+        self.assertNotIn("user:pass", message)
+        self.assertNotIn("token=secret", message)
+
+    def test_policy_error_message_names_ignored_companions_for_synthetic_productivity(
+        self,
+    ) -> None:
+        message = self.loop.autonomy_policy_error_message(
+            {
+                "failure_reason": "synthetic_append_without_productive_work",
+                "synthetic_row_count": 1,
+                "raw_dallas_csv_changed_paths": [],
+                "non_productive_companion_paths": [
+                    "NEXT_TASK.md",
+                    ".pixelbox/handoff.md",
+                ],
+            }
+        )
+
+        self.assertIn("without code, ingest, infra, test", message)
+        self.assertIn("Ignored companion path(s): NEXT_TASK.md", message)
+        self.assertIn(".pixelbox/handoff.md", message)
 
     def test_policy_error_message_names_preview_json_block(self) -> None:
         message = self.loop.autonomy_policy_error_message(

@@ -777,6 +777,17 @@ def bounded_sanitized_policy_list(values: list[Any]) -> list[str]:
     ]
 
 
+def policy_path_sample_summary(paths: list[Any], *, max_items: int = 5) -> str:
+    """Return a compact path sample summary for human-readable policy errors."""
+    samples = bounded_sanitized_policy_list(paths[:max_items])
+    if not samples:
+        return ""
+    summary = ", ".join(samples)
+    if len(paths) > max_items:
+        summary += f", +{len(paths) - max_items} more"
+    return summary
+
+
 def bounded_sanitized_policy_map(value: Any) -> dict[str, str]:
     """Return a bounded secret-safe string map for routeable status payloads."""
     if not isinstance(value, dict):
@@ -1512,6 +1523,8 @@ def run_autonomy_policy_check(log_file: Path) -> dict[str, Any]:
         )
         for row in synthetic_row_samples:
             emit(log_file, "  synthetic row: " + row)
+        for path in ignored_companion_paths[:8]:
+            emit(log_file, "  ignored companion path: " + sanitized_policy_detail(path))
     elif synthetic_rows and not productive_change:
         exit_status = 1
         failure_reason = "synthetic_append_without_productive_work"
@@ -1522,6 +1535,8 @@ def run_autonomy_policy_check(log_file: Path) -> dict[str, Any]:
         )
         for row in synthetic_row_samples:
             emit(log_file, "  synthetic row: " + row)
+        for path in ignored_companion_paths[:8]:
+            emit(log_file, "  ignored companion path: " + sanitized_policy_detail(path))
     elif raw_csv_paths and not productive_change:
         exit_status = 1
         failure_reason = "raw_dallas_csv_without_productive_work"
@@ -1711,9 +1726,16 @@ def autonomy_policy_error_message(policy_step: dict[str, Any]) -> str:
     raw_paths = policy_step.get("raw_dallas_csv_changed_paths")
     if not isinstance(raw_paths, list):
         raw_paths = []
-    raw_path_summary = ", ".join(str(path) for path in raw_paths[:5])
-    if len(raw_paths) > 5:
-        raw_path_summary += f", +{len(raw_paths) - 5} more"
+    raw_path_summary = policy_path_sample_summary(raw_paths)
+    ignored_paths = policy_step.get("non_productive_companion_paths")
+    if not isinstance(ignored_paths, list):
+        ignored_paths = []
+    ignored_path_summary = policy_path_sample_summary(ignored_paths)
+    ignored_suffix = (
+        f" Ignored companion path(s): {ignored_path_summary}."
+        if ignored_path_summary
+        else ""
+    )
 
     if reason == "synthetic_append_disallowed_by_snapshot":
         return (
@@ -1721,6 +1743,7 @@ def autonomy_policy_error_message(policy_step: dict[str, Any]) -> str:
             f"{synthetic_count} synthetic Dallas example.local row append(s): "
             "the supervisor snapshot disallows hidden fixture growth while "
             "Dallas readiness is already green."
+            + ignored_suffix
         )
     if reason == "raw_dallas_csv_without_productive_work":
         suffix = f": {raw_path_summary}" if raw_path_summary else "."
@@ -1733,6 +1756,7 @@ def autonomy_policy_error_message(policy_step: dict[str, Any]) -> str:
         return (
             "Autonomy policy rejected a synthetic Dallas example.local row append "
             "without code, ingest, infra, test, or durable spec companion work."
+            + ignored_suffix
         )
     if reason == "preview_json_changed":
         return (
