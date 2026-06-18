@@ -2388,6 +2388,31 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             },
         )
 
+    def test_publisher_source_health_reports_live_remote_omitted_count(self) -> None:
+        status = {
+            "status": "passing",
+            "loop_running": True,
+            "source_status_stale": False,
+            "source_status_file_status": "loaded",
+            "source_status_remote_omitted_field_count": "4",
+        }
+
+        health = self.publisher.publisher_source_health(status)
+
+        self.assertEqual(
+            health,
+            {
+                "status": "live",
+                "ok": True,
+                "reasons": [],
+                "primary_reason": None,
+                "label": "Live",
+                "diagnostics": {
+                    "source_status_remote_omitted_field_count": 4,
+                },
+            },
+        )
+
     def test_publisher_source_health_prioritizes_render_worker_failure(self) -> None:
         status = {
             "status": "failed",
@@ -3454,6 +3479,9 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 "reasons": [],
                 "primary_reason": None,
                 "label": "Scheduled pause",
+                "diagnostics": {
+                    "source_status_remote_omitted_field_count": 1,
+                },
             },
         )
         self.assertTrue(log_fields["source_business_hours_paused"])
@@ -3522,6 +3550,9 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 "reasons": [],
                 "primary_reason": None,
                 "label": "Scheduled pause",
+                "diagnostics": {
+                    "source_status_remote_omitted_field_count": 1,
+                },
             },
         )
         self.assertTrue(log_fields["source_business_hours_paused"])

@@ -3,6 +3,13 @@
 Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
+- timestamp: 2026-06-18T15:21:13Z
+- lane: editor
+- status: preserved standalone publisher source-health visibility for status whitelist suppression on otherwise-live snapshots; `publisher.source_health.diagnostics.source_status_remote_omitted_field_count` is now emitted even when no other diagnostic exists, including fresh scheduled-pause snapshots, while keeping health `status=live` and label `Scheduled pause` where appropriate; no Dallas raw CSV rows were edited
+- files: scripts/publish_cockpit_to_relay.py, tests/test_cockpit_relay_publisher.py, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- checks: `python3 -m unittest tests.test_cockpit_relay_publisher.CockpitRelayPublisherTest.test_publisher_source_health_reports_live_remote_omitted_count -v`; `python3 -m py_compile scripts/publish_cockpit_to_relay.py tests/test_cockpit_relay_publisher.py`; `python3 -m unittest tests.test_cockpit_relay_publisher -v`; `python3 -m unittest discover -s tests -v`; `node --check api/cockpit-upstreams.js && node --check api/cockpit-status.js && node --check api/cockpit-log.js`; `cmp -s generated/landing.html index.html`; `git diff --check`; `git diff --name-only -- generated/raw .pxcode/preview.json generated/landing.html index.html generated/pipeline/dallas-import-pipeline-summary-v1`; final local `run_autonomy_policy_check(Path('/tmp/automoat-publisher-omitted-source-health-policy-final.log'))` with zero synthetic rows, zero raw Dallas CSV paths, two productive paths, two ignored coordination files, no preview change, and `landing_index_synced=true`; `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json > /tmp/automoat-publisher-omitted-source-health-ready.json` plus corrected JSON assertion for readiness `ready`, zero blockers, `ready_for_next_import_records=true`, `535` permits, `1082` inspections, `1625` source records, `1093` tasks, `541` label reviews, `535/535` operator corrections, `13/13` contract checks, and zero latest thin-count buckets
+- next: when publisher source health is live but includes `source_status_remote_omitted_field_count`, treat it as a whitelist/suppression visibility signal for local-only status keys, not a degraded source condition
+
 - timestamp: 2026-06-18T14:03:19Z
 - lane: editor
 - status: prioritized Render worker failures in standalone publisher source health; `publisher.source_health` now reports primary reason `source_render_worker_failure` with label `Render worker failed` when `cockpit_summary.failure_summary.category=render_worker`, while preserving the existing sanitized `source_failure_*` route and exit-status diagnostics; no Dallas raw CSV rows were edited
