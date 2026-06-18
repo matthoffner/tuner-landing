@@ -698,6 +698,29 @@ def strict_json_clone(payload: dict[str, Any]) -> dict[str, Any]:
     return json.loads(json.dumps(payload, allow_nan=False))
 
 
+NON_FINITE_NUMBER = object()
+
+
+def sanitize_loaded_json_numbers(value: Any) -> Any:
+    if isinstance(value, float) and not math.isfinite(value):
+        return NON_FINITE_NUMBER
+    if isinstance(value, list):
+        sanitized_items = []
+        for item in value:
+            sanitized_item = sanitize_loaded_json_numbers(item)
+            if sanitized_item is not NON_FINITE_NUMBER:
+                sanitized_items.append(sanitized_item)
+        return sanitized_items
+    if isinstance(value, dict):
+        sanitized: dict[str, Any] = {}
+        for key, item in value.items():
+            sanitized_item = sanitize_loaded_json_numbers(item)
+            if sanitized_item is not NON_FINITE_NUMBER:
+                sanitized[key] = sanitized_item
+        return sanitized
+    return value
+
+
 def compact_float(value: Any) -> float | None:
     if isinstance(value, bool):
         return None
@@ -2084,7 +2107,7 @@ def sanitize_loaded_state_payload(payload: dict[str, Any]) -> dict[str, Any]:
     else:
         sanitized.pop("publisher", None)
 
-    return sanitized
+    return sanitize_loaded_json_numbers(sanitized)
 
 
 def load_state(path: Path | None) -> dict[str, Any]:

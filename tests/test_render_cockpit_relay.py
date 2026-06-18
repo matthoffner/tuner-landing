@@ -4055,6 +4055,65 @@ class RenderCockpitRelayTest(unittest.TestCase):
             status["relay"]["startup"]["state_load_error"],
         )
 
+    def test_persisted_state_numeric_overflow_is_sanitized_on_load(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            state_file = Path(tmp) / "relay-state.json"
+            state_file.write_text(
+                """
+{
+  "relay_status": "live",
+  "received_at": "2026-06-14T19:59:30Z",
+  "updated_at": "2026-06-14T19:59:30Z",
+  "status": {
+    "status": "running",
+    "loop_running": true,
+    "bad_metric": 1e999,
+    "bridge_summary": {
+      "available": true,
+      "status": "live",
+      "interval": 1e999
+    },
+    "metrics": [1, 1e999, 2]
+  },
+  "log_tail": "loop is working\\n",
+  "publisher": {
+    "host": "worker-1",
+    "snapshot_sequence": 1e999,
+    "runtime_config": {
+      "interval": 4.5,
+      "bad_metric": 1e999
+    }
+  }
+}
+""".lstrip(),
+                encoding="utf-8",
+            )
+            loaded_state = self.relay.load_state(state_file)
+
+        with self.relay.STATE_LOCK:
+            self.relay.STATE.clear()
+            self.relay.STATE.update(loaded_state)
+
+        snapshot = self.relay.snapshot()
+        health = self.relay.health_payload()
+        status = self.relay.relay_status_payload()
+        exposed_text = json.dumps(
+            {"health": health, "snapshot": snapshot, "status": status},
+            sort_keys=True,
+            allow_nan=False,
+        )
+
+        self.assertEqual(snapshot["relay_status"], "live")
+        self.assertEqual(snapshot["relay_startup"]["state_load_status"], "loaded")
+        self.assertNotIn("bad_metric", snapshot["status"])
+        self.assertNotIn("interval", snapshot["status"]["bridge_summary"])
+        self.assertEqual(snapshot["status"]["metrics"], [1, 2])
+        self.assertNotIn("snapshot_sequence", snapshot["publisher"])
+        self.assertNotIn("bad_metric", snapshot["publisher"]["runtime_config"])
+        self.assertTrue(health["ok"])
+        self.assertEqual(status["relay"]["startup"]["state_load_status"], "loaded")
+        self.assertNotIn("Infinity", exposed_text)
+
     def test_unreadable_persisted_state_error_uses_safe_state_file_label(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             state_file = Path(tmp) / "relay-state-dir"
