@@ -2332,7 +2332,7 @@ def write_business_hours_pause_status(state: dict[str, object]) -> None:
 def record_business_hours_pause_status(state: dict[str, object]) -> None:
     try:
         write_business_hours_pause_status(state)
-    except OSError as exc:
+    except Exception as exc:
         emit(f"could not write business-hours pause status: {type(exc).__name__}")
 
 
@@ -2574,7 +2574,7 @@ def record_render_worker_failure_status(
             message=message,
             details=details,
         )
-    except OSError as exc:
+    except Exception as exc:
         emit(f"could not write render worker failure status: {type(exc).__name__}")
 
 

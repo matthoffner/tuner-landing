@@ -3756,6 +3756,31 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         )
         self.assertNotIn("secret-token", output.getvalue())
 
+    def test_record_business_hours_pause_status_handles_serialization_failure(
+        self,
+    ) -> None:
+        output = io.StringIO()
+
+        with patch.object(
+            self.worker,
+            "write_business_hours_pause_status",
+            side_effect=ValueError("secret-token non-finite JSON"),
+        ), redirect_stdout(output):
+            self.worker.record_business_hours_pause_status(
+                {
+                    "enabled": True,
+                    "in_business_hours": False,
+                    "local_time": "2026-06-15T17:01:00-05:00",
+                    "next_start_at": "2026-06-16T09:00:00-05:00",
+                }
+            )
+
+        self.assertIn(
+            "could not write business-hours pause status: ValueError",
+            output.getvalue(),
+        )
+        self.assertNotIn("secret-token", output.getvalue())
+
     def test_write_business_hours_pause_status_sanitizes_schedule_context(
         self,
     ) -> None:
@@ -4167,6 +4192,29 @@ class RenderWorkerPreflightTest(unittest.TestCase):
 
         self.assertIn(
             "could not write render worker failure status: OSError",
+            output.getvalue(),
+        )
+        self.assertNotIn("secret-token", output.getvalue())
+
+    def test_record_render_worker_failure_status_handles_serialization_failure(
+        self,
+    ) -> None:
+        output = io.StringIO()
+
+        with patch.object(
+            self.worker,
+            "write_render_worker_failure_status",
+            side_effect=ValueError("secret-token non-finite JSON"),
+        ), redirect_stdout(output):
+            self.worker.record_render_worker_failure_status(
+                reason=self.worker.PUBLISHER_EXITED,
+                worker_exit_status=1,
+                publisher_exit_status=0,
+                message="secret-token publisher failure",
+            )
+
+        self.assertIn(
+            "could not write render worker failure status: ValueError",
             output.getvalue(),
         )
         self.assertNotIn("secret-token", output.getvalue())
