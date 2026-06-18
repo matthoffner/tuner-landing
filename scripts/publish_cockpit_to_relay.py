@@ -3240,6 +3240,7 @@ def publish_once_loop_result(
     *,
     published: bool,
     source_fields: dict[str, Any],
+    failure_fields: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     result: dict[str, Any] = {
         "published": published,
@@ -3256,7 +3257,15 @@ def publish_once_loop_result(
     ):
         if source_fields.get(field_name) is not None:
             result[field_name] = source_fields.get(field_name)
+    if failure_fields:
+        result.update(failure_fields)
     return result
+
+
+def relay_http_error_failure_kind(status_code: int) -> str:
+    if status_code in {HTTPStatus.UNAUTHORIZED, HTTPStatus.FORBIDDEN}:
+        return "relay_auth_failed"
+    return "http_error"
 
 
 def publish_error_kind(exc: BaseException) -> str:
@@ -3366,9 +3375,10 @@ def publish_once_result(args: argparse.Namespace) -> dict[str, Any]:
         if not source_fields:
             source_fields = fallback_source_status_log_fields(args)
         http_fields = http_error_summary(exc)
+        failure_kind = relay_http_error_failure_kind(http_fields["http_status"])
         emit(
             "publish failed "
-            "failure_kind=http_error "
+            f"failure_kind={failure_kind} "
             f"http_status={http_fields['http_status']} "
             f"http_reason={http_fields['http_reason']} "
             f"http_body_bytes={http_fields['http_body_bytes']} "
@@ -3378,6 +3388,11 @@ def publish_once_result(args: argparse.Namespace) -> dict[str, Any]:
         return publish_once_loop_result(
             published=False,
             source_fields=source_fields,
+            failure_fields={
+                "failure_kind": failure_kind,
+                "http_status": http_fields["http_status"],
+                "http_reason": http_fields["http_reason"],
+            },
         )
     except (
         OSError,
@@ -3503,6 +3518,29 @@ def run_publish_loop(args: argparse.Namespace) -> int:
             else:
                 consecutive_stale_bridge_statuses = 0
         else:
+            terminal_failure_kind = compact_policy_detail(
+                result.get("failure_kind"),
+                max_length=120,
+            )
+            if terminal_failure_kind == "relay_auth_failed":
+                http_status = compact_int(result.get("http_status"))
+                http_reason = compact_policy_detail(
+                    result.get("http_reason"),
+                    max_length=80,
+                )
+                http_fields = ""
+                if http_status is not None:
+                    http_fields += f" http_status={http_status}"
+                if http_reason is not None:
+                    http_fields += f" http_reason={http_reason}"
+                emit(
+                    "exiting after terminal publish failure "
+                    f"failure_kind={terminal_failure_kind}"
+                    f"{http_fields}"
+                    f"{publish_exit_source_status_log_suffix(args)}",
+                    log_path=args.publisher_log,
+                )
+                return 1
             consecutive_failures += 1
             if (
                 args.max_consecutive_failures > 0

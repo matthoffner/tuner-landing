@@ -6557,9 +6557,15 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 "source_status_stale": False,
                 "source_status_age_seconds": 12,
                 "source_status_stale_after_seconds": None,
+                "failure_kind": "relay_auth_failed",
+                "http_status": 401,
+                "http_reason": "Unauthorized",
             },
         )
-        self.assertIn("publish failed failure_kind=http_error http_status=401", log_text)
+        self.assertIn(
+            "publish failed failure_kind=relay_auth_failed http_status=401",
+            log_text,
+        )
         self.assertIn("http_reason=Unauthorized", log_text)
         self.assertIn(f"http_body_bytes={len(error_body)}", log_text)
         self.assertIn("source_status=running", log_text)
@@ -6711,6 +6717,61 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             log_text,
         )
         self.assertNotIn("source_status_stale", log_text)
+
+    def test_publish_loop_exits_immediately_after_relay_auth_failure(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            publisher_log = tmp_path / "publisher.log"
+            status_file = tmp_path / "status.json"
+            status_file.write_text(
+                json.dumps(
+                    {
+                        "status": "passing",
+                        "updated_at": "2026-06-14T19:30:00Z",
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            args = Namespace(
+                publisher_log=publisher_log,
+                status_file=status_file,
+                pid_file=tmp_path / "missing.pid",
+                bridge_status_file=tmp_path / "missing-bridge-status.json",
+                interval=0,
+                max_consecutive_failures=10,
+                max_consecutive_stale_statuses=0,
+                max_consecutive_stale_bridge_statuses=0,
+                status_stale_after_seconds=120,
+                bridge_status_stale_after_seconds=120,
+            )
+            calls = []
+            self.publisher.utc_now = lambda: "2026-06-14T19:31:00Z"
+            self.publisher.publish_once_result = lambda _args: calls.append(False) or {
+                "published": False,
+                "source_status_stale": False,
+                "failure_kind": "relay_auth_failed",
+                "http_status": 403,
+                "http_reason": "Forbidden",
+            }
+            self.publisher.time.sleep = lambda _seconds: self.fail(
+                "terminal relay auth failures should not sleep before exit"
+            )
+
+            status = self.publisher.run_publish_loop(args)
+            log_text = publisher_log.read_text(encoding="utf-8")
+
+        self.assertEqual(status, 1)
+        self.assertEqual(calls, [False])
+        self.assertIn(
+            "exiting after terminal publish failure "
+            "failure_kind=relay_auth_failed http_status=403 http_reason=Forbidden",
+            log_text,
+        )
+        self.assertIn("source_status=passing", log_text)
+        self.assertIn("source_status_file_status=loaded", log_text)
+        self.assertNotIn("consecutive_publish_failures", log_text)
+        self.assertNotIn(str(tmp_path), log_text)
 
     def test_publish_loop_exit_logs_configured_source_context_after_failures(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
