@@ -6613,6 +6613,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 "failure_kind": "relay_auth_failed",
                 "http_status": 401,
                 "http_reason": "Unauthorized",
+                "http_body_bytes": len(error_body),
             },
         )
         self.assertIn(
@@ -6666,6 +6667,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 "failure_kind": "relay_rate_limited",
                 "http_status": 429,
                 "http_reason": "Too Many Requests",
+                "http_body_bytes": len(error_body),
                 "http_retry_after": "120",
             },
         )
@@ -6849,6 +6851,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                         "failure_kind": "http_error",
                         "http_status": 500,
                         "http_reason": "Internal Server Error",
+                        "http_body_bytes": 37,
                     },
                 ]
             )
@@ -6867,7 +6870,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             "exiting after consecutive publish failures "
             "failure_kind=consecutive_publish_failures count=2 limit=2 "
             "last_failure_kind=http_error http_status=500 "
-            "http_reason=Internal Server Error",
+            "http_reason=Internal Server Error http_body_bytes=37",
             log_text,
         )
         self.assertNotIn("last_failure_kind=url_error", log_text)
@@ -6907,6 +6910,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 "failure_kind": "relay_auth_failed",
                 "http_status": 403,
                 "http_reason": "Forbidden",
+                "http_body_bytes": 19,
             }
             self.publisher.time.sleep = lambda _seconds: self.fail(
                 "terminal relay auth failures should not sleep before exit"
@@ -6919,7 +6923,8 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertEqual(calls, [False])
         self.assertIn(
             "exiting after terminal publish failure "
-            "failure_kind=relay_auth_failed http_status=403 http_reason=Forbidden",
+            "failure_kind=relay_auth_failed http_status=403 http_reason=Forbidden "
+            "http_body_bytes=19",
             log_text,
         )
         self.assertIn("source_status=passing", log_text)
@@ -6962,6 +6967,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 "failure_kind": "relay_rate_limited",
                 "http_status": 429,
                 "http_reason": "Too Many Requests",
+                "http_body_bytes": 31,
                 "http_retry_after": "120",
             }
             self.publisher.time.sleep = lambda _seconds: self.fail(
@@ -6976,7 +6982,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertIn(
             "exiting after terminal publish failure "
             "failure_kind=relay_rate_limited http_status=429 "
-            "http_reason=Too Many Requests retry_after=120",
+            "http_reason=Too Many Requests http_body_bytes=31 retry_after=120",
             log_text,
         )
         self.assertIn("source_status=passing", log_text)

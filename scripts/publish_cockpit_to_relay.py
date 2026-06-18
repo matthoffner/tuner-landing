@@ -3298,6 +3298,9 @@ def latest_publish_failure_log_suffix(result: dict[str, Any]) -> str:
     http_reason = compact_policy_detail(result.get("http_reason"), max_length=80)
     if http_reason is not None:
         fields.append(f"http_reason={http_reason}")
+    http_body_bytes = compact_int(result.get("http_body_bytes"))
+    if http_body_bytes is not None:
+        fields.append(f"http_body_bytes={http_body_bytes}")
     http_retry_after = compact_policy_detail(
         result.get("http_retry_after"),
         max_length=80,
@@ -3445,6 +3448,7 @@ def publish_once_result(args: argparse.Namespace) -> dict[str, Any]:
             "failure_kind": failure_kind,
             "http_status": http_fields["http_status"],
             "http_reason": http_fields["http_reason"],
+            "http_body_bytes": http_fields["http_body_bytes"],
         }
         if "http_retry_after" in http_fields:
             failure_fields["http_retry_after"] = http_fields["http_retry_after"]
@@ -3596,6 +3600,7 @@ def run_publish_loop(args: argparse.Namespace) -> int:
                     result.get("http_reason"),
                     max_length=80,
                 )
+                http_body_bytes = compact_int(result.get("http_body_bytes"))
                 http_retry_after = compact_policy_detail(
                     result.get("http_retry_after"),
                     max_length=80,
@@ -3605,6 +3610,8 @@ def run_publish_loop(args: argparse.Namespace) -> int:
                     http_fields += f" http_status={http_status}"
                 if http_reason is not None:
                     http_fields += f" http_reason={http_reason}"
+                if http_body_bytes is not None:
+                    http_fields += f" http_body_bytes={http_body_bytes}"
                 if http_retry_after is not None:
                     http_fields += f" retry_after={http_retry_after}"
                 emit(
