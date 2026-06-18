@@ -69,7 +69,10 @@ SENSITIVE_SINGLE_QUOTED_FIELD_PATTERN = re.compile(
 )
 URL_SCHEME_PATTERN = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*://")
 PUBLISHER_FAILURE_FIELD_PATTERN = re.compile(
-    r"\b(failure_kind|http_status|http_reason|http_body_bytes|http_body_truncated|retry_after)="
+    r"\b("
+    r"failure_kind|last_failure_kind|last_failure_reason|"
+    r"http_status|http_reason|http_body_bytes|http_body_truncated|retry_after"
+    r")="
     r"((?:(?!\s+[A-Za-z_][A-Za-z0-9_]*=).)+)"
 )
 REQUIRED_COMMANDS = ("git", "codex")
@@ -2446,6 +2449,16 @@ def compact_render_worker_failure_details(details: dict[str, object]) -> dict[st
     )
     if publisher_failure_kind is not None:
         compact["publisher_failure_kind"] = publisher_failure_kind
+    publisher_last_failure_kind = compact_publisher_failure_kind(
+        details.get("publisher_last_failure_kind")
+    )
+    if publisher_last_failure_kind is not None:
+        compact["publisher_last_failure_kind"] = publisher_last_failure_kind
+    publisher_last_failure_reason = compact_publisher_failure_reason(
+        details.get("publisher_last_failure_reason")
+    )
+    if publisher_last_failure_reason is not None:
+        compact["publisher_last_failure_reason"] = publisher_last_failure_reason
     publisher_http_status = compact_worker_exit_status(details.get("publisher_http_status"))
     if publisher_http_status is not None:
         compact["publisher_http_status"] = publisher_http_status
@@ -2558,6 +2571,18 @@ def write_render_worker_failure_status(
     publisher_failure_kind = compact_details.pop("publisher_failure_kind", None)
     if isinstance(publisher_failure_kind, str):
         failure["publisher_failure_kind"] = publisher_failure_kind
+    publisher_last_failure_kind = compact_details.pop(
+        "publisher_last_failure_kind",
+        None,
+    )
+    if isinstance(publisher_last_failure_kind, str):
+        failure["publisher_last_failure_kind"] = publisher_last_failure_kind
+    publisher_last_failure_reason = compact_details.pop(
+        "publisher_last_failure_reason",
+        None,
+    )
+    if isinstance(publisher_last_failure_reason, str):
+        failure["publisher_last_failure_reason"] = publisher_last_failure_reason
     publisher_http_status = compact_details.pop("publisher_http_status", None)
     if publisher_http_status is not None:
         failure["publisher_http_status"] = publisher_http_status
@@ -2611,6 +2636,8 @@ def write_render_worker_failure_status(
         "child_exit_status",
         "child_status_available",
         "publisher_failure_kind",
+        "publisher_last_failure_kind",
+        "publisher_last_failure_reason",
         "publisher_http_status",
         "publisher_http_reason",
         "publisher_http_body_bytes",
@@ -2765,6 +2792,14 @@ def publisher_failure_fields_from_log_line(line: str) -> dict[str, object]:
         return {}
 
     details: dict[str, object] = {"publisher_failure_kind": failure_kind}
+    last_failure_kind = compact_publisher_failure_kind(fields.get("last_failure_kind"))
+    if last_failure_kind is not None:
+        details["publisher_last_failure_kind"] = last_failure_kind
+    last_failure_reason = compact_publisher_failure_reason(
+        fields.get("last_failure_reason")
+    )
+    if last_failure_reason is not None:
+        details["publisher_last_failure_reason"] = last_failure_reason
     http_status = compact_worker_exit_status_from_text(fields.get("http_status"))
     if http_status is not None:
         details["publisher_http_status"] = http_status
@@ -2811,6 +2846,19 @@ def compact_publisher_http_reason(value: object) -> str | None:
     if not safe_value:
         return None
     if all(character.isalnum() or character in " _-" for character in safe_value):
+        return safe_value
+    return None
+
+
+def compact_publisher_failure_reason(value: object) -> str | None:
+    if not isinstance(value, str):
+        return None
+    safe_value = " ".join(sanitize_worker_log_text(value).split())[:160]
+    if not safe_value:
+        return None
+    if URL_SCHEME_PATTERN.search(safe_value):
+        return None
+    if all(character.isalnum() or character in " _-[]:./=" for character in safe_value):
         return safe_value
     return None
 

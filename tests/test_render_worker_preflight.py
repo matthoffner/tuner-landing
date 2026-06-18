@@ -4051,6 +4051,24 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             },
         )
 
+    def test_publisher_failure_fields_preserve_latest_nonterminal_failure(self) -> None:
+        details = self.worker.publisher_failure_fields_from_log_line(
+            "exiting after consecutive publish failures "
+            "failure_kind=consecutive_publish_failures count=3 limit=3 "
+            "last_failure_kind=invalid_relay_json "
+            "last_failure_reason=line 1 column 1: Expecting value "
+            "source_status=running token=relay-secret"
+        )
+
+        self.assertEqual(
+            details,
+            {
+                "publisher_failure_kind": "consecutive_publish_failures",
+                "publisher_last_failure_kind": "invalid_relay_json",
+                "publisher_last_failure_reason": "line 1 column 1: Expecting value",
+            },
+        )
+
     def test_write_render_worker_failure_status_preserves_publisher_failure_route(
         self,
     ) -> None:
@@ -4074,6 +4092,10 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                     details={
                         "child_label": "relay publisher",
                         "publisher_failure_kind": "relay_auth_failed",
+                        "publisher_last_failure_kind": "invalid_relay_json",
+                        "publisher_last_failure_reason": (
+                            "line 1 column 1: token=relay-secret"
+                        ),
                         "publisher_http_status": 403,
                         "publisher_http_reason": "Forbidden",
                         "publisher_http_body_bytes": 19,
@@ -4087,12 +4109,25 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             status = json.loads(status_text)
 
         self.assertEqual(status["failure"]["publisher_failure_kind"], "relay_auth_failed")
+        self.assertEqual(
+            status["failure"]["publisher_last_failure_kind"],
+            "invalid_relay_json",
+        )
+        self.assertEqual(
+            status["failure"]["publisher_last_failure_reason"],
+            "line 1 column 1: token=[redacted]",
+        )
         self.assertEqual(status["failure"]["publisher_http_status"], 403)
         self.assertEqual(status["failure"]["publisher_http_reason"], "Forbidden")
         self.assertEqual(status["failure"]["publisher_http_body_bytes"], 19)
         self.assertIs(status["failure"]["publisher_http_body_truncated"], True)
         self.assertEqual(status["failure"]["publisher_http_retry_after"], "60")
         self.assertIn('publisher_failure_kind="relay_auth_failed"', log_text)
+        self.assertIn('publisher_last_failure_kind="invalid_relay_json"', log_text)
+        self.assertIn(
+            'publisher_last_failure_reason="line 1 column 1: token=[redacted]"',
+            log_text,
+        )
         self.assertIn("publisher_http_status=403", log_text)
         self.assertIn('publisher_http_reason="Forbidden"', log_text)
         self.assertIn("publisher_http_body_bytes=19", log_text)
