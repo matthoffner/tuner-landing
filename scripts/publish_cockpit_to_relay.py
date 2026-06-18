@@ -96,6 +96,7 @@ PUBLISHER_CONFIG_LIMITS = {
     "bridge_status_stale_after_seconds": 3600,
 }
 URL_TEXT_PATTERN = re.compile(r"https?://[^\s'\"<>]+")
+PUBLISHER_LOG_URL_TEXT_PATTERN = re.compile(r"https?://[^\s'\"<>,;]+")
 PATH_TEXT_PATTERN = re.compile(r"(?<![\w:/])(?:~|/)[^\s,;|'\"\])}]+")
 BEARER_SECRET_PATTERN = re.compile(
     r"\b(authorization\s*[:=]\s*bearer)\s+[^\s,;]+",
@@ -110,6 +111,10 @@ SENSITIVE_KEY_PATTERN = (
 )
 SECRET_ASSIGNMENT_PATTERN = re.compile(
     rf"\b({SENSITIVE_KEY_PATTERN})\s*[:=]\s*[^\s,;|]+",
+    re.IGNORECASE,
+)
+PUBLISHER_LOG_SECRET_ASSIGNMENT_PATTERN = re.compile(
+    rf"\b({SENSITIVE_KEY_PATTERN})\s*[:=]\s*(?!\[redacted\])[^\s,;|]+",
     re.IGNORECASE,
 )
 SENSITIVE_DOUBLE_QUOTED_FIELD_PATTERN = re.compile(
@@ -177,7 +182,8 @@ PUBLISHER_SNAPSHOT_SEQUENCE = 0
 
 
 def emit(message: str, *, log_path: Path) -> None:
-    line = f"[{utc_now()}] {message}"
+    safe_message = sanitize_publisher_log_message(message)
+    line = f"[{utc_now()}] {safe_message}"
     print(line, flush=True)
     log_path.parent.mkdir(parents=True, exist_ok=True)
     with log_path.open("a", encoding="utf-8") as handle:
@@ -3243,16 +3249,32 @@ def sanitize_error_for_log(exc: BaseException) -> str:
     return sanitize_error_text_for_log(str(exc))
 
 
-def sanitize_error_text_for_log(message: str) -> str:
-    message = URL_TEXT_PATTERN.sub(sanitize_url_for_log, message)
+def sanitize_url_for_publisher_log(match: re.Match[str]) -> str:
+    value = match.group(0)
+    trailing = ""
+    while value.endswith((",", ";")):
+        trailing = value[-1] + trailing
+        value = value[:-1]
+    return sanitize_url_value(value) + trailing
+
+
+def sanitize_publisher_log_message(message: str) -> str:
+    message = "".join(
+        " " if character in "\r\n" or ord(character) < 32 or ord(character) == 127
+        else character
+        for character in message
+    )
+    message = PUBLISHER_LOG_URL_TEXT_PATTERN.sub(sanitize_url_for_publisher_log, message)
     message = BEARER_SECRET_PATTERN.sub(r"\1 [redacted]", message)
     message = sanitize_sensitive_quoted_fields(message)
-    message = SECRET_ASSIGNMENT_PATTERN.sub(
+    return PUBLISHER_LOG_SECRET_ASSIGNMENT_PATTERN.sub(
         lambda match: f"{match.group(1)}=[redacted]",
         message,
     )
-    message = message.replace("\r", " ").replace("\n", " ")
-    return message[:300]
+
+
+def sanitize_error_text_for_log(message: str) -> str:
+    return sanitize_publisher_log_message(message)[:300]
 
 
 def sanitize_exception_for_log(exc: BaseException, args: argparse.Namespace) -> str:

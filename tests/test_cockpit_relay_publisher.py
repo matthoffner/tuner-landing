@@ -5131,6 +5131,47 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertEqual(stdout.getvalue(), "")
         self.assertIn("--format json is only supported with --check-env", stderr.getvalue())
 
+    def test_emit_sanitizes_publisher_log_write_boundary(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            publisher_log = Path(tmp) / "publisher.log"
+            stdout = io.StringIO()
+
+            with redirect_stdout(stdout):
+                self.publisher.emit(
+                    (
+                        "publish failed\n"
+                        "Authorization: Bearer bearer-secret "
+                        "token=inline-secret "
+                        "https://relay-user:relay-pass@relay.example/ingest"
+                        "?token=url-secret#debug "
+                        '{"relay_token": "json-secret", "safe": "visible"}'
+                    ),
+                    log_path=publisher_log,
+                )
+
+            log_text = publisher_log.read_text(encoding="utf-8")
+            stdout_text = stdout.getvalue()
+
+        self.assertEqual(len(log_text.splitlines()), 1)
+        self.assertEqual(len(stdout_text.splitlines()), 1)
+        self.assertIn("publish failed Authorization: Bearer [redacted]", log_text)
+        self.assertIn("token=[redacted]", log_text)
+        self.assertIn(
+            "https://relay.example/ingest?[redacted]#[redacted]",
+            log_text,
+        )
+        self.assertIn('{"relay_token":"[redacted]", "safe": "visible"}', log_text)
+        self.assertEqual(log_text, stdout_text)
+        for secret in (
+            "bearer-secret",
+            "inline-secret",
+            "relay-user",
+            "relay-pass",
+            "url-secret",
+            "json-secret",
+        ):
+            self.assertNotIn(secret, log_text)
+
     def test_publish_once_logs_source_status_freshness(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             publisher_log = Path(tmp) / "publisher.log"
