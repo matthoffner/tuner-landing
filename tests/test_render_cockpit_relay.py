@@ -4715,6 +4715,76 @@ class RenderCockpitRelayTest(unittest.TestCase):
         self.assertNotIn("query-secret", state["log_tail"])
         self.assertNotIn("assignment-secret", state["log_tail"])
 
+    def test_update_state_sanitizes_status_before_storage(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            state_file = Path(tmp) / "relay-state.json"
+            self.relay.CONFIG["state_file"] = state_file
+
+            state = self.relay.update_state(
+                {
+                    "status": {
+                        "status": "running token=status-secret",
+                        "loop_running": True,
+                        "source_status_file_status": (
+                            "loaded token=file-status-secret"
+                        ),
+                        "source_status_file_error": (
+                            "failed /tmp/customer/status.json "
+                            "token=error-secret"
+                        ),
+                        "cockpit_summary": {
+                            "policy_summary": (
+                                "policy ready token=policy-secret"
+                            ),
+                            "unknown_secret_field": (
+                                "OPENAI_API_KEY=raw-summary-secret"
+                            ),
+                        },
+                        "bridge_summary": {
+                            "available": True,
+                            "status": "running",
+                            "public_url": (
+                                "https://user:bridge-secret@example.test/read"
+                                "?token=query-secret#debug"
+                            ),
+                            "unknown_bridge_secret": "relay_token=bridge-secret",
+                        },
+                        "unknown_status_secret": "OPENAI_API_KEY=raw-status-secret",
+                    },
+                    "log_tail": "new log\n",
+                }
+            )
+
+            persisted_text = state_file.read_text(encoding="utf-8")
+
+        snapshot_text = json.dumps(state, sort_keys=True)
+        for safe_text in (snapshot_text, persisted_text):
+            self.assertIn("running token=[redacted]", safe_text)
+            self.assertIn("loaded token=[redacted]", safe_text)
+            self.assertIn(
+                "failed <external>/status.json token=[redacted]",
+                safe_text,
+            )
+            self.assertIn("policy ready token=[redacted]", safe_text)
+            self.assertIn(
+                "https://example.test/read?[redacted]#[redacted]",
+                safe_text,
+            )
+            for unsafe_text in (
+                "status-secret",
+                "file-status-secret",
+                "error-secret",
+                "policy-secret",
+                "raw-summary-secret",
+                "bridge-secret",
+                "query-secret",
+                "raw-status-secret",
+                "unknown_secret_field",
+                "unknown_bridge_secret",
+                "unknown_status_secret",
+            ):
+                self.assertNotIn(unsafe_text, safe_text)
+
     def test_update_state_rejects_oversized_publisher_without_mutating_snapshot(self) -> None:
         self.relay.CONFIG["max_publisher_bytes"] = 128
         before = self.relay.snapshot()

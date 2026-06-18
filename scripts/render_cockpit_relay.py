@@ -1721,7 +1721,10 @@ def sanitize_cockpit_summary_for_relay_response(summary: Any) -> dict[str, Any] 
         ]
         if compact_values:
             sanitized[key] = compact_values
-        sanitized[f"{key}_count"] = len(value)
+        source_count = compact_int(summary.get(f"{key}_count"))
+        sanitized[f"{key}_count"] = (
+            source_count if source_count is not None else len(value)
+        )
 
     path_list_fields = {
         "policy_raw_dallas_csv_changed_paths": summary.get(
@@ -1740,7 +1743,10 @@ def sanitize_cockpit_summary_for_relay_response(summary: Any) -> dict[str, Any] 
         compact_values = compact_path_detail_list(value, max_items=5, max_length=240)
         if compact_values:
             sanitized[key] = compact_values
-        sanitized[f"{key}_count"] = len(value)
+        source_count = compact_int(summary.get(f"{key}_count"))
+        sanitized[f"{key}_count"] = (
+            source_count if source_count is not None else len(value)
+        )
 
     artifact_statuses = summary.get("artifact_statuses")
     if isinstance(artifact_statuses, dict):
@@ -2261,6 +2267,7 @@ def update_state(payload: dict[str, Any]) -> dict[str, Any]:
             "status object exceeds max status bytes "
             f"({status_size_bytes} > {max_status_bytes})"
         )
+    status = sanitize_status_for_relay_response(status)
 
     log_tail = payload.get("log_tail", "")
     if not isinstance(log_tail, str):
