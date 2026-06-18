@@ -1582,6 +1582,7 @@ def run_autonomy_policy_check(log_file: Path) -> dict[str, Any]:
         "raw_dallas_csv_changed_paths": raw_csv_paths,
         "productive_change": productive_change,
         "productive_changed_paths": productive_paths,
+        "non_productive_companion_path_count": len(ignored_companion_paths),
         "non_productive_companion_paths": ignored_companion_paths,
         "policy_allows_synthetic_append": policy_allows_synthetic_append,
         "policy_override": allow_override,

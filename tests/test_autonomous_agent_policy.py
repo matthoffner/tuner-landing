@@ -1450,6 +1450,18 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
         )
         self.assertFalse(result["productive_change"])
         self.assertFalse(result["policy_allows_synthetic_append"])
+        self.assertEqual(result["non_productive_companion_path_count"], 2)
+        self.assertEqual(
+            result["non_productive_companion_paths"],
+            [
+                "NEXT_TASK.md",
+                "README.md",
+            ],
+        )
+        self.assertEqual(
+            result["policy_diagnostics"]["non_productive_companion_path_count"],
+            2,
+        )
         self.assertEqual(
             result["dirty_paths_excluding_preview"],
             [
