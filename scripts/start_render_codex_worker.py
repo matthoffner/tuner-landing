@@ -37,6 +37,7 @@ STARTUP_CHILD_GRACE_SECONDS = 0.5
 PUBLISHER_PREFLIGHT_TIMEOUT_SECONDS = 15.0
 PUBLISHER_PREFLIGHT_MAX_OUTPUT_BYTES = 64 * 1024
 PUBLISHER_PREFLIGHT_DIAGNOSTIC_TOKEN_LIMIT = 12
+PUBLISHER_FAILURE_LOG_TAIL_BYTES = 32 * 1024
 CHILD_POLL_FAILURE_EXIT_STATUS = 1
 CODEX_AUTH_ENV_NAMES = ("CODEX_AUTH_JSON_B64", "CODEX_ACCESS_TOKEN", "OPENAI_API_KEY")
 GIT_AUTH_ENV_NAMES = ("GITHUB_TOKEN", "GH_TOKEN")
@@ -67,6 +68,9 @@ SENSITIVE_SINGLE_QUOTED_FIELD_PATTERN = re.compile(
     re.IGNORECASE,
 )
 URL_SCHEME_PATTERN = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*://")
+PUBLISHER_FAILURE_FIELD_PATTERN = re.compile(
+    r"\b(failure_kind|http_status|http_reason)=([^\s]+)"
+)
 REQUIRED_COMMANDS = ("git", "codex")
 CODEX_CONFIG_ENV_DEFAULTS = {
     "AUTOMOAT_CODEX_MODEL": "gpt-5.5",
@@ -2422,6 +2426,19 @@ def compact_render_worker_failure_details(details: dict[str, object]) -> dict[st
     child_status_available = details.get("child_status_available")
     if isinstance(child_status_available, bool):
         compact["child_status_available"] = child_status_available
+    publisher_failure_kind = compact_publisher_failure_kind(
+        details.get("publisher_failure_kind")
+    )
+    if publisher_failure_kind is not None:
+        compact["publisher_failure_kind"] = publisher_failure_kind
+    publisher_http_status = compact_worker_exit_status(details.get("publisher_http_status"))
+    if publisher_http_status is not None:
+        compact["publisher_http_status"] = publisher_http_status
+    publisher_http_reason = compact_publisher_http_reason(
+        details.get("publisher_http_reason")
+    )
+    if publisher_http_reason is not None:
+        compact["publisher_http_reason"] = publisher_http_reason
     environment_preflight = details.get("environment_preflight")
     if isinstance(environment_preflight, dict):
         compact_environment_preflight = compact_publisher_preflight_details(
@@ -2511,6 +2528,15 @@ def write_render_worker_failure_status(
     child_status_available = compact_details.pop("child_status_available", None)
     if isinstance(child_status_available, bool):
         failure["child_status_available"] = child_status_available
+    publisher_failure_kind = compact_details.pop("publisher_failure_kind", None)
+    if isinstance(publisher_failure_kind, str):
+        failure["publisher_failure_kind"] = publisher_failure_kind
+    publisher_http_status = compact_details.pop("publisher_http_status", None)
+    if publisher_http_status is not None:
+        failure["publisher_http_status"] = publisher_http_status
+    publisher_http_reason = compact_details.pop("publisher_http_reason", None)
+    if isinstance(publisher_http_reason, str):
+        failure["publisher_http_reason"] = publisher_http_reason
     environment_preflight = compact_details.pop("environment_preflight", None)
     if isinstance(environment_preflight, dict):
         failure["environment_preflight"] = environment_preflight
@@ -2540,7 +2566,15 @@ def write_render_worker_failure_status(
     ]
     if compact_publisher_status is not None:
         log_parts.append(f"publisher_exit_status={compact_publisher_status}")
-    for key in ("child_label", "child_pid", "child_exit_status", "child_status_available"):
+    for key in (
+        "child_label",
+        "child_pid",
+        "child_exit_status",
+        "child_status_available",
+        "publisher_failure_kind",
+        "publisher_http_status",
+        "publisher_http_reason",
+    ):
         value = failure.get(key)
         if value is not None:
             log_parts.append(f"{key}={compact_worker_log_value(value)}")
@@ -2651,6 +2685,92 @@ def start_publisher() -> subprocess.Popen[object]:
     )
     emit(f"started relay publisher pid={process.pid} {runtime_fields}")
     return process
+
+
+def publisher_log_path(
+    env: os._Environ[str] | dict[str, str],
+) -> Path:
+    return publisher_file_path(
+        env,
+        env.get("AUTOMOAT_PUBLISHER_LOG_FILE", DEFAULT_PUBLISHER_LOG).strip()
+        or DEFAULT_PUBLISHER_LOG,
+    )
+
+
+def publisher_log_size(env: os._Environ[str] | dict[str, str]) -> int:
+    try:
+        return publisher_log_path(env).stat().st_size
+    except OSError:
+        return 0
+
+
+def compact_publisher_failure_kind(value: object) -> str | None:
+    if not isinstance(value, str):
+        return None
+    label = publisher_preflight_status_label(value)
+    if label in {"missing", "invalid"}:
+        return None
+    return label
+
+
+def publisher_failure_fields_from_log_line(line: str) -> dict[str, object]:
+    fields = {
+        match.group(1): match.group(2)
+        for match in PUBLISHER_FAILURE_FIELD_PATTERN.finditer(line)
+    }
+    failure_kind = compact_publisher_failure_kind(fields.get("failure_kind"))
+    if failure_kind is None:
+        return {}
+
+    details: dict[str, object] = {"publisher_failure_kind": failure_kind}
+    http_status = compact_worker_exit_status_from_text(fields.get("http_status"))
+    if http_status is not None:
+        details["publisher_http_status"] = http_status
+    http_reason = compact_publisher_http_reason(fields.get("http_reason"))
+    if http_reason is not None:
+        details["publisher_http_reason"] = http_reason
+    return details
+
+
+def compact_worker_exit_status_from_text(value: object) -> int | None:
+    if not isinstance(value, str) or not value.isdigit():
+        return None
+    return compact_worker_exit_status(int(value))
+
+
+def compact_publisher_http_reason(value: object) -> str | None:
+    if not isinstance(value, str):
+        return None
+    safe_value = sanitize_worker_log_text(value)[:80]
+    if not safe_value:
+        return None
+    if all(character.isalnum() or character in "_-" for character in safe_value):
+        return safe_value
+    return None
+
+
+def publisher_terminal_failure_details(
+    env: os._Environ[str] | dict[str, str],
+    *,
+    start_offset: int = 0,
+) -> dict[str, object]:
+    path = publisher_log_path(env)
+    try:
+        with path.open("rb") as handle:
+            handle.seek(0, os.SEEK_END)
+            size = handle.tell()
+            read_start = max(start_offset, size - PUBLISHER_FAILURE_LOG_TAIL_BYTES, 0)
+            handle.seek(read_start)
+            payload = handle.read(PUBLISHER_FAILURE_LOG_TAIL_BYTES)
+    except OSError:
+        return {}
+
+    text = payload.decode("utf-8", errors="replace")
+    for line in reversed(text.splitlines()):
+        details = publisher_failure_fields_from_log_line(line)
+        if details:
+            return details
+    return {}
 
 
 def start_loop() -> subprocess.Popen[object]:
@@ -3108,6 +3228,7 @@ def main() -> int:
             failure_kwargs["details"] = preflight_details
         record_render_worker_failure_status(**failure_kwargs)
         return 1
+    publisher_log_start_offset = publisher_log_size(os.environ)
     try:
         publisher = start_publisher()
     except RuntimeError as exc:
@@ -3124,6 +3245,12 @@ def main() -> int:
         clean_exit_status=1,
     )
     if publisher_startup_status is not None:
+        publisher_startup_details.update(
+            publisher_terminal_failure_details(
+                os.environ,
+                start_offset=publisher_log_start_offset,
+            )
+        )
         record_render_worker_failure_status(
             reason="relay_publisher_startup_exit",
             worker_exit_status=publisher_startup_status,

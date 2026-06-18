@@ -3945,6 +3945,86 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertNotIn("relay-secret", status_text)
         self.assertNotIn("relay-secret", log_text)
 
+    def test_publisher_terminal_failure_details_reads_only_appended_log_fields(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workdir = Path(temp_dir) / "repo"
+            publisher_log = workdir / ".automoat" / "logs" / "publisher.log"
+            publisher_log.parent.mkdir(parents=True)
+            publisher_log.write_text(
+                "[old] exiting after terminal publish failure "
+                "failure_kind=relay_auth_failed http_status=401 "
+                "http_reason=Unauthorized token=old-secret\n",
+                encoding="utf-8",
+            )
+            start_offset = publisher_log.stat().st_size
+            publisher_log.write_text(
+                publisher_log.read_text(encoding="utf-8")
+                + "[new] exiting after terminal publish failure "
+                "failure_kind=relay_auth_failed http_status=403 "
+                "http_reason=Forbidden token=new-secret\n",
+                encoding="utf-8",
+            )
+
+            details = self.worker.publisher_terminal_failure_details(
+                {
+                    "AUTOMOAT_WORKDIR": str(workdir),
+                    "AUTOMOAT_PUBLISHER_LOG_FILE": ".automoat/logs/publisher.log",
+                },
+                start_offset=start_offset,
+            )
+
+        self.assertEqual(
+            details,
+            {
+                "publisher_failure_kind": "relay_auth_failed",
+                "publisher_http_status": 403,
+                "publisher_http_reason": "Forbidden",
+            },
+        )
+
+    def test_write_render_worker_failure_status_preserves_publisher_failure_route(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            self.worker.WORKDIR = Path(temp_dir) / "repo"
+            self.worker.WORKDIR.mkdir(parents=True)
+
+            with patch.dict(
+                self.worker.os.environ,
+                {"AUTOMOAT_RELAY_TOKEN": "relay-secret"},
+                clear=True,
+            ), patch.object(
+                self.worker,
+                "worker_git_snapshot",
+                return_value={"branch": "main", "head": "abc123"},
+            ):
+                self.worker.write_render_worker_failure_status(
+                    reason="relay_publisher_startup_exit",
+                    worker_exit_status=1,
+                    publisher_exit_status=1,
+                    details={
+                        "child_label": "relay publisher",
+                        "publisher_failure_kind": "relay_auth_failed",
+                        "publisher_http_status": 403,
+                        "publisher_http_reason": "Forbidden",
+                    },
+                )
+
+            status_text = self.worker.cockpit_status_file().read_text(encoding="utf-8")
+            log_text = self.worker.cockpit_log_file().read_text(encoding="utf-8")
+            status = json.loads(status_text)
+
+        self.assertEqual(status["failure"]["publisher_failure_kind"], "relay_auth_failed")
+        self.assertEqual(status["failure"]["publisher_http_status"], 403)
+        self.assertEqual(status["failure"]["publisher_http_reason"], "Forbidden")
+        self.assertIn('publisher_failure_kind="relay_auth_failed"', log_text)
+        self.assertIn("publisher_http_status=403", log_text)
+        self.assertIn('publisher_http_reason="Forbidden"', log_text)
+        self.assertNotIn("relay-secret", status_text)
+        self.assertNotIn("relay-secret", log_text)
+
     def test_write_render_worker_failure_status_preserves_business_hours_context(
         self,
     ) -> None:
@@ -5795,6 +5875,88 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertIn(
             "relay publisher exited during startup status=4; worker_exit_status=4",
             output.getvalue(),
+        )
+
+    def test_startup_publisher_exit_preserves_terminal_failure_kind(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            workdir = Path(temp_dir) / "repo"
+            publisher_log = workdir / ".automoat" / "logs" / "publisher.log"
+            publisher_log.parent.mkdir(parents=True)
+            publisher_log.write_text(
+                "[old] exiting after terminal publish failure "
+                "failure_kind=relay_auth_failed http_status=401 "
+                "http_reason=Unauthorized\n",
+                encoding="utf-8",
+            )
+            publisher = FakeProcess(pid=202, initial_status=1)
+
+            def start_publisher() -> object:
+                with publisher_log.open("a", encoding="utf-8") as handle:
+                    handle.write(
+                        "[new] exiting after terminal publish failure "
+                        "failure_kind=relay_auth_failed http_status=403 "
+                        "http_reason=Forbidden token=relay-secret\n"
+                    )
+                return publisher
+
+            with patch.object(self.worker, "parse_args") as parse_args, patch.object(
+                self.worker,
+                "emit_environment_preflight",
+                return_value=[],
+            ), patch.object(self.worker, "configure_git_auth"), patch.object(
+                self.worker,
+                "configure_codex_auth",
+            ), patch.object(
+                self.worker,
+                "sync_repo",
+            ), patch.object(
+                self.worker,
+                "check_relay_publisher_preflight",
+            ), patch.object(
+                self.worker,
+                "start_publisher",
+                side_effect=start_publisher,
+            ), patch.object(
+                self.worker,
+                "start_loop",
+            ) as start_loop, patch.object(
+                self.worker,
+                "record_render_worker_failure_status",
+            ) as record_failure_status, patch.object(
+                self.worker.time,
+                "sleep",
+            ), patch.dict(
+                self.worker.os.environ,
+                {
+                    "AUTOMOAT_WORKDIR": str(workdir),
+                    "AUTOMOAT_PUBLISHER_LOG_FILE": ".automoat/logs/publisher.log",
+                },
+                clear=True,
+            ):
+                parse_args.return_value = type(
+                    "Args",
+                    (),
+                    {"check_env": False, "format": "text"},
+                )()
+                self.worker.CHILDREN.append(publisher)
+
+                status = self.worker.main()
+
+        self.assertEqual(status, 1)
+        start_loop.assert_not_called()
+        record_failure_status.assert_called_once_with(
+            reason="relay_publisher_startup_exit",
+            worker_exit_status=1,
+            publisher_exit_status=1,
+            details={
+                "child_label": "relay publisher",
+                "child_pid": 202,
+                "child_status_available": True,
+                "child_exit_status": 1,
+                "publisher_failure_kind": "relay_auth_failed",
+                "publisher_http_status": 403,
+                "publisher_http_reason": "Forbidden",
+            },
         )
 
     def test_startup_publisher_poll_failure_prevents_loop_launch(
