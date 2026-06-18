@@ -2304,6 +2304,7 @@ def write_cockpit_status_payload(payload: dict[str, object]) -> None:
 
 
 def write_business_hours_pause_status(state: dict[str, object]) -> None:
+    business_hours = compact_business_hours_state(state)
     payload = {
         "run_id": "business-hours-schedule",
         "iteration": 0,
@@ -2313,15 +2314,17 @@ def write_business_hours_pause_status(state: dict[str, object]) -> None:
         "started_at": utc_now(),
         "updated_at": utc_now(),
         "steps": [],
-        "business_hours": state,
+        "business_hours": business_hours,
         "git": worker_git_snapshot(),
     }
     write_cockpit_status_payload(payload)
     append_cockpit_log(
         "business-hours pause: "
-        f"local_time={state.get('local_time')} "
-        f"window={state.get('days')} {state.get('start')}-{state.get('end')} "
-        f"next_start_at={state.get('next_start_at')}"
+        f"local_time={compact_worker_log_value(business_hours.get('local_time'))} "
+        f"window={compact_worker_log_value(business_hours.get('days'))} "
+        f"{compact_worker_log_value(business_hours.get('start'))}-"
+        f"{compact_worker_log_value(business_hours.get('end'))} "
+        f"next_start_at={compact_worker_log_value(business_hours.get('next_start_at'))}"
     )
 
 
