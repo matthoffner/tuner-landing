@@ -3,6 +3,13 @@
 Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
+- timestamp: 2026-06-18T20:00:04Z
+- lane: editor
+- status: normalized contradictory legacy Render relay publisher source-health snapshots that report `status=live` with `ok=false`; `scripts/render_cockpit_relay.py` now treats `ok=false` as authoritative and exposes `publisher.source_health.status=degraded`, so `/health` and `/api/status` no longer show live/not-ok publisher health; no Dallas raw CSV rows were edited
+- files: scripts/render_cockpit_relay.py, tests/test_render_cockpit_relay.py, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
+- checks: `python3 -m unittest tests.test_render_cockpit_relay.RenderCockpitRelayTest.test_publisher_source_health_treats_live_not_ok_as_degraded -v`; `python3 -m py_compile scripts/render_cockpit_relay.py tests/test_render_cockpit_relay.py`; `python3 -m unittest tests.test_render_cockpit_relay -v`; `node --check api/cockpit-upstreams.js && node --check api/cockpit-status.js && node --check api/cockpit-log.js`; `cmp -s generated/landing.html index.html`; `git diff --check`; `python3 -m unittest discover -s tests -v`; `git diff --name-only -- generated/raw .pxcode/preview.json generated/landing.html index.html generated/pipeline/dallas-import-pipeline-summary-v1`; `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json > /tmp/automoat-live-not-ok-ready.json` plus JSON assertion for readiness `ready`, zero blockers, `ready_for_next_import_records=true`, `535` permits, `1082` inspections, `1625` source records, `535/535` operator corrections, `13/13` contract checks, and zero latest thin-count buckets; final local autonomy policy check via `run_autonomy_policy_check(Path('/tmp/automoat-live-not-ok-policy-final.log'))` with zero synthetic rows, zero raw Dallas CSV paths, two productive paths, no preview change, and `landing_index_synced=true`
+- next: if a relay publisher snapshot says `ok=false`, trust the relay-normalized `publisher.source_health.status=degraded` even when the upstream legacy publisher sent `status=live`; inspect the source-health reasons for the actual source issue before debugging relay liveness
+
 - timestamp: 2026-06-18T19:54:25Z
 - lane: editor
 - status: normalized legacy Render relay publisher source-health snapshots that report `ok=false` without a status or reasons list; `scripts/render_cockpit_relay.py` now converts that shape into `status=degraded`, `primary_reason=source_publisher_health_degraded`, and a stable cockpit reason so `/health` and `/api/status` do not show contradictory live/not-ok publisher health; no Dallas raw CSV rows were edited

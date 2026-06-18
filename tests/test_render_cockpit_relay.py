@@ -796,6 +796,55 @@ class RenderCockpitRelayTest(unittest.TestCase):
             expected_source_health,
         )
 
+    def test_publisher_source_health_treats_live_not_ok_as_degraded(self) -> None:
+        self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
+        self.relay.update_state(
+            {
+                "pushed_at": "2026-06-14T19:59:30Z",
+                "status": {
+                    "status": "running",
+                    "loop_running": True,
+                },
+                "log_tail": "legacy publisher reported live but not-ok source health\n",
+                "publisher": {
+                    "host": "worker-1",
+                    "source_health": {
+                        "status": "live",
+                        "ok": False,
+                        "reasons": ["source_status_stale"],
+                        "primary_reason": "source_status_stale",
+                        "label": "Source status is stale",
+                    },
+                },
+            }
+        )
+        self.relay.utc_now = lambda: "2026-06-14T20:00:00Z"
+
+        health = self.relay.health_payload()
+        status = self.relay.relay_status_payload()
+
+        expected_source_health = {
+            "status": "degraded",
+            "ok": False,
+            "reasons": ["source_status_stale"],
+            "primary_reason": "source_status_stale",
+            "label": "Source status is stale",
+        }
+        self.assertFalse(health["cockpit_ok"])
+        self.assertEqual(health["cockpit_status"], "degraded")
+        self.assertEqual(
+            health["cockpit_health"]["reasons"],
+            ["source_status_stale"],
+        )
+        self.assertEqual(
+            health["cockpit_health"]["source_health"],
+            expected_source_health,
+        )
+        self.assertEqual(
+            status["relay"]["publisher"]["source_health"],
+            expected_source_health,
+        )
+
     def test_source_health_derives_reason_count_for_truncated_legacy_reasons(self) -> None:
         self.relay.utc_now = lambda: "2026-06-14T19:59:30Z"
         self.relay.update_state(
