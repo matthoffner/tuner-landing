@@ -5318,9 +5318,17 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                             "import_pipeline_status": "loaded",
                             "readiness_status": "ready",
                             "readiness_blocker_count": 0,
+                            "readiness_blockers": [
+                                "ledger correction missing",
+                                "operator review queued",
+                            ],
                             "ready_for_next_import_records": True,
                             "artifact_health_status": "degraded",
                             "degraded_artifact_count": 2,
+                            "degraded_artifacts": [
+                                "coverage",
+                                "workflow",
+                            ],
                             "import_pipeline_summary_path": (
                                 "generated/pipeline/"
                                 "dallas-import-pipeline-summary-v1/summary.json"
@@ -5459,11 +5467,17 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertIn("source_failure_readiness_status=ready", log_text)
         self.assertIn("source_failure_readiness_blocker_count=0", log_text)
         self.assertIn(
+            "source_failure_readiness_blockers=ledger correction missing,"
+            "operator review queued",
+            log_text,
+        )
+        self.assertIn(
             "source_failure_ready_for_next_import_records=True",
             log_text,
         )
         self.assertIn("source_failure_artifact_health_status=degraded", log_text)
         self.assertIn("source_failure_degraded_artifact_count=2", log_text)
+        self.assertIn("source_failure_degraded_artifacts=coverage,workflow", log_text)
         self.assertIn(
             "source_failure_import_pipeline_summary_path=generated/pipeline/"
             "dallas-import-pipeline-summary-v1/summary.json",
@@ -5780,11 +5794,23 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                                 "blocked token=failure-readiness-status-secret"
                             ),
                             "readiness_blocker_count": "4",
+                            "readiness_blockers": [
+                                (
+                                    "ledger missing token=failure-blocker-secret "
+                                    "https://failure-ready.example/check"
+                                    "?token=failure-blocker-url-secret#debug"
+                                ),
+                                "operator review token=failure-operator-secret",
+                            ],
                             "ready_for_next_import_records": "false",
                             "artifact_health_status": (
                                 "degraded token=failure-artifact-status-secret"
                             ),
                             "degraded_artifact_count": "3",
+                            "degraded_artifacts": [
+                                "landing token=failure-degraded-secret",
+                                "workflow token=failure-workflow-secret",
+                            ],
                             "import_pipeline_summary_path": (
                                 "/tmp/customer/pipeline/summary.json "
                                 "token=failure-summary-path-secret"
@@ -6022,6 +6048,12 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         )
         self.assertIn("source_failure_readiness_blocker_count=4", log_text)
         self.assertIn(
+            "source_failure_readiness_blockers=ledger missing token=[redacted] "
+            "https://failure-ready.example/check?[redacted]#[redacted],"
+            "operator review token=[redacted]",
+            log_text,
+        )
+        self.assertIn(
             "source_failure_ready_for_next_import_records=None",
             log_text,
         )
@@ -6030,6 +6062,11 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             log_text,
         )
         self.assertIn("source_failure_degraded_artifact_count=3", log_text)
+        self.assertIn(
+            "source_failure_degraded_artifacts=landing token=[redacted],"
+            "workflow token=[redacted]",
+            log_text,
+        )
         self.assertIn(
             "source_failure_import_pipeline_summary_path=<external>/summary.json "
             "token=[redacted]",
@@ -6095,7 +6132,12 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertNotIn("failure-companion-secret", log_text)
         self.assertNotIn("failure-pipeline-status-secret", log_text)
         self.assertNotIn("failure-readiness-status-secret", log_text)
+        self.assertNotIn("failure-blocker-secret", log_text)
+        self.assertNotIn("failure-blocker-url-secret", log_text)
+        self.assertNotIn("failure-operator-secret", log_text)
         self.assertNotIn("failure-artifact-status-secret", log_text)
+        self.assertNotIn("failure-degraded-secret", log_text)
+        self.assertNotIn("failure-workflow-secret", log_text)
         self.assertNotIn("failure-summary-path-secret", log_text)
         self.assertNotIn("failure-source-path-secret", log_text)
         self.assertNotIn("failure-target-path-secret", log_text)

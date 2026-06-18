@@ -2121,6 +2121,18 @@ def source_health_diagnostics(status: dict[str, Any]) -> dict[str, Any]:
                 POLICY_ROW_SAMPLE_LIMIT,
                 240,
             ),
+            (
+                "source_failure_readiness_blockers",
+                "readiness_blockers",
+                POLICY_RAW_PATH_SAMPLE_LIMIT,
+                160,
+            ),
+            (
+                "source_failure_degraded_artifacts",
+                "degraded_artifacts",
+                POLICY_RAW_PATH_SAMPLE_LIMIT,
+                120,
+            ),
         ):
             compact_value = compact_policy_detail_list(
                 failure.get(source_key),
@@ -2943,6 +2955,11 @@ def source_status_log_fields(payload: dict[str, Any]) -> dict[str, Any]:
         "source_failure_readiness_blocker_count": compact_int(
             failure.get("readiness_blocker_count")
         ),
+        "source_failure_readiness_blockers": compact_log_detail_list(
+            failure.get("readiness_blockers"),
+            max_items=POLICY_RAW_PATH_SAMPLE_LIMIT,
+            max_length=160,
+        ),
         "source_failure_ready_for_next_import_records": failure.get(
             "ready_for_next_import_records"
         )
@@ -2954,6 +2971,11 @@ def source_status_log_fields(payload: dict[str, Any]) -> dict[str, Any]:
         ),
         "source_failure_degraded_artifact_count": compact_int(
             failure.get("degraded_artifact_count")
+        ),
+        "source_failure_degraded_artifacts": compact_log_detail_list(
+            failure.get("degraded_artifacts"),
+            max_items=POLICY_RAW_PATH_SAMPLE_LIMIT,
+            max_length=120,
         ),
         "source_failure_import_pipeline_summary_path": compact_path_diagnostic(
             failure.get("import_pipeline_summary_path"),
@@ -3091,9 +3113,11 @@ SOURCE_STATUS_LOG_FIELD_NAMES = (
     "source_failure_import_pipeline_status",
     "source_failure_readiness_status",
     "source_failure_readiness_blocker_count",
+    "source_failure_readiness_blockers",
     "source_failure_ready_for_next_import_records",
     "source_failure_artifact_health_status",
     "source_failure_degraded_artifact_count",
+    "source_failure_degraded_artifacts",
     "source_failure_import_pipeline_summary_path",
     "source_failure_source_path",
     "source_failure_target_path",

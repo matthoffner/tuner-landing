@@ -962,8 +962,19 @@ class RenderCockpitRelayTest(unittest.TestCase):
                                 ),
                             ],
                             "source_failure_readiness_blocker_count": "2",
+                            "source_failure_readiness_blockers": [
+                                "ledger missing token=failure-blocker-secret",
+                                (
+                                    "review https://failure-ready.example/check"
+                                    "?token=failure-blocker-url-secret#debug"
+                                ),
+                            ],
                             "source_failure_ready_for_next_import_records": True,
                             "source_failure_degraded_artifact_count": "4",
+                            "source_failure_degraded_artifacts": [
+                                "landing token=failure-degraded-secret",
+                                "workflow token=failure-workflow-secret",
+                            ],
                             "source_failure_sync_exit_status": "2",
                             "source_failure_child_pid": "4242",
                             "source_failure_codex_exit_status": "124",
@@ -1146,8 +1157,19 @@ class RenderCockpitRelayTest(unittest.TestCase):
                 ),
             ],
             "source_failure_readiness_blocker_count": 2,
+            "source_failure_readiness_blockers": [
+                "ledger missing token=[redacted]",
+                (
+                    "review https://failure-ready.example/check"
+                    "?[redacted]#[redacted]"
+                ),
+            ],
             "source_failure_ready_for_next_import_records": True,
             "source_failure_degraded_artifact_count": 4,
+            "source_failure_degraded_artifacts": [
+                "landing token=[redacted]",
+                "workflow token=[redacted]",
+            ],
             "source_failure_sync_exit_status": 2,
             "source_failure_child_pid": 4242,
             "source_failure_codex_exit_status": 124,

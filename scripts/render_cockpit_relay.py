@@ -396,6 +396,8 @@ def publisher_source_health(state: dict[str, Any]) -> dict[str, Any]:
             ("source_failure_productive_path_samples", 8, 160),
             ("source_failure_non_productive_path_samples", 8, 160),
             ("source_failure_synthetic_row_samples", 5, 240),
+            ("source_failure_readiness_blockers", 8, 160),
+            ("source_failure_degraded_artifacts", 8, 120),
             ("source_artifact_problem_artifacts", 8, 120),
             ("source_readiness_blockers", 8, 160),
             ("source_thin_group_categories", 8, 120),
