@@ -2614,6 +2614,23 @@ def source_status_log_fields(payload: dict[str, Any]) -> dict[str, Any]:
             max_length=160,
         ),
         "source_cockpit_attention_reason_count": cockpit_attention_reason_count,
+        "source_artifact_health": compact_policy_detail(
+            cockpit_summary.get("artifact_health"),
+            max_length=80,
+        ),
+        "source_artifact_health_summary": compact_policy_detail(
+            cockpit_summary.get("artifact_health_summary"),
+            max_length=160,
+        ),
+        "source_artifact_count": compact_int(cockpit_summary.get("artifact_count")),
+        "source_loaded_artifact_count": compact_int(
+            cockpit_summary.get("loaded_artifact_count")
+        ),
+        "source_artifact_problem_artifacts": compact_log_detail_list(
+            cockpit_summary.get("artifact_problem_artifacts"),
+            max_items=POLICY_RAW_PATH_SAMPLE_LIMIT,
+            max_length=120,
+        ),
         "source_import_readiness": compact_policy_detail(
             cockpit_summary.get("import_readiness"),
             max_length=80,
@@ -2968,6 +2985,11 @@ SOURCE_STATUS_LOG_FIELD_NAMES = (
     "source_cockpit_attention_primary_reason",
     "source_cockpit_attention_label",
     "source_cockpit_attention_reason_count",
+    "source_artifact_health",
+    "source_artifact_health_summary",
+    "source_artifact_count",
+    "source_loaded_artifact_count",
+    "source_artifact_problem_artifacts",
     "source_import_readiness",
     "source_readiness_blocker_count",
     "source_readiness_blockers",

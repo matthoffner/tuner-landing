@@ -5274,6 +5274,14 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                         "operator_attention_primary_reason": "artifact_health_not_loaded",
                         "operator_attention_label": "Artifact health is not loaded",
                         "operator_attention_reasons_count": 2,
+                        "artifact_health": "degraded",
+                        "artifact_health_summary": "workflow artifact stale",
+                        "artifact_count": 5,
+                        "loaded_artifact_count": 3,
+                        "artifact_problem_artifacts": [
+                            "coverage",
+                            "workflow",
+                        ],
                         "import_readiness": "blocked",
                         "readiness_blocker_count": 2,
                         "readiness_blockers": [
@@ -5361,6 +5369,14 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             log_text,
         )
         self.assertIn("source_cockpit_attention_reason_count=2", log_text)
+        self.assertIn("source_artifact_health=degraded", log_text)
+        self.assertIn(
+            "source_artifact_health_summary=workflow artifact stale",
+            log_text,
+        )
+        self.assertIn("source_artifact_count=5", log_text)
+        self.assertIn("source_loaded_artifact_count=3", log_text)
+        self.assertIn("source_artifact_problem_artifacts=coverage,workflow", log_text)
         self.assertIn("source_import_readiness=blocked", log_text)
         self.assertIn("source_readiness_blocker_count=2", log_text)
         self.assertIn(
@@ -5646,6 +5662,22 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                         "policy_productive_changed_path_count": "3",
                         "policy_non_productive_companion_path_count": "2",
                         "policy_synthetic_row_count": "12",
+                        "artifact_health": "degraded token=artifact-health-secret",
+                        "artifact_health_summary": (
+                            "coverage stale authorization: Bearer artifact-summary-secret "
+                            "https://artifact.example/debug"
+                            "?token=artifact-summary-url-secret#trace"
+                        ),
+                        "artifact_count": "5",
+                        "loaded_artifact_count": "3",
+                        "artifact_problem_artifacts": [
+                            (
+                                "coverage token=artifact-problem-secret "
+                                "https://artifact.example/problem"
+                                "?token=artifact-problem-url-secret#trace"
+                            ),
+                            "workflow token=workflow-artifact-secret",
+                        ],
                         "import_readiness": "blocked token=readiness-secret",
                         "readiness_blocker_count": "2",
                         "readiness_blockers": [
@@ -5858,6 +5890,20 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertIn("source_policy_raw_path_count=9", log_text)
         self.assertIn("source_policy_productive_path_count=3", log_text)
         self.assertIn("source_policy_synthetic_row_count=12", log_text)
+        self.assertIn("source_artifact_health=degraded token=[redacted]", log_text)
+        self.assertIn(
+            "source_artifact_health_summary=coverage stale authorization: "
+            "Bearer [redacted] https://artifact.example/debug?[redacted]#[redacted]",
+            log_text,
+        )
+        self.assertIn("source_artifact_count=5", log_text)
+        self.assertIn("source_loaded_artifact_count=3", log_text)
+        self.assertIn(
+            "source_artifact_problem_artifacts=coverage token=[redacted] "
+            "https://artifact.example/problem?[redacted]#[redacted],"
+            "workflow token=[redacted]",
+            log_text,
+        )
         self.assertIn("source_import_readiness=blocked token=[redacted]", log_text)
         self.assertIn("source_readiness_blocker_count=2", log_text)
         self.assertIn(
