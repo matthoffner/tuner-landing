@@ -152,6 +152,7 @@ BUSINESS_HOURS_ENV_DEFAULTS = {
     "AUTOMOAT_BUSINESS_HOURS_IDLE_SLEEP": "300",
 }
 MAX_BUSINESS_HOURS_CONFIG_VALUE_CHARS = 120
+MAX_BUSINESS_HOURS_IDLE_SLEEP_SECONDS = 3600
 BUSINESS_HOURS_TRUE_VALUES = {"1", "true", "yes", "on", "enabled"}
 BUSINESS_HOURS_FALSE_VALUES = {"0", "false", "no", "off", "disabled"}
 BUSINESS_HOURS_ENV_NAMES = tuple(BUSINESS_HOURS_ENV_DEFAULTS)
@@ -753,7 +754,12 @@ def validate_business_hours_environment(
     except ValueError as exc:
         errors.append(str(exc))
 
-    validate_positive_float(env, "AUTOMOAT_BUSINESS_HOURS_IDLE_SLEEP", errors)
+    validate_positive_float(
+        env,
+        "AUTOMOAT_BUSINESS_HOURS_IDLE_SLEEP",
+        errors,
+        maximum=MAX_BUSINESS_HOURS_IDLE_SLEEP_SECONDS,
+    )
 
 
 def codex_config_value(
