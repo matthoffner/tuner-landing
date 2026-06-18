@@ -699,6 +699,7 @@ def strict_json_clone(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 NON_FINITE_NUMBER = object()
+LEGACY_STATUS_EXTRA_OMITTED = object()
 
 
 def sanitize_loaded_json_numbers(value: Any) -> Any:
@@ -2147,7 +2148,14 @@ def sanitize_loaded_state_payload(payload: dict[str, Any]) -> dict[str, Any]:
     else:
         sanitized.pop("publisher", None)
 
-    return sanitize_loaded_json_numbers(sanitized)
+    sanitized = sanitize_loaded_json_numbers(sanitized)
+    status = sanitized.get("status")
+    if isinstance(status, dict):
+        sanitized["status"] = sanitize_loaded_status_for_storage(status)
+    else:
+        sanitized.pop("status", None)
+
+    return sanitized
 
 
 def load_state(path: Path | None) -> dict[str, Any]:
@@ -2267,6 +2275,49 @@ def sanitize_publisher_metadata_for_storage(value: Any, key: Any = None) -> Any:
             )
         return sanitized
     return value
+
+
+def sanitize_loaded_status_extra_value(value: Any) -> Any:
+    if value is None or isinstance(value, bool):
+        return value
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return value if math.isfinite(value) else LEGACY_STATUS_EXTRA_OMITTED
+    if isinstance(value, list):
+        sanitized_items = []
+        for item in value:
+            sanitized_item = sanitize_loaded_status_extra_value(item)
+            if sanitized_item is not LEGACY_STATUS_EXTRA_OMITTED:
+                sanitized_items.append(sanitized_item)
+        return sanitized_items
+    if isinstance(value, dict):
+        sanitized: dict[str, Any] = {}
+        for raw_key, raw_value in value.items():
+            if re.fullmatch(SENSITIVE_KEY_PATTERN, str(raw_key), re.IGNORECASE):
+                continue
+            safe_key = compact_policy_detail(raw_key, max_length=160)
+            if safe_key is None:
+                continue
+            sanitized_item = sanitize_loaded_status_extra_value(raw_value)
+            if sanitized_item is not LEGACY_STATUS_EXTRA_OMITTED:
+                sanitized[safe_key] = sanitized_item
+        return sanitized if sanitized else LEGACY_STATUS_EXTRA_OMITTED
+    return LEGACY_STATUS_EXTRA_OMITTED
+
+
+def sanitize_loaded_status_for_storage(status: dict[str, Any]) -> dict[str, Any]:
+    response_status = sanitize_status_for_relay_response(status)
+    for raw_key, raw_value in status.items():
+        if re.fullmatch(SENSITIVE_KEY_PATTERN, str(raw_key), re.IGNORECASE):
+            continue
+        safe_key = compact_policy_detail(raw_key, max_length=160)
+        if safe_key is None or safe_key in response_status:
+            continue
+        sanitized_value = sanitize_loaded_status_extra_value(raw_value)
+        if sanitized_value is not LEGACY_STATUS_EXTRA_OMITTED:
+            response_status[safe_key] = sanitized_value
+    return response_status
 
 
 def snapshot() -> dict[str, Any]:

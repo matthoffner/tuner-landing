@@ -459,8 +459,81 @@ class RenderCockpitRelayTest(unittest.TestCase):
             "host-secret",
             "direct-runtime-secret",
             "sk-secret",
+            ):
+                self.assertNotIn(unsafe_text, exposed_text)
+
+    def test_load_state_sanitizes_legacy_status_before_storage(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            state_file = Path(tmp) / "relay-state.json"
+            state_file.write_text(
+                json.dumps(
+                    {
+                        "relay_status": "live",
+                        "received_at": "2026-06-14T19:59:30Z",
+                        "updated_at": "2026-06-14T19:59:30Z",
+                        "status": {
+                            "status": "running token=status-secret",
+                            "loop_running": True,
+                            "source_status_file_status": (
+                                "loaded token=file-status-secret"
+                            ),
+                            "source_status_file_error": (
+                                "failed /tmp/customer/status.json "
+                                "token=error-secret"
+                            ),
+                            "cockpit_summary": {
+                                "policy_summary": (
+                                    "policy ready token=policy-secret"
+                                ),
+                                "unknown_secret_field": (
+                                    "OPENAI_API_KEY=raw-summary-secret"
+                                ),
+                            },
+                            "bridge_summary": {
+                                "available": True,
+                                "status": "running",
+                                "public_url": (
+                                    "https://user:bridge-secret@example.test/read"
+                                    "?token=query-secret#debug"
+                                ),
+                                "unknown_bridge_secret": "relay_token=bridge-secret",
+                            },
+                            "unknown_status_secret": "OPENAI_API_KEY=raw-status-secret",
+                        },
+                        "log_tail": "legacy status loaded\n",
+                    },
+                    sort_keys=True,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            loaded_state = self.relay.load_state(state_file)
+
+        loaded_text = json.dumps(loaded_state, sort_keys=True)
+
+        self.assertIn("running token=[redacted]", loaded_text)
+        self.assertIn("loaded token=[redacted]", loaded_text)
+        self.assertIn("failed <external>/status.json token=[redacted]", loaded_text)
+        self.assertIn("policy ready token=[redacted]", loaded_text)
+        self.assertIn(
+            "https://example.test/read?[redacted]#[redacted]",
+            loaded_text,
+        )
+        for unsafe_text in (
+            "status-secret",
+            "file-status-secret",
+            "error-secret",
+            "policy-secret",
+            "raw-summary-secret",
+            "bridge-secret",
+            "query-secret",
+            "raw-status-secret",
+            "unknown_secret_field",
+            "unknown_bridge_secret",
+            "unknown_status_secret",
         ):
-            self.assertNotIn(unsafe_text, exposed_text)
+            self.assertNotIn(unsafe_text, loaded_text)
 
     def test_status_and_health_report_stale_snapshot(self) -> None:
         self.relay.utc_now = lambda: "2026-06-14T19:57:30Z"
