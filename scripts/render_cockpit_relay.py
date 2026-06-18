@@ -237,10 +237,12 @@ def publisher_source_health(state: dict[str, Any]) -> dict[str, Any]:
         "label": label,
     }
     reason_count = compact_int(source_health.get("reason_count"))
-    if reason_count is None:
-        derived_reason_count = source_health_reason_count(source_health.get("reasons"))
-        if derived_reason_count > len(normalized_reasons):
-            reason_count = derived_reason_count
+    derived_reason_count = source_health_reason_count(source_health.get("reasons"))
+    minimum_reason_count = max(len(normalized_reasons), derived_reason_count)
+    if reason_count is not None:
+        reason_count = max(reason_count, minimum_reason_count)
+    elif derived_reason_count > len(normalized_reasons):
+        reason_count = derived_reason_count
     if reason_count is not None:
         summary["reason_count"] = reason_count
     raw_diagnostics = source_health.get("diagnostics")
