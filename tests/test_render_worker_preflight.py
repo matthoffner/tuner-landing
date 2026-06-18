@@ -3654,6 +3654,30 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertNotIn("github-token", output.getvalue())
         self.assertNotIn("codex-token", output.getvalue())
 
+    def test_cockpit_status_writer_preserves_existing_status_on_replace_failure(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            self.worker.WORKDIR = Path(temp_dir) / "repo"
+            self.worker.WORKDIR.mkdir(parents=True)
+            status_path = self.worker.cockpit_status_file()
+            status_path.parent.mkdir(parents=True)
+            existing_status = '{"status":"old"}\n'
+            status_path.write_text(existing_status, encoding="utf-8")
+
+            with patch.object(
+                type(status_path),
+                "replace",
+                side_effect=OSError("replace failed"),
+            ), self.assertRaises(OSError):
+                self.worker.write_cockpit_status_payload({"status": "new"})
+
+            remaining_tmp_files = list(status_path.parent.glob("*.tmp"))
+            status_text = status_path.read_text(encoding="utf-8")
+
+        self.assertEqual(status_text, existing_status)
+        self.assertEqual(remaining_tmp_files, [])
+
     def test_write_business_hours_pause_status_updates_cockpit_files(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             self.worker.WORKDIR = Path(temp_dir) / "repo"

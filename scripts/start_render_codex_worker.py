@@ -2284,9 +2284,26 @@ def append_cockpit_log(message: str) -> None:
         handle.write(f"[{utc_now()}] {message}\n")
 
 
-def write_business_hours_pause_status(state: dict[str, object]) -> None:
+def write_cockpit_status_payload(payload: dict[str, object]) -> None:
     status_path = cockpit_status_file()
     status_path.parent.mkdir(parents=True, exist_ok=True)
+    temp_path = status_path.with_suffix(f"{status_path.suffix}.{os.getpid()}.tmp")
+    try:
+        with temp_path.open("w", encoding="utf-8") as handle:
+            json.dump(payload, handle, indent=2, sort_keys=True, allow_nan=False)
+            handle.write("\n")
+        temp_path.replace(status_path)
+    except Exception:
+        try:
+            temp_path.unlink()
+        except FileNotFoundError:
+            pass
+        except OSError:
+            pass
+        raise
+
+
+def write_business_hours_pause_status(state: dict[str, object]) -> None:
     payload = {
         "run_id": "business-hours-schedule",
         "iteration": 0,
@@ -2299,7 +2316,7 @@ def write_business_hours_pause_status(state: dict[str, object]) -> None:
         "business_hours": state,
         "git": worker_git_snapshot(),
     }
-    status_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    write_cockpit_status_payload(payload)
     append_cockpit_log(
         "business-hours pause: "
         f"local_time={state.get('local_time')} "
@@ -2446,8 +2463,6 @@ def write_render_worker_failure_status(
     details: dict[str, object] | None = None,
 ) -> None:
     """Write a compact cockpit status when the Render supervisor cannot continue."""
-    status_path = cockpit_status_file()
-    status_path.parent.mkdir(parents=True, exist_ok=True)
     now = utc_now()
     safe_reason = sanitize_worker_log_text(reason)[:MAX_BUSINESS_HOURS_CONFIG_VALUE_CHARS]
     route_hint = render_worker_failure_route_hint(reason)
@@ -2500,7 +2515,7 @@ def write_render_worker_failure_status(
     }
     if isinstance(business_hours, dict):
         payload["business_hours"] = business_hours
-    status_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    write_cockpit_status_payload(payload)
     log_parts = [
         "render-worker failure:",
         f"reason={compact_worker_log_value(safe_reason)}",
