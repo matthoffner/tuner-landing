@@ -6612,6 +6612,60 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertNotIn("relay-secret", log_text)
         self.assertNotIn("<html>", log_text)
 
+    def test_publish_once_classifies_relay_rate_limit_with_retry_after(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            publisher_log = Path(tmp) / "publisher.log"
+            args = Namespace(publisher_log=publisher_log)
+            payload = {
+                "status": {
+                    "status": "running",
+                    "loop_running": True,
+                    "source_status_stale": False,
+                    "source_status_age_seconds": 14,
+                    "source_status_file_status": "loaded",
+                },
+                "log_tail": "loop log\n",
+            }
+            error_body = b"rate limited token=relay-secret\n<html>debug page</html>"
+            self.publisher.build_payload = lambda _args: payload
+            self.publisher.post_payload = lambda _args, _body: (_ for _ in ()).throw(
+                HTTPError(
+                    "https://automoat-cockpit-relay.example/ingest",
+                    429,
+                    "Too Many Requests",
+                    {"Retry-After": "120"},
+                    io.BytesIO(error_body),
+                )
+            )
+
+            result = self.publisher.publish_once_result(args)
+            log_text = publisher_log.read_text(encoding="utf-8")
+
+        self.assertEqual(
+            result,
+            {
+                "published": False,
+                "source_status_stale": False,
+                "source_status_age_seconds": 14,
+                "source_status_stale_after_seconds": None,
+                "failure_kind": "relay_rate_limited",
+                "http_status": 429,
+                "http_reason": "Too Many Requests",
+                "http_retry_after": "120",
+            },
+        )
+        self.assertIn(
+            "publish failed failure_kind=relay_rate_limited http_status=429",
+            log_text,
+        )
+        self.assertIn("http_reason=Too Many Requests", log_text)
+        self.assertIn("retry_after=120", log_text)
+        self.assertIn(f"http_body_bytes={len(error_body)}", log_text)
+        self.assertIn("source_status=running", log_text)
+        self.assertIn("source_status_file_status=loaded", log_text)
+        self.assertNotIn("relay-secret", log_text)
+        self.assertNotIn("<html>", log_text)
+
     def test_publish_once_sanitizes_generic_transport_error_log(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             publisher_log = Path(tmp) / "publisher.log"
@@ -6804,6 +6858,63 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertIn(
             "exiting after terminal publish failure "
             "failure_kind=relay_auth_failed http_status=403 http_reason=Forbidden",
+            log_text,
+        )
+        self.assertIn("source_status=passing", log_text)
+        self.assertIn("source_status_file_status=loaded", log_text)
+        self.assertNotIn("consecutive_publish_failures", log_text)
+        self.assertNotIn(str(tmp_path), log_text)
+
+    def test_publish_loop_exits_immediately_after_relay_rate_limit(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            publisher_log = tmp_path / "publisher.log"
+            status_file = tmp_path / "status.json"
+            status_file.write_text(
+                json.dumps(
+                    {
+                        "status": "passing",
+                        "updated_at": "2026-06-14T19:30:00Z",
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            args = Namespace(
+                publisher_log=publisher_log,
+                status_file=status_file,
+                pid_file=tmp_path / "missing.pid",
+                bridge_status_file=tmp_path / "missing-bridge-status.json",
+                interval=0,
+                max_consecutive_failures=10,
+                max_consecutive_stale_statuses=0,
+                max_consecutive_stale_bridge_statuses=0,
+                status_stale_after_seconds=120,
+                bridge_status_stale_after_seconds=120,
+            )
+            calls = []
+            self.publisher.utc_now = lambda: "2026-06-14T19:31:00Z"
+            self.publisher.publish_once_result = lambda _args: calls.append(False) or {
+                "published": False,
+                "source_status_stale": False,
+                "failure_kind": "relay_rate_limited",
+                "http_status": 429,
+                "http_reason": "Too Many Requests",
+                "http_retry_after": "120",
+            }
+            self.publisher.time.sleep = lambda _seconds: self.fail(
+                "terminal relay rate limits should not sleep before exit"
+            )
+
+            status = self.publisher.run_publish_loop(args)
+            log_text = publisher_log.read_text(encoding="utf-8")
+
+        self.assertEqual(status, 1)
+        self.assertEqual(calls, [False])
+        self.assertIn(
+            "exiting after terminal publish failure "
+            "failure_kind=relay_rate_limited http_status=429 "
+            "http_reason=Too Many Requests retry_after=120",
             log_text,
         )
         self.assertIn("source_status=passing", log_text)

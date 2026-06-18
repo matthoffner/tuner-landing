@@ -3289,6 +3289,8 @@ def publish_once_loop_result(
 def relay_http_error_failure_kind(status_code: int) -> str:
     if status_code in {HTTPStatus.UNAUTHORIZED, HTTPStatus.FORBIDDEN}:
         return "relay_auth_failed"
+    if status_code == HTTPStatus.TOO_MANY_REQUESTS:
+        return "relay_rate_limited"
     return "http_error"
 
 
@@ -3322,11 +3324,16 @@ def http_error_summary(exc: HTTPError) -> dict[str, Any]:
         reason = HTTPStatus(exc.code).phrase
     except ValueError:
         reason = "HTTP error"
-    return {
+    summary: dict[str, Any] = {
         "http_status": exc.code,
         "http_reason": reason.replace("\r", " ").replace("\n", " ")[:80],
         "http_body_bytes": body_bytes,
     }
+    headers = getattr(exc, "headers", None) or {}
+    retry_after = compact_policy_detail(headers.get("Retry-After"), max_length=80)
+    if retry_after is not None:
+        summary["http_retry_after"] = retry_after
+    return summary
 
 
 def sanitize_url_for_log(match: re.Match[str]) -> str:
@@ -3406,17 +3413,21 @@ def publish_once_result(args: argparse.Namespace) -> dict[str, Any]:
             f"http_status={http_fields['http_status']} "
             f"http_reason={http_fields['http_reason']} "
             f"http_body_bytes={http_fields['http_body_bytes']} "
+            f"retry_after={http_fields.get('http_retry_after', 'unknown')} "
             f"{source_status_log_suffix(source_fields)}",
             log_path=args.publisher_log,
         )
+        failure_fields = {
+            "failure_kind": failure_kind,
+            "http_status": http_fields["http_status"],
+            "http_reason": http_fields["http_reason"],
+        }
+        if "http_retry_after" in http_fields:
+            failure_fields["http_retry_after"] = http_fields["http_retry_after"]
         return publish_once_loop_result(
             published=False,
             source_fields=source_fields,
-            failure_fields={
-                "failure_kind": failure_kind,
-                "http_status": http_fields["http_status"],
-                "http_reason": http_fields["http_reason"],
-            },
+            failure_fields=failure_fields,
         )
     except (
         OSError,
@@ -3548,10 +3559,14 @@ def run_publish_loop(args: argparse.Namespace) -> int:
                 result.get("failure_kind"),
                 max_length=120,
             )
-            if terminal_failure_kind == "relay_auth_failed":
+            if terminal_failure_kind in {"relay_auth_failed", "relay_rate_limited"}:
                 http_status = compact_int(result.get("http_status"))
                 http_reason = compact_policy_detail(
                     result.get("http_reason"),
+                    max_length=80,
+                )
+                http_retry_after = compact_policy_detail(
+                    result.get("http_retry_after"),
                     max_length=80,
                 )
                 http_fields = ""
@@ -3559,6 +3574,8 @@ def run_publish_loop(args: argparse.Namespace) -> int:
                     http_fields += f" http_status={http_status}"
                 if http_reason is not None:
                     http_fields += f" http_reason={http_reason}"
+                if http_retry_after is not None:
+                    http_fields += f" retry_after={http_retry_after}"
                 emit(
                     "exiting after terminal publish failure "
                     f"failure_kind={terminal_failure_kind}"
