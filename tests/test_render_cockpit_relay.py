@@ -4725,6 +4725,44 @@ class RenderCockpitRelayTest(unittest.TestCase):
             self.assertFalse(temp_file.exists())
             self.assertFalse(state_file.exists())
 
+    def test_update_state_fsyncs_state_directory_after_replace_best_effort(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            state_file = Path(tmp) / "relay-state.json"
+            self.relay.CONFIG["state_file"] = state_file
+            directory_fd = 12345
+            real_fsync = os.fsync
+            fsynced_fds: list[int] = []
+
+            def fake_fsync(fd: int) -> None:
+                fsynced_fds.append(fd)
+                if fd == directory_fd:
+                    raise OSError("directory fsync unsupported")
+                real_fsync(fd)
+
+            with patch.object(
+                self.relay.os,
+                "open",
+                return_value=directory_fd,
+            ) as open_mock:
+                with patch.object(self.relay.os, "fsync", side_effect=fake_fsync):
+                    with patch.object(self.relay.os, "close") as close_mock:
+                        state = self.relay.update_state(
+                            {
+                                "status": {
+                                    "status": "running",
+                                    "loop_running": True,
+                                },
+                                "log_tail": "new log\n",
+                            }
+                        )
+
+            open_mock.assert_called_once_with(state_file.parent, os.O_RDONLY)
+            close_mock.assert_called_once_with(directory_fd)
+            self.assertIn(directory_fd, fsynced_fds)
+            self.assertEqual(state["relay_status"], "live")
+            self.assertEqual(self.relay.snapshot()["relay_status"], "live")
+            self.assertTrue(state_file.exists())
+
     def test_update_state_rejects_oversized_status_without_mutating_snapshot(self) -> None:
         self.relay.CONFIG["max_status_bytes"] = 96
         before = self.relay.snapshot()

@@ -2213,12 +2213,26 @@ def save_state(path: Path | None, payload: dict[str, Any]) -> None:
             handle.flush()
             os.fsync(handle.fileno())
         temp_path.replace(path)
+        sync_directory_best_effort(path.parent)
     except BaseException:
         try:
             temp_path.unlink()
         except FileNotFoundError:
             pass
         raise
+
+
+def sync_directory_best_effort(path: Path) -> None:
+    try:
+        directory_fd = os.open(path, os.O_RDONLY)
+    except OSError:
+        return
+    try:
+        os.fsync(directory_fd)
+    except OSError:
+        pass
+    finally:
+        os.close(directory_fd)
 
 
 def encoded_json_size(payload: Any) -> int:
