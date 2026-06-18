@@ -70,7 +70,7 @@ SENSITIVE_SINGLE_QUOTED_FIELD_PATTERN = re.compile(
 URL_SCHEME_PATTERN = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*://")
 PUBLISHER_FAILURE_FIELD_PATTERN = re.compile(
     r"\b("
-    r"failure_kind|last_failure_kind|last_failure_reason|"
+    r"failure_kind|last_failure_kind|last_failure_reason|count|limit|"
     r"http_status|http_reason|http_body_bytes|http_body_truncated|retry_after|"
     r"source_status|source_loop_running|source_status_stale|"
     r"source_status_age_seconds|source_status_file_status|"
@@ -2463,6 +2463,16 @@ def compact_render_worker_failure_details(details: dict[str, object]) -> dict[st
     )
     if publisher_last_failure_reason is not None:
         compact["publisher_last_failure_reason"] = publisher_last_failure_reason
+    publisher_failure_count = compact_worker_nonnegative_int(
+        details.get("publisher_failure_count")
+    )
+    if publisher_failure_count is not None:
+        compact["publisher_failure_count"] = publisher_failure_count
+    publisher_failure_limit = compact_worker_nonnegative_int(
+        details.get("publisher_failure_limit")
+    )
+    if publisher_failure_limit is not None:
+        compact["publisher_failure_limit"] = publisher_failure_limit
     publisher_http_status = compact_worker_exit_status(details.get("publisher_http_status"))
     if publisher_http_status is not None:
         compact["publisher_http_status"] = publisher_http_status
@@ -2609,6 +2619,10 @@ def write_render_worker_failure_status(
     )
     if isinstance(publisher_last_failure_reason, str):
         failure["publisher_last_failure_reason"] = publisher_last_failure_reason
+    for key in ("publisher_failure_count", "publisher_failure_limit"):
+        value = compact_details.pop(key, None)
+        if value is not None:
+            failure[key] = value
     publisher_http_status = compact_details.pop("publisher_http_status", None)
     if publisher_http_status is not None:
         failure["publisher_http_status"] = publisher_http_status
@@ -2686,6 +2700,8 @@ def write_render_worker_failure_status(
         "publisher_failure_kind",
         "publisher_last_failure_kind",
         "publisher_last_failure_reason",
+        "publisher_failure_count",
+        "publisher_failure_limit",
         "publisher_http_status",
         "publisher_http_reason",
         "publisher_http_body_bytes",
@@ -2858,6 +2874,12 @@ def publisher_failure_fields_from_log_line(line: str) -> dict[str, object]:
     )
     if last_failure_reason is not None:
         details["publisher_last_failure_reason"] = last_failure_reason
+    failure_count = compact_worker_nonnegative_int_from_text(fields.get("count"))
+    if failure_count is not None:
+        details["publisher_failure_count"] = failure_count
+    failure_limit = compact_worker_nonnegative_int_from_text(fields.get("limit"))
+    if failure_limit is not None:
+        details["publisher_failure_limit"] = failure_limit
     http_status = compact_worker_exit_status_from_text(fields.get("http_status"))
     if http_status is not None:
         details["publisher_http_status"] = http_status

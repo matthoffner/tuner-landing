@@ -4068,6 +4068,8 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                 "publisher_failure_kind": "consecutive_publish_failures",
                 "publisher_last_failure_kind": "invalid_relay_json",
                 "publisher_last_failure_reason": "line 1 column 1: Expecting value",
+                "publisher_failure_count": 3,
+                "publisher_failure_limit": 3,
                 "publisher_source_status": "running",
             },
         )
@@ -4089,6 +4091,8 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             details,
             {
                 "publisher_failure_kind": "consecutive_stale_bridge_statuses",
+                "publisher_failure_count": 2,
+                "publisher_failure_limit": 2,
                 "publisher_source_status": "running",
                 "publisher_source_loop_running": True,
                 "publisher_source_status_stale": False,
@@ -4129,6 +4133,8 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                         "publisher_last_failure_reason": (
                             "line 1 column 1: token=relay-secret"
                         ),
+                        "publisher_failure_count": 3,
+                        "publisher_failure_limit": 3,
                         "publisher_http_status": 403,
                         "publisher_http_reason": "Forbidden",
                         "publisher_http_body_bytes": 19,
@@ -4160,6 +4166,8 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             status["failure"]["publisher_last_failure_reason"],
             "line 1 column 1: token=[redacted]",
         )
+        self.assertEqual(status["failure"]["publisher_failure_count"], 3)
+        self.assertEqual(status["failure"]["publisher_failure_limit"], 3)
         self.assertEqual(status["failure"]["publisher_http_status"], 403)
         self.assertEqual(status["failure"]["publisher_http_reason"], "Forbidden")
         self.assertEqual(status["failure"]["publisher_http_body_bytes"], 19)
@@ -4187,6 +4195,8 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             'publisher_last_failure_reason="line 1 column 1: token=[redacted]"',
             log_text,
         )
+        self.assertIn("publisher_failure_count=3", log_text)
+        self.assertIn("publisher_failure_limit=3", log_text)
         self.assertIn("publisher_http_status=403", log_text)
         self.assertIn('publisher_http_reason="Forbidden"', log_text)
         self.assertIn("publisher_http_body_bytes=19", log_text)
