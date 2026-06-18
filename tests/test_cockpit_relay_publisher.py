@@ -6628,6 +6628,54 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertNotIn("relay-secret", log_text)
         self.assertNotIn("<html>", log_text)
 
+    def test_publish_once_caps_oversized_http_error_body_read(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            publisher_log = Path(tmp) / "publisher.log"
+            args = Namespace(publisher_log=publisher_log)
+            payload = {
+                "status": {
+                    "status": "running",
+                    "loop_running": True,
+                    "source_status_stale": False,
+                    "source_status_age_seconds": 12,
+                    "source_status_file_status": "loaded",
+                },
+                "log_tail": "loop log\n",
+            }
+            error_body = b"x" * 64 + b"token=relay-secret"
+            self.publisher.MAX_RELAY_RESPONSE_BYTES = 8
+            self.publisher.build_payload = lambda _args: payload
+            self.publisher.post_payload = lambda _args, _body: (_ for _ in ()).throw(
+                HTTPError(
+                    "https://automoat-cockpit-relay.example/ingest",
+                    500,
+                    "Internal Server Error",
+                    {},
+                    io.BytesIO(error_body),
+                )
+            )
+
+            result = self.publisher.publish_once_result(args)
+            log_text = publisher_log.read_text(encoding="utf-8")
+
+        self.assertEqual(
+            result,
+            {
+                "published": False,
+                "source_status_stale": False,
+                "source_status_age_seconds": 12,
+                "source_status_stale_after_seconds": None,
+                "failure_kind": "http_error",
+                "http_status": 500,
+                "http_reason": "Internal Server Error",
+                "http_body_bytes": 8,
+                "http_body_truncated": True,
+            },
+        )
+        self.assertIn("http_body_bytes=8", log_text)
+        self.assertIn("http_body_truncated=True", log_text)
+        self.assertNotIn("relay-secret", log_text)
+
     def test_publish_once_classifies_relay_rate_limit_with_retry_after(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             publisher_log = Path(tmp) / "publisher.log"
@@ -6907,6 +6955,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                         "http_status": 500,
                         "http_reason": "Internal Server Error",
                         "http_body_bytes": 37,
+                        "http_body_truncated": True,
                     },
                 ]
             )
@@ -6925,7 +6974,8 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             "exiting after consecutive publish failures "
             "failure_kind=consecutive_publish_failures count=2 limit=2 "
             "last_failure_kind=http_error http_status=500 "
-            "http_reason=Internal Server Error http_body_bytes=37",
+            "http_reason=Internal Server Error http_body_bytes=37 "
+            "http_body_truncated=True",
             log_text,
         )
         self.assertNotIn("last_failure_kind=url_error", log_text)
@@ -7081,6 +7131,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 "http_status": 503,
                 "http_reason": "Service Unavailable",
                 "http_body_bytes": 27,
+                "http_body_truncated": True,
                 "http_retry_after": "45",
             }
             self.publisher.time.sleep = lambda _seconds: self.fail(
@@ -7095,7 +7146,8 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertIn(
             "exiting after terminal publish failure "
             "failure_kind=relay_unavailable http_status=503 "
-            "http_reason=Service Unavailable http_body_bytes=27 retry_after=45",
+            "http_reason=Service Unavailable http_body_bytes=27 "
+            "http_body_truncated=True retry_after=45",
             log_text,
         )
         self.assertIn("source_status=passing", log_text)

@@ -3301,6 +3301,8 @@ def latest_publish_failure_log_suffix(result: dict[str, Any]) -> str:
     http_body_bytes = compact_int(result.get("http_body_bytes"))
     if http_body_bytes is not None:
         fields.append(f"http_body_bytes={http_body_bytes}")
+    if result.get("http_body_truncated") is True:
+        fields.append("http_body_truncated=True")
     http_retry_after = compact_policy_detail(
         result.get("http_retry_after"),
         max_length=80,
@@ -3345,10 +3347,14 @@ def format_number(value: float | int) -> str:
 
 
 def http_error_summary(exc: HTTPError) -> dict[str, Any]:
+    body_truncated = False
     try:
-        body_bytes = len(exc.read())
+        body = exc.read(MAX_RELAY_RESPONSE_BYTES + 1)
     except OSError:
         body_bytes = None
+    else:
+        body_truncated = len(body) > MAX_RELAY_RESPONSE_BYTES
+        body_bytes = min(len(body), MAX_RELAY_RESPONSE_BYTES)
     try:
         reason = HTTPStatus(exc.code).phrase
     except ValueError:
@@ -3358,6 +3364,8 @@ def http_error_summary(exc: HTTPError) -> dict[str, Any]:
         "http_reason": reason.replace("\r", " ").replace("\n", " ")[:80],
         "http_body_bytes": body_bytes,
     }
+    if body_truncated:
+        summary["http_body_truncated"] = True
     headers = getattr(exc, "headers", None) or {}
     retry_after = compact_policy_detail(headers.get("Retry-After"), max_length=80)
     if retry_after is not None:
@@ -3436,12 +3444,18 @@ def publish_once_result(args: argparse.Namespace) -> dict[str, Any]:
             source_fields = fallback_source_status_log_fields(args)
         http_fields = http_error_summary(exc)
         failure_kind = relay_http_error_failure_kind(http_fields["http_status"])
+        truncation_field = (
+            "http_body_truncated=True "
+            if http_fields.get("http_body_truncated") is True
+            else ""
+        )
         emit(
             "publish failed "
             f"failure_kind={failure_kind} "
             f"http_status={http_fields['http_status']} "
             f"http_reason={http_fields['http_reason']} "
             f"http_body_bytes={http_fields['http_body_bytes']} "
+            f"{truncation_field}"
             f"retry_after={http_fields.get('http_retry_after', 'unknown')} "
             f"{source_status_log_suffix(source_fields)}",
             log_path=args.publisher_log,
@@ -3452,6 +3466,8 @@ def publish_once_result(args: argparse.Namespace) -> dict[str, Any]:
             "http_reason": http_fields["http_reason"],
             "http_body_bytes": http_fields["http_body_bytes"],
         }
+        if http_fields.get("http_body_truncated") is True:
+            failure_fields["http_body_truncated"] = True
         if "http_retry_after" in http_fields:
             failure_fields["http_retry_after"] = http_fields["http_retry_after"]
         return publish_once_loop_result(
@@ -3607,6 +3623,7 @@ def run_publish_loop(args: argparse.Namespace) -> int:
                     max_length=80,
                 )
                 http_body_bytes = compact_int(result.get("http_body_bytes"))
+                http_body_truncated = result.get("http_body_truncated") is True
                 http_retry_after = compact_policy_detail(
                     result.get("http_retry_after"),
                     max_length=80,
@@ -3618,6 +3635,8 @@ def run_publish_loop(args: argparse.Namespace) -> int:
                     http_fields += f" http_reason={http_reason}"
                 if http_body_bytes is not None:
                     http_fields += f" http_body_bytes={http_body_bytes}"
+                if http_body_truncated:
+                    http_fields += " http_body_truncated=True"
                 if http_retry_after is not None:
                     http_fields += f" retry_after={http_retry_after}"
                 emit(
