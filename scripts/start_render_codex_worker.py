@@ -153,6 +153,8 @@ BUSINESS_HOURS_ENV_DEFAULTS = {
 }
 MAX_BUSINESS_HOURS_CONFIG_VALUE_CHARS = 120
 MAX_BUSINESS_HOURS_IDLE_SLEEP_SECONDS = 3600
+MAX_COCKPIT_LOG_MESSAGE_CHARS = 4096
+COCKPIT_LOG_TRUNCATED_SUFFIX = " ...[truncated]"
 BUSINESS_HOURS_TRUE_VALUES = {"1", "true", "yes", "on", "enabled"}
 BUSINESS_HOURS_FALSE_VALUES = {"0", "false", "no", "off", "disabled"}
 BUSINESS_HOURS_ENV_NAMES = tuple(BUSINESS_HOURS_ENV_DEFAULTS)
@@ -2281,6 +2283,9 @@ def append_cockpit_log(message: str) -> None:
     log_file = cockpit_log_file()
     log_file.parent.mkdir(parents=True, exist_ok=True)
     safe_message = sanitize_worker_log_text(message)
+    if len(safe_message) > MAX_COCKPIT_LOG_MESSAGE_CHARS:
+        keep_chars = MAX_COCKPIT_LOG_MESSAGE_CHARS - len(COCKPIT_LOG_TRUNCATED_SUFFIX)
+        safe_message = f"{safe_message[:keep_chars]}{COCKPIT_LOG_TRUNCATED_SUFFIX}"
     with log_file.open("a", encoding="utf-8") as handle:
         handle.write(f"[{utc_now()}] {safe_message}\n")
 

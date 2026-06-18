@@ -3710,6 +3710,31 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertNotIn("github-secret", log_text)
         self.assertNotIn("\t", log_text)
 
+    def test_append_cockpit_log_bounds_oversized_messages_after_redaction(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            self.worker.WORKDIR = Path(temp_dir) / "repo"
+            self.worker.WORKDIR.mkdir(parents=True)
+            oversized_tail = "x" * (self.worker.MAX_COCKPIT_LOG_MESSAGE_CHARS + 500)
+
+            with patch.dict(
+                self.worker.os.environ,
+                {"AUTOMOAT_RELAY_TOKEN": "relay-secret"},
+                clear=True,
+            ):
+                self.worker.append_cockpit_log(
+                    f"render-worker failure: token=relay-secret {oversized_tail}"
+                )
+
+            log_text = self.worker.cockpit_log_file().read_text(encoding="utf-8")
+            log_lines = log_text.splitlines()
+            message = log_lines[0].split("] ", 1)[1]
+
+        self.assertEqual(len(log_lines), 1)
+        self.assertEqual(len(message), self.worker.MAX_COCKPIT_LOG_MESSAGE_CHARS)
+        self.assertTrue(message.endswith(self.worker.COCKPIT_LOG_TRUNCATED_SUFFIX))
+        self.assertIn("token=[redacted]", message)
+        self.assertNotIn("relay-secret", log_text)
+
     def test_write_business_hours_pause_status_updates_cockpit_files(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             self.worker.WORKDIR = Path(temp_dir) / "repo"
