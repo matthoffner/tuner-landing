@@ -310,6 +310,42 @@ function sanitizeEmbeddedUrlForHeader(rawUrl) {
   ].join("");
 }
 
+function sanitizeRedirectLocationForHeader(value) {
+  const raw = String(value || "").trim();
+  if (!raw) {
+    return "";
+  }
+  if (/[\r\n\x00-\x1f\x7f]/.test(raw)) {
+    return "invalid_location";
+  }
+  if (/^https?:\/\//i.test(raw)) {
+    return compactUpstreamHeaderPart(raw);
+  }
+
+  let parsed;
+  try {
+    parsed = new URL(raw, "https://automoat.invalid");
+  } catch (_error) {
+    return compactUpstreamHeaderPart(raw);
+  }
+
+  const prefix = raw.startsWith("//") ? `//${parsed.host}` : "";
+  return compactUpstreamHeaderPart([
+    prefix,
+    parsed.pathname || "",
+    parsed.search ? "?[redacted]" : "",
+    parsed.hash ? "#[redacted]" : "",
+  ].join("") || raw);
+}
+
+function upstreamRedirectError(headers) {
+  const rawLocation = headers && typeof headers.get === "function"
+    ? headers.get("location")
+    : null;
+  const location = sanitizeRedirectLocationForHeader(rawLocation);
+  return location ? `redirect_blocked_to ${location}` : "redirect_blocked";
+}
+
 function upstreamAttemptsHeader(attempts) {
   return attempts
     .map((attempt) => {
@@ -602,7 +638,7 @@ async function fetchUpstreamText(
         ok: false,
         status: upstream.status,
         body: "",
-        error: "redirect_blocked",
+        error: upstreamRedirectError(upstream.headers),
       };
     }
     if (
@@ -724,6 +760,7 @@ module.exports = {
   readTailBoundedUpstreamText,
   relayHeaderConfig,
   relayHeaders,
+  sanitizeRedirectLocationForHeader,
   sendMethodNotAllowed,
   sendOptionsResponse,
   sendProxyResponse,
@@ -734,5 +771,6 @@ module.exports = {
   upstreamAttemptSummary,
   upstreamAttemptsHeader,
   upstreamErrorHeader,
+  upstreamRedirectError,
   upstreams,
 };

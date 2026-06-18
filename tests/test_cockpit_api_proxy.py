@@ -648,6 +648,7 @@ class CockpitApiProxyTest(unittest.TestCase):
               invalidUpstreamDiagnostics,
               invalidUpstreamsHeader,
               parseUpstreamContentLength,
+              sanitizeRedirectLocationForHeader,
               sendMethodNotAllowed,
               sendOptionsResponse,
               sendProxyResponse,
@@ -655,6 +656,7 @@ class CockpitApiProxyTest(unittest.TestCase):
               setUpstreamSelectionHeaders,
               upstreamAttemptError,
               upstreamErrorHeader,
+              upstreamRedirectError,
             } = require("./api/cockpit-upstreams");
 
             function response() {
@@ -821,6 +823,11 @@ class CockpitApiProxyTest(unittest.TestCase):
                 return name.toLowerCase() === "content-length" ? value : null;
               },
             });
+            const locationHeaders = (value) => ({
+              get(name) {
+                return name.toLowerCase() === "location" ? value : null;
+              },
+            });
             assert.strictEqual(parseUpstreamContentLength(contentLengthHeaders("42")), 42);
             assert.strictEqual(parseUpstreamContentLength(contentLengthHeaders(" 42 ")), 42);
             assert.strictEqual(parseUpstreamContentLength(contentLengthHeaders("0")), 0);
@@ -831,6 +838,24 @@ class CockpitApiProxyTest(unittest.TestCase):
             assert.strictEqual(parseUpstreamContentLength(contentLengthHeaders("9007199254740992")), null);
             assert.strictEqual(parseUpstreamContentLength({ get() { return null; } }), null);
             assert.strictEqual(parseUpstreamContentLength(null), null);
+            assert.strictEqual(
+              sanitizeRedirectLocationForHeader("https://user:pass@relay.example/login?token=raw#debug"),
+              "https://relay.example/login?[redacted]#[redacted]",
+            );
+            assert.strictEqual(
+              sanitizeRedirectLocationForHeader("/login?token=raw#debug"),
+              "/login?[redacted]#[redacted]",
+            );
+            assert.strictEqual(
+              sanitizeRedirectLocationForHeader("next?token=raw"),
+              "/next?[redacted]",
+            );
+            assert.strictEqual(sanitizeRedirectLocationForHeader("bad\\nlocation"), "invalid_location");
+            assert.strictEqual(
+              upstreamRedirectError(locationHeaders("https://relay.example/login?token=raw")),
+              "redirect_blocked_to https://relay.example/login?[redacted]",
+            );
+            assert.strictEqual(upstreamRedirectError({ get() { return null; } }), "redirect_blocked");
             assert.strictEqual(
               setUpstreamSelectionHeaders(getResponse, "unreachable", 1, [
                 { kind: "relay\\r\\nextra", status: 503, error: "bad\\nstatus,next" },
@@ -1585,9 +1610,17 @@ class CockpitApiProxyTest(unittest.TestCase):
             global.fetch = async (url, options) => {
               fetches.push({ url, redirect: options.redirect });
               if (url.includes("automoat-cockpit-relay.example")) {
+                const location = url.endsWith("/api/status")
+                  ? "https://user:pass@relay.example/login?token=redirect-secret#debug"
+                  : "/login?token=redirect-secret#debug";
                 return {
                   ok: false,
                   status: 302,
+                  headers: {
+                    get(name) {
+                      return name.toLowerCase() === "location" ? location : null;
+                    },
+                  },
                   text: async () => "<html>redirect-secret</html>",
                 };
               }
@@ -1615,8 +1648,9 @@ class CockpitApiProxyTest(unittest.TestCase):
               });
               assert.strictEqual(
                 statusResponse.headers["X-Automoat-Upstream-Attempts"],
-                "relay:302:redirect_blocked,legacy_bridge:200",
+                "relay:302:redirect_blocked_to https://relay.example/login?[redacted]#[redacted],legacy_bridge:200",
               );
+              assert(!statusResponse.headers["X-Automoat-Upstream-Attempts"].includes("redirect-secret"));
               assert(!statusResponse.body.includes("redirect-secret"));
 
               const logResponse = response();
@@ -1625,8 +1659,9 @@ class CockpitApiProxyTest(unittest.TestCase):
               assert.strictEqual(logResponse.body, "bridge log\\n");
               assert.strictEqual(
                 logResponse.headers["X-Automoat-Upstream-Attempts"],
-                "relay:302:redirect_blocked,legacy_bridge:200",
+                "relay:302:redirect_blocked_to /login?[redacted]#[redacted],legacy_bridge:200",
               );
+              assert(!logResponse.headers["X-Automoat-Upstream-Attempts"].includes("redirect-secret"));
               assert(!logResponse.body.includes("redirect-secret"));
 
               assert.deepStrictEqual(fetches, [
