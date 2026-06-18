@@ -4408,6 +4408,29 @@ class RenderCockpitRelayTest(unittest.TestCase):
 
             self.assertEqual(self.relay.snapshot(), before)
 
+    def test_update_state_removes_temp_file_after_persistence_failure(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            state_file = Path(tmp) / "relay-state.json"
+            temp_file = Path(tmp) / "relay-state.json.tmp"
+            self.relay.CONFIG["state_file"] = state_file
+            before = self.relay.snapshot()
+
+            with patch.object(Path, "replace", side_effect=OSError("replace failed")):
+                with self.assertRaisesRegex(
+                    self.relay.RelayPersistenceError,
+                    "failed to persist relay state",
+                ):
+                    self.relay.update_state(
+                        {
+                            "status": {"status": "running", "loop_running": True},
+                            "log_tail": "new log\n",
+                        }
+                    )
+
+            self.assertEqual(self.relay.snapshot(), before)
+            self.assertFalse(temp_file.exists())
+            self.assertFalse(state_file.exists())
+
     def test_update_state_rejects_oversized_status_without_mutating_snapshot(self) -> None:
         self.relay.CONFIG["max_status_bytes"] = 96
         before = self.relay.snapshot()
