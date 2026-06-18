@@ -5282,6 +5282,17 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                             "coverage",
                             "workflow",
                         ],
+                        "thin_group_count": "3",
+                        "thin_group_category_count": "2",
+                        "thin_group_categories": [
+                            "failure_reasons token=category-secret",
+                            "next_action_groups",
+                        ],
+                        "coverage_latest_thin_counts": {
+                            "failure_reasons": "2",
+                            "next_action_groups": 1,
+                            "pattern_slices": "token=count-secret",
+                        },
                         "import_readiness": "blocked",
                         "readiness_blocker_count": 2,
                         "readiness_blockers": [
@@ -5377,6 +5388,18 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertIn("source_artifact_count=5", log_text)
         self.assertIn("source_loaded_artifact_count=3", log_text)
         self.assertIn("source_artifact_problem_artifacts=coverage,workflow", log_text)
+        self.assertIn("source_thin_group_count=3", log_text)
+        self.assertIn("source_thin_group_category_count=2", log_text)
+        self.assertIn(
+            "source_thin_group_categories=failure_reasons token=[redacted],"
+            "next_action_groups",
+            log_text,
+        )
+        self.assertIn(
+            "source_coverage_latest_thin_counts=failure_reasons:2,"
+            "next_action_groups:1",
+            log_text,
+        )
         self.assertIn("source_import_readiness=blocked", log_text)
         self.assertIn("source_readiness_blocker_count=2", log_text)
         self.assertIn(
@@ -5678,6 +5701,17 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                             ),
                             "workflow token=workflow-artifact-secret",
                         ],
+                        "thin_group_count": "7",
+                        "thin_group_category_count": "2",
+                        "thin_group_categories": [
+                            "failure_reasons token=thin-category-secret",
+                            "next_action_groups",
+                        ],
+                        "coverage_latest_thin_counts": {
+                            "failure_reasons token=thin-count-key-secret": "4",
+                            "next_action_groups": "2",
+                            "result_states": "token=thin-count-secret",
+                        },
                         "import_readiness": "blocked token=readiness-secret",
                         "readiness_blocker_count": "2",
                         "readiness_blockers": [
@@ -5904,6 +5938,18 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             "workflow token=[redacted]",
             log_text,
         )
+        self.assertIn("source_thin_group_count=7", log_text)
+        self.assertIn("source_thin_group_category_count=2", log_text)
+        self.assertIn(
+            "source_thin_group_categories=failure_reasons token=[redacted],"
+            "next_action_groups",
+            log_text,
+        )
+        self.assertIn(
+            "source_coverage_latest_thin_counts="
+            "failure_reasons token=[redacted]:4,next_action_groups:2",
+            log_text,
+        )
         self.assertIn("source_import_readiness=blocked token=[redacted]", log_text)
         self.assertIn("source_readiness_blocker_count=2", log_text)
         self.assertIn(
@@ -6077,6 +6123,9 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertNotIn("readiness-blocker-secret", log_text)
         self.assertNotIn("readiness-url-secret", log_text)
         self.assertNotIn("operator-blocker-secret", log_text)
+        self.assertNotIn("thin-category-secret", log_text)
+        self.assertNotIn("thin-count-key-secret", log_text)
+        self.assertNotIn("thin-count-secret", log_text)
         self.assertNotIn("coord-path-secret", log_text)
         self.assertNotIn("coord-status-secret", log_text)
         self.assertNotIn("coord-url-secret", log_text)

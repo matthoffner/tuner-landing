@@ -522,6 +522,13 @@ def compact_log_detail_list(
     return ",".join(compacted) if compacted else None
 
 
+def compact_log_count_map(value: Any, *, max_items: int = 8) -> str | None:
+    compacted = compact_count_map(value, max_items=max_items)
+    if not compacted:
+        return None
+    return ",".join(f"{key}:{count}" for key, count in compacted.items())
+
+
 def compact_path_detail_list(
     value: Any,
     *,
@@ -2631,6 +2638,18 @@ def source_status_log_fields(payload: dict[str, Any]) -> dict[str, Any]:
             max_items=POLICY_RAW_PATH_SAMPLE_LIMIT,
             max_length=120,
         ),
+        "source_thin_group_count": compact_int(cockpit_summary.get("thin_group_count")),
+        "source_thin_group_category_count": compact_int(
+            cockpit_summary.get("thin_group_category_count")
+        ),
+        "source_thin_group_categories": compact_log_detail_list(
+            cockpit_summary.get("thin_group_categories"),
+            max_items=POLICY_RAW_PATH_SAMPLE_LIMIT,
+            max_length=120,
+        ),
+        "source_coverage_latest_thin_counts": compact_log_count_map(
+            cockpit_summary.get("coverage_latest_thin_counts")
+        ),
         "source_import_readiness": compact_policy_detail(
             cockpit_summary.get("import_readiness"),
             max_length=80,
@@ -2990,6 +3009,10 @@ SOURCE_STATUS_LOG_FIELD_NAMES = (
     "source_artifact_count",
     "source_loaded_artifact_count",
     "source_artifact_problem_artifacts",
+    "source_thin_group_count",
+    "source_thin_group_category_count",
+    "source_thin_group_categories",
+    "source_coverage_latest_thin_counts",
     "source_import_readiness",
     "source_readiness_blocker_count",
     "source_readiness_blockers",
