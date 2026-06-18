@@ -5964,6 +5964,11 @@ class RenderWorkerPreflightTest(unittest.TestCase):
     def test_startup_loop_exit_stops_publisher(self) -> None:
         publisher = FakeProcess(pid=202)
         loop = FakeProcess(pid=101, initial_status=6)
+        state = {
+            "enabled": True,
+            "in_business_hours": True,
+            "local_time": "2026-06-15T10:00:00-05:00",
+        }
         output = io.StringIO()
 
         with patch.object(self.worker, "parse_args") as parse_args, patch.object(
@@ -5990,11 +5995,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         ), patch.object(
             self.worker,
             "current_business_hours_state",
-            return_value={
-                "enabled": True,
-                "in_business_hours": True,
-                "local_time": "2026-06-15T10:00:00-05:00",
-            },
+            return_value=state,
         ), patch.object(
             self.worker,
             "record_render_worker_failure_status",
@@ -6025,6 +6026,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                 "child_pid": 101,
                 "child_status_available": True,
                 "child_exit_status": 6,
+                "business_hours": state,
             },
         )
         stop_children.assert_called_once()
@@ -6036,6 +6038,11 @@ class RenderWorkerPreflightTest(unittest.TestCase):
     def test_startup_loop_poll_failure_records_worker_status(self) -> None:
         publisher = FakeProcess(pid=202)
         loop = PollRaisesProcess(pid=101)
+        state = {
+            "enabled": True,
+            "in_business_hours": True,
+            "local_time": "2026-06-15T10:00:00-05:00",
+        }
         output = io.StringIO()
 
         with patch.object(self.worker, "parse_args") as parse_args, patch.object(
@@ -6062,11 +6069,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         ), patch.object(
             self.worker,
             "current_business_hours_state",
-            return_value={
-                "enabled": True,
-                "in_business_hours": True,
-                "local_time": "2026-06-15T10:00:00-05:00",
-            },
+            return_value=state,
         ), patch.object(
             self.worker,
             "record_render_worker_failure_status",
@@ -6096,6 +6099,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                 "child_label": "autonomous loop",
                 "child_pid": 101,
                 "child_status_available": False,
+                "business_hours": state,
             },
         )
         stop_children.assert_called_once()
@@ -6109,6 +6113,11 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self,
     ) -> None:
         publisher = FakeProcess(pid=202)
+        state = {
+            "enabled": True,
+            "in_business_hours": True,
+            "local_time": "2026-06-15T10:00:00-05:00",
+        }
         output = io.StringIO()
 
         with patch.object(self.worker, "parse_args") as parse_args, patch.object(
@@ -6135,11 +6144,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         ), patch.object(
             self.worker,
             "current_business_hours_state",
-            return_value={
-                "enabled": True,
-                "in_business_hours": True,
-                "local_time": "2026-06-15T10:00:00-05:00",
-            },
+            return_value=state,
         ), patch.object(
             self.worker,
             "record_render_worker_failure_status",
@@ -6161,7 +6166,10 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             reason=self.worker.AUTONOMOUS_LOOP_START_FAILED,
             worker_exit_status=1,
             message="could not start autonomous loop: OSError",
-            details={"child_label": "autonomous loop"},
+            details={
+                "child_label": "autonomous loop",
+                "business_hours": state,
+            },
         )
         self.assertIn("business hours open; starting autonomous loop", output.getvalue())
 
@@ -6252,6 +6260,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                 "child_label": "autonomous loop",
                 "child_pid": 101,
                 "child_status_available": False,
+                "business_hours": state,
             },
         )
         self.assertIn("could not poll autonomous loop pid=101: OSError", output.getvalue())
@@ -6294,6 +6303,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                 "child_pid": 101,
                 "child_status_available": True,
                 "child_exit_status": 6,
+                "business_hours": state,
             },
         )
         self.assertIn("autonomous loop exited status=6", output.getvalue())
@@ -6333,6 +6343,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                 "child_pid": 101,
                 "child_status_available": True,
                 "child_exit_status": 0,
+                "business_hours": state,
             },
         )
 
@@ -6373,6 +6384,7 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                 "child_pid": 202,
                 "child_status_available": True,
                 "child_exit_status": 0,
+                "business_hours": state,
             },
         )
         self.assertIn("relay publisher exited unexpectedly status=0", output.getvalue())

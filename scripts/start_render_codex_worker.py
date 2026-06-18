@@ -2819,6 +2819,7 @@ def monitor_scheduled_loop(
                     loop_status,
                     loop_poll_ok,
                     child_pid=loop_process.pid,
+                    business_hours=state,
                 ),
             )
             stop_children()
@@ -2844,6 +2845,7 @@ def monitor_scheduled_loop(
                     publisher_status,
                     publisher_poll_ok,
                     child_pid=publisher_process.pid,
+                    business_hours=state,
                 ),
             )
             if not publisher_poll_ok:
@@ -2914,7 +2916,10 @@ def run_business_hours_schedule(
                     reason=AUTONOMOUS_LOOP_START_FAILED,
                     worker_exit_status=1,
                     message=str(exc),
-                    details={"child_label": "autonomous loop"},
+                    details={
+                        "child_label": "autonomous loop",
+                        "business_hours": state,
+                    },
                 )
                 stop_children()
                 return 1
@@ -2926,7 +2931,10 @@ def run_business_hours_schedule(
                 record_render_worker_failure_status(
                     reason=AUTONOMOUS_LOOP_STARTUP_EXIT,
                     worker_exit_status=loop_startup_status,
-                    details=loop_startup_details,
+                    details={
+                        **loop_startup_details,
+                        "business_hours": state,
+                    },
                 )
                 stop_children()
                 return loop_startup_status
