@@ -2566,6 +2566,10 @@ def source_status_log_fields(payload: dict[str, Any]) -> dict[str, Any]:
     source_health = publisher.get("source_health")
     if not isinstance(source_health, dict):
         source_health = {}
+    source_health_reasons = source_health.get("reasons")
+    source_health_reason_count = compact_int(source_health.get("reason_count"))
+    if source_health_reason_count is None and isinstance(source_health_reasons, list):
+        source_health_reason_count = len(source_health_reasons)
     git = publisher.get("git")
     if not isinstance(git, dict):
         git = {}
@@ -2623,6 +2627,7 @@ def source_status_log_fields(payload: dict[str, Any]) -> dict[str, Any]:
             source_health.get("primary_reason"),
             max_length=120,
         ),
+        "source_health_reason_count": source_health_reason_count,
         "source_health_label": compact_policy_detail(source_health.get("label"), max_length=160),
         "source_cockpit_attention": cockpit_summary.get("operator_attention")
         if isinstance(cockpit_summary.get("operator_attention"), bool)
@@ -3021,6 +3026,7 @@ SOURCE_STATUS_LOG_FIELD_NAMES = (
     "source_business_hours_next_start_at",
     "source_health_status",
     "source_health_primary_reason",
+    "source_health_reason_count",
     "source_health_label",
     "source_cockpit_attention",
     "source_cockpit_attention_primary_reason",

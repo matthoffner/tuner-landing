@@ -5175,6 +5175,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertIn("source_status_remote_omitted_field_count=None", log_text)
         self.assertIn("source_health_status=None", log_text)
         self.assertIn("source_health_primary_reason=None", log_text)
+        self.assertIn("source_health_reason_count=None", log_text)
         self.assertIn("source_health_label=None", log_text)
         self.assertIn("bridge_available=None", log_text)
         self.assertIn("bridge_status=None", log_text)
@@ -5384,7 +5385,10 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                     "source_health": {
                         "status": "degraded",
                         "ok": False,
-                        "reasons": ["source_status_stale"],
+                        "reasons": [
+                            "source_status_stale",
+                            "source_bridge_status_stale",
+                        ],
                         "primary_reason": "source_status_stale",
                         "label": "Source status is stale",
                     },
@@ -5408,6 +5412,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertIn("source_status=running", log_text)
         self.assertIn("source_health_status=degraded", log_text)
         self.assertIn("source_health_primary_reason=source_status_stale", log_text)
+        self.assertIn("source_health_reason_count=2", log_text)
         self.assertIn("source_health_label=Source status is stale", log_text)
         self.assertIn("source_cockpit_attention=True", log_text)
         self.assertIn(
@@ -5885,6 +5890,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                     "source_health": {
                         "status": "degraded",
                         "primary_reason": "source_status_stale",
+                        "reason_count": "4 token=source-health-count-secret",
                         "label": "Source token=label-secret status",
                     },
                     "git": {
@@ -5944,6 +5950,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             "publisher_host=worker-1 x-automoat-relay-token=[redacted]",
             log_text,
         )
+        self.assertIn("source_health_reason_count=None", log_text)
         self.assertIn("source_health_label=Source token=[redacted] status", log_text)
         self.assertIn("source_cockpit_attention=True", log_text)
         self.assertIn(
@@ -6139,6 +6146,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertNotIn("relay-pass", log_text)
         self.assertNotIn("url-secret", log_text)
         self.assertNotIn("host-secret", log_text)
+        self.assertNotIn("source-health-count-secret", log_text)
         self.assertNotIn("label-secret", log_text)
         self.assertNotIn("attention-primary-secret", log_text)
         self.assertNotIn("attention-label-secret", log_text)
@@ -6602,6 +6610,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertIn("source_status_stale_after_seconds=120", log_text)
         self.assertIn("source_health_status=degraded", log_text)
         self.assertIn("source_health_primary_reason=source_loop_not_running", log_text)
+        self.assertIn("source_health_reason_count=2", log_text)
         self.assertIn("source_loop_running=False", log_text)
         self.assertNotIn(str(tmp_path), log_text)
 
