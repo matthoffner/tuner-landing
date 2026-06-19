@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import signal
 import subprocess
 import sys
@@ -13,6 +14,7 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit, urlunsplit
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -33,12 +35,21 @@ HANDOFF_PATH = ROOT / ".pixelbox/handoff.md"
 STOP_REQUESTED = False
 MAX_ARTIFACT_HEALTH_DETAILS = 8
 MAX_ARTIFACT_HEALTH_DETAIL_CHARS = 240
+MAX_COORDINATION_DETAIL_CHARS = 240
+MAX_HANDOFF_BYTES = 128 * 1024
+MAX_HANDOFF_LATEST_SCAN_LINES = 24
 PIPELINE_SUMMARY_OBJECT_SECTIONS = (
     "execution_readiness",
     "contract",
     "workflow",
     "coverage",
     "latest_import",
+)
+URL_TOKEN_PATTERN = re.compile(r"https?://[^\s,'\"<>\]\)]+", re.IGNORECASE)
+TOKEN_ASSIGNMENT_PATTERN = re.compile(
+    r"\b([A-Za-z0-9_-]*(?:token|secret|password|api[_-]?key|access[_-]?key)"
+    r"[A-Za-z0-9_-]*)=([^,\s;]+)",
+    re.IGNORECASE,
 )
 
 
@@ -208,17 +219,174 @@ def run_step(log_file: Path, name: str, command: list[str]) -> dict[str, Any]:
 
 
 def latest_handoff_status() -> str:
-    if not HANDOFF_PATH.exists():
-        return "handoff missing"
-    lines = HANDOFF_PATH.read_text(encoding="utf-8").splitlines()
-    for index, line in enumerate(lines):
-        if line.startswith("- status:"):
-            return line.replace("- status:", "", 1).strip()
-        if line.strip() == "## Latest":
+    return str(handoff_line_snapshot(HANDOFF_PATH).get("latest_handoff_status"))
+
+
+def sanitize_coordination_detail(
+    text: str,
+    max_chars: int = MAX_COORDINATION_DETAIL_CHARS,
+) -> str:
+    """Return a bounded, secret-safe detail string for status coordination."""
+
+    def sanitize_url(match: re.Match[str]) -> str:
+        raw_url = match.group(0)
+        try:
+            parsed = urlsplit(raw_url)
+            host = parsed.hostname
+            port = parsed.port
+        except ValueError:
+            return "<redacted-url>"
+        if not host:
+            return "<redacted-url>"
+        netloc = host
+        if port is not None:
+            netloc += f":{port}"
+        return urlunsplit((parsed.scheme, netloc, parsed.path, "", ""))
+
+    sanitized = URL_TOKEN_PATTERN.sub(sanitize_url, text)
+    sanitized = TOKEN_ASSIGNMENT_PATTERN.sub(r"\1=<redacted>", sanitized)
+    sanitized = sanitized.replace("\r", " ").replace("\n", " ")
+    if len(sanitized) > max_chars:
+        return sanitized[: max_chars - 3] + "..."
+    return sanitized
+
+
+def sanitize_coordination_scalar(value: Any) -> Any:
+    if value is None:
+        return None
+    return sanitize_coordination_detail(str(value))
+
+
+def handoff_read_error(exc: BaseException, path: Path) -> str:
+    """Return a bounded handoff read error without leaking absolute paths."""
+    message = str(exc)
+    safe_label = repo_path(path)
+    path_strings = {str(path)}
+    try:
+        path_strings.add(str(path.resolve()))
+    except OSError:
+        pass
+    for path_string in sorted(path_strings, key=len, reverse=True):
+        if path_string:
+            message = message.replace(path_string, safe_label)
+    return sanitize_coordination_detail(message) or type(exc).__name__
+
+
+def handoff_age_seconds(path: Path) -> int | None:
+    try:
+        modified_at = path.stat().st_mtime
+    except OSError:
+        return None
+    return max(0, int(datetime.now(timezone.utc).timestamp() - modified_at))
+
+
+def read_handoff_lines_limited(path: Path) -> tuple[list[str] | None, dict[str, Any]]:
+    if not path.exists():
+        return None, {
+            "handoff_file_status": "missing",
+            "latest_section_found": False,
+            "latest_status_found": False,
+            "latest_handoff_status": "handoff missing",
+        }
+    try:
+        with path.open("rb") as handle:
+            payload_bytes = handle.read(MAX_HANDOFF_BYTES + 1)
+    except OSError as exc:
+        return None, {
+            "handoff_file_status": "read_failed",
+            "latest_section_found": False,
+            "latest_status_found": False,
+            "latest_handoff_status": "handoff unreadable",
+            "handoff_error": handoff_read_error(exc, path),
+        }
+
+    too_large = len(payload_bytes) > MAX_HANDOFF_BYTES
+    if too_large:
+        payload_bytes = payload_bytes[:MAX_HANDOFF_BYTES]
+    try:
+        text = payload_bytes.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        return None, {
+            "handoff_file_status": "invalid_encoding",
+            "latest_section_found": False,
+            "latest_status_found": False,
+            "latest_handoff_status": "handoff unreadable",
+            "handoff_error": sanitize_coordination_detail(
+                f"invalid UTF-8 at byte {exc.start}"
+            ),
+        }
+
+    metadata: dict[str, Any] = {
+        "handoff_file_status": "too_large" if too_large else "loaded",
+    }
+    if too_large:
+        metadata["handoff_error"] = (
+            f"file exceeds max handoff bytes ({MAX_HANDOFF_BYTES + 1} > "
+            f"{MAX_HANDOFF_BYTES})"
+        )
+    return text.splitlines(), metadata
+
+
+def handoff_line_snapshot(path: Path) -> dict[str, Any]:
+    lines, metadata = read_handoff_lines_limited(path)
+    if lines is None:
+        return metadata
+
+    latest_section_found = False
+    latest_fields: dict[str, Any] = {}
+    latest_section_line_count = 0
+    for line in lines:
+        stripped = line.strip()
+        if stripped == "## Latest":
+            latest_section_found = True
+            latest_fields = {}
+            latest_section_line_count = 0
             continue
-        if index > 20:
+        if not latest_section_found:
+            continue
+        if stripped.startswith("## ") and latest_section_found:
             break
-    return "handoff present"
+        if latest_section_found and stripped == "" and latest_fields:
+            break
+        latest_section_line_count += 1
+        if latest_section_line_count > MAX_HANDOFF_LATEST_SCAN_LINES:
+            break
+        if line.startswith("- timestamp:"):
+            latest_fields["latest_handoff_timestamp"] = sanitize_coordination_scalar(
+                line.replace("- timestamp:", "", 1).strip()
+            )
+        elif line.startswith("- lane:"):
+            latest_fields["latest_handoff_lane"] = sanitize_coordination_scalar(
+                line.replace("- lane:", "", 1).strip()
+            )
+        elif line.startswith("- status:"):
+            latest_fields["latest_handoff_status"] = sanitize_coordination_scalar(
+                line.replace("- status:", "", 1).strip()
+            )
+    latest_handoff_status = (
+        latest_fields.get("latest_handoff_status")
+        or (
+            "handoff too large"
+            if metadata["handoff_file_status"] == "too_large"
+            else "handoff present"
+        )
+    )
+    return {
+        **metadata,
+        **latest_fields,
+        "latest_section_found": latest_section_found,
+        "latest_status_found": "latest_handoff_status" in latest_fields,
+        "latest_handoff_status": latest_handoff_status,
+        "handoff_age_seconds": handoff_age_seconds(path),
+    }
+
+
+def coordination_snapshot() -> dict[str, Any]:
+    """Return compact shared-lane context for cockpit status consumers."""
+    return {
+        "handoff_path": repo_path(HANDOFF_PATH),
+        **handoff_line_snapshot(HANDOFF_PATH),
+    }
 
 
 def repo_path(path: Path) -> str:
@@ -497,6 +665,7 @@ def run_iteration(
         "steps": steps,
         "artifacts": artifacts,
         "git": git,
+        "coordination": coordination_snapshot(),
     }
     write_json(STATUS_FILE, payload)
     append_event(event_file, payload)

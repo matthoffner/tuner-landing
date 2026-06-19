@@ -355,6 +355,52 @@ class LoopArtifactVisibilityTest(unittest.TestCase):
                 self.assertEqual(list(Path(tmp).glob("*.tmp")), [])
                 self.assertEqual(list(Path(tmp).glob(".*.tmp")), [])
 
+    def test_mvp_coordination_snapshot_sanitizes_latest_handoff_status(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            module = load_module(ROOT / "scripts" / "run_mvp_loop.py")
+            module.ROOT = tmp_path
+            module.HANDOFF_PATH = tmp_path / ".pixelbox" / "handoff.md"
+            module.HANDOFF_PATH.parent.mkdir(parents=True)
+            module.HANDOFF_PATH.write_text(
+                "\n".join(
+                    [
+                        "# Pixelbox Agent Handoff",
+                        "",
+                        "## Latest",
+                        "- timestamp: 2026-06-19T14:45:00Z",
+                        "- lane: editor",
+                        (
+                            "- status: checking token=super-secret "
+                            "https://user:pass@example.local/status?token=url-secret#debug"
+                        ),
+                        "",
+                        "- timestamp: 2026-06-19T14:00:00Z",
+                        "- lane: runtime",
+                        "- status: older entry",
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            snapshot = module.coordination_snapshot()
+            latest_status = module.latest_handoff_status()
+
+        snapshot_json = json.dumps(snapshot, sort_keys=True)
+        self.assertEqual(snapshot["handoff_path"], ".pixelbox/handoff.md")
+        self.assertEqual(snapshot["handoff_file_status"], "loaded")
+        self.assertTrue(snapshot["latest_section_found"])
+        self.assertTrue(snapshot["latest_status_found"])
+        self.assertEqual(snapshot["latest_handoff_timestamp"], "2026-06-19T14:45:00Z")
+        self.assertEqual(snapshot["latest_handoff_lane"], "editor")
+        self.assertEqual(latest_status, snapshot["latest_handoff_status"])
+        self.assertIn("checking token=<redacted>", snapshot["latest_handoff_status"])
+        self.assertIn("https://example.local/status", snapshot["latest_handoff_status"])
+        self.assertNotIn("super-secret", snapshot_json)
+        self.assertNotIn("user:pass", snapshot_json)
+        self.assertNotIn("url-secret", snapshot_json)
+
     def test_mvp_iteration_fails_when_artifact_health_is_degraded(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
@@ -389,6 +435,11 @@ class LoopArtifactVisibilityTest(unittest.TestCase):
                 "dirty_paths": [],
                 "dirty_count_excluding_preview": 0,
             }
+            module.coordination_snapshot = lambda: {
+                "handoff_path": ".pixelbox/handoff.md",
+                "handoff_file_status": "loaded",
+                "latest_handoff_status": "handoff ready",
+            }
 
             payload = module.run_iteration(
                 tmp_path / "loop.log",
@@ -399,6 +450,14 @@ class LoopArtifactVisibilityTest(unittest.TestCase):
 
         self.assertEqual(payload["status"], "failing")
         self.assertEqual(payload["artifacts"]["artifact_health"]["status"], "degraded")
+        self.assertEqual(
+            payload["coordination"],
+            {
+                "handoff_path": ".pixelbox/handoff.md",
+                "handoff_file_status": "loaded",
+                "latest_handoff_status": "handoff ready",
+            },
+        )
 
     def test_autonomous_artifact_health_check_fails_degraded_artifacts(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
