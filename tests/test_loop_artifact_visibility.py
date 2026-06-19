@@ -6,6 +6,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import math
+from datetime import datetime, timezone
 from pathlib import Path
 import tempfile
 import unittest
@@ -442,6 +443,64 @@ class LoopArtifactVisibilityTest(unittest.TestCase):
                 "oversized handoff still visible token=<redacted>",
             )
             self.assertNotIn("tail-secret", snapshot_json)
+
+    def test_coordination_snapshot_prefers_valid_handoff_timestamp_with_diagnostics(
+        self,
+    ) -> None:
+        class FixedDateTime(datetime):
+            @classmethod
+            def now(cls, tz=None):
+                current = cls(2026, 6, 19, 15, 0, 0, tzinfo=timezone.utc)
+                if tz is None:
+                    return current.replace(tzinfo=None)
+                return current.astimezone(tz)
+
+        for script_path in LOOP_SCRIPTS:
+            with self.subTest(script=script_path.name), tempfile.TemporaryDirectory() as tmp:
+                tmp_path = Path(tmp)
+                module = load_module(script_path)
+                module.datetime = FixedDateTime
+                module.ROOT = tmp_path
+                module.HANDOFF_PATH = tmp_path / ".pixelbox" / "handoff.md"
+                module.HANDOFF_PATH.parent.mkdir(parents=True)
+                module.HANDOFF_PATH.write_text(
+                    "\n".join(
+                        [
+                            "# Pixelbox Agent Handoff",
+                            "",
+                            "## Latest",
+                            "- timestamp: zzz-not-a-date",
+                            "- lane: editor",
+                            "- status: malformed timestamp should not win",
+                            "",
+                            "- timestamp: 2026-06-19T15:01:00Z",
+                            "- lane: runtime",
+                            "- status: valid future timestamp wins token=future-secret",
+                        ]
+                    )
+                    + "\n",
+                    encoding="utf-8",
+                )
+
+                snapshot = module.coordination_snapshot()
+
+            snapshot_json = json.dumps(snapshot, sort_keys=True)
+            self.assertEqual(snapshot["handoff_file_status"], "loaded")
+            self.assertTrue(snapshot["latest_section_found"])
+            self.assertTrue(snapshot["latest_status_found"])
+            self.assertEqual(
+                snapshot["latest_handoff_timestamp"],
+                "2026-06-19T15:01:00Z",
+            )
+            self.assertEqual(snapshot["latest_handoff_lane"], "runtime")
+            self.assertEqual(
+                snapshot["latest_handoff_status"],
+                "valid future timestamp wins token=<redacted>",
+            )
+            self.assertFalse(snapshot["latest_handoff_timestamp_invalid"])
+            self.assertTrue(snapshot["latest_handoff_timestamp_future"])
+            self.assertIsNone(snapshot["latest_handoff_age_seconds"])
+            self.assertNotIn("future-secret", snapshot_json)
 
     def test_mvp_iteration_fails_when_artifact_health_is_degraded(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

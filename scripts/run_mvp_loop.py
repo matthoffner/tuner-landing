@@ -280,6 +280,47 @@ def handoff_age_seconds(path: Path) -> int | None:
     return max(0, int(datetime.now(timezone.utc).timestamp() - modified_at))
 
 
+def parse_handoff_timestamp(value: Any) -> datetime | None:
+    if not isinstance(value, str) or not value.strip():
+        return None
+    normalized = value.strip()
+    if normalized.endswith("Z"):
+        normalized = normalized[:-1] + "+00:00"
+    try:
+        parsed = datetime.fromisoformat(normalized)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def handoff_timestamp_diagnostics(value: Any) -> dict[str, Any]:
+    parsed = parse_handoff_timestamp(value)
+    provided = value is not None and str(value).strip() != ""
+    if parsed is None:
+        return {
+            "latest_handoff_timestamp_invalid": provided,
+            "latest_handoff_timestamp_future": False,
+            "latest_handoff_age_seconds": None,
+        }
+    current_time = datetime.now(timezone.utc)
+    if parsed > current_time:
+        return {
+            "latest_handoff_timestamp_invalid": False,
+            "latest_handoff_timestamp_future": True,
+            "latest_handoff_age_seconds": None,
+        }
+    return {
+        "latest_handoff_timestamp_invalid": False,
+        "latest_handoff_timestamp_future": False,
+        "latest_handoff_age_seconds": max(
+            0,
+            int((current_time - parsed).total_seconds()),
+        ),
+    }
+
+
 def read_handoff_lines_limited(path: Path) -> tuple[list[str] | None, dict[str, Any]]:
     if not path.exists():
         return None, {
@@ -383,11 +424,22 @@ def newest_handoff_fields(
     ]
     if not entries_with_status:
         return latest_section_found, {}
-    latest_fields = max(
-        entries_with_status,
-        key=lambda entry: str(entry.get("latest_handoff_timestamp") or ""),
-    )
-    return latest_section_found, latest_fields
+    indexed_entries = list(enumerate(entries_with_status))
+
+    def handoff_entry_sort_key(
+        indexed_entry: tuple[int, dict[str, Any]],
+    ) -> tuple[int, float]:
+        index, entry = indexed_entry
+        parsed = parse_handoff_timestamp(entry.get("latest_handoff_timestamp"))
+        if parsed is None:
+            return (0, float(-index))
+        return (1, parsed.timestamp())
+
+    _, latest_fields = max(indexed_entries, key=handoff_entry_sort_key)
+    return latest_section_found, {
+        **latest_fields,
+        **handoff_timestamp_diagnostics(latest_fields.get("latest_handoff_timestamp")),
+    }
 
 
 def handoff_line_snapshot(path: Path) -> dict[str, Any]:
