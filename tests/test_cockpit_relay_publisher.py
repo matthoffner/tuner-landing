@@ -5976,6 +5976,78 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                             "child_exit_status": 6,
                             "worker_exit_status": 1,
                             "publisher_exit_status": 2,
+                            "publisher_failure_kind": "consecutive_publish_failures",
+                            "publisher_last_failure_kind": "invalid_relay_json",
+                            "publisher_last_failure_reason": (
+                                "line 1 column 1: token=last-reason-secret"
+                            ),
+                            "publisher_http_status": 503,
+                            "publisher_http_reason": (
+                                "Service Unavailable token=http-reason-secret"
+                            ),
+                            "publisher_http_body_bytes": 45,
+                            "publisher_http_body_truncated": True,
+                            "publisher_http_retry_after": "90",
+                            "publisher_source_status": (
+                                "running token=source-status-secret"
+                            ),
+                            "publisher_source_loop_running": True,
+                            "publisher_source_status_stale": False,
+                            "publisher_source_status_timestamp_invalid": False,
+                            "publisher_source_status_timestamp_future": False,
+                            "publisher_source_status_value_invalid": False,
+                            "publisher_source_status_age_seconds": 12,
+                            "publisher_source_status_stale_after_seconds": 660,
+                            "publisher_source_status_file_status": (
+                                "loaded token=source-file-status-secret"
+                            ),
+                            "publisher_source_status_file_error": (
+                                "line 1 column 1: token=source-file-error-secret"
+                            ),
+                            "publisher_source_status_remote_omitted_field_count": 4,
+                            "publisher_source_business_hours_paused": True,
+                            "publisher_source_business_hours_timezone": (
+                                "America/Chicago token=source-timezone-secret"
+                            ),
+                            "publisher_source_business_hours_next_start_at": (
+                                "2026-06-16T09:00:00-05:00"
+                            ),
+                            "publisher_source_health_status": (
+                                "degraded token=source-health-status-secret"
+                            ),
+                            "publisher_source_health_primary_reason": (
+                                "source_bridge_degraded token=source-health-reason-secret"
+                            ),
+                            "publisher_source_health_reason_count": 3,
+                            "publisher_source_health_label": (
+                                "Source bridge is degraded token=source-health-label-secret"
+                            ),
+                            "publisher_bridge_status": (
+                                "stale token=bridge-status-secret"
+                            ),
+                            "publisher_bridge_status_file_status": (
+                                "loaded token=bridge-file-status-secret"
+                            ),
+                            "publisher_bridge_status_file_error": (
+                                "non-finite JSON number at $.updated_at "
+                                "token=bridge-file-error-secret"
+                            ),
+                            "publisher_bridge_status_stale": True,
+                            "publisher_bridge_status_timestamp_invalid": True,
+                            "publisher_bridge_status_timestamp_future": False,
+                            "publisher_bridge_status_value_invalid": True,
+                            "publisher_bridge_status_age_seconds": 901,
+                            "publisher_bridge_status_stale_after_seconds": 900,
+                            "publisher_bridge_health_status": (
+                                "degraded token=bridge-health-status-secret"
+                            ),
+                            "publisher_bridge_health_primary_reason": (
+                                "bridge_status_stale token=bridge-health-reason-secret"
+                            ),
+                            "publisher_bridge_health_reason_count": 2,
+                            "publisher_bridge_health_label": (
+                                "Bridge status is stale token=bridge-health-label-secret"
+                            ),
                             "environment_preflight": {
                                 "status": "failed token=env-status-secret",
                                 "error_count": 2,
@@ -6041,6 +6113,153 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertIn("source_failure_worker_exit_status=1", log_text)
         self.assertIn("source_failure_publisher_exit_status=2", log_text)
         self.assertIn(
+            "source_failure_publisher_failure_kind=consecutive_publish_failures",
+            log_text,
+        )
+        self.assertIn(
+            "source_failure_publisher_last_failure_kind=invalid_relay_json",
+            log_text,
+        )
+        self.assertIn(
+            "source_failure_publisher_last_failure_reason="
+            "line 1 column 1: token=[redacted]",
+            log_text,
+        )
+        self.assertIn("source_failure_publisher_http_status=503", log_text)
+        self.assertIn(
+            "source_failure_publisher_http_reason=Service Unavailable token=[redacted]",
+            log_text,
+        )
+        self.assertIn("source_failure_publisher_http_body_bytes=45", log_text)
+        self.assertIn("source_failure_publisher_http_body_truncated=True", log_text)
+        self.assertIn("source_failure_publisher_http_retry_after=90", log_text)
+        self.assertIn(
+            "source_failure_publisher_source_status=running token=[redacted]",
+            log_text,
+        )
+        self.assertIn("source_failure_publisher_source_loop_running=True", log_text)
+        self.assertIn("source_failure_publisher_source_status_stale=False", log_text)
+        self.assertIn(
+            "source_failure_publisher_source_status_timestamp_invalid=False",
+            log_text,
+        )
+        self.assertIn(
+            "source_failure_publisher_source_status_timestamp_future=False",
+            log_text,
+        )
+        self.assertIn(
+            "source_failure_publisher_source_status_value_invalid=False",
+            log_text,
+        )
+        self.assertIn(
+            "source_failure_publisher_source_status_age_seconds=12",
+            log_text,
+        )
+        self.assertIn(
+            "source_failure_publisher_source_status_stale_after_seconds=660",
+            log_text,
+        )
+        self.assertIn(
+            "source_failure_publisher_source_status_file_status="
+            "loaded token=[redacted]",
+            log_text,
+        )
+        self.assertIn(
+            "source_failure_publisher_source_status_file_error="
+            "line 1 column 1: token=[redacted]",
+            log_text,
+        )
+        self.assertIn(
+            "source_failure_publisher_source_status_remote_omitted_field_count=4",
+            log_text,
+        )
+        self.assertIn(
+            "source_failure_publisher_source_business_hours_paused=True",
+            log_text,
+        )
+        self.assertIn(
+            "source_failure_publisher_source_business_hours_timezone="
+            "America/Chicago token=[redacted]",
+            log_text,
+        )
+        self.assertIn(
+            "source_failure_publisher_source_business_hours_next_start_at="
+            "2026-06-16T09:00:00-05:00",
+            log_text,
+        )
+        self.assertIn(
+            "source_failure_publisher_source_health_status="
+            "degraded token=[redacted]",
+            log_text,
+        )
+        self.assertIn(
+            "source_failure_publisher_source_health_primary_reason="
+            "source_bridge_degraded token=[redacted]",
+            log_text,
+        )
+        self.assertIn(
+            "source_failure_publisher_source_health_reason_count=3",
+            log_text,
+        )
+        self.assertIn(
+            "source_failure_publisher_source_health_label="
+            "Source bridge is degraded token=[redacted]",
+            log_text,
+        )
+        self.assertIn(
+            "source_failure_publisher_bridge_status=stale token=[redacted]",
+            log_text,
+        )
+        self.assertIn(
+            "source_failure_publisher_bridge_status_file_status="
+            "loaded token=[redacted]",
+            log_text,
+        )
+        self.assertIn(
+            "source_failure_publisher_bridge_status_file_error="
+            "non-finite JSON number at $.updated_at token=[redacted]",
+            log_text,
+        )
+        self.assertIn("source_failure_publisher_bridge_status_stale=True", log_text)
+        self.assertIn(
+            "source_failure_publisher_bridge_status_timestamp_invalid=True",
+            log_text,
+        )
+        self.assertIn(
+            "source_failure_publisher_bridge_status_timestamp_future=False",
+            log_text,
+        )
+        self.assertIn(
+            "source_failure_publisher_bridge_status_value_invalid=True",
+            log_text,
+        )
+        self.assertIn(
+            "source_failure_publisher_bridge_status_age_seconds=901",
+            log_text,
+        )
+        self.assertIn(
+            "source_failure_publisher_bridge_status_stale_after_seconds=900",
+            log_text,
+        )
+        self.assertIn(
+            "source_failure_publisher_bridge_health_status=degraded token=[redacted]",
+            log_text,
+        )
+        self.assertIn(
+            "source_failure_publisher_bridge_health_primary_reason="
+            "bridge_status_stale token=[redacted]",
+            log_text,
+        )
+        self.assertIn(
+            "source_failure_publisher_bridge_health_reason_count=2",
+            log_text,
+        )
+        self.assertIn(
+            "source_failure_publisher_bridge_health_label="
+            "Bridge status is stale token=[redacted]",
+            log_text,
+        )
+        self.assertIn(
             "source_failure_environment_preflight_status=failed token=[redacted]",
             log_text,
         )
@@ -6083,6 +6302,21 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             "category-secret",
             "key-secret",
             "ignored-secret",
+            "last-reason-secret",
+            "http-reason-secret",
+            "source-status-secret",
+            "source-file-status-secret",
+            "source-file-error-secret",
+            "source-timezone-secret",
+            "source-health-status-secret",
+            "source-health-reason-secret",
+            "source-health-label-secret",
+            "bridge-status-secret",
+            "bridge-file-status-secret",
+            "bridge-file-error-secret",
+            "bridge-health-status-secret",
+            "bridge-health-reason-secret",
+            "bridge-health-label-secret",
         ):
             self.assertNotIn(unsafe_text, log_text)
 

@@ -3098,6 +3098,14 @@ def source_status_log_fields(payload: dict[str, Any]) -> dict[str, Any]:
             failure.get("publisher_failure_kind"),
             max_length=120,
         ),
+        "source_failure_publisher_last_failure_kind": compact_policy_detail(
+            failure.get("publisher_last_failure_kind"),
+            max_length=120,
+        ),
+        "source_failure_publisher_last_failure_reason": compact_policy_detail(
+            failure.get("publisher_last_failure_reason"),
+            max_length=160,
+        ),
         "source_failure_publisher_http_status": compact_int(
             failure.get("publisher_http_status")
         ),
@@ -3116,6 +3124,139 @@ def source_status_log_fields(payload: dict[str, Any]) -> dict[str, Any]:
         "source_failure_publisher_http_retry_after": compact_policy_detail(
             failure.get("publisher_http_retry_after"),
             max_length=80,
+        ),
+        "source_failure_publisher_source_status": compact_policy_detail(
+            failure.get("publisher_source_status"),
+            max_length=120,
+        ),
+        "source_failure_publisher_source_status_file_status": compact_policy_detail(
+            failure.get("publisher_source_status_file_status"),
+            max_length=120,
+        ),
+        "source_failure_publisher_source_status_file_error": compact_path_diagnostic(
+            failure.get("publisher_source_status_file_error"),
+            max_length=160,
+        ),
+        "source_failure_publisher_source_status_age_seconds": compact_int(
+            failure.get("publisher_source_status_age_seconds")
+        ),
+        "source_failure_publisher_source_status_stale_after_seconds": compact_int(
+            failure.get("publisher_source_status_stale_after_seconds")
+        ),
+        "source_failure_publisher_source_status_remote_omitted_field_count": (
+            compact_int(failure.get("publisher_source_status_remote_omitted_field_count"))
+        ),
+        "source_failure_publisher_source_business_hours_paused": (
+            failure.get("publisher_source_business_hours_paused")
+            if isinstance(failure.get("publisher_source_business_hours_paused"), bool)
+            else None
+        ),
+        "source_failure_publisher_source_business_hours_timezone": (
+            compact_policy_detail(
+                failure.get("publisher_source_business_hours_timezone"),
+                max_length=120,
+            )
+        ),
+        "source_failure_publisher_source_business_hours_next_start_at": (
+            compact_policy_detail(
+                failure.get("publisher_source_business_hours_next_start_at"),
+                max_length=120,
+            )
+        ),
+        "source_failure_publisher_source_health_status": compact_policy_detail(
+            failure.get("publisher_source_health_status"),
+            max_length=80,
+        ),
+        "source_failure_publisher_source_health_primary_reason": (
+            compact_policy_detail(
+                failure.get("publisher_source_health_primary_reason"),
+                max_length=120,
+            )
+        ),
+        "source_failure_publisher_source_health_reason_count": compact_int(
+            failure.get("publisher_source_health_reason_count")
+        ),
+        "source_failure_publisher_source_health_label": compact_policy_detail(
+            failure.get("publisher_source_health_label"),
+            max_length=160,
+        ),
+        "source_failure_publisher_bridge_status": compact_policy_detail(
+            failure.get("publisher_bridge_status"),
+            max_length=120,
+        ),
+        "source_failure_publisher_bridge_status_file_status": compact_policy_detail(
+            failure.get("publisher_bridge_status_file_status"),
+            max_length=120,
+        ),
+        "source_failure_publisher_bridge_status_file_error": compact_path_diagnostic(
+            failure.get("publisher_bridge_status_file_error"),
+            max_length=160,
+        ),
+        "source_failure_publisher_bridge_status_age_seconds": compact_int(
+            failure.get("publisher_bridge_status_age_seconds")
+        ),
+        "source_failure_publisher_bridge_status_stale_after_seconds": compact_int(
+            failure.get("publisher_bridge_status_stale_after_seconds")
+        ),
+        "source_failure_publisher_bridge_health_status": compact_policy_detail(
+            failure.get("publisher_bridge_health_status"),
+            max_length=80,
+        ),
+        "source_failure_publisher_bridge_health_primary_reason": compact_policy_detail(
+            failure.get("publisher_bridge_health_primary_reason"),
+            max_length=120,
+        ),
+        "source_failure_publisher_bridge_health_reason_count": compact_int(
+            failure.get("publisher_bridge_health_reason_count")
+        ),
+        "source_failure_publisher_bridge_health_label": compact_policy_detail(
+            failure.get("publisher_bridge_health_label"),
+            max_length=160,
+        ),
+        "source_failure_publisher_source_loop_running": (
+            failure.get("publisher_source_loop_running")
+            if isinstance(failure.get("publisher_source_loop_running"), bool)
+            else None
+        ),
+        "source_failure_publisher_source_status_stale": (
+            failure.get("publisher_source_status_stale")
+            if isinstance(failure.get("publisher_source_status_stale"), bool)
+            else None
+        ),
+        "source_failure_publisher_source_status_timestamp_invalid": (
+            failure.get("publisher_source_status_timestamp_invalid")
+            if isinstance(failure.get("publisher_source_status_timestamp_invalid"), bool)
+            else None
+        ),
+        "source_failure_publisher_source_status_timestamp_future": (
+            failure.get("publisher_source_status_timestamp_future")
+            if isinstance(failure.get("publisher_source_status_timestamp_future"), bool)
+            else None
+        ),
+        "source_failure_publisher_source_status_value_invalid": (
+            failure.get("publisher_source_status_value_invalid")
+            if isinstance(failure.get("publisher_source_status_value_invalid"), bool)
+            else None
+        ),
+        "source_failure_publisher_bridge_status_stale": (
+            failure.get("publisher_bridge_status_stale")
+            if isinstance(failure.get("publisher_bridge_status_stale"), bool)
+            else None
+        ),
+        "source_failure_publisher_bridge_status_timestamp_invalid": (
+            failure.get("publisher_bridge_status_timestamp_invalid")
+            if isinstance(failure.get("publisher_bridge_status_timestamp_invalid"), bool)
+            else None
+        ),
+        "source_failure_publisher_bridge_status_timestamp_future": (
+            failure.get("publisher_bridge_status_timestamp_future")
+            if isinstance(failure.get("publisher_bridge_status_timestamp_future"), bool)
+            else None
+        ),
+        "source_failure_publisher_bridge_status_value_invalid": (
+            failure.get("publisher_bridge_status_value_invalid")
+            if isinstance(failure.get("publisher_bridge_status_value_invalid"), bool)
+            else None
         ),
         "source_failure_child_pid": compact_int(failure.get("child_pid")),
         "source_failure_codex_exit_status": compact_exit_status(
@@ -3360,15 +3501,44 @@ SOURCE_STATUS_LOG_FIELD_NAMES = (
     "source_failure_setup_stage",
     "source_failure_child_label",
     "source_failure_publisher_failure_kind",
+    "source_failure_publisher_last_failure_kind",
+    "source_failure_publisher_last_failure_reason",
     "source_failure_publisher_http_status",
     "source_failure_publisher_http_reason",
     "source_failure_publisher_http_body_bytes",
     "source_failure_publisher_http_body_truncated",
     "source_failure_publisher_http_retry_after",
+    "source_failure_publisher_source_status",
+    "source_failure_publisher_source_loop_running",
+    "source_failure_publisher_source_status_file_status",
+    "source_failure_publisher_source_status_file_error",
+    "source_failure_publisher_source_status_stale",
+    "source_failure_publisher_source_status_timestamp_invalid",
+    "source_failure_publisher_source_status_timestamp_future",
+    "source_failure_publisher_source_status_value_invalid",
+    "source_failure_publisher_source_status_age_seconds",
+    "source_failure_publisher_source_status_stale_after_seconds",
+    "source_failure_publisher_source_status_remote_omitted_field_count",
+    "source_failure_publisher_source_business_hours_paused",
+    "source_failure_publisher_source_business_hours_timezone",
+    "source_failure_publisher_source_business_hours_next_start_at",
     "source_failure_publisher_source_health_status",
+    "source_failure_publisher_source_health_primary_reason",
     "source_failure_publisher_source_health_reason_count",
+    "source_failure_publisher_source_health_label",
+    "source_failure_publisher_bridge_status",
+    "source_failure_publisher_bridge_status_file_status",
+    "source_failure_publisher_bridge_status_file_error",
+    "source_failure_publisher_bridge_status_stale",
+    "source_failure_publisher_bridge_status_timestamp_invalid",
+    "source_failure_publisher_bridge_status_timestamp_future",
+    "source_failure_publisher_bridge_status_value_invalid",
+    "source_failure_publisher_bridge_status_age_seconds",
+    "source_failure_publisher_bridge_status_stale_after_seconds",
     "source_failure_publisher_bridge_health_status",
+    "source_failure_publisher_bridge_health_primary_reason",
     "source_failure_publisher_bridge_health_reason_count",
+    "source_failure_publisher_bridge_health_label",
     "source_failure_child_pid",
     "source_failure_codex_exit_status",
     "source_failure_worker_exit_status",
