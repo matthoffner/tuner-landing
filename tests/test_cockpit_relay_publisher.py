@@ -1671,6 +1671,8 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                             "publisher_source_business_hours_next_start_at": (
                                 "2026-06-16T09:00:00-05:00"
                             ),
+                            "publisher_source_health_status": "degraded",
+                            "publisher_source_health_reason_count": "3",
                             "publisher_bridge_status": "stale",
                             "publisher_bridge_status_file_status": "loaded",
                             "publisher_bridge_status_stale": True,
@@ -1731,6 +1733,8 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             failure["publisher_source_business_hours_next_start_at"],
             "2026-06-16T09:00:00-05:00",
         )
+        self.assertEqual(failure["publisher_source_health_status"], "degraded")
+        self.assertEqual(failure["publisher_source_health_reason_count"], 3)
         self.assertEqual(failure["publisher_bridge_status"], "stale")
         self.assertEqual(failure["publisher_bridge_status_file_status"], "loaded")
         self.assertIs(failure["publisher_bridge_status_stale"], True)
@@ -2969,6 +2973,10 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                     "publisher_source_business_hours_next_start_at": (
                         "2026-06-16T09:00:00-05:00"
                     ),
+                    "publisher_source_health_status": (
+                        "degraded token=source-health-status-secret"
+                    ),
+                    "publisher_source_health_reason_count": "3",
                     "publisher_source_health_primary_reason": (
                         "bridge_status_stale token=source-health-reason-secret"
                     ),
@@ -3155,9 +3163,13 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 "source_failure_publisher_source_business_hours_next_start_at": (
                     "2026-06-16T09:00:00-05:00"
                 ),
+                "source_failure_publisher_source_health_status": (
+                    "degraded token=[redacted]"
+                ),
                 "source_failure_publisher_source_health_primary_reason": (
                     "bridge_status_stale token=[redacted]"
                 ),
+                "source_failure_publisher_source_health_reason_count": 3,
                 "source_failure_publisher_source_health_label": (
                     "Source bridge is degraded token=[redacted]"
                 ),
@@ -3278,6 +3290,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertNotIn("source-file-status-secret", health_text)
         self.assertNotIn("source-file-error-secret", health_text)
         self.assertNotIn("source-timezone-secret", health_text)
+        self.assertNotIn("source-health-status-secret", health_text)
         self.assertNotIn("source-health-reason-secret", health_text)
         self.assertNotIn("source-health-label-secret", health_text)
         self.assertNotIn("bridge-status-secret", health_text)

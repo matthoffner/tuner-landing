@@ -4169,7 +4169,9 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             "source_status_file_status=loaded "
             "source_status_file_error=line 1 column 1: Expecting value "
             "source_status_remote_omitted_field_count=4 "
+            "source_health_status=degraded "
             "source_health_primary_reason=bridge_status_stale "
+            "source_health_reason_count=3 "
             "source_health_label=Source bridge is degraded "
             "bridge_status=invalid-status-value "
             "bridge_status_file_status=loaded "
@@ -4202,7 +4204,9 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                     "line 1 column 1: Expecting value"
                 ),
                 "publisher_source_status_remote_omitted_field_count": 4,
+                "publisher_source_health_status": "degraded",
                 "publisher_source_health_primary_reason": "bridge_status_stale",
+                "publisher_source_health_reason_count": 3,
                 "publisher_source_health_label": "Source bridge is degraded",
                 "publisher_bridge_status": "invalid-status-value",
                 "publisher_bridge_status_file_status": "loaded",
@@ -4272,7 +4276,9 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                         "publisher_source_business_hours_next_start_at": (
                             "2026-06-16T09:00:00-05:00"
                         ),
+                        "publisher_source_health_status": "degraded",
                         "publisher_source_health_primary_reason": "bridge_status_stale",
+                        "publisher_source_health_reason_count": 3,
                         "publisher_source_health_label": "Source bridge is degraded",
                         "publisher_bridge_status": "invalid-status-value",
                         "publisher_bridge_status_file_status": "loaded",
@@ -4352,8 +4358,16 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             "2026-06-16T09:00:00-05:00",
         )
         self.assertEqual(
+            status["failure"]["publisher_source_health_status"],
+            "degraded",
+        )
+        self.assertEqual(
             status["failure"]["publisher_source_health_primary_reason"],
             "bridge_status_stale",
+        )
+        self.assertEqual(
+            status["failure"]["publisher_source_health_reason_count"],
+            3,
         )
         self.assertEqual(
             status["failure"]["publisher_source_health_label"],
@@ -4432,9 +4446,14 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             log_text,
         )
         self.assertIn(
+            'publisher_source_health_status="degraded"',
+            log_text,
+        )
+        self.assertIn(
             'publisher_source_health_primary_reason="bridge_status_stale"',
             log_text,
         )
+        self.assertIn("publisher_source_health_reason_count=3", log_text)
         self.assertIn(
             'publisher_source_health_label='
             '"Source bridge is degraded"',

@@ -80,7 +80,8 @@ PUBLISHER_FAILURE_FIELD_PATTERN = re.compile(
     r"source_status_file_status|source_status_remote_omitted_field_count|"
     r"source_business_hours_paused|source_business_hours_timezone|"
     r"source_business_hours_next_start_at|"
-    r"source_health_primary_reason|source_health_label|"
+    r"source_health_status|source_health_primary_reason|"
+    r"source_health_reason_count|source_health_label|"
     r"bridge_status_file_status|"
     r"bridge_status|bridge_status_file_error|"
     r"bridge_status_stale|bridge_status_age_seconds|"
@@ -2507,6 +2508,7 @@ def compact_render_worker_failure_details(details: dict[str, object]) -> dict[st
     for key in (
         "publisher_source_status",
         "publisher_source_status_file_status",
+        "publisher_source_health_status",
         "publisher_source_health_primary_reason",
         "publisher_source_health_label",
         "publisher_bridge_status",
@@ -2535,6 +2537,7 @@ def compact_render_worker_failure_details(details: dict[str, object]) -> dict[st
         "publisher_source_status_age_seconds",
         "publisher_source_status_stale_after_seconds",
         "publisher_source_status_remote_omitted_field_count",
+        "publisher_source_health_reason_count",
         "publisher_bridge_status_age_seconds",
         "publisher_bridge_status_stale_after_seconds",
     ):
@@ -2685,6 +2688,7 @@ def write_render_worker_failure_status(
     for key in (
         "publisher_source_status",
         "publisher_source_status_file_status",
+        "publisher_source_health_status",
         "publisher_source_business_hours_timezone",
         "publisher_source_business_hours_next_start_at",
         "publisher_source_health_primary_reason",
@@ -2708,6 +2712,7 @@ def write_render_worker_failure_status(
         "publisher_source_status_age_seconds",
         "publisher_source_status_stale_after_seconds",
         "publisher_source_status_remote_omitted_field_count",
+        "publisher_source_health_reason_count",
         "publisher_bridge_status_age_seconds",
         "publisher_bridge_status_stale_after_seconds",
     ):
@@ -2787,7 +2792,9 @@ def write_render_worker_failure_status(
         "publisher_source_business_hours_paused",
         "publisher_source_business_hours_timezone",
         "publisher_source_business_hours_next_start_at",
+        "publisher_source_health_status",
         "publisher_source_health_primary_reason",
+        "publisher_source_health_reason_count",
         "publisher_source_health_label",
         "publisher_bridge_status",
         "publisher_bridge_status_file_status",
@@ -2982,6 +2989,7 @@ def publisher_failure_fields_from_log_line(line: str) -> dict[str, object]:
     for field_name, detail_name in (
         ("source_status", "publisher_source_status"),
         ("source_status_file_status", "publisher_source_status_file_status"),
+        ("source_health_status", "publisher_source_health_status"),
         ("source_health_primary_reason", "publisher_source_health_primary_reason"),
         ("source_health_label", "publisher_source_health_label"),
         ("bridge_status", "publisher_bridge_status"),
@@ -3019,6 +3027,7 @@ def publisher_failure_fields_from_log_line(line: str) -> dict[str, object]:
             "source_status_remote_omitted_field_count",
             "publisher_source_status_remote_omitted_field_count",
         ),
+        ("source_health_reason_count", "publisher_source_health_reason_count"),
         ("bridge_status_age_seconds", "publisher_bridge_status_age_seconds"),
         (
             "bridge_status_stale_after_seconds",

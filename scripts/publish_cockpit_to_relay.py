@@ -955,6 +955,9 @@ def failure_summary(status: dict[str, Any]) -> dict[str, Any]:
         "publisher_source_business_hours_next_start_at": failure.get(
             "publisher_source_business_hours_next_start_at"
         ),
+        "publisher_source_health_status": failure.get(
+            "publisher_source_health_status"
+        ),
         "publisher_source_health_primary_reason": failure.get(
             "publisher_source_health_primary_reason"
         ),
@@ -1055,6 +1058,9 @@ def failure_summary(status: dict[str, Any]) -> dict[str, Any]:
         ),
         "publisher_source_status_remote_omitted_field_count": failure.get(
             "publisher_source_status_remote_omitted_field_count"
+        ),
+        "publisher_source_health_reason_count": failure.get(
+            "publisher_source_health_reason_count"
         ),
         "publisher_bridge_status_age_seconds": failure.get(
             "publisher_bridge_status_age_seconds"
@@ -2164,6 +2170,7 @@ def source_health_diagnostics(status: dict[str, Any]) -> dict[str, Any]:
             ("source_failure_publisher_source_status_file_error", 160),
             ("source_failure_publisher_source_business_hours_timezone", 120),
             ("source_failure_publisher_source_business_hours_next_start_at", 120),
+            ("source_failure_publisher_source_health_status", 80),
             ("source_failure_publisher_source_health_primary_reason", 120),
             ("source_failure_publisher_source_health_label", 160),
             ("source_failure_publisher_bridge_status", 120),
@@ -2229,6 +2236,10 @@ def source_health_diagnostics(status: dict[str, Any]) -> dict[str, Any]:
             (
                 "source_failure_publisher_source_status_remote_omitted_field_count",
                 "publisher_source_status_remote_omitted_field_count",
+            ),
+            (
+                "source_failure_publisher_source_health_reason_count",
+                "publisher_source_health_reason_count",
             ),
             (
                 "source_failure_publisher_bridge_status_age_seconds",
@@ -3337,6 +3348,8 @@ SOURCE_STATUS_LOG_FIELD_NAMES = (
     "source_failure_publisher_http_body_bytes",
     "source_failure_publisher_http_body_truncated",
     "source_failure_publisher_http_retry_after",
+    "source_failure_publisher_source_health_status",
+    "source_failure_publisher_source_health_reason_count",
     "source_failure_child_pid",
     "source_failure_codex_exit_status",
     "source_failure_worker_exit_status",

@@ -1533,6 +1533,10 @@ class RenderCockpitRelayTest(unittest.TestCase):
                             "source_failure_publisher_http_body_bytes": "65537",
                             "source_failure_publisher_http_body_truncated": True,
                             "source_failure_publisher_http_retry_after": "45",
+                            "source_failure_publisher_source_health_status": (
+                                "degraded token=publisher-source-health-status-secret"
+                            ),
+                            "source_failure_publisher_source_health_reason_count": "3",
                             "source_failure_codex_exit_status": "124",
                             "source_failure_worker_exit_status": "2",
                             "source_failure_publisher_exit_status": "3",
@@ -1747,6 +1751,10 @@ class RenderCockpitRelayTest(unittest.TestCase):
             "source_failure_publisher_http_body_bytes": 65537,
             "source_failure_publisher_http_body_truncated": True,
             "source_failure_publisher_http_retry_after": "45",
+            "source_failure_publisher_source_health_status": (
+                "degraded token=[redacted]"
+            ),
+            "source_failure_publisher_source_health_reason_count": 3,
             "source_failure_codex_exit_status": 124,
             "source_failure_worker_exit_status": 2,
             "source_failure_publisher_exit_status": 3,
