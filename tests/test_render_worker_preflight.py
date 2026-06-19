@@ -4156,6 +4156,29 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             },
         )
 
+    def test_publisher_failure_fields_preserve_nonsecret_key_value_reason(
+        self,
+    ) -> None:
+        details = self.worker.publisher_failure_fields_from_log_line(
+            "exiting after consecutive publish failures "
+            "failure_kind=consecutive_publish_failures count=2 limit=2 "
+            "last_failure_kind=http_error "
+            "last_failure_reason=upstream status=500 code=E_CONN "
+            "token=relay-secret source_status=running"
+        )
+
+        self.assertEqual(
+            details,
+            {
+                "publisher_failure_kind": "consecutive_publish_failures",
+                "publisher_last_failure_kind": "http_error",
+                "publisher_last_failure_reason": "upstream status=500 code=E_CONN",
+                "publisher_failure_count": 2,
+                "publisher_failure_limit": 2,
+                "publisher_source_status": "running",
+            },
+        )
+
     def test_publisher_failure_fields_preserve_source_and_bridge_context(self) -> None:
         details = self.worker.publisher_failure_fields_from_log_line(
             "exiting after consecutive stale bridge statuses "

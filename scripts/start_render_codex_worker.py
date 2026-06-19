@@ -69,28 +69,55 @@ SENSITIVE_SINGLE_QUOTED_FIELD_PATTERN = re.compile(
     re.IGNORECASE,
 )
 URL_SCHEME_PATTERN = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*://")
+PUBLISHER_FAILURE_FIELD_NAMES = (
+    "failure_kind",
+    "last_failure_kind",
+    "last_failure_reason",
+    "count",
+    "limit",
+    "http_status",
+    "http_reason",
+    "http_body_bytes",
+    "http_body_truncated",
+    "retry_after",
+    "source_status",
+    "source_loop_running",
+    "source_status_stale",
+    "source_status_timestamp_invalid",
+    "source_status_timestamp_future",
+    "source_status_value_invalid",
+    "source_status_file_error",
+    "source_status_age_seconds",
+    "source_status_stale_after_seconds",
+    "source_status_file_status",
+    "source_status_remote_omitted_field_count",
+    "source_business_hours_paused",
+    "source_business_hours_timezone",
+    "source_business_hours_next_start_at",
+    "source_health_status",
+    "source_health_primary_reason",
+    "source_health_reason_count",
+    "source_health_label",
+    "bridge_status_file_status",
+    "bridge_status",
+    "bridge_status_file_error",
+    "bridge_status_stale",
+    "bridge_status_age_seconds",
+    "bridge_status_timestamp_invalid",
+    "bridge_status_timestamp_future",
+    "bridge_status_value_invalid",
+    "bridge_status_stale_after_seconds",
+    "bridge_health_status",
+    "bridge_health_primary_reason",
+    "bridge_health_reason_count",
+    "bridge_health_label",
+)
+PUBLISHER_FAILURE_FIELD_NAME_PATTERN = "|".join(
+    re.escape(name) for name in PUBLISHER_FAILURE_FIELD_NAMES
+)
 PUBLISHER_FAILURE_FIELD_PATTERN = re.compile(
-    r"\b("
-    r"failure_kind|last_failure_kind|last_failure_reason|count|limit|"
-    r"http_status|http_reason|http_body_bytes|http_body_truncated|retry_after|"
-    r"source_status|source_loop_running|source_status_stale|"
-    r"source_status_timestamp_invalid|source_status_timestamp_future|"
-    r"source_status_value_invalid|source_status_file_error|"
-    r"source_status_age_seconds|source_status_stale_after_seconds|"
-    r"source_status_file_status|source_status_remote_omitted_field_count|"
-    r"source_business_hours_paused|source_business_hours_timezone|"
-    r"source_business_hours_next_start_at|"
-    r"source_health_status|source_health_primary_reason|"
-    r"source_health_reason_count|source_health_label|"
-    r"bridge_status_file_status|"
-    r"bridge_status|bridge_status_file_error|"
-    r"bridge_status_stale|bridge_status_age_seconds|"
-    r"bridge_status_timestamp_invalid|bridge_status_timestamp_future|"
-    r"bridge_status_value_invalid|bridge_status_stale_after_seconds|"
-    r"bridge_health_status|bridge_health_primary_reason|"
-    r"bridge_health_reason_count|bridge_health_label"
-    r")="
-    r"((?:(?!\s+[A-Za-z_][A-Za-z0-9_]*=).)+)"
+    rf"\b({PUBLISHER_FAILURE_FIELD_NAME_PATTERN})="
+    rf"((?:(?!\s+(?:{PUBLISHER_FAILURE_FIELD_NAME_PATTERN}|{SENSITIVE_KEY_PATTERN})=).)+)"
 )
 REQUIRED_COMMANDS = ("git", "codex")
 CODEX_CONFIG_ENV_DEFAULTS = {
