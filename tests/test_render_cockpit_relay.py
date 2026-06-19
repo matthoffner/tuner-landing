@@ -1526,6 +1526,14 @@ class RenderCockpitRelayTest(unittest.TestCase):
                             "source_failure_publisher_failure_kind": (
                                 "relay_unavailable token=publisher-kind-secret"
                             ),
+                            "source_failure_publisher_last_failure_kind": (
+                                "invalid_relay_json token=publisher-last-kind-secret"
+                            ),
+                            "source_failure_publisher_last_failure_reason": (
+                                "line 1 column 1: token=publisher-last-reason-secret"
+                            ),
+                            "source_failure_publisher_failure_count": "3",
+                            "source_failure_publisher_failure_limit": "5",
                             "source_failure_publisher_http_status": "503",
                             "source_failure_publisher_http_reason": (
                                 "Service_Unavailable token=publisher-reason-secret"
@@ -1533,10 +1541,68 @@ class RenderCockpitRelayTest(unittest.TestCase):
                             "source_failure_publisher_http_body_bytes": "65537",
                             "source_failure_publisher_http_body_truncated": True,
                             "source_failure_publisher_http_retry_after": "45",
+                            "source_failure_publisher_source_status": (
+                                "paused token=publisher-source-status-secret"
+                            ),
+                            "source_failure_publisher_source_loop_running": False,
+                            "source_failure_publisher_source_status_stale": True,
+                            "source_failure_publisher_source_status_timestamp_invalid": False,
+                            "source_failure_publisher_source_status_timestamp_future": True,
+                            "source_failure_publisher_source_status_value_invalid": True,
+                            "source_failure_publisher_source_status_age_seconds": "901",
+                            "source_failure_publisher_source_status_stale_after_seconds": "900",
+                            "source_failure_publisher_source_status_file_status": (
+                                "loaded token=publisher-source-file-status-secret"
+                            ),
+                            "source_failure_publisher_source_status_file_error": (
+                                "failed /tmp/source-status.json "
+                                "token=publisher-source-file-error-secret"
+                            ),
+                            "source_failure_publisher_source_status_remote_omitted_field_count": "4",
+                            "source_failure_publisher_source_business_hours_paused": True,
+                            "source_failure_publisher_source_business_hours_timezone": (
+                                "America/Chicago token=publisher-source-tz-secret"
+                            ),
+                            "source_failure_publisher_source_business_hours_next_start_at": (
+                                "2026-06-16T09:00:00-05:00 "
+                                "token=publisher-source-next-secret"
+                            ),
                             "source_failure_publisher_source_health_status": (
                                 "degraded token=publisher-source-health-status-secret"
                             ),
+                            "source_failure_publisher_source_health_primary_reason": (
+                                "source_status_stale token=publisher-source-health-reason-secret"
+                            ),
                             "source_failure_publisher_source_health_reason_count": "3",
+                            "source_failure_publisher_source_health_label": (
+                                "Source status is stale token=publisher-source-health-label-secret"
+                            ),
+                            "source_failure_publisher_bridge_status": (
+                                "stale token=publisher-bridge-status-secret"
+                            ),
+                            "source_failure_publisher_bridge_status_stale": True,
+                            "source_failure_publisher_bridge_status_timestamp_invalid": True,
+                            "source_failure_publisher_bridge_status_timestamp_future": False,
+                            "source_failure_publisher_bridge_status_value_invalid": True,
+                            "source_failure_publisher_bridge_status_age_seconds": "902",
+                            "source_failure_publisher_bridge_status_stale_after_seconds": "900",
+                            "source_failure_publisher_bridge_status_file_status": (
+                                "loaded token=publisher-bridge-file-status-secret"
+                            ),
+                            "source_failure_publisher_bridge_status_file_error": (
+                                "failed /tmp/bridge-status.json "
+                                "token=publisher-bridge-file-error-secret"
+                            ),
+                            "source_failure_publisher_bridge_health_status": (
+                                "degraded token=publisher-bridge-health-status-secret"
+                            ),
+                            "source_failure_publisher_bridge_health_primary_reason": (
+                                "bridge_status_stale token=publisher-bridge-health-reason-secret"
+                            ),
+                            "source_failure_publisher_bridge_health_reason_count": "2",
+                            "source_failure_publisher_bridge_health_label": (
+                                "Bridge status is stale token=publisher-bridge-health-label-secret"
+                            ),
                             "source_failure_codex_exit_status": "124",
                             "source_failure_worker_exit_status": "2",
                             "source_failure_publisher_exit_status": "3",
@@ -1744,6 +1810,14 @@ class RenderCockpitRelayTest(unittest.TestCase):
             "source_failure_publisher_failure_kind": (
                 "relay_unavailable token=[redacted]"
             ),
+            "source_failure_publisher_last_failure_kind": (
+                "invalid_relay_json token=[redacted]"
+            ),
+            "source_failure_publisher_last_failure_reason": (
+                "line 1 column 1: token=[redacted]"
+            ),
+            "source_failure_publisher_failure_count": 3,
+            "source_failure_publisher_failure_limit": 5,
             "source_failure_publisher_http_status": 503,
             "source_failure_publisher_http_reason": (
                 "Service_Unavailable token=[redacted]"
@@ -1751,10 +1825,61 @@ class RenderCockpitRelayTest(unittest.TestCase):
             "source_failure_publisher_http_body_bytes": 65537,
             "source_failure_publisher_http_body_truncated": True,
             "source_failure_publisher_http_retry_after": "45",
+            "source_failure_publisher_source_status": "paused token=[redacted]",
+            "source_failure_publisher_source_loop_running": False,
+            "source_failure_publisher_source_status_stale": True,
+            "source_failure_publisher_source_status_timestamp_invalid": False,
+            "source_failure_publisher_source_status_timestamp_future": True,
+            "source_failure_publisher_source_status_value_invalid": True,
+            "source_failure_publisher_source_status_age_seconds": 901,
+            "source_failure_publisher_source_status_stale_after_seconds": 900,
+            "source_failure_publisher_source_status_file_status": (
+                "loaded token=[redacted]"
+            ),
+            "source_failure_publisher_source_status_file_error": (
+                "failed <external>/source-status.json token=[redacted]"
+            ),
+            "source_failure_publisher_source_status_remote_omitted_field_count": 4,
+            "source_failure_publisher_source_business_hours_paused": True,
+            "source_failure_publisher_source_business_hours_timezone": (
+                "America/Chicago token=[redacted]"
+            ),
+            "source_failure_publisher_source_business_hours_next_start_at": (
+                "2026-06-16T09:00:00-05:00 token=[redacted]"
+            ),
             "source_failure_publisher_source_health_status": (
                 "degraded token=[redacted]"
             ),
+            "source_failure_publisher_source_health_primary_reason": (
+                "source_status_stale token=[redacted]"
+            ),
             "source_failure_publisher_source_health_reason_count": 3,
+            "source_failure_publisher_source_health_label": (
+                "Source status is stale token=[redacted]"
+            ),
+            "source_failure_publisher_bridge_status": "stale token=[redacted]",
+            "source_failure_publisher_bridge_status_stale": True,
+            "source_failure_publisher_bridge_status_timestamp_invalid": True,
+            "source_failure_publisher_bridge_status_timestamp_future": False,
+            "source_failure_publisher_bridge_status_value_invalid": True,
+            "source_failure_publisher_bridge_status_age_seconds": 902,
+            "source_failure_publisher_bridge_status_stale_after_seconds": 900,
+            "source_failure_publisher_bridge_status_file_status": (
+                "loaded token=[redacted]"
+            ),
+            "source_failure_publisher_bridge_status_file_error": (
+                "failed <external>/bridge-status.json token=[redacted]"
+            ),
+            "source_failure_publisher_bridge_health_status": (
+                "degraded token=[redacted]"
+            ),
+            "source_failure_publisher_bridge_health_primary_reason": (
+                "bridge_status_stale token=[redacted]"
+            ),
+            "source_failure_publisher_bridge_health_reason_count": 2,
+            "source_failure_publisher_bridge_health_label": (
+                "Bridge status is stale token=[redacted]"
+            ),
             "source_failure_codex_exit_status": 124,
             "source_failure_worker_exit_status": 2,
             "source_failure_publisher_exit_status": 3,
