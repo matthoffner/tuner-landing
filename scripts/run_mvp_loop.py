@@ -289,8 +289,22 @@ def read_handoff_lines_limited(path: Path) -> tuple[list[str] | None, dict[str, 
             "latest_handoff_status": "handoff missing",
         }
     try:
+        file_size = path.stat().st_size
         with path.open("rb") as handle:
-            payload_bytes = handle.read(MAX_HANDOFF_BYTES + 1)
+            if file_size > MAX_HANDOFF_BYTES:
+                chunk_size = MAX_HANDOFF_BYTES // 2
+                head_bytes = handle.read(chunk_size)
+                last_newline_index = head_bytes.rfind(b"\n")
+                if last_newline_index >= 0:
+                    head_bytes = head_bytes[: last_newline_index + 1]
+                handle.seek(max(0, file_size - chunk_size))
+                tail_bytes = handle.read(chunk_size)
+                first_newline_index = tail_bytes.find(b"\n")
+                if first_newline_index >= 0:
+                    tail_bytes = tail_bytes[first_newline_index + 1 :]
+                payload_bytes = head_bytes + b"\n" + tail_bytes
+            else:
+                payload_bytes = handle.read(MAX_HANDOFF_BYTES + 1)
     except OSError as exc:
         return None, {
             "handoff_file_status": "read_failed",
@@ -300,9 +314,7 @@ def read_handoff_lines_limited(path: Path) -> tuple[list[str] | None, dict[str, 
             "handoff_error": handoff_read_error(exc, path),
         }
 
-    too_large = len(payload_bytes) > MAX_HANDOFF_BYTES
-    if too_large:
-        payload_bytes = payload_bytes[:MAX_HANDOFF_BYTES]
+    truncated = file_size > MAX_HANDOFF_BYTES
     try:
         text = payload_bytes.decode("utf-8")
     except UnicodeDecodeError as exc:
@@ -317,14 +329,65 @@ def read_handoff_lines_limited(path: Path) -> tuple[list[str] | None, dict[str, 
         }
 
     metadata: dict[str, Any] = {
-        "handoff_file_status": "too_large" if too_large else "loaded",
+        "handoff_file_status": "loaded",
+        "handoff_file_truncated": truncated,
+        "handoff_bytes": file_size,
     }
-    if too_large:
-        metadata["handoff_error"] = (
-            f"file exceeds max handoff bytes ({MAX_HANDOFF_BYTES + 1} > "
-            f"{MAX_HANDOFF_BYTES})"
-        )
     return text.splitlines(), metadata
+
+
+def newest_handoff_fields(
+    lines: list[str],
+    *,
+    allow_unmarked_entries: bool = False,
+) -> tuple[bool, dict[str, Any]]:
+    latest_section_found = False
+    scanning = allow_unmarked_entries
+    current_entry: dict[str, Any] = {}
+    entries: list[dict[str, Any]] = []
+
+    def finish_current_entry() -> None:
+        nonlocal current_entry
+        if current_entry:
+            entries.append(current_entry)
+            current_entry = {}
+
+    for line in lines:
+        stripped = line.strip()
+        if stripped == "## Latest":
+            latest_section_found = True
+            scanning = True
+            finish_current_entry()
+            continue
+        if latest_section_found and stripped.startswith("## "):
+            break
+        if not scanning:
+            continue
+        if line.startswith("- timestamp:"):
+            finish_current_entry()
+            current_entry["latest_handoff_timestamp"] = sanitize_coordination_scalar(
+                line.replace("- timestamp:", "", 1).strip()
+            )
+        elif line.startswith("- lane:"):
+            current_entry["latest_handoff_lane"] = sanitize_coordination_scalar(
+                line.replace("- lane:", "", 1).strip()
+            )
+        elif line.startswith("- status:"):
+            current_entry["latest_handoff_status"] = sanitize_coordination_scalar(
+                line.replace("- status:", "", 1).strip()
+            )
+    finish_current_entry()
+
+    entries_with_status = [
+        entry for entry in entries if entry.get("latest_handoff_status") is not None
+    ]
+    if not entries_with_status:
+        return latest_section_found, {}
+    latest_fields = max(
+        entries_with_status,
+        key=lambda entry: str(entry.get("latest_handoff_timestamp") or ""),
+    )
+    return latest_section_found, latest_fields
 
 
 def handoff_line_snapshot(path: Path) -> dict[str, Any]:
@@ -332,44 +395,14 @@ def handoff_line_snapshot(path: Path) -> dict[str, Any]:
     if lines is None:
         return metadata
 
-    latest_section_found = False
-    latest_fields: dict[str, Any] = {}
-    latest_section_line_count = 0
-    for line in lines:
-        stripped = line.strip()
-        if stripped == "## Latest":
-            latest_section_found = True
-            latest_fields = {}
-            latest_section_line_count = 0
-            continue
-        if not latest_section_found:
-            continue
-        if stripped.startswith("## ") and latest_section_found:
-            break
-        if latest_section_found and stripped == "" and latest_fields:
-            break
-        latest_section_line_count += 1
-        if latest_section_line_count > MAX_HANDOFF_LATEST_SCAN_LINES:
-            break
-        if line.startswith("- timestamp:"):
-            latest_fields["latest_handoff_timestamp"] = sanitize_coordination_scalar(
-                line.replace("- timestamp:", "", 1).strip()
-            )
-        elif line.startswith("- lane:"):
-            latest_fields["latest_handoff_lane"] = sanitize_coordination_scalar(
-                line.replace("- lane:", "", 1).strip()
-            )
-        elif line.startswith("- status:"):
-            latest_fields["latest_handoff_status"] = sanitize_coordination_scalar(
-                line.replace("- status:", "", 1).strip()
-            )
+    latest_section_found, latest_fields = newest_handoff_fields(
+        lines,
+        allow_unmarked_entries=metadata.get("handoff_file_truncated") is True,
+    )
+    if latest_fields and metadata.get("handoff_file_truncated") is True:
+        latest_section_found = True
     latest_handoff_status = (
-        latest_fields.get("latest_handoff_status")
-        or (
-            "handoff too large"
-            if metadata["handoff_file_status"] == "too_large"
-            else "handoff present"
-        )
+        latest_fields.get("latest_handoff_status") or "handoff present"
     )
     return {
         **metadata,

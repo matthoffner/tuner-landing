@@ -401,6 +401,48 @@ class LoopArtifactVisibilityTest(unittest.TestCase):
         self.assertNotIn("user:pass", snapshot_json)
         self.assertNotIn("url-secret", snapshot_json)
 
+    def test_coordination_snapshot_reads_latest_section_from_large_handoff_tail(self) -> None:
+        for script_path in LOOP_SCRIPTS:
+            with self.subTest(script=script_path.name), tempfile.TemporaryDirectory() as tmp:
+                tmp_path = Path(tmp)
+                module = load_module(script_path)
+                module.ROOT = tmp_path
+                module.HANDOFF_PATH = tmp_path / ".pixelbox" / "handoff.md"
+                module.HANDOFF_PATH.parent.mkdir(parents=True)
+                module.HANDOFF_PATH.write_text(
+                    ("older handoff context\n" * 9000)
+                    + "\n".join(
+                        [
+                            "## Latest",
+                            "- timestamp: 2026-06-19T15:20:00Z",
+                            "- lane: editor",
+                            "- status: oversized handoff still visible token=tail-secret",
+                            "",
+                        ]
+                    ),
+                    encoding="utf-8",
+                )
+
+                snapshot = module.coordination_snapshot()
+
+            snapshot_json = json.dumps(snapshot, sort_keys=True)
+            self.assertEqual(snapshot["handoff_path"], ".pixelbox/handoff.md")
+            self.assertEqual(snapshot["handoff_file_status"], "loaded")
+            self.assertTrue(snapshot["handoff_file_truncated"])
+            self.assertGreater(snapshot["handoff_bytes"], module.MAX_HANDOFF_BYTES)
+            self.assertTrue(snapshot["latest_section_found"])
+            self.assertTrue(snapshot["latest_status_found"])
+            self.assertEqual(
+                snapshot["latest_handoff_timestamp"],
+                "2026-06-19T15:20:00Z",
+            )
+            self.assertEqual(snapshot["latest_handoff_lane"], "editor")
+            self.assertEqual(
+                snapshot["latest_handoff_status"],
+                "oversized handoff still visible token=<redacted>",
+            )
+            self.assertNotIn("tail-secret", snapshot_json)
+
     def test_mvp_iteration_fails_when_artifact_health_is_degraded(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
