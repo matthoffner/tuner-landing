@@ -971,6 +971,9 @@ def failure_summary(status: dict[str, Any]) -> dict[str, Any]:
         "publisher_bridge_status_file_error": failure.get(
             "publisher_bridge_status_file_error"
         ),
+        "publisher_bridge_health_status": failure.get(
+            "publisher_bridge_health_status"
+        ),
         "publisher_bridge_health_primary_reason": failure.get(
             "publisher_bridge_health_primary_reason"
         ),
@@ -1067,6 +1070,9 @@ def failure_summary(status: dict[str, Any]) -> dict[str, Any]:
         ),
         "publisher_bridge_status_stale_after_seconds": failure.get(
             "publisher_bridge_status_stale_after_seconds"
+        ),
+        "publisher_bridge_health_reason_count": failure.get(
+            "publisher_bridge_health_reason_count"
         ),
     }
     for key, value in count_fields.items():
@@ -2176,6 +2182,7 @@ def source_health_diagnostics(status: dict[str, Any]) -> dict[str, Any]:
             ("source_failure_publisher_bridge_status", 120),
             ("source_failure_publisher_bridge_status_file_status", 120),
             ("source_failure_publisher_bridge_status_file_error", 160),
+            ("source_failure_publisher_bridge_health_status", 80),
             ("source_failure_publisher_bridge_health_primary_reason", 120),
             ("source_failure_publisher_bridge_health_label", 160),
             ("source_failure_import_pipeline_status", 80),
@@ -2248,6 +2255,10 @@ def source_health_diagnostics(status: dict[str, Any]) -> dict[str, Any]:
             (
                 "source_failure_publisher_bridge_status_stale_after_seconds",
                 "publisher_bridge_status_stale_after_seconds",
+            ),
+            (
+                "source_failure_publisher_bridge_health_reason_count",
+                "publisher_bridge_health_reason_count",
             ),
         ):
             compact_value = compact_int(failure.get(source_key))
@@ -2756,6 +2767,10 @@ def source_status_log_fields(payload: dict[str, Any]) -> dict[str, Any]:
     bridge_health = bridge_summary.get("bridge_health")
     if not isinstance(bridge_health, dict):
         bridge_health = {}
+    bridge_health_reasons = bridge_health.get("reasons")
+    bridge_health_reason_count = compact_int(bridge_health.get("reason_count"))
+    if bridge_health_reason_count is None and isinstance(bridge_health_reasons, list):
+        bridge_health_reason_count = len(bridge_health_reasons)
     coordination = cockpit_summary.get("coordination")
     if not isinstance(coordination, dict):
         coordination = status.get("coordination")
@@ -2936,6 +2951,7 @@ def source_status_log_fields(payload: dict[str, Any]) -> dict[str, Any]:
             bridge_health.get("primary_reason"),
             max_length=120,
         ),
+        "bridge_health_reason_count": bridge_health_reason_count,
         "bridge_health_label": compact_policy_detail(
             bridge_health.get("label"),
             max_length=160,
@@ -3306,6 +3322,7 @@ SOURCE_STATUS_LOG_FIELD_NAMES = (
     "bridge_status_stale_after_seconds",
     "bridge_health_status",
     "bridge_health_primary_reason",
+    "bridge_health_reason_count",
     "bridge_health_label",
     "source_policy_failure_reason",
     "source_policy_diagnostics_status",
@@ -3350,6 +3367,8 @@ SOURCE_STATUS_LOG_FIELD_NAMES = (
     "source_failure_publisher_http_retry_after",
     "source_failure_publisher_source_health_status",
     "source_failure_publisher_source_health_reason_count",
+    "source_failure_publisher_bridge_health_status",
+    "source_failure_publisher_bridge_health_reason_count",
     "source_failure_child_pid",
     "source_failure_codex_exit_status",
     "source_failure_worker_exit_status",

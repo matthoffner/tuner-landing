@@ -87,7 +87,8 @@ PUBLISHER_FAILURE_FIELD_PATTERN = re.compile(
     r"bridge_status_stale|bridge_status_age_seconds|"
     r"bridge_status_timestamp_invalid|bridge_status_timestamp_future|"
     r"bridge_status_value_invalid|bridge_status_stale_after_seconds|"
-    r"bridge_health_primary_reason|bridge_health_label"
+    r"bridge_health_status|bridge_health_primary_reason|"
+    r"bridge_health_reason_count|bridge_health_label"
     r")="
     r"((?:(?!\s+[A-Za-z_][A-Za-z0-9_]*=).)+)"
 )
@@ -2513,6 +2514,7 @@ def compact_render_worker_failure_details(details: dict[str, object]) -> dict[st
         "publisher_source_health_label",
         "publisher_bridge_status",
         "publisher_bridge_status_file_status",
+        "publisher_bridge_health_status",
         "publisher_bridge_health_primary_reason",
         "publisher_bridge_health_label",
     ):
@@ -2540,6 +2542,7 @@ def compact_render_worker_failure_details(details: dict[str, object]) -> dict[st
         "publisher_source_health_reason_count",
         "publisher_bridge_status_age_seconds",
         "publisher_bridge_status_stale_after_seconds",
+        "publisher_bridge_health_reason_count",
     ):
         compact_value = compact_worker_nonnegative_int(details.get(key))
         if compact_value is not None:
@@ -2695,6 +2698,7 @@ def write_render_worker_failure_status(
         "publisher_source_health_label",
         "publisher_bridge_status",
         "publisher_bridge_status_file_status",
+        "publisher_bridge_health_status",
         "publisher_bridge_health_primary_reason",
         "publisher_bridge_health_label",
     ):
@@ -2715,6 +2719,7 @@ def write_render_worker_failure_status(
         "publisher_source_health_reason_count",
         "publisher_bridge_status_age_seconds",
         "publisher_bridge_status_stale_after_seconds",
+        "publisher_bridge_health_reason_count",
     ):
         value = compact_details.pop(key, None)
         if value is not None:
@@ -2805,7 +2810,9 @@ def write_render_worker_failure_status(
         "publisher_bridge_status_value_invalid",
         "publisher_bridge_status_age_seconds",
         "publisher_bridge_status_stale_after_seconds",
+        "publisher_bridge_health_status",
         "publisher_bridge_health_primary_reason",
+        "publisher_bridge_health_reason_count",
         "publisher_bridge_health_label",
     ):
         value = failure.get(key)
@@ -2994,6 +3001,7 @@ def publisher_failure_fields_from_log_line(line: str) -> dict[str, object]:
         ("source_health_label", "publisher_source_health_label"),
         ("bridge_status", "publisher_bridge_status"),
         ("bridge_status_file_status", "publisher_bridge_status_file_status"),
+        ("bridge_health_status", "publisher_bridge_health_status"),
         ("bridge_health_primary_reason", "publisher_bridge_health_primary_reason"),
         ("bridge_health_label", "publisher_bridge_health_label"),
     ):
@@ -3033,6 +3041,7 @@ def publisher_failure_fields_from_log_line(line: str) -> dict[str, object]:
             "bridge_status_stale_after_seconds",
             "publisher_bridge_status_stale_after_seconds",
         ),
+        ("bridge_health_reason_count", "publisher_bridge_health_reason_count"),
     ):
         compact_value = compact_worker_nonnegative_int_from_text(fields.get(field_name))
         if compact_value is not None:

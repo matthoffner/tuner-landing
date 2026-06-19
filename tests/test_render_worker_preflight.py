@@ -4181,7 +4181,9 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             "bridge_status_timestamp_invalid=True "
             "bridge_status_timestamp_future=False "
             "bridge_status_value_invalid=True "
+            "bridge_health_status=degraded "
             "bridge_health_primary_reason=bridge_status_stale "
+            "bridge_health_reason_count=2 "
             "bridge_health_label=Bridge status is stale token=relay-secret"
         )
 
@@ -4219,7 +4221,9 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                 "publisher_bridge_status_timestamp_invalid": True,
                 "publisher_bridge_status_timestamp_future": False,
                 "publisher_bridge_status_value_invalid": True,
+                "publisher_bridge_health_status": "degraded",
                 "publisher_bridge_health_primary_reason": "bridge_status_stale",
+                "publisher_bridge_health_reason_count": 2,
                 "publisher_bridge_health_label": "Bridge status is stale",
             },
         )
@@ -4291,7 +4295,9 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                         "publisher_bridge_status_value_invalid": True,
                         "publisher_bridge_status_age_seconds": 901,
                         "publisher_bridge_status_stale_after_seconds": 900,
+                        "publisher_bridge_health_status": "degraded",
                         "publisher_bridge_health_primary_reason": "bridge_status_stale",
+                        "publisher_bridge_health_reason_count": 2,
                         "publisher_bridge_health_label": "Bridge status is stale",
                     },
                 )
@@ -4401,8 +4407,16 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             900,
         )
         self.assertEqual(
+            status["failure"]["publisher_bridge_health_status"],
+            "degraded",
+        )
+        self.assertEqual(
             status["failure"]["publisher_bridge_health_primary_reason"],
             "bridge_status_stale",
+        )
+        self.assertEqual(
+            status["failure"]["publisher_bridge_health_reason_count"],
+            2,
         )
         self.assertEqual(
             status["failure"]["publisher_bridge_health_label"],
@@ -4472,10 +4486,12 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertIn("publisher_bridge_status_value_invalid=true", log_text)
         self.assertIn("publisher_bridge_status_age_seconds=901", log_text)
         self.assertIn("publisher_bridge_status_stale_after_seconds=900", log_text)
+        self.assertIn('publisher_bridge_health_status="degraded"', log_text)
         self.assertIn(
             'publisher_bridge_health_primary_reason="bridge_status_stale"',
             log_text,
         )
+        self.assertIn("publisher_bridge_health_reason_count=2", log_text)
         self.assertIn(
             'publisher_bridge_health_label="Bridge status is stale"',
             log_text,

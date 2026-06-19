@@ -1678,6 +1678,8 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                             "publisher_bridge_status_stale": True,
                             "publisher_bridge_status_age_seconds": "901",
                             "publisher_bridge_status_stale_after_seconds": "900",
+                            "publisher_bridge_health_status": "degraded",
+                            "publisher_bridge_health_reason_count": "2",
                             "publisher_bridge_health_label": (
                                 "Bridge status is stale token=bridge-label-secret"
                             ),
@@ -1743,6 +1745,8 @@ class CockpitRelayPublisherTest(unittest.TestCase):
             failure["publisher_bridge_status_stale_after_seconds"],
             900,
         )
+        self.assertEqual(failure["publisher_bridge_health_status"], "degraded")
+        self.assertEqual(failure["publisher_bridge_health_reason_count"], 2)
         self.assertEqual(
             failure["publisher_bridge_health_label"],
             "Bridge status is stale token=[redacted]",
@@ -2999,6 +3003,10 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                     "publisher_bridge_status_value_invalid": True,
                     "publisher_bridge_status_age_seconds": "901",
                     "publisher_bridge_status_stale_after_seconds": "900",
+                    "publisher_bridge_health_status": (
+                        "degraded token=bridge-health-status-secret"
+                    ),
+                    "publisher_bridge_health_reason_count": "2",
                     "publisher_bridge_health_primary_reason": (
                         "bridge_status_stale token=bridge-health-reason-secret"
                     ),
@@ -3186,9 +3194,13 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 "source_failure_publisher_bridge_status_value_invalid": True,
                 "source_failure_publisher_bridge_status_age_seconds": 901,
                 "source_failure_publisher_bridge_status_stale_after_seconds": 900,
+                "source_failure_publisher_bridge_health_status": (
+                    "degraded token=[redacted]"
+                ),
                 "source_failure_publisher_bridge_health_primary_reason": (
                     "bridge_status_stale token=[redacted]"
                 ),
+                "source_failure_publisher_bridge_health_reason_count": 2,
                 "source_failure_publisher_bridge_health_label": (
                     "Bridge status is stale token=[redacted]"
                 ),
@@ -5699,6 +5711,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                         "bridge_health": {
                             "status": "degraded",
                             "primary_reason": "tunnel_stale",
+                            "reasons": ["tunnel_stale", "tunnel_auth_failed"],
                             "label": "Bridge status is stale",
                         },
                     },
@@ -5874,6 +5887,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertIn("bridge_status_stale_after_seconds=660", log_text)
         self.assertIn("bridge_health_status=degraded", log_text)
         self.assertIn("bridge_health_primary_reason=tunnel_stale", log_text)
+        self.assertIn("bridge_health_reason_count=2", log_text)
         self.assertIn("bridge_health_label=Bridge status is stale", log_text)
         self.assertIn(
             "source_policy_failure_reason=raw_dallas_csv_without_productive_work",
@@ -7676,6 +7690,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                         "bridge_health": {
                             "status": "degraded",
                             "ok": False,
+                            "reasons": ["tunnel_stale", "tunnel_auth_failed"],
                             "primary_reason": "tunnel_stale",
                             "label": "Bridge status is stale",
                         },
@@ -7726,6 +7741,7 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertIn("bridge_status_stale_after_seconds=120", log_text)
         self.assertIn("bridge_health_status=degraded", log_text)
         self.assertIn("bridge_health_primary_reason=tunnel_stale", log_text)
+        self.assertIn("bridge_health_reason_count=2", log_text)
         self.assertIn("bridge_health_label=Bridge status is stale", log_text)
         self.assertNotIn(str(tmp_path), log_text)
 
