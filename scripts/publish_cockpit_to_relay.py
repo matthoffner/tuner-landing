@@ -937,6 +937,43 @@ def failure_summary(status: dict[str, Any]) -> dict[str, Any]:
         "failed_substep": failure.get("failed_substep"),
         "setup_stage": failure.get("setup_stage"),
         "child_label": failure.get("child_label"),
+        "publisher_failure_kind": failure.get("publisher_failure_kind"),
+        "publisher_last_failure_kind": failure.get("publisher_last_failure_kind"),
+        "publisher_last_failure_reason": failure.get("publisher_last_failure_reason"),
+        "publisher_http_reason": failure.get("publisher_http_reason"),
+        "publisher_http_retry_after": failure.get("publisher_http_retry_after"),
+        "publisher_source_status": failure.get("publisher_source_status"),
+        "publisher_source_status_file_status": failure.get(
+            "publisher_source_status_file_status"
+        ),
+        "publisher_source_status_file_error": failure.get(
+            "publisher_source_status_file_error"
+        ),
+        "publisher_source_business_hours_timezone": failure.get(
+            "publisher_source_business_hours_timezone"
+        ),
+        "publisher_source_business_hours_next_start_at": failure.get(
+            "publisher_source_business_hours_next_start_at"
+        ),
+        "publisher_source_health_primary_reason": failure.get(
+            "publisher_source_health_primary_reason"
+        ),
+        "publisher_source_health_label": failure.get(
+            "publisher_source_health_label"
+        ),
+        "publisher_bridge_status": failure.get("publisher_bridge_status"),
+        "publisher_bridge_status_file_status": failure.get(
+            "publisher_bridge_status_file_status"
+        ),
+        "publisher_bridge_status_file_error": failure.get(
+            "publisher_bridge_status_file_error"
+        ),
+        "publisher_bridge_health_primary_reason": failure.get(
+            "publisher_bridge_health_primary_reason"
+        ),
+        "publisher_bridge_health_label": failure.get(
+            "publisher_bridge_health_label"
+        ),
     }
     for key, value in text_fields.items():
         compact_value = compact_policy_detail(value)
@@ -1006,6 +1043,25 @@ def failure_summary(status: dict[str, Any]) -> dict[str, Any]:
         "degraded_artifact_count": failure.get("degraded_artifact_count"),
         "sync_exit_status": failure.get("sync_exit_status"),
         "child_pid": failure.get("child_pid"),
+        "publisher_failure_count": failure.get("publisher_failure_count"),
+        "publisher_failure_limit": failure.get("publisher_failure_limit"),
+        "publisher_http_status": failure.get("publisher_http_status"),
+        "publisher_http_body_bytes": failure.get("publisher_http_body_bytes"),
+        "publisher_source_status_age_seconds": failure.get(
+            "publisher_source_status_age_seconds"
+        ),
+        "publisher_source_status_stale_after_seconds": failure.get(
+            "publisher_source_status_stale_after_seconds"
+        ),
+        "publisher_source_status_remote_omitted_field_count": failure.get(
+            "publisher_source_status_remote_omitted_field_count"
+        ),
+        "publisher_bridge_status_age_seconds": failure.get(
+            "publisher_bridge_status_age_seconds"
+        ),
+        "publisher_bridge_status_stale_after_seconds": failure.get(
+            "publisher_bridge_status_stale_after_seconds"
+        ),
     }
     for key, value in count_fields.items():
         compact_value = compact_int(value)
@@ -1032,6 +1088,22 @@ def failure_summary(status: dict[str, Any]) -> dict[str, Any]:
     child_status_available = failure.get("child_status_available")
     if isinstance(child_status_available, bool):
         summary["child_status_available"] = child_status_available
+    for key in (
+        "publisher_source_loop_running",
+        "publisher_http_body_truncated",
+        "publisher_source_status_stale",
+        "publisher_source_status_timestamp_invalid",
+        "publisher_source_status_timestamp_future",
+        "publisher_source_status_value_invalid",
+        "publisher_source_business_hours_paused",
+        "publisher_bridge_status_stale",
+        "publisher_bridge_status_timestamp_invalid",
+        "publisher_bridge_status_timestamp_future",
+        "publisher_bridge_status_value_invalid",
+    ):
+        value = failure.get(key)
+        if isinstance(value, bool):
+            summary[key] = value
 
     ready_for_next_import_records = failure.get("ready_for_next_import_records")
     if isinstance(ready_for_next_import_records, bool):
@@ -2083,8 +2155,22 @@ def source_health_diagnostics(status: dict[str, Any]) -> dict[str, Any]:
             ("source_failure_setup_stage", 120),
             ("source_failure_child_label", 120),
             ("source_failure_publisher_failure_kind", 120),
+            ("source_failure_publisher_last_failure_kind", 120),
+            ("source_failure_publisher_last_failure_reason", 160),
             ("source_failure_publisher_http_reason", 120),
             ("source_failure_publisher_http_retry_after", 80),
+            ("source_failure_publisher_source_status", 120),
+            ("source_failure_publisher_source_status_file_status", 120),
+            ("source_failure_publisher_source_status_file_error", 160),
+            ("source_failure_publisher_source_business_hours_timezone", 120),
+            ("source_failure_publisher_source_business_hours_next_start_at", 120),
+            ("source_failure_publisher_source_health_primary_reason", 120),
+            ("source_failure_publisher_source_health_label", 160),
+            ("source_failure_publisher_bridge_status", 120),
+            ("source_failure_publisher_bridge_status_file_status", 120),
+            ("source_failure_publisher_bridge_status_file_error", 160),
+            ("source_failure_publisher_bridge_health_primary_reason", 120),
+            ("source_failure_publisher_bridge_health_label", 160),
             ("source_failure_import_pipeline_status", 80),
             ("source_failure_readiness_status", 80),
             ("source_failure_artifact_health_status", 80),
@@ -2125,10 +2211,32 @@ def source_health_diagnostics(status: dict[str, Any]) -> dict[str, Any]:
             ("source_failure_degraded_artifact_count", "degraded_artifact_count"),
             ("source_failure_sync_exit_status", "sync_exit_status"),
             ("source_failure_child_pid", "child_pid"),
+            ("source_failure_publisher_failure_count", "publisher_failure_count"),
+            ("source_failure_publisher_failure_limit", "publisher_failure_limit"),
             ("source_failure_publisher_http_status", "publisher_http_status"),
             (
                 "source_failure_publisher_http_body_bytes",
                 "publisher_http_body_bytes",
+            ),
+            (
+                "source_failure_publisher_source_status_age_seconds",
+                "publisher_source_status_age_seconds",
+            ),
+            (
+                "source_failure_publisher_source_status_stale_after_seconds",
+                "publisher_source_status_stale_after_seconds",
+            ),
+            (
+                "source_failure_publisher_source_status_remote_omitted_field_count",
+                "publisher_source_status_remote_omitted_field_count",
+            ),
+            (
+                "source_failure_publisher_bridge_status_age_seconds",
+                "publisher_bridge_status_age_seconds",
+            ),
+            (
+                "source_failure_publisher_bridge_status_stale_after_seconds",
+                "publisher_bridge_status_stale_after_seconds",
             ),
         ):
             compact_value = compact_int(failure.get(source_key))
@@ -2197,6 +2305,46 @@ def source_health_diagnostics(status: dict[str, Any]) -> dict[str, Any]:
             (
                 "source_failure_publisher_http_body_truncated",
                 "publisher_http_body_truncated",
+            ),
+            (
+                "source_failure_publisher_source_loop_running",
+                "publisher_source_loop_running",
+            ),
+            (
+                "source_failure_publisher_source_status_stale",
+                "publisher_source_status_stale",
+            ),
+            (
+                "source_failure_publisher_source_status_timestamp_invalid",
+                "publisher_source_status_timestamp_invalid",
+            ),
+            (
+                "source_failure_publisher_source_status_timestamp_future",
+                "publisher_source_status_timestamp_future",
+            ),
+            (
+                "source_failure_publisher_source_status_value_invalid",
+                "publisher_source_status_value_invalid",
+            ),
+            (
+                "source_failure_publisher_source_business_hours_paused",
+                "publisher_source_business_hours_paused",
+            ),
+            (
+                "source_failure_publisher_bridge_status_stale",
+                "publisher_bridge_status_stale",
+            ),
+            (
+                "source_failure_publisher_bridge_status_timestamp_invalid",
+                "publisher_bridge_status_timestamp_invalid",
+            ),
+            (
+                "source_failure_publisher_bridge_status_timestamp_future",
+                "publisher_bridge_status_timestamp_future",
+            ),
+            (
+                "source_failure_publisher_bridge_status_value_invalid",
+                "publisher_bridge_status_value_invalid",
             ),
         ):
             value = failure.get(source_key)

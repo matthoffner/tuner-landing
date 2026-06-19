@@ -1631,6 +1631,127 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         ):
             self.assertNotIn(unsafe_text, failure_text)
 
+    def test_read_status_preserves_render_worker_publisher_context_for_relay(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            status_file = tmp_path / "status.json"
+            status_file.write_text(
+                json.dumps(
+                    {
+                        "status": "failed",
+                        "phase": "relay_publisher_startup_exit",
+                        "mode": "autonomous_codex",
+                        "updated_at": "2026-06-14T19:30:00Z",
+                        "failure": {
+                            "category": "render_worker",
+                            "route_hint": "relay_publisher_startup_exit",
+                            "publisher_failure_kind": "consecutive_publish_failures",
+                            "publisher_last_failure_kind": "invalid_relay_json",
+                            "publisher_last_failure_reason": (
+                                "line 1 column 1: token=last-reason-secret"
+                            ),
+                            "publisher_failure_count": "3",
+                            "publisher_failure_limit": "3",
+                            "publisher_source_status": "running",
+                            "publisher_source_loop_running": True,
+                            "publisher_source_status_stale": False,
+                            "publisher_source_status_age_seconds": "12",
+                            "publisher_source_status_stale_after_seconds": "660",
+                            "publisher_source_status_file_status": "loaded",
+                            "publisher_source_status_file_error": (
+                                "line 1 column 1: token=source-error-secret"
+                            ),
+                            "publisher_source_status_remote_omitted_field_count": "4",
+                            "publisher_source_business_hours_paused": True,
+                            "publisher_source_business_hours_timezone": (
+                                "America/Chicago"
+                            ),
+                            "publisher_source_business_hours_next_start_at": (
+                                "2026-06-16T09:00:00-05:00"
+                            ),
+                            "publisher_bridge_status": "stale",
+                            "publisher_bridge_status_file_status": "loaded",
+                            "publisher_bridge_status_stale": True,
+                            "publisher_bridge_status_age_seconds": "901",
+                            "publisher_bridge_status_stale_after_seconds": "900",
+                            "publisher_bridge_health_label": (
+                                "Bridge status is stale token=bridge-label-secret"
+                            ),
+                        },
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            self.publisher.utc_now = lambda: "2026-06-14T19:31:00Z"
+            self.publisher.local_loop_pid = lambda _pid_file: 4242
+
+            status = self.publisher.read_status(
+                status_file,
+                tmp_path / "loop.pid",
+                status_stale_after_seconds=120,
+                bridge_status_file=tmp_path / "missing-bridge-status.json",
+            )
+            remote_status = self.publisher.source_status_for_relay(status)
+
+        failure = status["cockpit_summary"]["failure_summary"]
+        self.assertEqual(failure["publisher_failure_kind"], "consecutive_publish_failures")
+        self.assertEqual(failure["publisher_last_failure_kind"], "invalid_relay_json")
+        self.assertEqual(
+            failure["publisher_last_failure_reason"],
+            "line 1 column 1: token=[redacted]",
+        )
+        self.assertEqual(failure["publisher_failure_count"], 3)
+        self.assertEqual(failure["publisher_failure_limit"], 3)
+        self.assertEqual(failure["publisher_source_status"], "running")
+        self.assertIs(failure["publisher_source_loop_running"], True)
+        self.assertIs(failure["publisher_source_status_stale"], False)
+        self.assertEqual(failure["publisher_source_status_age_seconds"], 12)
+        self.assertEqual(
+            failure["publisher_source_status_stale_after_seconds"],
+            660,
+        )
+        self.assertEqual(failure["publisher_source_status_file_status"], "loaded")
+        self.assertEqual(
+            failure["publisher_source_status_file_error"],
+            "line 1 column 1: token=[redacted]",
+        )
+        self.assertEqual(
+            failure["publisher_source_status_remote_omitted_field_count"],
+            4,
+        )
+        self.assertIs(failure["publisher_source_business_hours_paused"], True)
+        self.assertEqual(
+            failure["publisher_source_business_hours_timezone"],
+            "America/Chicago",
+        )
+        self.assertEqual(
+            failure["publisher_source_business_hours_next_start_at"],
+            "2026-06-16T09:00:00-05:00",
+        )
+        self.assertEqual(failure["publisher_bridge_status"], "stale")
+        self.assertEqual(failure["publisher_bridge_status_file_status"], "loaded")
+        self.assertIs(failure["publisher_bridge_status_stale"], True)
+        self.assertEqual(failure["publisher_bridge_status_age_seconds"], 901)
+        self.assertEqual(
+            failure["publisher_bridge_status_stale_after_seconds"],
+            900,
+        )
+        self.assertEqual(
+            failure["publisher_bridge_health_label"],
+            "Bridge status is stale token=[redacted]",
+        )
+        self.assertEqual(
+            remote_status["cockpit_summary"]["failure_summary"],
+            failure,
+        )
+        failure_text = json.dumps(failure, sort_keys=True)
+        self.assertNotIn("last-reason-secret", failure_text)
+        self.assertNotIn("source-error-secret", failure_text)
+        self.assertNotIn("bridge-label-secret", failure_text)
+
     def test_read_status_sanitizes_failure_summary_paths_for_relay(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
@@ -2811,6 +2932,14 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                     "publisher_failure_kind": (
                         "relay_unavailable token=publisher-kind-secret"
                     ),
+                    "publisher_last_failure_kind": (
+                        "invalid_relay_json token=last-kind-secret"
+                    ),
+                    "publisher_last_failure_reason": (
+                        "line 1 column 1: token=last-reason-secret"
+                    ),
+                    "publisher_failure_count": "3",
+                    "publisher_failure_limit": "3",
                     "publisher_http_status": "503",
                     "publisher_http_reason": (
                         "Service_Unavailable token=publisher-reason-secret"
@@ -2818,6 +2947,56 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                     "publisher_http_body_bytes": "65537",
                     "publisher_http_body_truncated": True,
                     "publisher_http_retry_after": "45",
+                    "publisher_source_status": "running token=source-status-secret",
+                    "publisher_source_loop_running": True,
+                    "publisher_source_status_stale": False,
+                    "publisher_source_status_timestamp_invalid": False,
+                    "publisher_source_status_timestamp_future": False,
+                    "publisher_source_status_value_invalid": False,
+                    "publisher_source_status_age_seconds": "12",
+                    "publisher_source_status_stale_after_seconds": "660",
+                    "publisher_source_status_file_status": (
+                        "loaded token=source-file-status-secret"
+                    ),
+                    "publisher_source_status_file_error": (
+                        "line 1 column 1: token=source-file-error-secret"
+                    ),
+                    "publisher_source_status_remote_omitted_field_count": "4",
+                    "publisher_source_business_hours_paused": True,
+                    "publisher_source_business_hours_timezone": (
+                        "America/Chicago token=source-timezone-secret"
+                    ),
+                    "publisher_source_business_hours_next_start_at": (
+                        "2026-06-16T09:00:00-05:00"
+                    ),
+                    "publisher_source_health_primary_reason": (
+                        "bridge_status_stale token=source-health-reason-secret"
+                    ),
+                    "publisher_source_health_label": (
+                        "Source bridge is degraded token=source-health-label-secret"
+                    ),
+                    "publisher_bridge_status": (
+                        "stale token=bridge-status-secret"
+                    ),
+                    "publisher_bridge_status_file_status": (
+                        "loaded token=bridge-file-status-secret"
+                    ),
+                    "publisher_bridge_status_file_error": (
+                        "non-finite JSON number at $.updated_at "
+                        "token=bridge-file-error-secret"
+                    ),
+                    "publisher_bridge_status_stale": True,
+                    "publisher_bridge_status_timestamp_invalid": True,
+                    "publisher_bridge_status_timestamp_future": False,
+                    "publisher_bridge_status_value_invalid": True,
+                    "publisher_bridge_status_age_seconds": "901",
+                    "publisher_bridge_status_stale_after_seconds": "900",
+                    "publisher_bridge_health_primary_reason": (
+                        "bridge_status_stale token=bridge-health-reason-secret"
+                    ),
+                    "publisher_bridge_health_label": (
+                        "Bridge status is stale token=bridge-health-label-secret"
+                    ),
                     "child_pid": "4242",
                     "codex_exit_status": "124",
                     "worker_exit_status": "2",
@@ -2937,6 +3116,14 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 "source_failure_publisher_failure_kind": (
                     "relay_unavailable token=[redacted]"
                 ),
+                "source_failure_publisher_last_failure_kind": (
+                    "invalid_relay_json token=[redacted]"
+                ),
+                "source_failure_publisher_last_failure_reason": (
+                    "line 1 column 1: token=[redacted]"
+                ),
+                "source_failure_publisher_failure_count": 3,
+                "source_failure_publisher_failure_limit": 3,
                 "source_failure_publisher_http_status": 503,
                 "source_failure_publisher_http_reason": (
                     "Service_Unavailable token=[redacted]"
@@ -2944,6 +3131,55 @@ class CockpitRelayPublisherTest(unittest.TestCase):
                 "source_failure_publisher_http_body_bytes": 65537,
                 "source_failure_publisher_http_body_truncated": True,
                 "source_failure_publisher_http_retry_after": "45",
+                "source_failure_publisher_source_status": (
+                    "running token=[redacted]"
+                ),
+                "source_failure_publisher_source_loop_running": True,
+                "source_failure_publisher_source_status_stale": False,
+                "source_failure_publisher_source_status_timestamp_invalid": False,
+                "source_failure_publisher_source_status_timestamp_future": False,
+                "source_failure_publisher_source_status_value_invalid": False,
+                "source_failure_publisher_source_status_age_seconds": 12,
+                "source_failure_publisher_source_status_stale_after_seconds": 660,
+                "source_failure_publisher_source_status_file_status": (
+                    "loaded token=[redacted]"
+                ),
+                "source_failure_publisher_source_status_file_error": (
+                    "line 1 column 1: token=[redacted]"
+                ),
+                "source_failure_publisher_source_status_remote_omitted_field_count": 4,
+                "source_failure_publisher_source_business_hours_paused": True,
+                "source_failure_publisher_source_business_hours_timezone": (
+                    "America/Chicago token=[redacted]"
+                ),
+                "source_failure_publisher_source_business_hours_next_start_at": (
+                    "2026-06-16T09:00:00-05:00"
+                ),
+                "source_failure_publisher_source_health_primary_reason": (
+                    "bridge_status_stale token=[redacted]"
+                ),
+                "source_failure_publisher_source_health_label": (
+                    "Source bridge is degraded token=[redacted]"
+                ),
+                "source_failure_publisher_bridge_status": "stale token=[redacted]",
+                "source_failure_publisher_bridge_status_file_status": (
+                    "loaded token=[redacted]"
+                ),
+                "source_failure_publisher_bridge_status_file_error": (
+                    "non-finite JSON number at $.updated_at token=[redacted]"
+                ),
+                "source_failure_publisher_bridge_status_stale": True,
+                "source_failure_publisher_bridge_status_timestamp_invalid": True,
+                "source_failure_publisher_bridge_status_timestamp_future": False,
+                "source_failure_publisher_bridge_status_value_invalid": True,
+                "source_failure_publisher_bridge_status_age_seconds": 901,
+                "source_failure_publisher_bridge_status_stale_after_seconds": 900,
+                "source_failure_publisher_bridge_health_primary_reason": (
+                    "bridge_status_stale token=[redacted]"
+                ),
+                "source_failure_publisher_bridge_health_label": (
+                    "Bridge status is stale token=[redacted]"
+                ),
                 "source_failure_import_pipeline_status": "loaded token=[redacted]",
                 "source_failure_readiness_status": "ready token=[redacted]",
                 "source_failure_artifact_health_status": "degraded token=[redacted]",
@@ -3035,7 +3271,20 @@ class CockpitRelayPublisherTest(unittest.TestCase):
         self.assertNotIn("setup-secret", health_text)
         self.assertNotIn("child-secret", health_text)
         self.assertNotIn("publisher-kind-secret", health_text)
+        self.assertNotIn("last-kind-secret", health_text)
+        self.assertNotIn("last-reason-secret", health_text)
         self.assertNotIn("publisher-reason-secret", health_text)
+        self.assertNotIn("source-status-secret", health_text)
+        self.assertNotIn("source-file-status-secret", health_text)
+        self.assertNotIn("source-file-error-secret", health_text)
+        self.assertNotIn("source-timezone-secret", health_text)
+        self.assertNotIn("source-health-reason-secret", health_text)
+        self.assertNotIn("source-health-label-secret", health_text)
+        self.assertNotIn("bridge-status-secret", health_text)
+        self.assertNotIn("bridge-file-status-secret", health_text)
+        self.assertNotIn("bridge-file-error-secret", health_text)
+        self.assertNotIn("bridge-health-reason-secret", health_text)
+        self.assertNotIn("bridge-health-label-secret", health_text)
         self.assertNotIn("env-status-secret", health_text)
         self.assertNotIn("env-category-secret", health_text)
         self.assertNotIn("env-key-secret", health_text)
