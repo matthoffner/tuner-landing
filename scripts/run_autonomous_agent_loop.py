@@ -107,6 +107,7 @@ MAX_AGENT_INTERVAL_SECONDS = 3600
 MAX_CODEX_TIMEOUT_SECONDS = 7200
 MAX_PROMPT_FILE_BYTES = 128 * 1024
 MAX_HANDOFF_BYTES = 128 * 1024
+MAX_HANDOFF_LATEST_SCAN_LINES = 24
 COMMAND_TERMINATE_GRACE_SECONDS = 5.0
 PIPELINE_SUMMARY_OBJECT_SECTIONS = (
     "execution_readiness",
@@ -357,14 +358,22 @@ def handoff_line_snapshot(path: Path) -> dict[str, Any]:
 
     latest_section_found = False
     latest_fields: dict[str, Any] = {}
-    for index, line in enumerate(lines):
+    latest_section_line_count = 0
+    for line in lines:
         stripped = line.strip()
         if stripped == "## Latest":
             latest_section_found = True
+            latest_fields = {}
+            latest_section_line_count = 0
+            continue
+        if not latest_section_found:
             continue
         if stripped.startswith("## ") and latest_section_found:
             break
         if latest_section_found and stripped == "" and latest_fields:
+            break
+        latest_section_line_count += 1
+        if latest_section_line_count > MAX_HANDOFF_LATEST_SCAN_LINES:
             break
         if line.startswith("- timestamp:"):
             latest_fields["latest_handoff_timestamp"] = sanitized_policy_scalar(
@@ -378,8 +387,6 @@ def handoff_line_snapshot(path: Path) -> dict[str, Any]:
             latest_fields["latest_handoff_status"] = sanitized_policy_scalar(
                 line.replace("- status:", "", 1).strip()
             )
-        if index > 24:
-            break
     latest_handoff_status = (
         latest_fields.get("latest_handoff_status")
         or (

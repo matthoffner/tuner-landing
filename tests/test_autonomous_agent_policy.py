@@ -301,6 +301,52 @@ class AutonomousAgentPolicyTest(unittest.TestCase):
         self.assertEqual(snapshot["latest_handoff_status"], "handoff missing")
         self.assertNotIn("handoff_age_seconds", snapshot)
 
+    def test_coordination_snapshot_finds_latest_after_long_handoff_preamble(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            handoff_path = root / ".pixelbox" / "handoff.md"
+            handoff_path.parent.mkdir(parents=True)
+            preamble = [f"- older context line {index}" for index in range(40)]
+            handoff_path.write_text(
+                "\n".join(
+                    [
+                        "# Pixelbox Agent Handoff",
+                        *preamble,
+                        "",
+                        "## Latest",
+                        "- timestamp: 2026-06-18T19:10:00Z",
+                        "- lane: editor",
+                        (
+                            "- status: checking policy token=super-secret "
+                            "https://user:pass@example.local/status?token=secret#debug"
+                        ),
+                        "",
+                        "## Previous",
+                        "- status: older status",
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            self.loop.ROOT = root
+            self.loop.HANDOFF_PATH = handoff_path
+
+            snapshot = self.loop.coordination_snapshot()
+
+        snapshot_json = json.dumps(snapshot, sort_keys=True)
+        self.assertEqual(snapshot["handoff_file_status"], "loaded")
+        self.assertTrue(snapshot["latest_section_found"])
+        self.assertTrue(snapshot["latest_status_found"])
+        self.assertEqual(snapshot["latest_handoff_timestamp"], "2026-06-18T19:10:00Z")
+        self.assertEqual(snapshot["latest_handoff_lane"], "editor")
+        self.assertIn("checking policy token=<redacted>", snapshot["latest_handoff_status"])
+        self.assertIn("https://example.local/status", snapshot["latest_handoff_status"])
+        self.assertNotIn("super-secret", snapshot_json)
+        self.assertNotIn("user:pass", snapshot_json)
+        self.assertNotIn("token=secret", snapshot_json)
+
     def test_coordination_snapshot_routes_oversized_handoff_without_losing_latest_status(
         self,
     ) -> None:
