@@ -78,6 +78,8 @@ PUBLISHER_FAILURE_FIELD_PATTERN = re.compile(
     r"source_status_value_invalid|source_status_file_error|"
     r"source_status_age_seconds|source_status_stale_after_seconds|"
     r"source_status_file_status|source_status_remote_omitted_field_count|"
+    r"source_business_hours_paused|source_business_hours_timezone|"
+    r"source_business_hours_next_start_at|"
     r"source_health_primary_reason|source_health_label|"
     r"bridge_status_file_status|"
     r"bridge_status|bridge_status_file_error|"
@@ -2516,6 +2518,13 @@ def compact_render_worker_failure_details(details: dict[str, object]) -> dict[st
         if compact_value is not None:
             compact[key] = compact_value
     for key in (
+        "publisher_source_business_hours_timezone",
+        "publisher_source_business_hours_next_start_at",
+    ):
+        compact_value = compact_publisher_schedule_text(details.get(key))
+        if compact_value is not None:
+            compact[key] = compact_value
+    for key in (
         "publisher_source_status_file_error",
         "publisher_bridge_status_file_error",
     ):
@@ -2538,6 +2547,7 @@ def compact_render_worker_failure_details(details: dict[str, object]) -> dict[st
         "publisher_source_status_timestamp_invalid",
         "publisher_source_status_timestamp_future",
         "publisher_source_status_value_invalid",
+        "publisher_source_business_hours_paused",
         "publisher_bridge_status_stale",
         "publisher_bridge_status_timestamp_invalid",
         "publisher_bridge_status_timestamp_future",
@@ -2675,6 +2685,8 @@ def write_render_worker_failure_status(
     for key in (
         "publisher_source_status",
         "publisher_source_status_file_status",
+        "publisher_source_business_hours_timezone",
+        "publisher_source_business_hours_next_start_at",
         "publisher_source_health_primary_reason",
         "publisher_source_health_label",
         "publisher_bridge_status",
@@ -2708,6 +2720,7 @@ def write_render_worker_failure_status(
         "publisher_source_status_timestamp_invalid",
         "publisher_source_status_timestamp_future",
         "publisher_source_status_value_invalid",
+        "publisher_source_business_hours_paused",
         "publisher_bridge_status_stale",
         "publisher_bridge_status_timestamp_invalid",
         "publisher_bridge_status_timestamp_future",
@@ -2771,6 +2784,9 @@ def write_render_worker_failure_status(
         "publisher_source_status_file_status",
         "publisher_source_status_file_error",
         "publisher_source_status_remote_omitted_field_count",
+        "publisher_source_business_hours_paused",
+        "publisher_source_business_hours_timezone",
+        "publisher_source_business_hours_next_start_at",
         "publisher_source_health_primary_reason",
         "publisher_source_health_label",
         "publisher_bridge_status",
@@ -2977,6 +2993,16 @@ def publisher_failure_fields_from_log_line(line: str) -> dict[str, object]:
         if compact_value is not None:
             details[detail_name] = compact_value
     for field_name, detail_name in (
+        ("source_business_hours_timezone", "publisher_source_business_hours_timezone"),
+        (
+            "source_business_hours_next_start_at",
+            "publisher_source_business_hours_next_start_at",
+        ),
+    ):
+        compact_value = compact_publisher_schedule_text(fields.get(field_name))
+        if compact_value is not None:
+            details[detail_name] = compact_value
+    for field_name, detail_name in (
         ("source_status_file_error", "publisher_source_status_file_error"),
         ("bridge_status_file_error", "publisher_bridge_status_file_error"),
     ):
@@ -3011,6 +3037,7 @@ def publisher_failure_fields_from_log_line(line: str) -> dict[str, object]:
         ),
         ("source_status_timestamp_future", "publisher_source_status_timestamp_future"),
         ("source_status_value_invalid", "publisher_source_status_value_invalid"),
+        ("source_business_hours_paused", "publisher_source_business_hours_paused"),
         ("bridge_status_stale", "publisher_bridge_status_stale"),
         (
             "bridge_status_timestamp_invalid",
@@ -3069,6 +3096,19 @@ def compact_publisher_context_text(value: object) -> str | None:
     if not safe_value or safe_value == "None":
         return None
     if all(character.isalnum() or character in " _-." for character in safe_value):
+        return safe_value
+    return None
+
+
+def compact_publisher_schedule_text(value: object) -> str | None:
+    if not isinstance(value, str):
+        return None
+    safe_value = " ".join(sanitize_worker_log_text(value).split())[:120]
+    if not safe_value or safe_value == "None":
+        return None
+    if URL_SCHEME_PATTERN.search(safe_value):
+        return None
+    if all(character.isalnum() or character in " _-.:/+" for character in safe_value):
         return safe_value
     return None
 

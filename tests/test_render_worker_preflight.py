@@ -4073,6 +4073,34 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             },
         )
 
+    def test_publisher_failure_fields_preserve_source_business_hours_context(
+        self,
+    ) -> None:
+        details = self.worker.publisher_failure_fields_from_log_line(
+            "exiting after consecutive stale source statuses "
+            "failure_kind=consecutive_stale_source_statuses count=2 limit=2 "
+            "source_status=paused source_business_hours_paused=yes "
+            "source_business_hours_timezone=America/Chicago "
+            "source_business_hours_next_start_at=2026-06-16T09:00:00-05:00 "
+            "source_health_label=Scheduled pause token=relay-secret"
+        )
+
+        self.assertEqual(
+            details,
+            {
+                "publisher_failure_kind": "consecutive_stale_source_statuses",
+                "publisher_failure_count": 2,
+                "publisher_failure_limit": 2,
+                "publisher_source_status": "paused",
+                "publisher_source_business_hours_paused": True,
+                "publisher_source_business_hours_timezone": "America/Chicago",
+                "publisher_source_business_hours_next_start_at": (
+                    "2026-06-16T09:00:00-05:00"
+                ),
+                "publisher_source_health_label": "Scheduled pause",
+            },
+        )
+
     def test_publisher_failure_fields_preserve_http_date_retry_after(self) -> None:
         details = self.worker.publisher_failure_fields_from_log_line(
             "exiting after terminal publish failure "
@@ -4239,6 +4267,11 @@ class RenderWorkerPreflightTest(unittest.TestCase):
                             "line 1 column 1: token=relay-secret"
                         ),
                         "publisher_source_status_remote_omitted_field_count": 4,
+                        "publisher_source_business_hours_paused": True,
+                        "publisher_source_business_hours_timezone": "America/Chicago",
+                        "publisher_source_business_hours_next_start_at": (
+                            "2026-06-16T09:00:00-05:00"
+                        ),
                         "publisher_source_health_primary_reason": "bridge_status_stale",
                         "publisher_source_health_label": "Source bridge is degraded",
                         "publisher_bridge_status": "invalid-status-value",
@@ -4305,6 +4338,18 @@ class RenderWorkerPreflightTest(unittest.TestCase):
         self.assertEqual(
             status["failure"]["publisher_source_status_remote_omitted_field_count"],
             4,
+        )
+        self.assertIs(
+            status["failure"]["publisher_source_business_hours_paused"],
+            True,
+        )
+        self.assertEqual(
+            status["failure"]["publisher_source_business_hours_timezone"],
+            "America/Chicago",
+        )
+        self.assertEqual(
+            status["failure"]["publisher_source_business_hours_next_start_at"],
+            "2026-06-16T09:00:00-05:00",
         )
         self.assertEqual(
             status["failure"]["publisher_source_health_primary_reason"],
@@ -4376,6 +4421,16 @@ class RenderWorkerPreflightTest(unittest.TestCase):
             log_text,
         )
         self.assertIn("publisher_source_status_remote_omitted_field_count=4", log_text)
+        self.assertIn("publisher_source_business_hours_paused=true", log_text)
+        self.assertIn(
+            'publisher_source_business_hours_timezone="America/Chicago"',
+            log_text,
+        )
+        self.assertIn(
+            'publisher_source_business_hours_next_start_at='
+            '"2026-06-16T09:00:00-05:00"',
+            log_text,
+        )
         self.assertIn(
             'publisher_source_health_primary_reason="bridge_status_stale"',
             log_text,
