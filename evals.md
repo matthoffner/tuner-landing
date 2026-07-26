@@ -44,6 +44,21 @@ Every task should be runnable against the same three system modes when possible:
 
 The MVP does not require fine-tuning in the first pass. The `moat` condition only needs to prove that structured local history adds measurable value.
 
+## Optional Local-Model Baseline
+
+The Modal llama.cpp service provides a reproducible SLM baseline without moving the durable autonomous worker off Render. After deploying `modal_slm.py`, run a bounded sample:
+
+```bash
+AUTOMOAT_SLM_URL=https://<modal-app>.modal.run \
+AUTOMOAT_SLM_TOKEN=<secret> \
+python3 scripts/slm_inference_client.py \
+  --tasks generated/evals/dallas-electrician-import-sample-v2/tasks.jsonl \
+  --output generated/evals/dallas-electrician-import-sample-v2/predictions/slm-smoke.jsonl \
+  --limit 10
+```
+
+Treat this as an experiment, not as an automatic replacement for the frontier-model baseline. Record model repository and quantization, GPU type, warm and cold latency, exact-match accuracy, structured-output failures, and estimated cost. Never place the endpoint token in generated predictions or committed configuration.
+
 ## Required Eval Artifacts
 
 A future eval scaffold should be able to materialize these files under a generated eval directory:

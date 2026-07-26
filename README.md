@@ -35,6 +35,8 @@ Created from Pixelbox.
 - Legacy detached autonomous cockpit plus ngrok bridge: `python3 scripts/start_autonomous_cockpit_bridge.py`
 - Legacy read-only ngrok bridge: `python3 scripts/bridge_mvp_cockpit.py`
 - Dallas eval artifact writer: `python3 scripts/generate_dallas_eval_artifacts.py`
+- Optional Modal SLM deploy: `modal deploy modal_slm.py`; this serves a GPU-backed llama.cpp model at `/v1/chat/completions` while keeping the Render worker and cockpit relay unchanged.
+- Bounded SLM eval sample: `AUTOMOAT_SLM_URL=https://<modal-app>.modal.run AUTOMOAT_SLM_TOKEN=<secret> python3 scripts/slm_inference_client.py --tasks generated/evals/dallas-electrician-import-sample-v2/tasks.jsonl --output generated/evals/dallas-electrician-import-sample-v2/predictions/slm-smoke.jsonl --limit 10`
 - Dallas label review writer: `python3 scripts/generate_dallas_label_reviews.py`
 - Dallas discovery artifact writer: `python3 scripts/generate_dallas_discovery_artifacts.py`
 - Dallas discovery batch mode: `python3 scripts/generate_dallas_discovery_artifacts.py --batch-input-dir generated/intake --batch-output-dir generated/discovery`
@@ -69,6 +71,21 @@ The deployed cockpit should use the Render relay path instead of ngrok. The stab
 The real cloud worker is `automoat-codex-worker`. It runs from the root `Dockerfile`, clones `main` at runtime with a GitHub token, authenticates Codex from a Render secret, starts `scripts/run_autonomous_agent_loop.py`, and runs `scripts/publish_cockpit_to_relay.py` beside it so the landing page can show the agent working. Only one writer should run against `main` at a time: stop the local cockpit loop before enabling the Render worker.
 
 The autonomous loop is now policy-gated against low-leverage synthetic fixture churn. When Dallas import readiness is already `ready` and coverage has no thin groups, the prompt directs Codex toward autonomy, visibility, Render reliability, real ingest mechanics, product clarity, and tests. The supervisor rejects a synthetic `example.local` Dallas raw-row append when it is not paired with code, ingest, infra, test, or durable spec work; routine README, NEXT_TASK, landing-page, journal, or handoff refreshes do not count as that companion work.
+
+### Optional Modal SLM experiment
+
+Render remains the durable CPU orchestrator; it does not host model weights. `modal_slm.py` adds an independent, scale-to-zero L4 service using a CUDA build of `llama-cpp-python`, a persistent model volume, and an authenticated OpenAI-compatible chat-completions route. The default is a Qwen 2.5 3B Q4 GGUF, and `AUTOMOAT_SLM_MODEL_REPO` plus `AUTOMOAT_SLM_MODEL_FILE` can select another compatible Hugging Face GGUF before deployment.
+
+Install the Modal CLI, authenticate it, and create the shared secret without committing its value:
+
+```bash
+python3 -m pip install modal
+modal setup
+modal secret create automoat-slm AUTOMOAT_SLM_TOKEN=<random-secret> HF_TOKEN=<optional-hugging-face-token>
+modal deploy modal_slm.py
+```
+
+Set `AUTOMOAT_SLM_URL` to the deployed `api` function URL and use `scripts/slm_inference_client.py` for a single prompt or a bounded JSONL eval. The client enforces deterministic temperature, requests JSON output, excludes target labels from prompts, bounds response size and timeout, and writes predictions beside the existing eval artifacts. Start with `--limit 10`; compare correctness, latency, token use, cold starts, and cost before routing production work. The Modal service is optional, and Codex/OpenAI remains the repository-editing agent and baseline fallback.
 
 The eventual app shell can be React Server Components instead of an iframe. Use RSC for the initial cockpit snapshot from `/api/status` and whitelisted artifacts, then use a small client component or polling client for the live terminal/log stream. Keep mutation endpoints local-only; remote relays should stay read-only.
 
