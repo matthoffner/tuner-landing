@@ -18,3 +18,4 @@
 .automoat/logs/mvp-cockpit-server.log
 .automoat/logs/cockpit-relay-publisher.log
 __pycache__/
+generated/evals/*/predictions/slm-*.jsonl
