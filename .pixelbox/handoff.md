@@ -6861,3 +6861,10 @@ Use this file to coordinate between editor/runtime lanes.
 - files: modal_slm.py, scripts/slm_inference_client.py, tests/test_slm_inference_client.py, README.md, evals.md, .gitignore, .automoat/logs/agent-journal.md, .pixelbox/handoff.md
 - checks: `python3 -m unittest tests.test_slm_inference_client -v`; `python3 -m py_compile scripts/slm_inference_client.py modal_slm.py tests/test_slm_inference_client.py`; `python3 -m unittest discover -s tests -v`; `git diff --check`
 - next: create the `automoat-slm` Modal secret, deploy `modal_slm.py`, then run the documented 10-task smoke sample and record cold/warm latency plus accuracy before routing any production work
+
+- timestamp: 2026-08-19T21:25:00Z
+- lane: editor
+- status: restored Automoat's durable product hierarchy on the public root; metadata, H1, and hero now lead with the local-first discover/define/prove/operationalize moat job, business-first and dataset-first entry points precede the current release, Whole-Record Check is labeled a released current initiative with Dallas as its bounded validation case, and the terminal is framed as build/runtime evidence rather than the product; added a visible 2026-08-19 release note and a static hierarchy regression contract; no raw data, pipeline summary, or Pixelbox preview metadata changed
+- files: README.md, generated/landing.html, index.html, tests/test_product_identity_surface.py, .pixelbox/handoff.md
+- checks: `python3 -m unittest tests.test_product_identity_surface -v` (6 passed); `python3 -m unittest discover -s tests -p 'test_*.py'` (658 passed); `python3 scripts/generate_dallas_whole_record_check.py --check` (30 cases, 20 coverage receipts, 10/10 planted omissions detected, zero unexpected conflicts, fingerprint `sha256:bb43fefc404a5a4e920034cd1607c532e72aa4c369542041b2b4e425e3a0d316`); `cmp -s generated/landing.html index.html`; `git diff --check`
+- next: review the copy and responsive root in a preview, then commit, push, and deploy this exact clean-worktree change; preserve the separate dirty canonical checkout

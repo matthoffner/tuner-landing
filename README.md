@@ -4,13 +4,20 @@ Created from Pixelbox.
 
 ## What This Is
 
-`automoat` is a local-first scaffold for turning repeated operational judgment into inspectable artifacts before building a product around it. The current proof is deliberately narrow: Dallas residential electrical permits and inspections for electricians. The repo normalizes sample records, generates inspection sequences, creates eval tasks and reviewed labels, checks contract stability, reports edge-case coverage, and now emits a small action queue that shows what an operator would do after failed or not-ready inspections.
+`automoat` is a local-first workbench for helping a business discover, define, prove, and operationalize a moat from proprietary workflows, decisions, corrections, outcomes, and datasets. It turns repeated operational judgment into inspectable artifacts, reusable evaluation contracts, and approval-aware systems so the business can see what is defensible before automating it.
 
-## Whole-Record Check
+## Product Entry Points
 
-Automoat now has a backend-neutral check for the moment before a recommendation becomes an operator action. It compares the candidate answer with one immutable, bounded case snapshot. Agreement produces a Coverage Receipt; a material action or evidence mismatch produces an Evidence Conflict card with stable source IDs and existing correction-ledger context.
+- **Business-first discovery:** map recurring work, identify which workflow knowledge is proprietary, and produce a data collection, evaluation, and monetization plan.
+- **Dataset-first build + eval:** inspect local proprietary data, formulate the tasks it can improve, compare it against a generic baseline, and choose retrieval, adaptation, fine-tuning, or no deployment.
 
-The committed validation set uses 30 versioned Dallas scaffold cases and plants exactly 10 retrieval omissions. The deterministic harness produces 20 Coverage Receipts, detects all 10 planted omissions as conflicts, and produces no unexpected conflicts. This is a regression proof over scaffold records, not a production model-accuracy benchmark.
+These are two routes into the same product, not separate products. Both should leave the user with evidence for how to operationalize a moat.
+
+## Current Initiative: Whole-Record Check
+
+Whole-Record Check is one released application of that core loop. It provides a backend-neutral check for the moment before a recommendation becomes an operator action. It compares the candidate answer with one immutable, bounded case snapshot. Agreement produces a Coverage Receipt; a material action or evidence mismatch produces an Evidence Conflict card with stable source IDs and existing correction-ledger context.
+
+The current validation is deliberately narrow: 30 versioned Dallas residential-electrician scaffold cases with exactly 10 planted retrieval omissions. The deterministic harness produces 20 Coverage Receipts, detects all 10 omissions as conflicts, and produces no unexpected conflicts. Dallas is the bounded validation case for this initiative, not Automoat's product identity, and the result is a regression proof rather than a production model-accuracy benchmark.
 
 ## Docs
 
