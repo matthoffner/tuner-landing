@@ -499,9 +499,23 @@
         width: 8px;
         height: 8px;
         border-radius: 999px;
+        background: #8f98a4;
+        box-shadow: none;
+      }
+
+      .terminal-meta[data-state="live"] .terminal-live-dot {
         background: #f0d8c8;
         box-shadow: 0 0 0 rgba(240, 216, 200, 0.52);
         animation: terminalPulse 1.3s ease-in-out infinite;
+      }
+
+      .terminal-meta[data-state="waiting"] .terminal-live-dot {
+        background: #e7b862;
+      }
+
+      .terminal-meta[data-state="degraded"] .terminal-live-dot,
+      .terminal-meta[data-state="error"] .terminal-live-dot {
+        background: #dc725e;
       }
 
       @keyframes terminalPulse {
@@ -1223,15 +1237,15 @@
                 </div>
                 <div class="terminal-fact">
                   <strong>Visibility</strong>
-                  <span>live log relay</span>
+                  <span>health-checked log relay</span>
                 </div>
               </div>
             </div>
 
-            <div class="terminal-panel terminal-panel-primary" aria-label="Live autonomous Codex terminal">
+            <div class="terminal-panel terminal-panel-primary" aria-label="Autonomous Codex terminal evidence">
               <div class="terminal-bar">
-                <span>render codex live</span>
-                <span class="terminal-meta">
+                <span>render codex relay</span>
+                <span class="terminal-meta" data-state="waiting">
                   <span class="terminal-live-dot" aria-hidden="true"></span>
                   <span data-cockpit-terminal-status>connecting</span>
                 </span>
@@ -1247,7 +1261,7 @@
             <div class="terminal-note-grid">
               <div class="terminal-note">
                 <strong>Loop</strong>
-                <p>The agent reads the repo, chooses a small improvement, runs checks, commits, and pushes.</p>
+                <p>The agent acts on new evidence, runs checks for material work, and records no change when the evidence is unchanged.</p>
               </div>
               <div class="terminal-note">
                 <strong>Memory</strong>
@@ -1315,6 +1329,15 @@
               <div class="timeline-item">
                 <div class="timeline-meta">2026-08-19</div>
                 <p>
+                  Made cockpit health fail honestly. The relay badge now follows
+                  <code>cockpit_ok</code>, <code>cockpit_status</code>, and the health label instead
+                  of calling a stale or degraded snapshot live; the pulsing indicator is reserved
+                  for a confirmed live relay.
+                </p>
+              </div>
+              <div class="timeline-item">
+                <div class="timeline-meta">2026-08-19</div>
+                <p>
                   Restored Automoat's durable product hierarchy. The root now leads with the
                   local-first job of discovering, defining, proving, and operationalizing a moat;
                   business-first and dataset-first entry points come next. Whole-Record Check is a
@@ -1342,15 +1365,15 @@
             </div>
             <h2>A terminal tunnel makes the build and runtime evidence inspectable</h2>
             <p>
-              The worker runs in Render, publishes status through the relay, and pushes bounded
-              improvements to <code>main</code>. This supporting evidence lets an operator inspect
+              The worker runs in Render and publishes status through the relay; material,
+              checked improvements can be pushed to <code>main</code>. This supporting evidence lets an operator inspect
               the agent's work without confusing the build cockpit with Automoat itself.
             </p>
             <div class="cockpit-layout">
-              <div class="terminal-panel" aria-label="Live Codex loop terminal stream">
+              <div class="terminal-panel" aria-label="Codex loop terminal relay">
                 <div class="terminal-bar">
-                  <span>render codex live</span>
-                  <span class="terminal-meta">
+                  <span>render codex relay</span>
+                  <span class="terminal-meta" data-state="waiting">
                     <span class="terminal-live-dot" aria-hidden="true"></span>
                     <span data-cockpit-terminal-status>connecting</span>
                   </span>
@@ -1361,10 +1384,10 @@
               <div class="cockpit-list">
                 <div class="cockpit-step">
                   <strong>Loop runner</strong>
-                  <p>Codex now runs explicit autonomous iterations with a bounded prompt, changed files, checks, commit, push, and next step.</p>
+                  <p>Codex runs bounded iterations only from new evidence; unchanged evidence produces no change, while material work carries checks, commit, push, and a next step.</p>
                 </div>
                 <div class="cockpit-step">
-                  <strong>Live terminal stream</strong>
+                  <strong>Terminal relay</strong>
                   <p>The cockpit shows the PTY/log stream so operators can see the agent working instead of trusting a black box.</p>
                 </div>
                 <div class="cockpit-step">
@@ -1831,12 +1854,32 @@
           const runId = status.run_id || "unknown-run";
           const updated = status.publisher_updated_at || status.updated_at || relay.updated_at || "unknown-time";
           const running = status.loop_running ? "running" : "stopped";
+          const health = cockpitHealth(status);
           return [
             `$ python3 /app/scripts/start_render_codex_worker.py`,
             `$ render worker=${running} phase=${phase} head=${head} poll=${pollCount}`,
+            `$ cockpit=${health.state} detail=${health.detail}`,
             `$ run_id=${runId} updated=${updated}`,
             "",
           ].join("\n");
+        }
+
+        function cockpitHealth(status) {
+          const reported = typeof status.cockpit_status === "string"
+            ? status.cockpit_status.toLowerCase()
+            : "unknown";
+          const detail = typeof status.cockpit_health_label === "string"
+            ? status.cockpit_health_label
+            : "Relay health is unavailable";
+          const confirmedLive = status.cockpit_ok === true && reported === "live";
+          const state = confirmedLive ? "live" : reported === "waiting" ? "waiting" : "degraded";
+          return {
+            state,
+            detail,
+            label: confirmedLive
+              ? `live · ${status.phase || "unknown"}`
+              : `${state} · ${detail}`
+          };
         }
 
         function updateLiveTerminals(status, logText) {
@@ -1847,9 +1890,11 @@
             terminal.textContent = body;
             terminal.scrollTop = terminal.scrollHeight;
           });
-          const label = `${status.loop_running ? "live" : "stopped"} · ${status.phase || "unknown"}`;
+          const health = cockpitHealth(status);
           liveTerminalStatuses.forEach((node) => {
-            node.textContent = label;
+            node.textContent = health.label;
+            const meta = node.closest(".terminal-meta");
+            if (meta) meta.dataset.state = health.state;
           });
         }
 
@@ -1859,6 +1904,8 @@
           });
           liveTerminalStatuses.forEach((node) => {
             node.textContent = "relay error";
+            const meta = node.closest(".terminal-meta");
+            if (meta) meta.dataset.state = "error";
           });
         }
 

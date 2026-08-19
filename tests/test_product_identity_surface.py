@@ -64,8 +64,17 @@ class ProductIdentitySurfaceTest(unittest.TestCase):
     def test_runtime_cockpit_is_evidence_not_the_product_identity(self) -> None:
         self.assertIn("Build and runtime evidence", self.html)
         self.assertIn("not the product\n                  identity", self.html)
+        self.assertIn("render codex relay", self.html)
+        self.assertNotIn("render codex live", self.html)
         self.assertNotIn("Live product surface", self.html)
         self.assertNotIn("the product surface", self.html.lower())
+
+    def test_runtime_badge_fails_closed_on_degraded_or_stale_relay_health(self) -> None:
+        self.assertIn('status.cockpit_ok === true && reported === "live"', self.html)
+        self.assertIn('status.cockpit_health_label === "string"', self.html)
+        self.assertIn('meta.dataset.state = health.state', self.html)
+        self.assertIn('.terminal-meta[data-state="live"] .terminal-live-dot', self.html)
+        self.assertIn('meta.dataset.state = "error"', self.html)
 
     def test_public_release_notes_record_the_identity_correction(self) -> None:
         release_notes_start = self.html.index('id="release-notes"')
