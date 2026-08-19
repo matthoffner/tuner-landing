@@ -1,0 +1,2099 @@
+{
+  "bounds": {
+    "case_count": 30,
+    "max_snapshot_bytes": 65536,
+    "max_source_records_per_case": 12,
+    "planted_retrieval_omission_count": 10
+  },
+  "cases": [
+    {
+      "candidate": {
+        "backend": "deterministic-validation-harness",
+        "candidate_fingerprint": "sha256:ef3d42f57b795985f713d8670f103842d63e9ec26d245d960f14008d55e4be95",
+        "case_id": "dallas-whole-record-case-01",
+        "evidence_source_ids": [
+          "source:permit:elm-2026-0211",
+          "source:inspection:elm-2026-0211:2026-04-14:final"
+        ],
+        "planted_omission": null,
+        "recommended_actions": [
+          "ensure_site_access",
+          "schedule_reinspection"
+        ],
+        "schema_version": "whole-record-candidate/v1",
+        "snapshot_fingerprint": "sha256:7fb0e3cd77c07d6f093f2aac835c2c0641bf69bd41af9690ca50394cf056f168"
+      },
+      "case_id": "dallas-whole-record-case-01",
+      "queue_item_id": "workflow-item:dallas:next-action:0001",
+      "result": {
+        "artifact_fingerprint": "sha256:ceb62282bb4713c619b352650e502ba507ba9dcd7c245993713bb460b1c4f371",
+        "artifact_type": "coverage_receipt",
+        "candidate_fingerprint": "sha256:ef3d42f57b795985f713d8670f103842d63e9ec26d245d960f14008d55e4be95",
+        "case_id": "dallas-whole-record-case-01",
+        "correction_ledger": {
+          "allowed_decisions": [
+            "accepted",
+            "rejected",
+            "edited"
+          ],
+          "context": {
+            "inspection_id": "inspection:dallas:elm-2026-0211:2026-04-14:final",
+            "permit_id": "permit:dallas:elm-2026-0211",
+            "source_permit_number": "ELM-2026-0211"
+          },
+          "contract": "operator-correction-event-compatible/v1",
+          "ledger_path": "generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl",
+          "payload_template": {
+            "queue_item_id": "workflow-item:dallas:next-action:0001",
+            "source": "dallas-whole-record-check"
+          },
+          "writes_ledger": false
+        },
+        "covered_action_ids": [
+          "ensure_site_access",
+          "schedule_reinspection"
+        ],
+        "covered_source_ids": [
+          "source:inspection:elm-2026-0211:2026-04-14:final",
+          "source:permit:elm-2026-0211"
+        ],
+        "mismatch": {
+          "missing_action_ids": [],
+          "missing_material_source_ids": [],
+          "unexpected_action_ids": [],
+          "unknown_source_ids": []
+        },
+        "queue_item_id": "workflow-item:dallas:next-action:0001",
+        "schema_version": "coverage-receipt/v1",
+        "snapshot_fingerprint": "sha256:7fb0e3cd77c07d6f093f2aac835c2c0641bf69bd41af9690ca50394cf056f168",
+        "status": "agreement"
+      },
+      "snapshot_fingerprint": "sha256:7fb0e3cd77c07d6f093f2aac835c2c0641bf69bd41af9690ca50394cf056f168",
+      "snapshot_path": "cases/dallas-whole-record-case-01--7fb0e3cd77c07d6f.json"
+    },
+    {
+      "candidate": {
+        "backend": "deterministic-validation-harness",
+        "candidate_fingerprint": "sha256:06d5acf7db6df17db08535f855d998a855ed330e714c51f72176d277f45a1d9a",
+        "case_id": "dallas-whole-record-case-02",
+        "evidence_source_ids": [
+          "source:permit:elz-2026-0220",
+          "source:inspection:elz-2026-0220:2026-05-05:rough_in"
+        ],
+        "planted_omission": null,
+        "recommended_actions": [
+          "correct_wiring_or_devices",
+          "schedule_reinspection"
+        ],
+        "schema_version": "whole-record-candidate/v1",
+        "snapshot_fingerprint": "sha256:baa5f15001c0edb357e611c5a74e95a02d59dcb380c1132d1a67410d89d72aca"
+      },
+      "case_id": "dallas-whole-record-case-02",
+      "queue_item_id": "workflow-item:dallas:next-action:0019",
+      "result": {
+        "artifact_fingerprint": "sha256:cebe9f794f8a22fca4d8453f5f27f2b9e893c93a17078559e1f0a457bd5edfe8",
+        "artifact_type": "coverage_receipt",
+        "candidate_fingerprint": "sha256:06d5acf7db6df17db08535f855d998a855ed330e714c51f72176d277f45a1d9a",
+        "case_id": "dallas-whole-record-case-02",
+        "correction_ledger": {
+          "allowed_decisions": [
+            "accepted",
+            "rejected",
+            "edited"
+          ],
+          "context": {
+            "inspection_id": "inspection:dallas:elz-2026-0220:2026-05-05:rough_in",
+            "permit_id": "permit:dallas:elz-2026-0220",
+            "source_permit_number": "ELZ-2026-0220"
+          },
+          "contract": "operator-correction-event-compatible/v1",
+          "ledger_path": "generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl",
+          "payload_template": {
+            "queue_item_id": "workflow-item:dallas:next-action:0019",
+            "source": "dallas-whole-record-check"
+          },
+          "writes_ledger": false
+        },
+        "covered_action_ids": [
+          "correct_wiring_or_devices",
+          "schedule_reinspection"
+        ],
+        "covered_source_ids": [
+          "source:inspection:elz-2026-0220:2026-05-05:rough_in",
+          "source:permit:elz-2026-0220"
+        ],
+        "mismatch": {
+          "missing_action_ids": [],
+          "missing_material_source_ids": [],
+          "unexpected_action_ids": [],
+          "unknown_source_ids": []
+        },
+        "queue_item_id": "workflow-item:dallas:next-action:0019",
+        "schema_version": "coverage-receipt/v1",
+        "snapshot_fingerprint": "sha256:baa5f15001c0edb357e611c5a74e95a02d59dcb380c1132d1a67410d89d72aca",
+        "status": "agreement"
+      },
+      "snapshot_fingerprint": "sha256:baa5f15001c0edb357e611c5a74e95a02d59dcb380c1132d1a67410d89d72aca",
+      "snapshot_path": "cases/dallas-whole-record-case-02--baa5f15001c0edb3.json"
+    },
+    {
+      "candidate": {
+        "backend": "deterministic-validation-harness",
+        "candidate_fingerprint": "sha256:8628261183d230eb2661601264085dda9537dd96dd9db8ba7bc240c1669c3da4",
+        "case_id": "dallas-whole-record-case-03",
+        "evidence_source_ids": [
+          "source:permit:elz-2026-0238"
+        ],
+        "planted_omission": {
+          "kind": "retrieval_omission",
+          "omitted_action_id": "schedule_reinspection",
+          "omitted_source_id": "source:inspection:elz-2026-0238:2026-05-22:rough_in"
+        },
+        "recommended_actions": [
+          "complete_remaining_work"
+        ],
+        "schema_version": "whole-record-candidate/v1",
+        "snapshot_fingerprint": "sha256:83e5731f7ce497ecad48f1d032db95baf332c63f08db6e4b0c15818ff517df37"
+      },
+      "case_id": "dallas-whole-record-case-03",
+      "queue_item_id": "workflow-item:dallas:next-action:0037",
+      "result": {
+        "artifact_fingerprint": "sha256:ffa7701b8d112ef93f65243cea41839efe789277d3bbcc5b81c94810b44bac48",
+        "artifact_type": "evidence_conflict_card",
+        "candidate_fingerprint": "sha256:8628261183d230eb2661601264085dda9537dd96dd9db8ba7bc240c1669c3da4",
+        "case_id": "dallas-whole-record-case-03",
+        "correction_ledger": {
+          "allowed_decisions": [
+            "accepted",
+            "rejected",
+            "edited"
+          ],
+          "context": {
+            "inspection_id": "inspection:dallas:elz-2026-0238:2026-05-22:rough_in",
+            "permit_id": "permit:dallas:elz-2026-0238",
+            "source_permit_number": "ELZ-2026-0238"
+          },
+          "contract": "operator-correction-event-compatible/v1",
+          "ledger_path": "generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl",
+          "payload_template": {
+            "queue_item_id": "workflow-item:dallas:next-action:0037",
+            "source": "dallas-whole-record-check"
+          },
+          "writes_ledger": false
+        },
+        "mismatch": {
+          "missing_action_ids": [
+            "schedule_reinspection"
+          ],
+          "missing_material_source_ids": [
+            "source:inspection:elz-2026-0238:2026-05-22:rough_in"
+          ],
+          "unexpected_action_ids": [],
+          "unknown_source_ids": []
+        },
+        "queue_item_id": "workflow-item:dallas:next-action:0037",
+        "retrieved_action_ids": [
+          "complete_remaining_work"
+        ],
+        "retrieved_source_ids": [
+          "source:permit:elz-2026-0238"
+        ],
+        "schema_version": "evidence-conflict-card/v1",
+        "snapshot_fingerprint": "sha256:83e5731f7ce497ecad48f1d032db95baf332c63f08db6e4b0c15818ff517df37",
+        "status": "material_mismatch",
+        "whole_record_action_ids": [
+          "complete_remaining_work",
+          "schedule_reinspection"
+        ],
+        "whole_record_material_source_ids": [
+          "source:inspection:elz-2026-0238:2026-05-22:rough_in",
+          "source:permit:elz-2026-0238"
+        ]
+      },
+      "snapshot_fingerprint": "sha256:83e5731f7ce497ecad48f1d032db95baf332c63f08db6e4b0c15818ff517df37",
+      "snapshot_path": "cases/dallas-whole-record-case-03--83e5731f7ce497ec.json"
+    },
+    {
+      "candidate": {
+        "backend": "deterministic-validation-harness",
+        "candidate_fingerprint": "sha256:c281c732ff3548dbf6b7720358ba858db1b5768f0ec2fc6ed0aa9ad8f6c871e9",
+        "case_id": "dallas-whole-record-case-04",
+        "evidence_source_ids": [
+          "source:permit:elz-2026-0257",
+          "source:inspection:elz-2026-0257:2026-05-22:rough_in"
+        ],
+        "planted_omission": null,
+        "recommended_actions": [
+          "complete_remaining_work",
+          "schedule_reinspection"
+        ],
+        "schema_version": "whole-record-candidate/v1",
+        "snapshot_fingerprint": "sha256:799ce5f81c7e3895dc6682bc49a30b9fa493236421714a589b4b081538bb6d3e"
+      },
+      "case_id": "dallas-whole-record-case-04",
+      "queue_item_id": "workflow-item:dallas:next-action:0056",
+      "result": {
+        "artifact_fingerprint": "sha256:270c2d2b7be7052958c3c71875aba978ca282fdb45eac24b540915a113ad90b8",
+        "artifact_type": "coverage_receipt",
+        "candidate_fingerprint": "sha256:c281c732ff3548dbf6b7720358ba858db1b5768f0ec2fc6ed0aa9ad8f6c871e9",
+        "case_id": "dallas-whole-record-case-04",
+        "correction_ledger": {
+          "allowed_decisions": [
+            "accepted",
+            "rejected",
+            "edited"
+          ],
+          "context": {
+            "inspection_id": "inspection:dallas:elz-2026-0257:2026-05-22:rough_in",
+            "permit_id": "permit:dallas:elz-2026-0257",
+            "source_permit_number": "ELZ-2026-0257"
+          },
+          "contract": "operator-correction-event-compatible/v1",
+          "ledger_path": "generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl",
+          "payload_template": {
+            "queue_item_id": "workflow-item:dallas:next-action:0056",
+            "source": "dallas-whole-record-check"
+          },
+          "writes_ledger": false
+        },
+        "covered_action_ids": [
+          "complete_remaining_work",
+          "schedule_reinspection"
+        ],
+        "covered_source_ids": [
+          "source:inspection:elz-2026-0257:2026-05-22:rough_in",
+          "source:permit:elz-2026-0257"
+        ],
+        "mismatch": {
+          "missing_action_ids": [],
+          "missing_material_source_ids": [],
+          "unexpected_action_ids": [],
+          "unknown_source_ids": []
+        },
+        "queue_item_id": "workflow-item:dallas:next-action:0056",
+        "schema_version": "coverage-receipt/v1",
+        "snapshot_fingerprint": "sha256:799ce5f81c7e3895dc6682bc49a30b9fa493236421714a589b4b081538bb6d3e",
+        "status": "agreement"
+      },
+      "snapshot_fingerprint": "sha256:799ce5f81c7e3895dc6682bc49a30b9fa493236421714a589b4b081538bb6d3e",
+      "snapshot_path": "cases/dallas-whole-record-case-04--799ce5f81c7e3895.json"
+    },
+    {
+      "candidate": {
+        "backend": "deterministic-validation-harness",
+        "candidate_fingerprint": "sha256:4c76b0306371856d4c67a788fa2d359c781e4dd2d90a01ab43edcdc8981865a4",
+        "case_id": "dallas-whole-record-case-05",
+        "evidence_source_ids": [
+          "source:permit:elz-2026-0275",
+          "source:inspection:elz-2026-0275:2026-05-22:rough_in"
+        ],
+        "planted_omission": null,
+        "recommended_actions": [
+          "complete_remaining_work",
+          "schedule_reinspection"
+        ],
+        "schema_version": "whole-record-candidate/v1",
+        "snapshot_fingerprint": "sha256:4468384b1bc6f054f472661427dd11f66385c2b33ea4720c93d075d827211dec"
+      },
+      "case_id": "dallas-whole-record-case-05",
+      "queue_item_id": "workflow-item:dallas:next-action:0074",
+      "result": {
+        "artifact_fingerprint": "sha256:b0d7e8f5d02f0b978f65d8a43f35370514e5f68c8ad493a64f6956b03aec2903",
+        "artifact_type": "coverage_receipt",
+        "candidate_fingerprint": "sha256:4c76b0306371856d4c67a788fa2d359c781e4dd2d90a01ab43edcdc8981865a4",
+        "case_id": "dallas-whole-record-case-05",
+        "correction_ledger": {
+          "allowed_decisions": [
+            "accepted",
+            "rejected",
+            "edited"
+          ],
+          "context": {
+            "inspection_id": "inspection:dallas:elz-2026-0275:2026-05-22:rough_in",
+            "permit_id": "permit:dallas:elz-2026-0275",
+            "source_permit_number": "ELZ-2026-0275"
+          },
+          "contract": "operator-correction-event-compatible/v1",
+          "ledger_path": "generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl",
+          "payload_template": {
+            "queue_item_id": "workflow-item:dallas:next-action:0074",
+            "source": "dallas-whole-record-check"
+          },
+          "writes_ledger": false
+        },
+        "covered_action_ids": [
+          "complete_remaining_work",
+          "schedule_reinspection"
+        ],
+        "covered_source_ids": [
+          "source:inspection:elz-2026-0275:2026-05-22:rough_in",
+          "source:permit:elz-2026-0275"
+        ],
+        "mismatch": {
+          "missing_action_ids": [],
+          "missing_material_source_ids": [],
+          "unexpected_action_ids": [],
+          "unknown_source_ids": []
+        },
+        "queue_item_id": "workflow-item:dallas:next-action:0074",
+        "schema_version": "coverage-receipt/v1",
+        "snapshot_fingerprint": "sha256:4468384b1bc6f054f472661427dd11f66385c2b33ea4720c93d075d827211dec",
+        "status": "agreement"
+      },
+      "snapshot_fingerprint": "sha256:4468384b1bc6f054f472661427dd11f66385c2b33ea4720c93d075d827211dec",
+      "snapshot_path": "cases/dallas-whole-record-case-05--4468384b1bc6f054.json"
+    },
+    {
+      "candidate": {
+        "backend": "deterministic-validation-harness",
+        "candidate_fingerprint": "sha256:9350f3610b11183969dc7f40016716a40d4eb51a8f99cf2c68e8b7cf9f3f5c91",
+        "case_id": "dallas-whole-record-case-06",
+        "evidence_source_ids": [
+          "source:permit:elz-2026-0294"
+        ],
+        "planted_omission": {
+          "kind": "retrieval_omission",
+          "omitted_action_id": "schedule_reinspection",
+          "omitted_source_id": "source:inspection:elz-2026-0294:2026-05-22:rough_in"
+        },
+        "recommended_actions": [
+          "complete_remaining_work"
+        ],
+        "schema_version": "whole-record-candidate/v1",
+        "snapshot_fingerprint": "sha256:9e96a62033b7755d70807bce1e76d1b87233871f2579685ff5b2a9da17917fcc"
+      },
+      "case_id": "dallas-whole-record-case-06",
+      "queue_item_id": "workflow-item:dallas:next-action:0093",
+      "result": {
+        "artifact_fingerprint": "sha256:d67cfd8bf3e6c5e0a7c0c77e48d73278df6a5f2e78d5767f3d799d97217ecbb7",
+        "artifact_type": "evidence_conflict_card",
+        "candidate_fingerprint": "sha256:9350f3610b11183969dc7f40016716a40d4eb51a8f99cf2c68e8b7cf9f3f5c91",
+        "case_id": "dallas-whole-record-case-06",
+        "correction_ledger": {
+          "allowed_decisions": [
+            "accepted",
+            "rejected",
+            "edited"
+          ],
+          "context": {
+            "inspection_id": "inspection:dallas:elz-2026-0294:2026-05-22:rough_in",
+            "permit_id": "permit:dallas:elz-2026-0294",
+            "source_permit_number": "ELZ-2026-0294"
+          },
+          "contract": "operator-correction-event-compatible/v1",
+          "ledger_path": "generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl",
+          "payload_template": {
+            "queue_item_id": "workflow-item:dallas:next-action:0093",
+            "source": "dallas-whole-record-check"
+          },
+          "writes_ledger": false
+        },
+        "mismatch": {
+          "missing_action_ids": [
+            "schedule_reinspection"
+          ],
+          "missing_material_source_ids": [
+            "source:inspection:elz-2026-0294:2026-05-22:rough_in"
+          ],
+          "unexpected_action_ids": [],
+          "unknown_source_ids": []
+        },
+        "queue_item_id": "workflow-item:dallas:next-action:0093",
+        "retrieved_action_ids": [
+          "complete_remaining_work"
+        ],
+        "retrieved_source_ids": [
+          "source:permit:elz-2026-0294"
+        ],
+        "schema_version": "evidence-conflict-card/v1",
+        "snapshot_fingerprint": "sha256:9e96a62033b7755d70807bce1e76d1b87233871f2579685ff5b2a9da17917fcc",
+        "status": "material_mismatch",
+        "whole_record_action_ids": [
+          "complete_remaining_work",
+          "schedule_reinspection"
+        ],
+        "whole_record_material_source_ids": [
+          "source:inspection:elz-2026-0294:2026-05-22:rough_in",
+          "source:permit:elz-2026-0294"
+        ]
+      },
+      "snapshot_fingerprint": "sha256:9e96a62033b7755d70807bce1e76d1b87233871f2579685ff5b2a9da17917fcc",
+      "snapshot_path": "cases/dallas-whole-record-case-06--9e96a62033b7755d.json"
+    },
+    {
+      "candidate": {
+        "backend": "deterministic-validation-harness",
+        "candidate_fingerprint": "sha256:0e99e5f5d54aebd04fa7a2d52a4195694d44de998e636c1542e2579d7c808a17",
+        "case_id": "dallas-whole-record-case-07",
+        "evidence_source_ids": [
+          "source:permit:elz-2026-0312",
+          "source:inspection:elz-2026-0312:2026-05-24:rough_in"
+        ],
+        "planted_omission": null,
+        "recommended_actions": [
+          "complete_remaining_work",
+          "schedule_reinspection"
+        ],
+        "schema_version": "whole-record-candidate/v1",
+        "snapshot_fingerprint": "sha256:77d26a218f960cbd9ac4bf3e8e74c1bf8faccd6a2984d4c9bb87a6d4bd35f395"
+      },
+      "case_id": "dallas-whole-record-case-07",
+      "queue_item_id": "workflow-item:dallas:next-action:0111",
+      "result": {
+        "artifact_fingerprint": "sha256:57376b18a483a911506f944072a64b2dcf24fda5d9e7aa75a8a9684af6bfc750",
+        "artifact_type": "coverage_receipt",
+        "candidate_fingerprint": "sha256:0e99e5f5d54aebd04fa7a2d52a4195694d44de998e636c1542e2579d7c808a17",
+        "case_id": "dallas-whole-record-case-07",
+        "correction_ledger": {
+          "allowed_decisions": [
+            "accepted",
+            "rejected",
+            "edited"
+          ],
+          "context": {
+            "inspection_id": "inspection:dallas:elz-2026-0312:2026-05-24:rough_in",
+            "permit_id": "permit:dallas:elz-2026-0312",
+            "source_permit_number": "ELZ-2026-0312"
+          },
+          "contract": "operator-correction-event-compatible/v1",
+          "ledger_path": "generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl",
+          "payload_template": {
+            "queue_item_id": "workflow-item:dallas:next-action:0111",
+            "source": "dallas-whole-record-check"
+          },
+          "writes_ledger": false
+        },
+        "covered_action_ids": [
+          "complete_remaining_work",
+          "schedule_reinspection"
+        ],
+        "covered_source_ids": [
+          "source:inspection:elz-2026-0312:2026-05-24:rough_in",
+          "source:permit:elz-2026-0312"
+        ],
+        "mismatch": {
+          "missing_action_ids": [],
+          "missing_material_source_ids": [],
+          "unexpected_action_ids": [],
+          "unknown_source_ids": []
+        },
+        "queue_item_id": "workflow-item:dallas:next-action:0111",
+        "schema_version": "coverage-receipt/v1",
+        "snapshot_fingerprint": "sha256:77d26a218f960cbd9ac4bf3e8e74c1bf8faccd6a2984d4c9bb87a6d4bd35f395",
+        "status": "agreement"
+      },
+      "snapshot_fingerprint": "sha256:77d26a218f960cbd9ac4bf3e8e74c1bf8faccd6a2984d4c9bb87a6d4bd35f395",
+      "snapshot_path": "cases/dallas-whole-record-case-07--77d26a218f960cbd.json"
+    },
+    {
+      "candidate": {
+        "backend": "deterministic-validation-harness",
+        "candidate_fingerprint": "sha256:98d7d8ceabc34a676b70b453112f550f6ad3dc8149b69c48efd86762601639be",
+        "case_id": "dallas-whole-record-case-08",
+        "evidence_source_ids": [
+          "source:permit:elz-2026-0330",
+          "source:inspection:elz-2026-0330:2026-05-24:rough_in"
+        ],
+        "planted_omission": null,
+        "recommended_actions": [
+          "complete_remaining_work",
+          "schedule_reinspection"
+        ],
+        "schema_version": "whole-record-candidate/v1",
+        "snapshot_fingerprint": "sha256:b744a5a4b455b187069f324ffaeaa828ea4c18646400643b09fda3ff26834137"
+      },
+      "case_id": "dallas-whole-record-case-08",
+      "queue_item_id": "workflow-item:dallas:next-action:0129",
+      "result": {
+        "artifact_fingerprint": "sha256:dda801c7a130bd7b566ef5d93c16d63865d108b9d2f278060703d0ffa7aaa899",
+        "artifact_type": "coverage_receipt",
+        "candidate_fingerprint": "sha256:98d7d8ceabc34a676b70b453112f550f6ad3dc8149b69c48efd86762601639be",
+        "case_id": "dallas-whole-record-case-08",
+        "correction_ledger": {
+          "allowed_decisions": [
+            "accepted",
+            "rejected",
+            "edited"
+          ],
+          "context": {
+            "inspection_id": "inspection:dallas:elz-2026-0330:2026-05-24:rough_in",
+            "permit_id": "permit:dallas:elz-2026-0330",
+            "source_permit_number": "ELZ-2026-0330"
+          },
+          "contract": "operator-correction-event-compatible/v1",
+          "ledger_path": "generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl",
+          "payload_template": {
+            "queue_item_id": "workflow-item:dallas:next-action:0129",
+            "source": "dallas-whole-record-check"
+          },
+          "writes_ledger": false
+        },
+        "covered_action_ids": [
+          "complete_remaining_work",
+          "schedule_reinspection"
+        ],
+        "covered_source_ids": [
+          "source:inspection:elz-2026-0330:2026-05-24:rough_in",
+          "source:permit:elz-2026-0330"
+        ],
+        "mismatch": {
+          "missing_action_ids": [],
+          "missing_material_source_ids": [],
+          "unexpected_action_ids": [],
+          "unknown_source_ids": []
+        },
+        "queue_item_id": "workflow-item:dallas:next-action:0129",
+        "schema_version": "coverage-receipt/v1",
+        "snapshot_fingerprint": "sha256:b744a5a4b455b187069f324ffaeaa828ea4c18646400643b09fda3ff26834137",
+        "status": "agreement"
+      },
+      "snapshot_fingerprint": "sha256:b744a5a4b455b187069f324ffaeaa828ea4c18646400643b09fda3ff26834137",
+      "snapshot_path": "cases/dallas-whole-record-case-08--b744a5a4b455b187.json"
+    },
+    {
+      "candidate": {
+        "backend": "deterministic-validation-harness",
+        "candidate_fingerprint": "sha256:f88806e031f477185d31db9b6bbf5a1276863fb79c3b612780ae35406193252d",
+        "case_id": "dallas-whole-record-case-09",
+        "evidence_source_ids": [
+          "source:permit:elz-2026-0349"
+        ],
+        "planted_omission": {
+          "kind": "retrieval_omission",
+          "omitted_action_id": "schedule_reinspection",
+          "omitted_source_id": "source:inspection:elz-2026-0349:2026-05-24:rough_in"
+        },
+        "recommended_actions": [
+          "complete_remaining_work"
+        ],
+        "schema_version": "whole-record-candidate/v1",
+        "snapshot_fingerprint": "sha256:6d1789874c7388888a00082e568f5e1f97e515af1bb9cdfd976d5df45416c5b1"
+      },
+      "case_id": "dallas-whole-record-case-09",
+      "queue_item_id": "workflow-item:dallas:next-action:0148",
+      "result": {
+        "artifact_fingerprint": "sha256:074b4dc59e29517ccd12b7fd0deaa21c033ed8c72ea7148405b5059e39092e03",
+        "artifact_type": "evidence_conflict_card",
+        "candidate_fingerprint": "sha256:f88806e031f477185d31db9b6bbf5a1276863fb79c3b612780ae35406193252d",
+        "case_id": "dallas-whole-record-case-09",
+        "correction_ledger": {
+          "allowed_decisions": [
+            "accepted",
+            "rejected",
+            "edited"
+          ],
+          "context": {
+            "inspection_id": "inspection:dallas:elz-2026-0349:2026-05-24:rough_in",
+            "permit_id": "permit:dallas:elz-2026-0349",
+            "source_permit_number": "ELZ-2026-0349"
+          },
+          "contract": "operator-correction-event-compatible/v1",
+          "ledger_path": "generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl",
+          "payload_template": {
+            "queue_item_id": "workflow-item:dallas:next-action:0148",
+            "source": "dallas-whole-record-check"
+          },
+          "writes_ledger": false
+        },
+        "mismatch": {
+          "missing_action_ids": [
+            "schedule_reinspection"
+          ],
+          "missing_material_source_ids": [
+            "source:inspection:elz-2026-0349:2026-05-24:rough_in"
+          ],
+          "unexpected_action_ids": [],
+          "unknown_source_ids": []
+        },
+        "queue_item_id": "workflow-item:dallas:next-action:0148",
+        "retrieved_action_ids": [
+          "complete_remaining_work"
+        ],
+        "retrieved_source_ids": [
+          "source:permit:elz-2026-0349"
+        ],
+        "schema_version": "evidence-conflict-card/v1",
+        "snapshot_fingerprint": "sha256:6d1789874c7388888a00082e568f5e1f97e515af1bb9cdfd976d5df45416c5b1",
+        "status": "material_mismatch",
+        "whole_record_action_ids": [
+          "complete_remaining_work",
+          "schedule_reinspection"
+        ],
+        "whole_record_material_source_ids": [
+          "source:inspection:elz-2026-0349:2026-05-24:rough_in",
+          "source:permit:elz-2026-0349"
+        ]
+      },
+      "snapshot_fingerprint": "sha256:6d1789874c7388888a00082e568f5e1f97e515af1bb9cdfd976d5df45416c5b1",
+      "snapshot_path": "cases/dallas-whole-record-case-09--6d1789874c738888.json"
+    },
+    {
+      "candidate": {
+        "backend": "deterministic-validation-harness",
+        "candidate_fingerprint": "sha256:68abe49ff295c409e084acf5dd45a1483b47f19b0c6c8a5f9bd9ac54be1a0980",
+        "case_id": "dallas-whole-record-case-10",
+        "evidence_source_ids": [
+          "source:permit:elz-2026-0367",
+          "source:inspection:elz-2026-0367:2026-05-24:rough_in"
+        ],
+        "planted_omission": null,
+        "recommended_actions": [
+          "complete_remaining_work",
+          "schedule_reinspection"
+        ],
+        "schema_version": "whole-record-candidate/v1",
+        "snapshot_fingerprint": "sha256:6745986e8030810d10e0b4b7327a50fa3cab8cb3633439564eb87bd58126acf4"
+      },
+      "case_id": "dallas-whole-record-case-10",
+      "queue_item_id": "workflow-item:dallas:next-action:0166",
+      "result": {
+        "artifact_fingerprint": "sha256:7eaeae37878faee44f48cc8ed9ea5e25928f6fc8971386be191cd5d0aea0feea",
+        "artifact_type": "coverage_receipt",
+        "candidate_fingerprint": "sha256:68abe49ff295c409e084acf5dd45a1483b47f19b0c6c8a5f9bd9ac54be1a0980",
+        "case_id": "dallas-whole-record-case-10",
+        "correction_ledger": {
+          "allowed_decisions": [
+            "accepted",
+            "rejected",
+            "edited"
+          ],
+          "context": {
+            "inspection_id": "inspection:dallas:elz-2026-0367:2026-05-24:rough_in",
+            "permit_id": "permit:dallas:elz-2026-0367",
+            "source_permit_number": "ELZ-2026-0367"
+          },
+          "contract": "operator-correction-event-compatible/v1",
+          "ledger_path": "generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl",
+          "payload_template": {
+            "queue_item_id": "workflow-item:dallas:next-action:0166",
+            "source": "dallas-whole-record-check"
+          },
+          "writes_ledger": false
+        },
+        "covered_action_ids": [
+          "complete_remaining_work",
+          "schedule_reinspection"
+        ],
+        "covered_source_ids": [
+          "source:inspection:elz-2026-0367:2026-05-24:rough_in",
+          "source:permit:elz-2026-0367"
+        ],
+        "mismatch": {
+          "missing_action_ids": [],
+          "missing_material_source_ids": [],
+          "unexpected_action_ids": [],
+          "unknown_source_ids": []
+        },
+        "queue_item_id": "workflow-item:dallas:next-action:0166",
+        "schema_version": "coverage-receipt/v1",
+        "snapshot_fingerprint": "sha256:6745986e8030810d10e0b4b7327a50fa3cab8cb3633439564eb87bd58126acf4",
+        "status": "agreement"
+      },
+      "snapshot_fingerprint": "sha256:6745986e8030810d10e0b4b7327a50fa3cab8cb3633439564eb87bd58126acf4",
+      "snapshot_path": "cases/dallas-whole-record-case-10--6745986e8030810d.json"
+    },
+    {
+      "candidate": {
+        "backend": "deterministic-validation-harness",
+        "candidate_fingerprint": "sha256:72757d0b83a29d9903f484a46d83a19c54de50c531eb99ef13880611ebed783c",
+        "case_id": "dallas-whole-record-case-11",
+        "evidence_source_ids": [
+          "source:permit:elz-2026-0386",
+          "source:inspection:elz-2026-0386:2026-05-24:rough_in"
+        ],
+        "planted_omission": null,
+        "recommended_actions": [
+          "complete_remaining_work",
+          "schedule_reinspection"
+        ],
+        "schema_version": "whole-record-candidate/v1",
+        "snapshot_fingerprint": "sha256:6b45c52035f46f5148a8e85f76f31ad11dc6e4cd916ade22e5ed8a397cd929a1"
+      },
+      "case_id": "dallas-whole-record-case-11",
+      "queue_item_id": "workflow-item:dallas:next-action:0185",
+      "result": {
+        "artifact_fingerprint": "sha256:1029a4c93dae5805343f3007701a22dc8c162d456fe3ad6b4af9dd71346d4378",
+        "artifact_type": "coverage_receipt",
+        "candidate_fingerprint": "sha256:72757d0b83a29d9903f484a46d83a19c54de50c531eb99ef13880611ebed783c",
+        "case_id": "dallas-whole-record-case-11",
+        "correction_ledger": {
+          "allowed_decisions": [
+            "accepted",
+            "rejected",
+            "edited"
+          ],
+          "context": {
+            "inspection_id": "inspection:dallas:elz-2026-0386:2026-05-24:rough_in",
+            "permit_id": "permit:dallas:elz-2026-0386",
+            "source_permit_number": "ELZ-2026-0386"
+          },
+          "contract": "operator-correction-event-compatible/v1",
+          "ledger_path": "generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl",
+          "payload_template": {
+            "queue_item_id": "workflow-item:dallas:next-action:0185",
+            "source": "dallas-whole-record-check"
+          },
+          "writes_ledger": false
+        },
+        "covered_action_ids": [
+          "complete_remaining_work",
+          "schedule_reinspection"
+        ],
+        "covered_source_ids": [
+          "source:inspection:elz-2026-0386:2026-05-24:rough_in",
+          "source:permit:elz-2026-0386"
+        ],
+        "mismatch": {
+          "missing_action_ids": [],
+          "missing_material_source_ids": [],
+          "unexpected_action_ids": [],
+          "unknown_source_ids": []
+        },
+        "queue_item_id": "workflow-item:dallas:next-action:0185",
+        "schema_version": "coverage-receipt/v1",
+        "snapshot_fingerprint": "sha256:6b45c52035f46f5148a8e85f76f31ad11dc6e4cd916ade22e5ed8a397cd929a1",
+        "status": "agreement"
+      },
+      "snapshot_fingerprint": "sha256:6b45c52035f46f5148a8e85f76f31ad11dc6e4cd916ade22e5ed8a397cd929a1",
+      "snapshot_path": "cases/dallas-whole-record-case-11--6b45c52035f46f51.json"
+    },
+    {
+      "candidate": {
+        "backend": "deterministic-validation-harness",
+        "candidate_fingerprint": "sha256:7f17cae949797a58dfc82abd36becfdd4f7286e1cee9cd2805f5e0062fbcfe5f",
+        "case_id": "dallas-whole-record-case-12",
+        "evidence_source_ids": [
+          "source:permit:elz-2026-0404"
+        ],
+        "planted_omission": {
+          "kind": "retrieval_omission",
+          "omitted_action_id": "schedule_reinspection",
+          "omitted_source_id": "source:inspection:elz-2026-0404:2026-05-24:rough_in"
+        },
+        "recommended_actions": [
+          "complete_remaining_work"
+        ],
+        "schema_version": "whole-record-candidate/v1",
+        "snapshot_fingerprint": "sha256:d01b49ce8812a9cde3a5b08b9173092e319cebb71000fb0a51f4a543f3f7256b"
+      },
+      "case_id": "dallas-whole-record-case-12",
+      "queue_item_id": "workflow-item:dallas:next-action:0203",
+      "result": {
+        "artifact_fingerprint": "sha256:5dd518dcd600b1d99940a85371ccddcef4306814e0f2a56f5dec7616d29aae79",
+        "artifact_type": "evidence_conflict_card",
+        "candidate_fingerprint": "sha256:7f17cae949797a58dfc82abd36becfdd4f7286e1cee9cd2805f5e0062fbcfe5f",
+        "case_id": "dallas-whole-record-case-12",
+        "correction_ledger": {
+          "allowed_decisions": [
+            "accepted",
+            "rejected",
+            "edited"
+          ],
+          "context": {
+            "inspection_id": "inspection:dallas:elz-2026-0404:2026-05-24:rough_in",
+            "permit_id": "permit:dallas:elz-2026-0404",
+            "source_permit_number": "ELZ-2026-0404"
+          },
+          "contract": "operator-correction-event-compatible/v1",
+          "ledger_path": "generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl",
+          "payload_template": {
+            "queue_item_id": "workflow-item:dallas:next-action:0203",
+            "source": "dallas-whole-record-check"
+          },
+          "writes_ledger": false
+        },
+        "mismatch": {
+          "missing_action_ids": [
+            "schedule_reinspection"
+          ],
+          "missing_material_source_ids": [
+            "source:inspection:elz-2026-0404:2026-05-24:rough_in"
+          ],
+          "unexpected_action_ids": [],
+          "unknown_source_ids": []
+        },
+        "queue_item_id": "workflow-item:dallas:next-action:0203",
+        "retrieved_action_ids": [
+          "complete_remaining_work"
+        ],
+        "retrieved_source_ids": [
+          "source:permit:elz-2026-0404"
+        ],
+        "schema_version": "evidence-conflict-card/v1",
+        "snapshot_fingerprint": "sha256:d01b49ce8812a9cde3a5b08b9173092e319cebb71000fb0a51f4a543f3f7256b",
+        "status": "material_mismatch",
+        "whole_record_action_ids": [
+          "complete_remaining_work",
+          "schedule_reinspection"
+        ],
+        "whole_record_material_source_ids": [
+          "source:inspection:elz-2026-0404:2026-05-24:rough_in",
+          "source:permit:elz-2026-0404"
+        ]
+      },
+      "snapshot_fingerprint": "sha256:d01b49ce8812a9cde3a5b08b9173092e319cebb71000fb0a51f4a543f3f7256b",
+      "snapshot_path": "cases/dallas-whole-record-case-12--d01b49ce8812a9cd.json"
+    },
+    {
+      "candidate": {
+        "backend": "deterministic-validation-harness",
+        "candidate_fingerprint": "sha256:83ac9693b7baebb5967715561c65eb777f797ce32627244997b64f4002d973cf",
+        "case_id": "dallas-whole-record-case-13",
+        "evidence_source_ids": [
+          "source:permit:elz-2026-0422",
+          "source:inspection:elz-2026-0422:2026-05-24:rough_in"
+        ],
+        "planted_omission": null,
+        "recommended_actions": [
+          "complete_remaining_work",
+          "schedule_reinspection"
+        ],
+        "schema_version": "whole-record-candidate/v1",
+        "snapshot_fingerprint": "sha256:fa3769b84eb9bfa7aae5b4e5a3a819b92625c6d378c3885950ed7e2629904bcc"
+      },
+      "case_id": "dallas-whole-record-case-13",
+      "queue_item_id": "workflow-item:dallas:next-action:0221",
+      "result": {
+        "artifact_fingerprint": "sha256:8b322624df5b9920874860283b52f358577ccd37ad205b9619a01bceca465b7c",
+        "artifact_type": "coverage_receipt",
+        "candidate_fingerprint": "sha256:83ac9693b7baebb5967715561c65eb777f797ce32627244997b64f4002d973cf",
+        "case_id": "dallas-whole-record-case-13",
+        "correction_ledger": {
+          "allowed_decisions": [
+            "accepted",
+            "rejected",
+            "edited"
+          ],
+          "context": {
+            "inspection_id": "inspection:dallas:elz-2026-0422:2026-05-24:rough_in",
+            "permit_id": "permit:dallas:elz-2026-0422",
+            "source_permit_number": "ELZ-2026-0422"
+          },
+          "contract": "operator-correction-event-compatible/v1",
+          "ledger_path": "generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl",
+          "payload_template": {
+            "queue_item_id": "workflow-item:dallas:next-action:0221",
+            "source": "dallas-whole-record-check"
+          },
+          "writes_ledger": false
+        },
+        "covered_action_ids": [
+          "complete_remaining_work",
+          "schedule_reinspection"
+        ],
+        "covered_source_ids": [
+          "source:inspection:elz-2026-0422:2026-05-24:rough_in",
+          "source:permit:elz-2026-0422"
+        ],
+        "mismatch": {
+          "missing_action_ids": [],
+          "missing_material_source_ids": [],
+          "unexpected_action_ids": [],
+          "unknown_source_ids": []
+        },
+        "queue_item_id": "workflow-item:dallas:next-action:0221",
+        "schema_version": "coverage-receipt/v1",
+        "snapshot_fingerprint": "sha256:fa3769b84eb9bfa7aae5b4e5a3a819b92625c6d378c3885950ed7e2629904bcc",
+        "status": "agreement"
+      },
+      "snapshot_fingerprint": "sha256:fa3769b84eb9bfa7aae5b4e5a3a819b92625c6d378c3885950ed7e2629904bcc",
+      "snapshot_path": "cases/dallas-whole-record-case-13--fa3769b84eb9bfa7.json"
+    },
+    {
+      "candidate": {
+        "backend": "deterministic-validation-harness",
+        "candidate_fingerprint": "sha256:2c6eb69c615f241d36e3ce9feca64aa2958172785320af1e356e8819c648579c",
+        "case_id": "dallas-whole-record-case-14",
+        "evidence_source_ids": [
+          "source:permit:elz-2026-0441",
+          "source:inspection:elz-2026-0441:2026-05-24:rough_in"
+        ],
+        "planted_omission": null,
+        "recommended_actions": [
+          "complete_remaining_work",
+          "schedule_reinspection"
+        ],
+        "schema_version": "whole-record-candidate/v1",
+        "snapshot_fingerprint": "sha256:8a370dc420c1e73a415b9f8a2b3aa9c64713bad43cbcab90146d3e103f304304"
+      },
+      "case_id": "dallas-whole-record-case-14",
+      "queue_item_id": "workflow-item:dallas:next-action:0240",
+      "result": {
+        "artifact_fingerprint": "sha256:dfeafa4021a47e2e33a120a6912e3f317af5e52b4b11ebb27330ea4e4dffaeea",
+        "artifact_type": "coverage_receipt",
+        "candidate_fingerprint": "sha256:2c6eb69c615f241d36e3ce9feca64aa2958172785320af1e356e8819c648579c",
+        "case_id": "dallas-whole-record-case-14",
+        "correction_ledger": {
+          "allowed_decisions": [
+            "accepted",
+            "rejected",
+            "edited"
+          ],
+          "context": {
+            "inspection_id": "inspection:dallas:elz-2026-0441:2026-05-24:rough_in",
+            "permit_id": "permit:dallas:elz-2026-0441",
+            "source_permit_number": "ELZ-2026-0441"
+          },
+          "contract": "operator-correction-event-compatible/v1",
+          "ledger_path": "generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl",
+          "payload_template": {
+            "queue_item_id": "workflow-item:dallas:next-action:0240",
+            "source": "dallas-whole-record-check"
+          },
+          "writes_ledger": false
+        },
+        "covered_action_ids": [
+          "complete_remaining_work",
+          "schedule_reinspection"
+        ],
+        "covered_source_ids": [
+          "source:inspection:elz-2026-0441:2026-05-24:rough_in",
+          "source:permit:elz-2026-0441"
+        ],
+        "mismatch": {
+          "missing_action_ids": [],
+          "missing_material_source_ids": [],
+          "unexpected_action_ids": [],
+          "unknown_source_ids": []
+        },
+        "queue_item_id": "workflow-item:dallas:next-action:0240",
+        "schema_version": "coverage-receipt/v1",
+        "snapshot_fingerprint": "sha256:8a370dc420c1e73a415b9f8a2b3aa9c64713bad43cbcab90146d3e103f304304",
+        "status": "agreement"
+      },
+      "snapshot_fingerprint": "sha256:8a370dc420c1e73a415b9f8a2b3aa9c64713bad43cbcab90146d3e103f304304",
+      "snapshot_path": "cases/dallas-whole-record-case-14--8a370dc420c1e73a.json"
+    },
+    {
+      "candidate": {
+        "backend": "deterministic-validation-harness",
+        "candidate_fingerprint": "sha256:94af287ec5f49570dc8a60532e1f8629466b672916a5ce713859dd061953dc40",
+        "case_id": "dallas-whole-record-case-15",
+        "evidence_source_ids": [
+          "source:permit:elz-2026-0459"
+        ],
+        "planted_omission": {
+          "kind": "retrieval_omission",
+          "omitted_action_id": "schedule_reinspection",
+          "omitted_source_id": "source:inspection:elz-2026-0459:2026-05-24:rough_in"
+        },
+        "recommended_actions": [
+          "complete_remaining_work"
+        ],
+        "schema_version": "whole-record-candidate/v1",
+        "snapshot_fingerprint": "sha256:1bf51853e20068c759aa20d2d6dd6d606648236bd9372276577181d355e0e908"
+      },
+      "case_id": "dallas-whole-record-case-15",
+      "queue_item_id": "workflow-item:dallas:next-action:0258",
+      "result": {
+        "artifact_fingerprint": "sha256:851b73e5628641fe31b957bd1927b58c02a281b836d17a2e58bf824a2cbd9069",
+        "artifact_type": "evidence_conflict_card",
+        "candidate_fingerprint": "sha256:94af287ec5f49570dc8a60532e1f8629466b672916a5ce713859dd061953dc40",
+        "case_id": "dallas-whole-record-case-15",
+        "correction_ledger": {
+          "allowed_decisions": [
+            "accepted",
+            "rejected",
+            "edited"
+          ],
+          "context": {
+            "inspection_id": "inspection:dallas:elz-2026-0459:2026-05-24:rough_in",
+            "permit_id": "permit:dallas:elz-2026-0459",
+            "source_permit_number": "ELZ-2026-0459"
+          },
+          "contract": "operator-correction-event-compatible/v1",
+          "ledger_path": "generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl",
+          "payload_template": {
+            "queue_item_id": "workflow-item:dallas:next-action:0258",
+            "source": "dallas-whole-record-check"
+          },
+          "writes_ledger": false
+        },
+        "mismatch": {
+          "missing_action_ids": [
+            "schedule_reinspection"
+          ],
+          "missing_material_source_ids": [
+            "source:inspection:elz-2026-0459:2026-05-24:rough_in"
+          ],
+          "unexpected_action_ids": [],
+          "unknown_source_ids": []
+        },
+        "queue_item_id": "workflow-item:dallas:next-action:0258",
+        "retrieved_action_ids": [
+          "complete_remaining_work"
+        ],
+        "retrieved_source_ids": [
+          "source:permit:elz-2026-0459"
+        ],
+        "schema_version": "evidence-conflict-card/v1",
+        "snapshot_fingerprint": "sha256:1bf51853e20068c759aa20d2d6dd6d606648236bd9372276577181d355e0e908",
+        "status": "material_mismatch",
+        "whole_record_action_ids": [
+          "complete_remaining_work",
+          "schedule_reinspection"
+        ],
+        "whole_record_material_source_ids": [
+          "source:inspection:elz-2026-0459:2026-05-24:rough_in",
+          "source:permit:elz-2026-0459"
+        ]
+      },
+      "snapshot_fingerprint": "sha256:1bf51853e20068c759aa20d2d6dd6d606648236bd9372276577181d355e0e908",
+      "snapshot_path": "cases/dallas-whole-record-case-15--1bf51853e20068c7.json"
+    },
+    {
+      "candidate": {
+        "backend": "deterministic-validation-harness",
+        "candidate_fingerprint": "sha256:60d4e01186483b04c2dca281c3ffaab6318f8156c032f81ba2d3ded35769108f",
+        "case_id": "dallas-whole-record-case-16",
+        "evidence_source_ids": [
+          "source:permit:elz-2026-0478",
+          "source:inspection:elz-2026-0478:2026-05-24:rough_in"
+        ],
+        "planted_omission": null,
+        "recommended_actions": [
+          "complete_remaining_work",
+          "schedule_reinspection"
+        ],
+        "schema_version": "whole-record-candidate/v1",
+        "snapshot_fingerprint": "sha256:51eec3f901d94928b767b6b887e2b129df7f68d367d6b08f22b3735e4505be97"
+      },
+      "case_id": "dallas-whole-record-case-16",
+      "queue_item_id": "workflow-item:dallas:next-action:0277",
+      "result": {
+        "artifact_fingerprint": "sha256:3f4d14f90bdd31b08281837f432546c404aea3deb97ca5db2223a6fe56583a56",
+        "artifact_type": "coverage_receipt",
+        "candidate_fingerprint": "sha256:60d4e01186483b04c2dca281c3ffaab6318f8156c032f81ba2d3ded35769108f",
+        "case_id": "dallas-whole-record-case-16",
+        "correction_ledger": {
+          "allowed_decisions": [
+            "accepted",
+            "rejected",
+            "edited"
+          ],
+          "context": {
+            "inspection_id": "inspection:dallas:elz-2026-0478:2026-05-24:rough_in",
+            "permit_id": "permit:dallas:elz-2026-0478",
+            "source_permit_number": "ELZ-2026-0478"
+          },
+          "contract": "operator-correction-event-compatible/v1",
+          "ledger_path": "generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl",
+          "payload_template": {
+            "queue_item_id": "workflow-item:dallas:next-action:0277",
+            "source": "dallas-whole-record-check"
+          },
+          "writes_ledger": false
+        },
+        "covered_action_ids": [
+          "complete_remaining_work",
+          "schedule_reinspection"
+        ],
+        "covered_source_ids": [
+          "source:inspection:elz-2026-0478:2026-05-24:rough_in",
+          "source:permit:elz-2026-0478"
+        ],
+        "mismatch": {
+          "missing_action_ids": [],
+          "missing_material_source_ids": [],
+          "unexpected_action_ids": [],
+          "unknown_source_ids": []
+        },
+        "queue_item_id": "workflow-item:dallas:next-action:0277",
+        "schema_version": "coverage-receipt/v1",
+        "snapshot_fingerprint": "sha256:51eec3f901d94928b767b6b887e2b129df7f68d367d6b08f22b3735e4505be97",
+        "status": "agreement"
+      },
+      "snapshot_fingerprint": "sha256:51eec3f901d94928b767b6b887e2b129df7f68d367d6b08f22b3735e4505be97",
+      "snapshot_path": "cases/dallas-whole-record-case-16--51eec3f901d94928.json"
+    },
+    {
+      "candidate": {
+        "backend": "deterministic-validation-harness",
+        "candidate_fingerprint": "sha256:0deb7d230bee69ee3e274d86c71d3c1eab8f356d1ab23fdb939b13aaac0824c7",
+        "case_id": "dallas-whole-record-case-17",
+        "evidence_source_ids": [
+          "source:permit:elz-2026-0496",
+          "source:inspection:elz-2026-0496:2026-05-24:rough_in"
+        ],
+        "planted_omission": null,
+        "recommended_actions": [
+          "complete_remaining_work",
+          "schedule_reinspection"
+        ],
+        "schema_version": "whole-record-candidate/v1",
+        "snapshot_fingerprint": "sha256:05cfb0dc8cd62fcfdc385b12ba2a3c68a43e07a5fd6c3ef4d868d34de728e96b"
+      },
+      "case_id": "dallas-whole-record-case-17",
+      "queue_item_id": "workflow-item:dallas:next-action:0295",
+      "result": {
+        "artifact_fingerprint": "sha256:f4fff9d9faa7df6038172ed94be8cc1769ff283de637c280c0b8263810b21bda",
+        "artifact_type": "coverage_receipt",
+        "candidate_fingerprint": "sha256:0deb7d230bee69ee3e274d86c71d3c1eab8f356d1ab23fdb939b13aaac0824c7",
+        "case_id": "dallas-whole-record-case-17",
+        "correction_ledger": {
+          "allowed_decisions": [
+            "accepted",
+            "rejected",
+            "edited"
+          ],
+          "context": {
+            "inspection_id": "inspection:dallas:elz-2026-0496:2026-05-24:rough_in",
+            "permit_id": "permit:dallas:elz-2026-0496",
+            "source_permit_number": "ELZ-2026-0496"
+          },
+          "contract": "operator-correction-event-compatible/v1",
+          "ledger_path": "generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl",
+          "payload_template": {
+            "queue_item_id": "workflow-item:dallas:next-action:0295",
+            "source": "dallas-whole-record-check"
+          },
+          "writes_ledger": false
+        },
+        "covered_action_ids": [
+          "complete_remaining_work",
+          "schedule_reinspection"
+        ],
+        "covered_source_ids": [
+          "source:inspection:elz-2026-0496:2026-05-24:rough_in",
+          "source:permit:elz-2026-0496"
+        ],
+        "mismatch": {
+          "missing_action_ids": [],
+          "missing_material_source_ids": [],
+          "unexpected_action_ids": [],
+          "unknown_source_ids": []
+        },
+        "queue_item_id": "workflow-item:dallas:next-action:0295",
+        "schema_version": "coverage-receipt/v1",
+        "snapshot_fingerprint": "sha256:05cfb0dc8cd62fcfdc385b12ba2a3c68a43e07a5fd6c3ef4d868d34de728e96b",
+        "status": "agreement"
+      },
+      "snapshot_fingerprint": "sha256:05cfb0dc8cd62fcfdc385b12ba2a3c68a43e07a5fd6c3ef4d868d34de728e96b",
+      "snapshot_path": "cases/dallas-whole-record-case-17--05cfb0dc8cd62fcf.json"
+    },
+    {
+      "candidate": {
+        "backend": "deterministic-validation-harness",
+        "candidate_fingerprint": "sha256:10a91e1757ca387f81b0d22704d93362fe3d6b7c657f11ac53d69f766e3e62b5",
+        "case_id": "dallas-whole-record-case-18",
+        "evidence_source_ids": [
+          "source:permit:elz-2026-0515"
+        ],
+        "planted_omission": {
+          "kind": "retrieval_omission",
+          "omitted_action_id": "schedule_reinspection",
+          "omitted_source_id": "source:inspection:elz-2026-0515:2026-05-24:rough_in"
+        },
+        "recommended_actions": [
+          "complete_remaining_work"
+        ],
+        "schema_version": "whole-record-candidate/v1",
+        "snapshot_fingerprint": "sha256:fe20df22888a89b2a7335ad6638584983a59f1eeb1cdbe08fafa48a944f975cc"
+      },
+      "case_id": "dallas-whole-record-case-18",
+      "queue_item_id": "workflow-item:dallas:next-action:0314",
+      "result": {
+        "artifact_fingerprint": "sha256:cf7fa84090a9627145183f96a334e39a06b739e2b1d7edd1e42edaede157546d",
+        "artifact_type": "evidence_conflict_card",
+        "candidate_fingerprint": "sha256:10a91e1757ca387f81b0d22704d93362fe3d6b7c657f11ac53d69f766e3e62b5",
+        "case_id": "dallas-whole-record-case-18",
+        "correction_ledger": {
+          "allowed_decisions": [
+            "accepted",
+            "rejected",
+            "edited"
+          ],
+          "context": {
+            "inspection_id": "inspection:dallas:elz-2026-0515:2026-05-24:rough_in",
+            "permit_id": "permit:dallas:elz-2026-0515",
+            "source_permit_number": "ELZ-2026-0515"
+          },
+          "contract": "operator-correction-event-compatible/v1",
+          "ledger_path": "generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl",
+          "payload_template": {
+            "queue_item_id": "workflow-item:dallas:next-action:0314",
+            "source": "dallas-whole-record-check"
+          },
+          "writes_ledger": false
+        },
+        "mismatch": {
+          "missing_action_ids": [
+            "schedule_reinspection"
+          ],
+          "missing_material_source_ids": [
+            "source:inspection:elz-2026-0515:2026-05-24:rough_in"
+          ],
+          "unexpected_action_ids": [],
+          "unknown_source_ids": []
+        },
+        "queue_item_id": "workflow-item:dallas:next-action:0314",
+        "retrieved_action_ids": [
+          "complete_remaining_work"
+        ],
+        "retrieved_source_ids": [
+          "source:permit:elz-2026-0515"
+        ],
+        "schema_version": "evidence-conflict-card/v1",
+        "snapshot_fingerprint": "sha256:fe20df22888a89b2a7335ad6638584983a59f1eeb1cdbe08fafa48a944f975cc",
+        "status": "material_mismatch",
+        "whole_record_action_ids": [
+          "complete_remaining_work",
+          "schedule_reinspection"
+        ],
+        "whole_record_material_source_ids": [
+          "source:inspection:elz-2026-0515:2026-05-24:rough_in",
+          "source:permit:elz-2026-0515"
+        ]
+      },
+      "snapshot_fingerprint": "sha256:fe20df22888a89b2a7335ad6638584983a59f1eeb1cdbe08fafa48a944f975cc",
+      "snapshot_path": "cases/dallas-whole-record-case-18--fe20df22888a89b2.json"
+    },
+    {
+      "candidate": {
+        "backend": "deterministic-validation-harness",
+        "candidate_fingerprint": "sha256:4d596c89ed014843827c32521e9d5197ca02397a1d11aa1aca723e33cbeb9394",
+        "case_id": "dallas-whole-record-case-19",
+        "evidence_source_ids": [
+          "source:permit:elz-2026-0533",
+          "source:inspection:elz-2026-0533:2026-05-24:rough_in"
+        ],
+        "planted_omission": null,
+        "recommended_actions": [
+          "complete_remaining_work",
+          "schedule_reinspection"
+        ],
+        "schema_version": "whole-record-candidate/v1",
+        "snapshot_fingerprint": "sha256:07880280cabd4e125772201cefc2809ab20551ca067a5b1e083cca20754961c3"
+      },
+      "case_id": "dallas-whole-record-case-19",
+      "queue_item_id": "workflow-item:dallas:next-action:0332",
+      "result": {
+        "artifact_fingerprint": "sha256:b9a5a40a01a3a9269dbcbaa1a711033489e2e307ffd332bfbe3068cb1e3224f1",
+        "artifact_type": "coverage_receipt",
+        "candidate_fingerprint": "sha256:4d596c89ed014843827c32521e9d5197ca02397a1d11aa1aca723e33cbeb9394",
+        "case_id": "dallas-whole-record-case-19",
+        "correction_ledger": {
+          "allowed_decisions": [
+            "accepted",
+            "rejected",
+            "edited"
+          ],
+          "context": {
+            "inspection_id": "inspection:dallas:elz-2026-0533:2026-05-24:rough_in",
+            "permit_id": "permit:dallas:elz-2026-0533",
+            "source_permit_number": "ELZ-2026-0533"
+          },
+          "contract": "operator-correction-event-compatible/v1",
+          "ledger_path": "generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl",
+          "payload_template": {
+            "queue_item_id": "workflow-item:dallas:next-action:0332",
+            "source": "dallas-whole-record-check"
+          },
+          "writes_ledger": false
+        },
+        "covered_action_ids": [
+          "complete_remaining_work",
+          "schedule_reinspection"
+        ],
+        "covered_source_ids": [
+          "source:inspection:elz-2026-0533:2026-05-24:rough_in",
+          "source:permit:elz-2026-0533"
+        ],
+        "mismatch": {
+          "missing_action_ids": [],
+          "missing_material_source_ids": [],
+          "unexpected_action_ids": [],
+          "unknown_source_ids": []
+        },
+        "queue_item_id": "workflow-item:dallas:next-action:0332",
+        "schema_version": "coverage-receipt/v1",
+        "snapshot_fingerprint": "sha256:07880280cabd4e125772201cefc2809ab20551ca067a5b1e083cca20754961c3",
+        "status": "agreement"
+      },
+      "snapshot_fingerprint": "sha256:07880280cabd4e125772201cefc2809ab20551ca067a5b1e083cca20754961c3",
+      "snapshot_path": "cases/dallas-whole-record-case-19--07880280cabd4e12.json"
+    },
+    {
+      "candidate": {
+        "backend": "deterministic-validation-harness",
+        "candidate_fingerprint": "sha256:e9ba52134c8388dc2a3c36381d768fed6a5be5617974226f5b1ae095583560b4",
+        "case_id": "dallas-whole-record-case-20",
+        "evidence_source_ids": [
+          "source:permit:elz-2026-0551",
+          "source:inspection:elz-2026-0551:2026-05-24:rough_in"
+        ],
+        "planted_omission": null,
+        "recommended_actions": [
+          "complete_remaining_work",
+          "schedule_reinspection"
+        ],
+        "schema_version": "whole-record-candidate/v1",
+        "snapshot_fingerprint": "sha256:a8cd1aee00782de22aca60e38f40bc91f5fe1cc36a08c5d86ac957c50b774e2f"
+      },
+      "case_id": "dallas-whole-record-case-20",
+      "queue_item_id": "workflow-item:dallas:next-action:0350",
+      "result": {
+        "artifact_fingerprint": "sha256:e22ad779c0ab456ee900004bb4b700c4a03364ebd6f761b4676332b996b800f8",
+        "artifact_type": "coverage_receipt",
+        "candidate_fingerprint": "sha256:e9ba52134c8388dc2a3c36381d768fed6a5be5617974226f5b1ae095583560b4",
+        "case_id": "dallas-whole-record-case-20",
+        "correction_ledger": {
+          "allowed_decisions": [
+            "accepted",
+            "rejected",
+            "edited"
+          ],
+          "context": {
+            "inspection_id": "inspection:dallas:elz-2026-0551:2026-05-24:rough_in",
+            "permit_id": "permit:dallas:elz-2026-0551",
+            "source_permit_number": "ELZ-2026-0551"
+          },
+          "contract": "operator-correction-event-compatible/v1",
+          "ledger_path": "generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl",
+          "payload_template": {
+            "queue_item_id": "workflow-item:dallas:next-action:0350",
+            "source": "dallas-whole-record-check"
+          },
+          "writes_ledger": false
+        },
+        "covered_action_ids": [
+          "complete_remaining_work",
+          "schedule_reinspection"
+        ],
+        "covered_source_ids": [
+          "source:inspection:elz-2026-0551:2026-05-24:rough_in",
+          "source:permit:elz-2026-0551"
+        ],
+        "mismatch": {
+          "missing_action_ids": [],
+          "missing_material_source_ids": [],
+          "unexpected_action_ids": [],
+          "unknown_source_ids": []
+        },
+        "queue_item_id": "workflow-item:dallas:next-action:0350",
+        "schema_version": "coverage-receipt/v1",
+        "snapshot_fingerprint": "sha256:a8cd1aee00782de22aca60e38f40bc91f5fe1cc36a08c5d86ac957c50b774e2f",
+        "status": "agreement"
+      },
+      "snapshot_fingerprint": "sha256:a8cd1aee00782de22aca60e38f40bc91f5fe1cc36a08c5d86ac957c50b774e2f",
+      "snapshot_path": "cases/dallas-whole-record-case-20--a8cd1aee00782de2.json"
+    },
+    {
+      "candidate": {
+        "backend": "deterministic-validation-harness",
+        "candidate_fingerprint": "sha256:f268fa705267696184bc3f30ae5c4990265e4119cb192e51d5da4f2cfde8bcaf",
+        "case_id": "dallas-whole-record-case-21",
+        "evidence_source_ids": [
+          "source:permit:elz-2026-0570"
+        ],
+        "planted_omission": {
+          "kind": "retrieval_omission",
+          "omitted_action_id": "schedule_reinspection",
+          "omitted_source_id": "source:inspection:elz-2026-0570:2026-05-24:rough_in"
+        },
+        "recommended_actions": [
+          "complete_remaining_work"
+        ],
+        "schema_version": "whole-record-candidate/v1",
+        "snapshot_fingerprint": "sha256:ceb7c64a521b49c1d9e97628c652b2b77a412df182882f5eb455eb73ecb359e0"
+      },
+      "case_id": "dallas-whole-record-case-21",
+      "queue_item_id": "workflow-item:dallas:next-action:0369",
+      "result": {
+        "artifact_fingerprint": "sha256:e6f393ef3cfcdad7131c4ff404ff9776277d2662ca2479dd7bfb23143c66f75e",
+        "artifact_type": "evidence_conflict_card",
+        "candidate_fingerprint": "sha256:f268fa705267696184bc3f30ae5c4990265e4119cb192e51d5da4f2cfde8bcaf",
+        "case_id": "dallas-whole-record-case-21",
+        "correction_ledger": {
+          "allowed_decisions": [
+            "accepted",
+            "rejected",
+            "edited"
+          ],
+          "context": {
+            "inspection_id": "inspection:dallas:elz-2026-0570:2026-05-24:rough_in",
+            "permit_id": "permit:dallas:elz-2026-0570",
+            "source_permit_number": "ELZ-2026-0570"
+          },
+          "contract": "operator-correction-event-compatible/v1",
+          "ledger_path": "generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl",
+          "payload_template": {
+            "queue_item_id": "workflow-item:dallas:next-action:0369",
+            "source": "dallas-whole-record-check"
+          },
+          "writes_ledger": false
+        },
+        "mismatch": {
+          "missing_action_ids": [
+            "schedule_reinspection"
+          ],
+          "missing_material_source_ids": [
+            "source:inspection:elz-2026-0570:2026-05-24:rough_in"
+          ],
+          "unexpected_action_ids": [],
+          "unknown_source_ids": []
+        },
+        "queue_item_id": "workflow-item:dallas:next-action:0369",
+        "retrieved_action_ids": [
+          "complete_remaining_work"
+        ],
+        "retrieved_source_ids": [
+          "source:permit:elz-2026-0570"
+        ],
+        "schema_version": "evidence-conflict-card/v1",
+        "snapshot_fingerprint": "sha256:ceb7c64a521b49c1d9e97628c652b2b77a412df182882f5eb455eb73ecb359e0",
+        "status": "material_mismatch",
+        "whole_record_action_ids": [
+          "complete_remaining_work",
+          "schedule_reinspection"
+        ],
+        "whole_record_material_source_ids": [
+          "source:inspection:elz-2026-0570:2026-05-24:rough_in",
+          "source:permit:elz-2026-0570"
+        ]
+      },
+      "snapshot_fingerprint": "sha256:ceb7c64a521b49c1d9e97628c652b2b77a412df182882f5eb455eb73ecb359e0",
+      "snapshot_path": "cases/dallas-whole-record-case-21--ceb7c64a521b49c1.json"
+    },
+    {
+      "candidate": {
+        "backend": "deterministic-validation-harness",
+        "candidate_fingerprint": "sha256:8adb1761ef5b75c80c9af57c34cb61e3a423b5b7ca9af34d681ee583dac1a506",
+        "case_id": "dallas-whole-record-case-22",
+        "evidence_source_ids": [
+          "source:permit:elz-2026-0588",
+          "source:inspection:elz-2026-0588:2026-05-24:rough_in"
+        ],
+        "planted_omission": null,
+        "recommended_actions": [
+          "complete_remaining_work",
+          "schedule_reinspection"
+        ],
+        "schema_version": "whole-record-candidate/v1",
+        "snapshot_fingerprint": "sha256:ad6ade826403d22fecff0ed5a75af96c3247f52f8e217f16f3f05e038ef8a785"
+      },
+      "case_id": "dallas-whole-record-case-22",
+      "queue_item_id": "workflow-item:dallas:next-action:0387",
+      "result": {
+        "artifact_fingerprint": "sha256:026af0666e6b75e037ef162e6ce14b5a65037fa1fd2d30a6a7325f0afeeecd94",
+        "artifact_type": "coverage_receipt",
+        "candidate_fingerprint": "sha256:8adb1761ef5b75c80c9af57c34cb61e3a423b5b7ca9af34d681ee583dac1a506",
+        "case_id": "dallas-whole-record-case-22",
+        "correction_ledger": {
+          "allowed_decisions": [
+            "accepted",
+            "rejected",
+            "edited"
+          ],
+          "context": {
+            "inspection_id": "inspection:dallas:elz-2026-0588:2026-05-24:rough_in",
+            "permit_id": "permit:dallas:elz-2026-0588",
+            "source_permit_number": "ELZ-2026-0588"
+          },
+          "contract": "operator-correction-event-compatible/v1",
+          "ledger_path": "generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl",
+          "payload_template": {
+            "queue_item_id": "workflow-item:dallas:next-action:0387",
+            "source": "dallas-whole-record-check"
+          },
+          "writes_ledger": false
+        },
+        "covered_action_ids": [
+          "complete_remaining_work",
+          "schedule_reinspection"
+        ],
+        "covered_source_ids": [
+          "source:inspection:elz-2026-0588:2026-05-24:rough_in",
+          "source:permit:elz-2026-0588"
+        ],
+        "mismatch": {
+          "missing_action_ids": [],
+          "missing_material_source_ids": [],
+          "unexpected_action_ids": [],
+          "unknown_source_ids": []
+        },
+        "queue_item_id": "workflow-item:dallas:next-action:0387",
+        "schema_version": "coverage-receipt/v1",
+        "snapshot_fingerprint": "sha256:ad6ade826403d22fecff0ed5a75af96c3247f52f8e217f16f3f05e038ef8a785",
+        "status": "agreement"
+      },
+      "snapshot_fingerprint": "sha256:ad6ade826403d22fecff0ed5a75af96c3247f52f8e217f16f3f05e038ef8a785",
+      "snapshot_path": "cases/dallas-whole-record-case-22--ad6ade826403d22f.json"
+    },
+    {
+      "candidate": {
+        "backend": "deterministic-validation-harness",
+        "candidate_fingerprint": "sha256:6b663c72d36730399f5b778baa201331aba957e8db90d56a6a13005717b02fbd",
+        "case_id": "dallas-whole-record-case-23",
+        "evidence_source_ids": [
+          "source:permit:elz-2026-0607",
+          "source:inspection:elz-2026-0607:2026-05-24:rough_in"
+        ],
+        "planted_omission": null,
+        "recommended_actions": [
+          "complete_remaining_work",
+          "schedule_reinspection"
+        ],
+        "schema_version": "whole-record-candidate/v1",
+        "snapshot_fingerprint": "sha256:c0e2dce8ff5da44e38d07adbc95263d77d35356cf32aa71de6c25a816ba52474"
+      },
+      "case_id": "dallas-whole-record-case-23",
+      "queue_item_id": "workflow-item:dallas:next-action:0406",
+      "result": {
+        "artifact_fingerprint": "sha256:f12ca5c232483176499be5cf853ddd2cc6c3a77c44aebd728a50900703d3866a",
+        "artifact_type": "coverage_receipt",
+        "candidate_fingerprint": "sha256:6b663c72d36730399f5b778baa201331aba957e8db90d56a6a13005717b02fbd",
+        "case_id": "dallas-whole-record-case-23",
+        "correction_ledger": {
+          "allowed_decisions": [
+            "accepted",
+            "rejected",
+            "edited"
+          ],
+          "context": {
+            "inspection_id": "inspection:dallas:elz-2026-0607:2026-05-24:rough_in",
+            "permit_id": "permit:dallas:elz-2026-0607",
+            "source_permit_number": "ELZ-2026-0607"
+          },
+          "contract": "operator-correction-event-compatible/v1",
+          "ledger_path": "generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl",
+          "payload_template": {
+            "queue_item_id": "workflow-item:dallas:next-action:0406",
+            "source": "dallas-whole-record-check"
+          },
+          "writes_ledger": false
+        },
+        "covered_action_ids": [
+          "complete_remaining_work",
+          "schedule_reinspection"
+        ],
+        "covered_source_ids": [
+          "source:inspection:elz-2026-0607:2026-05-24:rough_in",
+          "source:permit:elz-2026-0607"
+        ],
+        "mismatch": {
+          "missing_action_ids": [],
+          "missing_material_source_ids": [],
+          "unexpected_action_ids": [],
+          "unknown_source_ids": []
+        },
+        "queue_item_id": "workflow-item:dallas:next-action:0406",
+        "schema_version": "coverage-receipt/v1",
+        "snapshot_fingerprint": "sha256:c0e2dce8ff5da44e38d07adbc95263d77d35356cf32aa71de6c25a816ba52474",
+        "status": "agreement"
+      },
+      "snapshot_fingerprint": "sha256:c0e2dce8ff5da44e38d07adbc95263d77d35356cf32aa71de6c25a816ba52474",
+      "snapshot_path": "cases/dallas-whole-record-case-23--c0e2dce8ff5da44e.json"
+    },
+    {
+      "candidate": {
+        "backend": "deterministic-validation-harness",
+        "candidate_fingerprint": "sha256:b83c5e4f62faab1e535c6adef170c552c02b2c8cb155b030dd3aecea2edf3479",
+        "case_id": "dallas-whole-record-case-24",
+        "evidence_source_ids": [
+          "source:permit:elz-2026-0625"
+        ],
+        "planted_omission": {
+          "kind": "retrieval_omission",
+          "omitted_action_id": "schedule_reinspection",
+          "omitted_source_id": "source:inspection:elz-2026-0625:2026-05-24:rough_in"
+        },
+        "recommended_actions": [
+          "complete_remaining_work"
+        ],
+        "schema_version": "whole-record-candidate/v1",
+        "snapshot_fingerprint": "sha256:dc6d30ce9ae9d4193ac454a2c901099278fb1281ea2b170028c2cea5d71b9dbc"
+      },
+      "case_id": "dallas-whole-record-case-24",
+      "queue_item_id": "workflow-item:dallas:next-action:0424",
+      "result": {
+        "artifact_fingerprint": "sha256:19cde76dd8507aae4cd5086f8b0c5b5da8ffe16747f4b46cac791f49306c85b0",
+        "artifact_type": "evidence_conflict_card",
+        "candidate_fingerprint": "sha256:b83c5e4f62faab1e535c6adef170c552c02b2c8cb155b030dd3aecea2edf3479",
+        "case_id": "dallas-whole-record-case-24",
+        "correction_ledger": {
+          "allowed_decisions": [
+            "accepted",
+            "rejected",
+            "edited"
+          ],
+          "context": {
+            "inspection_id": "inspection:dallas:elz-2026-0625:2026-05-24:rough_in",
+            "permit_id": "permit:dallas:elz-2026-0625",
+            "source_permit_number": "ELZ-2026-0625"
+          },
+          "contract": "operator-correction-event-compatible/v1",
+          "ledger_path": "generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl",
+          "payload_template": {
+            "queue_item_id": "workflow-item:dallas:next-action:0424",
+            "source": "dallas-whole-record-check"
+          },
+          "writes_ledger": false
+        },
+        "mismatch": {
+          "missing_action_ids": [
+            "schedule_reinspection"
+          ],
+          "missing_material_source_ids": [
+            "source:inspection:elz-2026-0625:2026-05-24:rough_in"
+          ],
+          "unexpected_action_ids": [],
+          "unknown_source_ids": []
+        },
+        "queue_item_id": "workflow-item:dallas:next-action:0424",
+        "retrieved_action_ids": [
+          "complete_remaining_work"
+        ],
+        "retrieved_source_ids": [
+          "source:permit:elz-2026-0625"
+        ],
+        "schema_version": "evidence-conflict-card/v1",
+        "snapshot_fingerprint": "sha256:dc6d30ce9ae9d4193ac454a2c901099278fb1281ea2b170028c2cea5d71b9dbc",
+        "status": "material_mismatch",
+        "whole_record_action_ids": [
+          "complete_remaining_work",
+          "schedule_reinspection"
+        ],
+        "whole_record_material_source_ids": [
+          "source:inspection:elz-2026-0625:2026-05-24:rough_in",
+          "source:permit:elz-2026-0625"
+        ]
+      },
+      "snapshot_fingerprint": "sha256:dc6d30ce9ae9d4193ac454a2c901099278fb1281ea2b170028c2cea5d71b9dbc",
+      "snapshot_path": "cases/dallas-whole-record-case-24--dc6d30ce9ae9d419.json"
+    },
+    {
+      "candidate": {
+        "backend": "deterministic-validation-harness",
+        "candidate_fingerprint": "sha256:fc8e3a8e39e7ca5ab3e242c227057ae4351d662860e01340e700ba98a837c11e",
+        "case_id": "dallas-whole-record-case-25",
+        "evidence_source_ids": [
+          "source:permit:elz-2026-0643",
+          "source:inspection:elz-2026-0643:2026-05-24:rough_in"
+        ],
+        "planted_omission": null,
+        "recommended_actions": [
+          "complete_remaining_work",
+          "schedule_reinspection"
+        ],
+        "schema_version": "whole-record-candidate/v1",
+        "snapshot_fingerprint": "sha256:54900bb8078e142ab91861871fc750c59ea4165417354294ba30a3e373d18873"
+      },
+      "case_id": "dallas-whole-record-case-25",
+      "queue_item_id": "workflow-item:dallas:next-action:0442",
+      "result": {
+        "artifact_fingerprint": "sha256:7e5d205723354980607ed5dcefac71b06204d23574f252b2a2e7af116fad09ef",
+        "artifact_type": "coverage_receipt",
+        "candidate_fingerprint": "sha256:fc8e3a8e39e7ca5ab3e242c227057ae4351d662860e01340e700ba98a837c11e",
+        "case_id": "dallas-whole-record-case-25",
+        "correction_ledger": {
+          "allowed_decisions": [
+            "accepted",
+            "rejected",
+            "edited"
+          ],
+          "context": {
+            "inspection_id": "inspection:dallas:elz-2026-0643:2026-05-24:rough_in",
+            "permit_id": "permit:dallas:elz-2026-0643",
+            "source_permit_number": "ELZ-2026-0643"
+          },
+          "contract": "operator-correction-event-compatible/v1",
+          "ledger_path": "generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl",
+          "payload_template": {
+            "queue_item_id": "workflow-item:dallas:next-action:0442",
+            "source": "dallas-whole-record-check"
+          },
+          "writes_ledger": false
+        },
+        "covered_action_ids": [
+          "complete_remaining_work",
+          "schedule_reinspection"
+        ],
+        "covered_source_ids": [
+          "source:inspection:elz-2026-0643:2026-05-24:rough_in",
+          "source:permit:elz-2026-0643"
+        ],
+        "mismatch": {
+          "missing_action_ids": [],
+          "missing_material_source_ids": [],
+          "unexpected_action_ids": [],
+          "unknown_source_ids": []
+        },
+        "queue_item_id": "workflow-item:dallas:next-action:0442",
+        "schema_version": "coverage-receipt/v1",
+        "snapshot_fingerprint": "sha256:54900bb8078e142ab91861871fc750c59ea4165417354294ba30a3e373d18873",
+        "status": "agreement"
+      },
+      "snapshot_fingerprint": "sha256:54900bb8078e142ab91861871fc750c59ea4165417354294ba30a3e373d18873",
+      "snapshot_path": "cases/dallas-whole-record-case-25--54900bb8078e142a.json"
+    },
+    {
+      "candidate": {
+        "backend": "deterministic-validation-harness",
+        "candidate_fingerprint": "sha256:d8570a868d7436f88a4e078befc63dd2b04ec6f4ad55c0b853e1ee2ad10d0532",
+        "case_id": "dallas-whole-record-case-26",
+        "evidence_source_ids": [
+          "source:permit:elz-2026-0662",
+          "source:inspection:elz-2026-0662:2026-05-24:rough_in"
+        ],
+        "planted_omission": null,
+        "recommended_actions": [
+          "complete_remaining_work",
+          "schedule_reinspection"
+        ],
+        "schema_version": "whole-record-candidate/v1",
+        "snapshot_fingerprint": "sha256:8550817a06c7cb532a6e92828aa1c39c7a3b1b1d2723b55d179f7aa8a85c2ced"
+      },
+      "case_id": "dallas-whole-record-case-26",
+      "queue_item_id": "workflow-item:dallas:next-action:0461",
+      "result": {
+        "artifact_fingerprint": "sha256:c2525d6cf12f7bdc51047ad2d7e11e513e7297b3f525fd4957cf9ae3a838e40e",
+        "artifact_type": "coverage_receipt",
+        "candidate_fingerprint": "sha256:d8570a868d7436f88a4e078befc63dd2b04ec6f4ad55c0b853e1ee2ad10d0532",
+        "case_id": "dallas-whole-record-case-26",
+        "correction_ledger": {
+          "allowed_decisions": [
+            "accepted",
+            "rejected",
+            "edited"
+          ],
+          "context": {
+            "inspection_id": "inspection:dallas:elz-2026-0662:2026-05-24:rough_in",
+            "permit_id": "permit:dallas:elz-2026-0662",
+            "source_permit_number": "ELZ-2026-0662"
+          },
+          "contract": "operator-correction-event-compatible/v1",
+          "ledger_path": "generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl",
+          "payload_template": {
+            "queue_item_id": "workflow-item:dallas:next-action:0461",
+            "source": "dallas-whole-record-check"
+          },
+          "writes_ledger": false
+        },
+        "covered_action_ids": [
+          "complete_remaining_work",
+          "schedule_reinspection"
+        ],
+        "covered_source_ids": [
+          "source:inspection:elz-2026-0662:2026-05-24:rough_in",
+          "source:permit:elz-2026-0662"
+        ],
+        "mismatch": {
+          "missing_action_ids": [],
+          "missing_material_source_ids": [],
+          "unexpected_action_ids": [],
+          "unknown_source_ids": []
+        },
+        "queue_item_id": "workflow-item:dallas:next-action:0461",
+        "schema_version": "coverage-receipt/v1",
+        "snapshot_fingerprint": "sha256:8550817a06c7cb532a6e92828aa1c39c7a3b1b1d2723b55d179f7aa8a85c2ced",
+        "status": "agreement"
+      },
+      "snapshot_fingerprint": "sha256:8550817a06c7cb532a6e92828aa1c39c7a3b1b1d2723b55d179f7aa8a85c2ced",
+      "snapshot_path": "cases/dallas-whole-record-case-26--8550817a06c7cb53.json"
+    },
+    {
+      "candidate": {
+        "backend": "deterministic-validation-harness",
+        "candidate_fingerprint": "sha256:bbbbead3d79b2c9ea208a1ba291c1f3fe14456013fef520945c83ea16ed9277c",
+        "case_id": "dallas-whole-record-case-27",
+        "evidence_source_ids": [
+          "source:permit:elz-2026-0680"
+        ],
+        "planted_omission": {
+          "kind": "retrieval_omission",
+          "omitted_action_id": "schedule_reinspection",
+          "omitted_source_id": "source:inspection:elz-2026-0680:2026-05-24:rough_in"
+        },
+        "recommended_actions": [
+          "complete_remaining_work"
+        ],
+        "schema_version": "whole-record-candidate/v1",
+        "snapshot_fingerprint": "sha256:44b37dc7ca660ad25d0c09517ea036d525edf5a511d8890d1b62cb08e9364f44"
+      },
+      "case_id": "dallas-whole-record-case-27",
+      "queue_item_id": "workflow-item:dallas:next-action:0479",
+      "result": {
+        "artifact_fingerprint": "sha256:959dfb1bafd3db4da807c02ba0ecdf5f57712250f4a126a947054d9ab1fac003",
+        "artifact_type": "evidence_conflict_card",
+        "candidate_fingerprint": "sha256:bbbbead3d79b2c9ea208a1ba291c1f3fe14456013fef520945c83ea16ed9277c",
+        "case_id": "dallas-whole-record-case-27",
+        "correction_ledger": {
+          "allowed_decisions": [
+            "accepted",
+            "rejected",
+            "edited"
+          ],
+          "context": {
+            "inspection_id": "inspection:dallas:elz-2026-0680:2026-05-24:rough_in",
+            "permit_id": "permit:dallas:elz-2026-0680",
+            "source_permit_number": "ELZ-2026-0680"
+          },
+          "contract": "operator-correction-event-compatible/v1",
+          "ledger_path": "generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl",
+          "payload_template": {
+            "queue_item_id": "workflow-item:dallas:next-action:0479",
+            "source": "dallas-whole-record-check"
+          },
+          "writes_ledger": false
+        },
+        "mismatch": {
+          "missing_action_ids": [
+            "schedule_reinspection"
+          ],
+          "missing_material_source_ids": [
+            "source:inspection:elz-2026-0680:2026-05-24:rough_in"
+          ],
+          "unexpected_action_ids": [],
+          "unknown_source_ids": []
+        },
+        "queue_item_id": "workflow-item:dallas:next-action:0479",
+        "retrieved_action_ids": [
+          "complete_remaining_work"
+        ],
+        "retrieved_source_ids": [
+          "source:permit:elz-2026-0680"
+        ],
+        "schema_version": "evidence-conflict-card/v1",
+        "snapshot_fingerprint": "sha256:44b37dc7ca660ad25d0c09517ea036d525edf5a511d8890d1b62cb08e9364f44",
+        "status": "material_mismatch",
+        "whole_record_action_ids": [
+          "complete_remaining_work",
+          "schedule_reinspection"
+        ],
+        "whole_record_material_source_ids": [
+          "source:inspection:elz-2026-0680:2026-05-24:rough_in",
+          "source:permit:elz-2026-0680"
+        ]
+      },
+      "snapshot_fingerprint": "sha256:44b37dc7ca660ad25d0c09517ea036d525edf5a511d8890d1b62cb08e9364f44",
+      "snapshot_path": "cases/dallas-whole-record-case-27--44b37dc7ca660ad2.json"
+    },
+    {
+      "candidate": {
+        "backend": "deterministic-validation-harness",
+        "candidate_fingerprint": "sha256:2de5ad17752ce8850f23b06dc9dd3576674d05653679d9ff1e55505dbbb7c53e",
+        "case_id": "dallas-whole-record-case-28",
+        "evidence_source_ids": [
+          "source:permit:elz-2026-0699",
+          "source:inspection:elz-2026-0699:2026-05-24:rough_in"
+        ],
+        "planted_omission": null,
+        "recommended_actions": [
+          "complete_remaining_work",
+          "schedule_reinspection"
+        ],
+        "schema_version": "whole-record-candidate/v1",
+        "snapshot_fingerprint": "sha256:9b723306a90e74e5d9c46e78dd640a900f6f363aa274ec47f6dc3cf6842caf47"
+      },
+      "case_id": "dallas-whole-record-case-28",
+      "queue_item_id": "workflow-item:dallas:next-action:0498",
+      "result": {
+        "artifact_fingerprint": "sha256:6701aa67c9abc1b1ae817f1cc8e0b85e33d0a51166c4823d7d712938e95c816e",
+        "artifact_type": "coverage_receipt",
+        "candidate_fingerprint": "sha256:2de5ad17752ce8850f23b06dc9dd3576674d05653679d9ff1e55505dbbb7c53e",
+        "case_id": "dallas-whole-record-case-28",
+        "correction_ledger": {
+          "allowed_decisions": [
+            "accepted",
+            "rejected",
+            "edited"
+          ],
+          "context": {
+            "inspection_id": "inspection:dallas:elz-2026-0699:2026-05-24:rough_in",
+            "permit_id": "permit:dallas:elz-2026-0699",
+            "source_permit_number": "ELZ-2026-0699"
+          },
+          "contract": "operator-correction-event-compatible/v1",
+          "ledger_path": "generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl",
+          "payload_template": {
+            "queue_item_id": "workflow-item:dallas:next-action:0498",
+            "source": "dallas-whole-record-check"
+          },
+          "writes_ledger": false
+        },
+        "covered_action_ids": [
+          "complete_remaining_work",
+          "schedule_reinspection"
+        ],
+        "covered_source_ids": [
+          "source:inspection:elz-2026-0699:2026-05-24:rough_in",
+          "source:permit:elz-2026-0699"
+        ],
+        "mismatch": {
+          "missing_action_ids": [],
+          "missing_material_source_ids": [],
+          "unexpected_action_ids": [],
+          "unknown_source_ids": []
+        },
+        "queue_item_id": "workflow-item:dallas:next-action:0498",
+        "schema_version": "coverage-receipt/v1",
+        "snapshot_fingerprint": "sha256:9b723306a90e74e5d9c46e78dd640a900f6f363aa274ec47f6dc3cf6842caf47",
+        "status": "agreement"
+      },
+      "snapshot_fingerprint": "sha256:9b723306a90e74e5d9c46e78dd640a900f6f363aa274ec47f6dc3cf6842caf47",
+      "snapshot_path": "cases/dallas-whole-record-case-28--9b723306a90e74e5.json"
+    },
+    {
+      "candidate": {
+        "backend": "deterministic-validation-harness",
+        "candidate_fingerprint": "sha256:e27136849411648da9931957340167b55b9d0445d78a24afd35b53e1abf7921a",
+        "case_id": "dallas-whole-record-case-29",
+        "evidence_source_ids": [
+          "source:permit:elz-2026-0717",
+          "source:inspection:elz-2026-0717:2026-05-24:rough_in"
+        ],
+        "planted_omission": null,
+        "recommended_actions": [
+          "complete_remaining_work",
+          "schedule_reinspection"
+        ],
+        "schema_version": "whole-record-candidate/v1",
+        "snapshot_fingerprint": "sha256:5654b1ae625f0485e299d290193f1d156e9bb34dd2745b93482a1d05139a761b"
+      },
+      "case_id": "dallas-whole-record-case-29",
+      "queue_item_id": "workflow-item:dallas:next-action:0516",
+      "result": {
+        "artifact_fingerprint": "sha256:3d4689bc04678b1d0960d274eae67d09d28cc075d13f990cf4ebcfb3c7b1c2f6",
+        "artifact_type": "coverage_receipt",
+        "candidate_fingerprint": "sha256:e27136849411648da9931957340167b55b9d0445d78a24afd35b53e1abf7921a",
+        "case_id": "dallas-whole-record-case-29",
+        "correction_ledger": {
+          "allowed_decisions": [
+            "accepted",
+            "rejected",
+            "edited"
+          ],
+          "context": {
+            "inspection_id": "inspection:dallas:elz-2026-0717:2026-05-24:rough_in",
+            "permit_id": "permit:dallas:elz-2026-0717",
+            "source_permit_number": "ELZ-2026-0717"
+          },
+          "contract": "operator-correction-event-compatible/v1",
+          "ledger_path": "generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl",
+          "payload_template": {
+            "queue_item_id": "workflow-item:dallas:next-action:0516",
+            "source": "dallas-whole-record-check"
+          },
+          "writes_ledger": false
+        },
+        "covered_action_ids": [
+          "complete_remaining_work",
+          "schedule_reinspection"
+        ],
+        "covered_source_ids": [
+          "source:inspection:elz-2026-0717:2026-05-24:rough_in",
+          "source:permit:elz-2026-0717"
+        ],
+        "mismatch": {
+          "missing_action_ids": [],
+          "missing_material_source_ids": [],
+          "unexpected_action_ids": [],
+          "unknown_source_ids": []
+        },
+        "queue_item_id": "workflow-item:dallas:next-action:0516",
+        "schema_version": "coverage-receipt/v1",
+        "snapshot_fingerprint": "sha256:5654b1ae625f0485e299d290193f1d156e9bb34dd2745b93482a1d05139a761b",
+        "status": "agreement"
+      },
+      "snapshot_fingerprint": "sha256:5654b1ae625f0485e299d290193f1d156e9bb34dd2745b93482a1d05139a761b",
+      "snapshot_path": "cases/dallas-whole-record-case-29--5654b1ae625f0485.json"
+    },
+    {
+      "candidate": {
+        "backend": "deterministic-validation-harness",
+        "candidate_fingerprint": "sha256:c2ead3cb55be5307403f12c67213aa69cfd91286137338936c7c3294902c0312",
+        "case_id": "dallas-whole-record-case-30",
+        "evidence_source_ids": [
+          "source:permit:elz-2026-0736"
+        ],
+        "planted_omission": {
+          "kind": "retrieval_omission",
+          "omitted_action_id": "schedule_reinspection",
+          "omitted_source_id": "source:inspection:elz-2026-0736:2026-05-24:rough_in"
+        },
+        "recommended_actions": [
+          "complete_remaining_work"
+        ],
+        "schema_version": "whole-record-candidate/v1",
+        "snapshot_fingerprint": "sha256:eb54d2bd4b30d4a4061542502af118853ba5aab4bc228e32af8679d3e311f115"
+      },
+      "case_id": "dallas-whole-record-case-30",
+      "queue_item_id": "workflow-item:dallas:next-action:0535",
+      "result": {
+        "artifact_fingerprint": "sha256:2f4bcaec1c5eea7d554a1fe01f8a0ba4feccf9d8c9d83e87d58fbaba6bdcd1eb",
+        "artifact_type": "evidence_conflict_card",
+        "candidate_fingerprint": "sha256:c2ead3cb55be5307403f12c67213aa69cfd91286137338936c7c3294902c0312",
+        "case_id": "dallas-whole-record-case-30",
+        "correction_ledger": {
+          "allowed_decisions": [
+            "accepted",
+            "rejected",
+            "edited"
+          ],
+          "context": {
+            "inspection_id": "inspection:dallas:elz-2026-0736:2026-05-24:rough_in",
+            "permit_id": "permit:dallas:elz-2026-0736",
+            "source_permit_number": "ELZ-2026-0736"
+          },
+          "contract": "operator-correction-event-compatible/v1",
+          "ledger_path": "generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl",
+          "payload_template": {
+            "queue_item_id": "workflow-item:dallas:next-action:0535",
+            "source": "dallas-whole-record-check"
+          },
+          "writes_ledger": false
+        },
+        "mismatch": {
+          "missing_action_ids": [
+            "schedule_reinspection"
+          ],
+          "missing_material_source_ids": [
+            "source:inspection:elz-2026-0736:2026-05-24:rough_in"
+          ],
+          "unexpected_action_ids": [],
+          "unknown_source_ids": []
+        },
+        "queue_item_id": "workflow-item:dallas:next-action:0535",
+        "retrieved_action_ids": [
+          "complete_remaining_work"
+        ],
+        "retrieved_source_ids": [
+          "source:permit:elz-2026-0736"
+        ],
+        "schema_version": "evidence-conflict-card/v1",
+        "snapshot_fingerprint": "sha256:eb54d2bd4b30d4a4061542502af118853ba5aab4bc228e32af8679d3e311f115",
+        "status": "material_mismatch",
+        "whole_record_action_ids": [
+          "complete_remaining_work",
+          "schedule_reinspection"
+        ],
+        "whole_record_material_source_ids": [
+          "source:inspection:elz-2026-0736:2026-05-24:rough_in",
+          "source:permit:elz-2026-0736"
+        ]
+      },
+      "snapshot_fingerprint": "sha256:eb54d2bd4b30d4a4061542502af118853ba5aab4bc228e32af8679d3e311f115",
+      "snapshot_path": "cases/dallas-whole-record-case-30--eb54d2bd4b30d4a4.json"
+    }
+  ],
+  "product_name": "Automoat Whole-Record Check",
+  "release_date": "2026-08-19",
+  "report_fingerprint": "sha256:bb43fefc404a5a4e920034cd1607c532e72aa4c369542041b2b4e425e3a0d316",
+  "schema_version": "dallas-whole-record-check-report/v1",
+  "source": {
+    "dataset_id": "dallas-electrician-import-sample-v2",
+    "normalized_dir": "generated/normalized/dallas-electrician-import-sample-v2",
+    "queue_path": "generated/workflows/dallas-inspection-workflow-v1/action-queue.json",
+    "workflow_id": "dallas-inspection-workflow-v1"
+  },
+  "summary": {
+    "cases_checked": 30,
+    "coverage_receipts": 20,
+    "evidence_conflict_cards": 10,
+    "planted_omissions_detected": 10,
+    "planted_retrieval_omissions": 10,
+    "unexpected_conflicts": 0
+  },
+  "validation_scope": "Deterministic validation over versioned Dallas scaffold records; not a production accuracy benchmark."
+}

@@ -1,0 +1,130 @@
+{
+  "bounds": {
+    "max_snapshot_bytes": 65536,
+    "max_source_records": 12,
+    "source_record_count": 4
+  },
+  "case_id": "dallas-whole-record-case-01",
+  "correction_ledger": {
+    "allowed_decisions": [
+      "accepted",
+      "rejected",
+      "edited"
+    ],
+    "context": {
+      "inspection_id": "inspection:dallas:elm-2026-0211:2026-04-14:final",
+      "permit_id": "permit:dallas:elm-2026-0211",
+      "source_permit_number": "ELM-2026-0211"
+    },
+    "contract": "operator-correction-event-compatible/v1",
+    "ledger_path": "generated/workflows/dallas-inspection-workflow-v1/operator-corrections.jsonl",
+    "payload_template": {
+      "queue_item_id": "workflow-item:dallas:next-action:0001",
+      "source": "dallas-whole-record-check"
+    },
+    "writes_ledger": false
+  },
+  "dataset_id": "dallas-electrician-import-sample-v2",
+  "expected_outcome": {
+    "material_source_ids": [
+      "source:permit:elm-2026-0211",
+      "source:inspection:elm-2026-0211:2026-04-14:final"
+    ],
+    "recommended_actions": [
+      "ensure_site_access",
+      "schedule_reinspection"
+    ]
+  },
+  "queue_context": {
+    "permit_id": "permit:dallas:elm-2026-0211",
+    "priority": "medium",
+    "queue_item_id": "workflow-item:dallas:next-action:0001",
+    "source_permit_number": "ELM-2026-0211",
+    "trigger_inspection_id": "inspection:dallas:elm-2026-0211:2026-04-14:final"
+  },
+  "record_scope": "one permit and its linked inspection history",
+  "schema_version": "dallas-whole-record-case/v1",
+  "snapshot_fingerprint": "sha256:7fb0e3cd77c07d6f093f2aac835c2c0641bf69bd41af9690ca50394cf056f168",
+  "source_records": [
+    {
+      "record": {
+        "contractor_id": "contractor:dallas:trinity-grove-electric",
+        "declared_valuation": 9700,
+        "file_date": "2026-04-09",
+        "final_date": "2026-04-19",
+        "is_residential_inferred": false,
+        "issue_date": "2026-04-10",
+        "permit_id": "permit:dallas:elm-2026-0211",
+        "permit_type_normalized": "electrical_remodel",
+        "permit_type_raw": "Residential electrical remodel",
+        "property_id": "property:1836-nomas-st-dallas-tx-75212",
+        "source_permit_number": "ELM-2026-0211",
+        "source_record_id": "source:permit:elm-2026-0211",
+        "source_system": "permit_csv_extract",
+        "source_url": "https://example.local/dallas/permits/ELM-2026-0211",
+        "status_normalized": "finaled",
+        "status_raw": "Finaled",
+        "trade": "electrical",
+        "work_class": "residential",
+        "work_description": "Rear addition remodel with new receptacle spacing plus lighting relocation and final trim."
+      },
+      "record_type": "permit",
+      "source_id": "source:permit:elm-2026-0211"
+    },
+    {
+      "record": {
+        "inspection_date": "2026-04-12",
+        "inspection_id": "inspection:dallas:elm-2026-0211:2026-04-12:rough_in",
+        "inspection_type_normalized": "rough_in",
+        "inspection_type_raw": "Rough-in",
+        "inspector_name": "Inspector West",
+        "notes_raw": "Rear addition branch routing and box placement acceptable before final trim.",
+        "permit_id": "permit:dallas:elm-2026-0211",
+        "reinspection_flag": false,
+        "result_normalized": "pass",
+        "result_raw": "Pass",
+        "source_record_id": "source:inspection:elm-2026-0211:2026-04-12:rough_in",
+        "source_url": "https://example.local/dallas/inspections/ELM-2026-0211/1"
+      },
+      "record_type": "inspection",
+      "source_id": "source:inspection:elm-2026-0211:2026-04-12:rough_in"
+    },
+    {
+      "record": {
+        "failure_reason_normalized": "access_or_scheduling_issue",
+        "inspection_date": "2026-04-14",
+        "inspection_id": "inspection:dallas:elm-2026-0211:2026-04-14:final",
+        "inspection_type_normalized": "final",
+        "inspection_type_raw": "Final",
+        "inspector_name": "Inspector West",
+        "notes_raw": "Locked side gate prevented access to the rear addition devices and no adult was on site for entry.",
+        "permit_id": "permit:dallas:elm-2026-0211",
+        "reinspection_flag": false,
+        "result_normalized": "not_ready",
+        "result_raw": "Not Ready",
+        "source_record_id": "source:inspection:elm-2026-0211:2026-04-14:final",
+        "source_url": "https://example.local/dallas/inspections/ELM-2026-0211/2"
+      },
+      "record_type": "inspection",
+      "source_id": "source:inspection:elm-2026-0211:2026-04-14:final"
+    },
+    {
+      "record": {
+        "inspection_date": "2026-04-19",
+        "inspection_id": "inspection:dallas:elm-2026-0211:2026-04-19:correction_followup",
+        "inspection_type_normalized": "correction_followup",
+        "inspection_type_raw": "Correction follow-up",
+        "inspector_name": "Inspector West",
+        "notes_raw": "Rear gate opened and final devices verified for approval on the return visit.",
+        "permit_id": "permit:dallas:elm-2026-0211",
+        "reinspection_flag": true,
+        "result_normalized": "pass",
+        "result_raw": "Pass",
+        "source_record_id": "source:inspection:elm-2026-0211:2026-04-19:correction_followup",
+        "source_url": "https://example.local/dallas/inspections/ELM-2026-0211/3"
+      },
+      "record_type": "inspection",
+      "source_id": "source:inspection:elm-2026-0211:2026-04-19:correction_followup"
+    }
+  ]
+}

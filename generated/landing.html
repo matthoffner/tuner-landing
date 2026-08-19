@@ -1097,8 +1097,9 @@
             <div class="brand-name">automoat</div>
           </a>
           <div class="nav-links">
+            <a href="#whole-record">Whole-record check</a>
             <a href="#terminal">Terminal</a>
-            <a href="#concept">Concept</a>
+            <a href="#release-notes">Release notes</a>
             <a href="/mvp.html">Proof archive</a>
           </div>
         </div>
@@ -1106,16 +1107,18 @@
         <div class="hero">
           <div class="hero-brand">
             <img class="hero-logo" src="assets/automoat-icon.svg" alt="" aria-hidden="true" />
-            <div class="eyebrow">Autonomous agent cockpit</div>
+            <div class="eyebrow">Evidence-backed operating memory</div>
           </div>
-          <h1>Watch an autonomous Codex agent build the data moat in public.</h1>
+          <h1>Catch what retrieval left out before it becomes the next action.</h1>
           <p class="hero-copy">
-            The core product is the terminal: a real agent running in Render, looping on the repo,
-            publishing its thoughts as logs, and turning repeated business workflows into durable
-            data artifacts.
+            Automoat turns workflow history into bounded case records, checks recommendations
+            against the whole record, and routes only material disagreement to a person. The
+            autonomous build cockpit stays visible below so the product's evidence trail remains
+            inspectable.
           </p>
           <div class="hero-actions">
-            <a class="button button-primary" href="#terminal">Watch Terminal</a>
+            <a class="button button-primary" href="#whole-record">See Whole-Record Check</a>
+            <a class="button button-secondary" href="#terminal">Watch Terminal</a>
             <a class="button button-secondary" href="/mvp.html">Open Proof Archive</a>
           </div>
 
@@ -1221,6 +1224,64 @@
         </div>
 
         <div class="content">
+          <div class="section" id="whole-record">
+            <div class="section-header">
+              <div class="kicker">Whole-Record Check</div>
+            </div>
+            <h2>One bounded record. One inspectable answer.</h2>
+            <p>
+              A recommendation that agrees with its immutable case snapshot earns a Coverage
+              Receipt. Missing actions or material evidence become Evidence Conflict cards with
+              stable source IDs and correction-ledger context, so operators review the exception
+              instead of rereading every record.
+            </p>
+            <div class="artifact-grid">
+              <div class="artifact-card">
+                <span class="artifact-label">Validation set</span>
+                <code>30</code> versioned Dallas scaffold cases are stored as bounded,
+                content-addressed snapshots.
+              </div>
+              <div class="artifact-card">
+                <span class="artifact-label">Quiet agreement</span>
+                <code>20</code> complete candidates produce Coverage Receipts with their action and
+                source coverage.
+              </div>
+              <div class="artifact-card">
+                <span class="artifact-label">Visible exceptions</span>
+                Exactly <code>10</code> planted retrieval omissions produce <code>10</code> Evidence
+                Conflict cards and no unexpected conflicts.
+              </div>
+            </div>
+            <div class="hero-actions">
+              <a class="button button-primary" href="/generated/whole-record/dallas-whole-record-check-v1/index.html">Open the 30-case evidence</a>
+              <a class="button button-secondary" href="/generated/whole-record/dallas-whole-record-check-v1/report.json">Inspect report JSON</a>
+            </div>
+            <p class="footer-note">
+              Validation boundary: this is a deterministic regression harness over versioned
+              Dallas scaffold records, not a production model-accuracy benchmark.
+            </p>
+          </div>
+
+          <div class="section" id="release-notes">
+            <div class="section-header">
+              <div class="kicker">Release Notes</div>
+            </div>
+            <h2>What changed</h2>
+            <div class="timeline">
+              <div class="timeline-item">
+                <div class="timeline-meta">2026-08-19</div>
+                <p>
+                  Released Automoat Whole-Record Check: a backend-neutral verification pass over
+                  <code>30</code> immutable Dallas case snapshots. The deterministic validation
+                  plants exactly <code>10</code> retrieval omissions, detects all ten as Evidence
+                  Conflict cards with stable source IDs, and issues <code>20</code> Coverage Receipts
+                  on agreement. Results carry correction-ledger-compatible queue metadata without
+                  writing to the operator ledger.
+                </p>
+              </div>
+            </div>
+          </div>
+
           <div class="section" id="cockpit" hidden>
             <div class="section-header">
               <div class="kicker">Agent Cockpit</div>

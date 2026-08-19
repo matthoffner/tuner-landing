@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Automoat Whole-Record Check</title>
+    <style>
+      :root { color-scheme: light; --ink:#19222d; --muted:#65707e; --paper:#fffdf7; --line:#d9d4c8; --good:#2f6b46; --warn:#a34628; }
+      * { box-sizing:border-box; }
+      body { margin:0; color:var(--ink); background:#f2eee5; font-family:ui-sans-serif,system-ui,sans-serif; }
+      main { width:min(1120px,calc(100% - 32px)); margin:0 auto; padding:56px 0 80px; }
+      .eyebrow { color:#8d4428; font-weight:800; letter-spacing:.1em; text-transform:uppercase; font-size:.76rem; }
+      h1 { max-width:820px; margin:12px 0; font:700 clamp(2.6rem,7vw,5.8rem)/.95 Georgia,serif; letter-spacing:-.05em; }
+      .lede { max-width:760px; color:var(--muted); font-size:1.1rem; line-height:1.7; }
+      .stats { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin:30px 0; }
+      .stat,.card { border:1px solid var(--line); border-radius:18px; background:var(--paper); }
+      .stat { padding:18px; } .stat strong { display:block; font-size:2rem; } .stat span { color:var(--muted); }
+      .notice { padding:16px 18px; border-left:4px solid #b77a31; background:#fff8e7; line-height:1.6; }
+      .grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:26px; }
+      .card { padding:18px; } .card h3 { margin:10px 0 0; font-size:1rem; } .card p { color:var(--muted); line-height:1.55; min-height:48px; }
+      .card code { display:block; overflow-wrap:anywhere; font-size:.72rem; }
+      .status { font-size:.74rem; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
+      .receipt .status { color:var(--good); } .conflict .status { color:var(--warn); }
+      @media (max-width:800px) { .stats,.grid { grid-template-columns:1fr 1fr; } }
+      @media (max-width:520px) { .stats,.grid { grid-template-columns:1fr; } }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="eyebrow">Released 2026-08-19</div>
+      <h1>Catch what retrieval left out.</h1>
+      <p class="lede">Automoat now checks an answer against one immutable, bounded case record. Agreement earns a Coverage Receipt. Material evidence or action gaps become Evidence Conflict cards with stable source IDs for operator review.</p>
+      <section class="stats" aria-label="Deterministic validation results">
+        <div class="stat"><strong>30</strong><span>Dallas scaffold cases</span></div>
+        <div class="stat"><strong>20</strong><span>Coverage Receipts</span></div>
+        <div class="stat"><strong>10</strong><span>Evidence Conflicts</span></div>
+        <div class="stat"><strong>10/10</strong><span>planted omissions detected</span></div>
+      </section>
+      <p class="notice"><strong>Validation boundary:</strong> deterministic regression harness over versioned Dallas scaffold records. This is not a production model-accuracy claim.</p>
+      <section class="grid"><article class="card receipt">
+              <div class="status">Coverage Receipt</div>
+              <h3>dallas-whole-record-case-01</h3>
+              <p>Expected actions and material source IDs agree.</p>
+              <code>workflow-item:dallas:next-action:0001</code>
+            </article><article class="card receipt">
+              <div class="status">Coverage Receipt</div>
+              <h3>dallas-whole-record-case-02</h3>
+              <p>Expected actions and material source IDs agree.</p>
+              <code>workflow-item:dallas:next-action:0019</code>
+            </article><article class="card conflict">
+              <div class="status">Evidence Conflict</div>
+              <h3>dallas-whole-record-case-03</h3>
+              <p>Missing action: schedule_reinspection<br>Missing evidence: source:inspection:elz-2026-0238:2026-05-22:rough_in</p>
+              <code>workflow-item:dallas:next-action:0037</code>
+            </article><article class="card receipt">
+              <div class="status">Coverage Receipt</div>
+              <h3>dallas-whole-record-case-04</h3>
+              <p>Expected actions and material source IDs agree.</p>
+              <code>workflow-item:dallas:next-action:0056</code>
+            </article><article class="card receipt">
+              <div class="status">Coverage Receipt</div>
+              <h3>dallas-whole-record-case-05</h3>
+              <p>Expected actions and material source IDs agree.</p>
+              <code>workflow-item:dallas:next-action:0074</code>
+            </article><article class="card conflict">
+              <div class="status">Evidence Conflict</div>
+              <h3>dallas-whole-record-case-06</h3>
+              <p>Missing action: schedule_reinspection<br>Missing evidence: source:inspection:elz-2026-0294:2026-05-22:rough_in</p>
+              <code>workflow-item:dallas:next-action:0093</code>
+            </article><article class="card receipt">
+              <div class="status">Coverage Receipt</div>
+              <h3>dallas-whole-record-case-07</h3>
+              <p>Expected actions and material source IDs agree.</p>
+              <code>workflow-item:dallas:next-action:0111</code>
+            </article><article class="card receipt">
+              <div class="status">Coverage Receipt</div>
+              <h3>dallas-whole-record-case-08</h3>
+              <p>Expected actions and material source IDs agree.</p>
+              <code>workflow-item:dallas:next-action:0129</code>
+            </article><article class="card conflict">
+              <div class="status">Evidence Conflict</div>
+              <h3>dallas-whole-record-case-09</h3>
+              <p>Missing action: schedule_reinspection<br>Missing evidence: source:inspection:elz-2026-0349:2026-05-24:rough_in</p>
+              <code>workflow-item:dallas:next-action:0148</code>
+            </article><article class="card receipt">
+              <div class="status">Coverage Receipt</div>
+              <h3>dallas-whole-record-case-10</h3>
+              <p>Expected actions and material source IDs agree.</p>
+              <code>workflow-item:dallas:next-action:0166</code>
+            </article><article class="card receipt">
+              <div class="status">Coverage Receipt</div>
+              <h3>dallas-whole-record-case-11</h3>
+              <p>Expected actions and material source IDs agree.</p>
+              <code>workflow-item:dallas:next-action:0185</code>
+            </article><article class="card conflict">
+              <div class="status">Evidence Conflict</div>
+              <h3>dallas-whole-record-case-12</h3>
+              <p>Missing action: schedule_reinspection<br>Missing evidence: source:inspection:elz-2026-0404:2026-05-24:rough_in</p>
+              <code>workflow-item:dallas:next-action:0203</code>
+            </article><article class="card receipt">
+              <div class="status">Coverage Receipt</div>
+              <h3>dallas-whole-record-case-13</h3>
+              <p>Expected actions and material source IDs agree.</p>
+              <code>workflow-item:dallas:next-action:0221</code>
+            </article><article class="card receipt">
+              <div class="status">Coverage Receipt</div>
+              <h3>dallas-whole-record-case-14</h3>
+              <p>Expected actions and material source IDs agree.</p>
+              <code>workflow-item:dallas:next-action:0240</code>
+            </article><article class="card conflict">
+              <div class="status">Evidence Conflict</div>
+              <h3>dallas-whole-record-case-15</h3>
+              <p>Missing action: schedule_reinspection<br>Missing evidence: source:inspection:elz-2026-0459:2026-05-24:rough_in</p>
+              <code>workflow-item:dallas:next-action:0258</code>
+            </article><article class="card receipt">
+              <div class="status">Coverage Receipt</div>
+              <h3>dallas-whole-record-case-16</h3>
+              <p>Expected actions and material source IDs agree.</p>
+              <code>workflow-item:dallas:next-action:0277</code>
+            </article><article class="card receipt">
+              <div class="status">Coverage Receipt</div>
+              <h3>dallas-whole-record-case-17</h3>
+              <p>Expected actions and material source IDs agree.</p>
+              <code>workflow-item:dallas:next-action:0295</code>
+            </article><article class="card conflict">
+              <div class="status">Evidence Conflict</div>
+              <h3>dallas-whole-record-case-18</h3>
+              <p>Missing action: schedule_reinspection<br>Missing evidence: source:inspection:elz-2026-0515:2026-05-24:rough_in</p>
+              <code>workflow-item:dallas:next-action:0314</code>
+            </article><article class="card receipt">
+              <div class="status">Coverage Receipt</div>
+              <h3>dallas-whole-record-case-19</h3>
+              <p>Expected actions and material source IDs agree.</p>
+              <code>workflow-item:dallas:next-action:0332</code>
+            </article><article class="card receipt">
+              <div class="status">Coverage Receipt</div>
+              <h3>dallas-whole-record-case-20</h3>
+              <p>Expected actions and material source IDs agree.</p>
+              <code>workflow-item:dallas:next-action:0350</code>
+            </article><article class="card conflict">
+              <div class="status">Evidence Conflict</div>
+              <h3>dallas-whole-record-case-21</h3>
+              <p>Missing action: schedule_reinspection<br>Missing evidence: source:inspection:elz-2026-0570:2026-05-24:rough_in</p>
+              <code>workflow-item:dallas:next-action:0369</code>
+            </article><article class="card receipt">
+              <div class="status">Coverage Receipt</div>
+              <h3>dallas-whole-record-case-22</h3>
+              <p>Expected actions and material source IDs agree.</p>
+              <code>workflow-item:dallas:next-action:0387</code>
+            </article><article class="card receipt">
+              <div class="status">Coverage Receipt</div>
+              <h3>dallas-whole-record-case-23</h3>
+              <p>Expected actions and material source IDs agree.</p>
+              <code>workflow-item:dallas:next-action:0406</code>
+            </article><article class="card conflict">
+              <div class="status">Evidence Conflict</div>
+              <h3>dallas-whole-record-case-24</h3>
+              <p>Missing action: schedule_reinspection<br>Missing evidence: source:inspection:elz-2026-0625:2026-05-24:rough_in</p>
+              <code>workflow-item:dallas:next-action:0424</code>
+            </article><article class="card receipt">
+              <div class="status">Coverage Receipt</div>
+              <h3>dallas-whole-record-case-25</h3>
+              <p>Expected actions and material source IDs agree.</p>
+              <code>workflow-item:dallas:next-action:0442</code>
+            </article><article class="card receipt">
+              <div class="status">Coverage Receipt</div>
+              <h3>dallas-whole-record-case-26</h3>
+              <p>Expected actions and material source IDs agree.</p>
+              <code>workflow-item:dallas:next-action:0461</code>
+            </article><article class="card conflict">
+              <div class="status">Evidence Conflict</div>
+              <h3>dallas-whole-record-case-27</h3>
+              <p>Missing action: schedule_reinspection<br>Missing evidence: source:inspection:elz-2026-0680:2026-05-24:rough_in</p>
+              <code>workflow-item:dallas:next-action:0479</code>
+            </article><article class="card receipt">
+              <div class="status">Coverage Receipt</div>
+              <h3>dallas-whole-record-case-28</h3>
+              <p>Expected actions and material source IDs agree.</p>
+              <code>workflow-item:dallas:next-action:0498</code>
+            </article><article class="card receipt">
+              <div class="status">Coverage Receipt</div>
+              <h3>dallas-whole-record-case-29</h3>
+              <p>Expected actions and material source IDs agree.</p>
+              <code>workflow-item:dallas:next-action:0516</code>
+            </article><article class="card conflict">
+              <div class="status">Evidence Conflict</div>
+              <h3>dallas-whole-record-case-30</h3>
+              <p>Missing action: schedule_reinspection<br>Missing evidence: source:inspection:elz-2026-0736:2026-05-24:rough_in</p>
+              <code>workflow-item:dallas:next-action:0535</code>
+            </article></section>
+    </main>
+  </body>
+</html>

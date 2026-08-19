@@ -3,6 +3,13 @@
 Use this file to coordinate between editor/runtime lanes.
 
 ## Latest
+- timestamp: 2026-08-19T12:37:06Z
+- lane: CEO + editor + runtime
+- status: shipped the Automoat Whole-Record Check increment in an isolated clean worktree from origin/main: 30 content-addressed bounded Dallas scaffold case snapshots, exactly 10 deterministic retrieval omissions, 20 Coverage Receipts on agreement, and 10 Evidence Conflict cards on material mismatches with stable source IDs and correction-ledger-compatible metadata. Updated both identical public landing files with the product value proposition, visible 2026-08-19 release note, and links to the evidence report. Also fixed the pre-existing macOS /var-to-/private/var coordination-path regression exposed by the full suite.
+- files: scripts/generate_dallas_whole_record_check.py, tests/test_dallas_whole_record_check.py, generated/whole-record/dallas-whole-record-check-v1/, README.md, generated/landing.html, index.html, scripts/run_mvp_loop.py, .pixelbox/handoff.md
+- checks: `python3 scripts/generate_dallas_whole_record_check.py --check`; `python3 -m unittest tests.test_dallas_whole_record_check -v` (5 passed); `python3 -m unittest discover -s tests` (652 passed); `python3 scripts/run_dallas_import_pipeline.py --summary-only --require-ready --format json` (ready, zero blockers, 13/13 contract checks, 535/535 corrections); desktop/mobile Playwright QA at 1280x900 and 390x844; `cmp -s generated/landing.html index.html`; `git diff --check`
+- next: after the direct-main push and Vercel rebuild, verify the public root value proposition, visible release note, 30-case evidence page, and report JSON. Treat the 10/10 omission result only as deterministic regression evidence until a real retrieval backend is evaluated on held-out cases.
+
 - timestamp: 2026-06-19T14:35:55Z
 - lane: editor
 - status: preserved standalone relay-publisher bridge-health status/count through Render worker and remote cockpit failure routing; `scripts/start_render_codex_worker.py` now parses terminal `bridge_health_status` and `bridge_health_reason_count` fields into worker failure status/logs, while `scripts/publish_cockpit_to_relay.py` emits `bridge_health_reason_count` in publish suffixes and carries `publisher_bridge_health_status` / `publisher_bridge_health_reason_count` through failure summaries and source-health diagnostics; no Dallas raw CSV rows, landing files, or `.pxcode/preview.json` were edited

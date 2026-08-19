@@ -6,6 +6,12 @@ Created from Pixelbox.
 
 `automoat` is a local-first scaffold for turning repeated operational judgment into inspectable artifacts before building a product around it. The current proof is deliberately narrow: Dallas residential electrical permits and inspections for electricians. The repo normalizes sample records, generates inspection sequences, creates eval tasks and reviewed labels, checks contract stability, reports edge-case coverage, and now emits a small action queue that shows what an operator would do after failed or not-ready inspections.
 
+## Whole-Record Check
+
+Automoat now has a backend-neutral check for the moment before a recommendation becomes an operator action. It compares the candidate answer with one immutable, bounded case snapshot. Agreement produces a Coverage Receipt; a material action or evidence mismatch produces an Evidence Conflict card with stable source IDs and existing correction-ledger context.
+
+The committed validation set uses 30 versioned Dallas scaffold cases and plants exactly 10 retrieval omissions. The deterministic harness produces 20 Coverage Receipts, detects all 10 planted omissions as conflicts, and produces no unexpected conflicts. This is a regression proof over scaffold records, not a production model-accuracy benchmark.
+
 ## Docs
 
 - [Vision](./vision.md)
@@ -15,6 +21,8 @@ Created from Pixelbox.
 - [Dallas Import Pipeline Summary](./generated/pipeline/dallas-import-pipeline-summary-v1/summary.md)
 - [Dallas Edge-Case Coverage](./generated/coverage/dallas-electrician-edge-case-coverage-v1/coverage.md)
 - [Dallas Inspection Workflow](./generated/workflows/dallas-inspection-workflow-v1/index.html)
+- [Dallas Whole-Record Check](./generated/whole-record/dallas-whole-record-check-v1/index.html)
+- [Dallas Whole-Record Check Report](./generated/whole-record/dallas-whole-record-check-v1/report.md)
 - [Loop Instructions](./LOOP.md)
 - [Next Task](./NEXT_TASK.md)
 
@@ -44,6 +52,8 @@ Created from Pixelbox.
 - Dallas latest import pipeline: `python3 scripts/run_dallas_import_pipeline.py` prints the next-gap summary, raw CSV handoff, copyable follow-up commands, generated report paths, and writes `generated/pipeline/dallas-import-pipeline-summary-v1/summary.json` plus `summary.md`; add `--require-ready` when automation should fail if the generated execution-readiness gate is blocked, use `--summary-only --require-ready` to rebuild the durable summary and strict readiness result from current generated artifacts without rerunning every writer, or add `--format json` when automation needs the final summary on stdout with step logs sent to stderr.
 - Dallas edge-case coverage writer: `python3 scripts/generate_dallas_edge_case_coverage.py`
 - Dallas inspection workflow writer: `python3 scripts/generate_dallas_inspection_workflow.py`
+- Dallas Whole-Record Check writer: `python3 scripts/generate_dallas_whole_record_check.py`
+- Dallas Whole-Record Check verification: `python3 scripts/generate_dallas_whole_record_check.py --check`
 - Dallas operator-correction queue listing: `python3 scripts/record_operator_correction.py --list-queue-items`
 - Dallas missing-correction queue listing: `python3 scripts/record_operator_correction.py --list-queue-items --missing-only`
 - Dallas next missing correction: `python3 scripts/record_operator_correction.py --next-missing`
