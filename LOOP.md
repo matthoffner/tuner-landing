@@ -10,7 +10,9 @@ The loop exists to keep moving the project forward between direct user intervent
 
 The current mission is:
 
-- define the Dallas electricians MVP clearly enough to implement
+- make local AI on consumer hardware measurable and private by default
+- turn proprietary work into immutable evals and prove quality per token
+- keep Dallas and Whole-Record as subordinate moat-harness proofs
 - keep the project docs and generated landing page in sync
 - leave a legible trail of what each run did
 
@@ -97,9 +99,11 @@ Stay inside this repository.
 
 Prefer the current project direction:
 
-- local-first product
-- Dallas electricians MVP
-- business-first discovery plus dataset-first build/eval
+- local AI on hardware the user controls
+- loopback by default with explicit, receipt-visible remote egress
+- token economics, task quality, and privacy in the same run contract
+- hardware-first local runs plus moat-first business/data discovery
+- Dallas electricians and Whole-Record as bounded task packs/capabilities, not the root identity
 
 Do not widen scope unless the user explicitly changes direction or a necessary prerequisite is discovered.
 

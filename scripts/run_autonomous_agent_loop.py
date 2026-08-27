@@ -50,14 +50,20 @@ Do exactly one bounded improvement for this repo, then stop. Read AGENTS.md and
 leverage improvement for the autonomous product.
 
 Task policy:
+- Automoat is local AI on consumer hardware plus a harness that builds a
+  proprietary moat. Token economics and privacy are core product gates.
+- Prefer a real loopback run, runtime adapter, token/cost/quality receipt,
+  egress guard, or immutable baseline-versus-moat comparison.
+- Treat Modal as a remote cloud comparator. Treat DFlash2 and similar runtime
+  techniques as candidates until a hardware- and task-bound receipt proves them.
 - If the Dallas import pipeline is already ready and coverage has no thin groups,
   do not append another synthetic `ELZ-*` row to the example.local Dallas CSV
   fixtures. That work is low-leverage and will be rejected by the supervisor.
 - Updating README, NEXT_TASK, the landing page, the journal, or the handoff to
   describe that fixture append does not make it higher-leverage work.
-- Prefer autonomy, cockpit visibility, Render worker reliability, policy/checking,
-  product clarity, real-data ingestion mechanics, or tests that make the agent
-  more useful and inspectable.
+- Prefer local inference, moat evaluation, privacy/cost checks, real-data ingest,
+  policy/checking, product clarity, or tests that make the harness more useful
+  and inspectable.
 - Only edit raw Dallas CSV rows when fixing a broken readiness gate, adding a new
   documented edge case/source type, or wiring a real import path. Explain why the
   data change is not just another hidden fixture row.
@@ -66,7 +72,8 @@ Constraints:
 - Do not ask the user questions.
 - Do not run long-lived servers.
 - Do not edit .pxcode/preview.json.
-- Keep the product vision broad, with Dallas permit data as the MVP wedge.
+- Keep Dallas permit data and Whole-Record Check subordinate to the two-pillar
+  product identity.
 - Update .automoat/logs/agent-journal.md and .pixelbox/handoff.md for any real change.
 - If generated/landing.html changes, sync it to index.html.
 - Run relevant deterministic checks.

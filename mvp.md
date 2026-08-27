@@ -4,13 +4,18 @@ This document defines the recommended first proof of concept for `automoat`.
 
 The goal is not to build the whole product. The goal is to prove one narrow claim:
 
-`automoat` can take a local operational dataset, identify plausible moat hypotheses, derive useful eval tasks, and show whether a moat-enhanced approach outperforms a generic baseline on a narrow real-world task.`
+`automoat` can run a bounded AI task on consumer hardware, disclose its token economics and privacy boundary, then show whether private operational context improves the result over a generic baseline.`
 
 ## Recommended Direction
 
 The strongest first MVP is:
 
-`home / property / permit / inspection intelligence`
+`a Local Run Receipt over a home / property / permit / inspection task pack`
+
+Dallas permit and inspection intelligence remains the first moat task pack, not the product identity. The product proof now has two layers:
+
+1. the local runtime layer proves what a pinned model/runtime/hardware combination costs per token and per correct outcome without hidden egress;
+2. the moat layer proves whether Dallas-specific records and corrections improve the fixed task pack.
 
 This is a better first wedge than a pure academic PDF corpus because it feels more real, more local, and more commercially legible.
 
@@ -26,7 +31,7 @@ This domain has several advantages:
 
 Most importantly, it demonstrates the real thesis of `automoat`:
 
-boring operational records can contain a valuable moat if you can identify the patterns inside them.
+useful local AI and boring operational records become defensible only when one receipt connects privacy, token economics, and task lift.
 
 ## Candidate Public Data Sources
 
@@ -170,17 +175,18 @@ These are the kinds of things a generic model will not know well on its own.
 
 The first live demo should look like this:
 
-1. user creates a local project
-2. user imports Dallas electrical permit and inspection records
-3. `automoat` normalizes and summarizes the corpus
-4. `automoat` proposes 2-4 moat hypotheses
-5. `automoat` generates eval tasks
+1. user creates a local project and declares the allowed execution boundary
+2. user records the consumer hardware, model, runtime, quantization, and active inference technique
+3. user imports Dallas electrical permit and inspection records
+4. `automoat` normalizes and summarizes the corpus
+5. `automoat` proposes 2-4 moat hypotheses and freezes one task pack
 6. user runs a benchmark across:
    - generic baseline
    - local retrieval baseline
    - local moat-enhanced approach
-7. the UI shows charts for quality, confidence, locality, and cost
-8. `automoat` recommends the best next path
+7. each run records prompt/completion/total tokens, wall time, effective compute cost, exact task quality, and local-versus-remote execution
+8. the UI compares quality per token and cost per correct outcome without embedding raw private content in the receipt
+9. `automoat` recommends the best next path or no deployment
 
 ## Minimal Evaluation Tasks
 
@@ -220,6 +226,10 @@ Essential screens:
 Essential outputs:
 
 - quality score by eval task
+- prompt, completion, and total token counts
+- end-to-end output tokens per second
+- effective cost per million tokens and per correct result when a compute rate is supplied
+- explicit local/remote execution boundary and egress opt-in
 - likely value of local data
 - locality/privacy explanation
 - moat hypothesis summary
@@ -229,6 +239,10 @@ Essential outputs:
 
 The MVP is successful if it proves all of the following:
 
+- a supported model can run through a loopback endpoint on consumer hardware
+- the receipt contains no raw task, target, prompt, or prediction content
+- a remote endpoint is refused unless the user explicitly opts in
+- token, time, effective cost, runtime provenance, and task quality remain bound to one task-pack digest
 - a user can import Dallas electrical permit and inspection records
 - `automoat` can suggest plausible moat hypotheses
 - `automoat` can generate useful narrow eval tasks

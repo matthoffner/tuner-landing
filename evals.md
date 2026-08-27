@@ -44,9 +44,26 @@ Every task should be runnable against the same three system modes when possible:
 
 The MVP does not require fine-tuning in the first pass. The `moat` condition only needs to prove that structured local history adds measurable value.
 
-## Optional Local-Model Baseline
+## Local Run Receipt
 
-The Modal llama.cpp service provides a reproducible SLM baseline without moving the durable autonomous worker off Render. After deploying `modal_slm.py`, run a bounded sample:
+The preferred execution path is a loopback OpenAI-compatible endpoint on hardware the user controls:
+
+```bash
+python3 scripts/run_local_moat_eval.py \
+  --url http://127.0.0.1:8080 \
+  --tasks generated/evals/dallas-electrician-import-sample-v2/tasks.jsonl \
+  --receipt .automoat/runs/local-dallas-receipt.json \
+  --runtime llama.cpp \
+  --hardware "consumer-machine-description" \
+  --model "pinned-model-id" \
+  --optimization quantized
+```
+
+The aggregate receipt must not include raw tasks, targets, prompts, or predictions. It should bind the task digest to model/runtime/hardware/optimization provenance and report token totals, wall time, end-to-end output tokens per second, strict exact-match quality, the execution boundary, and optional effective compute cost.
+
+## Optional Cloud SLM Comparator
+
+The Modal llama.cpp service is a remote L4 cloud comparator, not a local-model baseline. It can provide a reproducible SLM reference without moving the durable autonomous worker off Render. Remote inference is an explicit privacy and cost decision. After deploying `modal_slm.py`, run a bounded sample:
 
 ```bash
 AUTOMOAT_SLM_URL=https://<modal-app>.modal.run \
@@ -57,7 +74,7 @@ python3 scripts/slm_inference_client.py \
   --limit 10
 ```
 
-Treat this as an experiment, not as an automatic replacement for the frontier-model baseline. Record model repository and quantization, GPU type, warm and cold latency, exact-match accuracy, structured-output failures, and estimated cost. Never place the endpoint token in generated predictions or committed configuration.
+Treat this as an experiment, not as an automatic replacement for the frontier-model baseline or evidence of local execution. Record model repository and quantization, GPU type, warm and cold latency, exact-match accuracy, structured-output failures, estimated cost, and the fact that task content crossed a third-party inference boundary. Never place the endpoint token in generated predictions or committed configuration.
 
 ## Required Eval Artifacts
 

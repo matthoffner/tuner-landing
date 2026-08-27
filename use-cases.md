@@ -8,12 +8,15 @@ The point is not to describe every possible market. The point is to give future 
 
 The common `automoat` story looks like this:
 
-1. a user has a large local corpus of domain-specific documents, often PDFs
-2. the corpus does not initially look like a moat, just a messy archive
-3. `automoat` helps define what is actually proprietary or defensible in that corpus
-4. `automoat` turns the corpus into structured datasets, eval tasks, and benchmarkable assets
-5. the user compares generic frontier-model behavior against local, retrieval-enhanced, or adapted alternatives
-6. the user learns whether their dataset creates a real moat through privacy, cost, convenience, control, or task-specific quality
+1. a user has a valuable recurring task and hardware they control
+2. `automoat` creates one immutable task pack and a visible privacy boundary
+3. a supported local model runs behind a loopback endpoint with its runtime and optimization pinned
+4. the receipt records prompt, completion, and total tokens; wall time; effective compute cost; and task quality
+5. `automoat` identifies which workflow records, decisions, corrections, and outcomes are actually proprietary
+6. the user compares the generic baseline with retrieval-enhanced or adapted alternatives on the same task pack
+7. the user learns whether the combination of local inference and private context creates a real moat through privacy, cost, convenience, control, or task-specific quality
+
+Some users start with the hardware: “What useful AI can this machine run privately, and what does each correct result cost?” Others start with the work: “Which part of this workflow is worth capturing and improving?” These are entry points into the same product, not separate products.
 
 Sometimes the user starts with the business instead of the dataset.
 
@@ -38,6 +41,8 @@ The win condition is usually narrower:
 - do it more cheaply
 - do it with better control or lower latency
 - do it in a more convenient local workflow
+
+Every use case must report token economics and privacy explicitly. Local inference removes the third-party API token meter only when the request stays local; it does not make hardware, electricity, storage, or operator time free. A privacy claim is valid only when routing, fallbacks, telemetry, and tools respect the recorded boundary.
 
 ## Story 1: Insurance Operations
 

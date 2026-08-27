@@ -16,7 +16,7 @@ DEFAULT_MINUTES=30
 AUTO_REPORT="${AUTO_REPORT:-1}"
 AUTO_PUBLISH="${AUTO_PUBLISH:-1}"
 
-WORKER_PROMPT="Read LOOP.md, HEARTBEAT.md, NEXT_TASK.md, vision.md, mvp.md, implementation-spec.md, and .pixelbox/handoff.md. Make one bounded improvement focused on the Dallas electricians MVP. Prefer the next unfinished item in NEXT_TASK.md. Leave durable repo artifacts. Update .automoat/logs/agent-journal.md, .pixelbox/handoff.md, and generated/landing.html if the project state changes."
+WORKER_PROMPT="Read LOOP.md, HEARTBEAT.md, NEXT_TASK.md, vision.md, mvp.md, implementation-spec.md, and .pixelbox/handoff.md. Make one bounded improvement to Automoat's local-AI or moat-building harness. Prefer a real loopback run, token/cost/privacy receipt, immutable baseline comparison, or moat-eval improvement from NEXT_TASK.md. Keep Dallas and Whole-Record subordinate. Leave durable repo artifacts. Update .automoat/logs/agent-journal.md, .pixelbox/handoff.md, and generated/landing.html if the project state changes."
 REPORTER_PROMPT="Read generated/landing.html, NEXT_TASK.md, .automoat/logs/agent-journal.md, .pixelbox/handoff.md, README.md, and the most recent generated artifacts. Update generated/landing.html so it acts as a high-signal landing page and changelog for the real current state of automoat. Do not invent progress. Keep the product framing broad and the build log current."
 
 mkdir -p "$STATE_DIR" "$LOG_DIR" "$RUNS_DIR" "$SESSION_DIR"

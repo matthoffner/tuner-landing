@@ -4,16 +4,31 @@ Created from Pixelbox.
 
 ## What This Is
 
-`automoat` is a local-first workbench for helping a business discover, define, prove, and operationalize a moat from proprietary workflows, decisions, corrections, outcomes, and datasets. It turns repeated operational judgment into inspectable artifacts, reusable evaluation contracts, and approval-aware systems so the business can see what is defensible before automating it.
+`automoat` connects two systems:
+
+1. **Local AI on consumer hardware.** Run supported models on hardware the user controls and measure the real token economics, task quality, and execution boundary across replaceable runtimes and inference techniques.
+2. **A harness for building the user's moat.** Turn private workflows, decisions, corrections, outcomes, and datasets into immutable task packs, reusable evals, and approval-aware systems that improve with use.
+
+Neither half is sufficient alone. Faster local inference is useful only when it makes a valuable job cheaper or more private. Proprietary data is a moat only when a fixed evaluation shows it improves that job. Automoat binds both claims into inspectable receipts.
+
+Token cost and privacy are core product gates, not settings added later. A run should disclose prompt, completion, and total tokens; end-to-end time; effective compute cost when a rate is supplied; whether any request left the device; and whether the result improved the chosen task. Raw business inputs and model outputs do not belong in the aggregate run receipt.
 
 ## Product Entry Points
 
-- **Business-first discovery:** map recurring work, identify which workflow knowledge is proprietary, and produce a data collection, evaluation, and monetization plan.
-- **Dataset-first build + eval:** inspect local proprietary data, formulate the tasks it can improve, compare it against a generic baseline, and choose retrieval, adaptation, fine-tuning, or no deployment.
+- **Hardware-first local run:** pin a model, runtime, hardware profile, and optimization; execute an immutable task pack on a loopback endpoint; and measure tokens, time, effective cost, privacy boundary, and strict task quality.
+- **Moat-first business + data:** map recurring work or inspect local proprietary data, formulate the tasks it can improve, compare against a generic baseline, and choose retrieval, adaptation, fine-tuning, or no deployment.
 
-These are two routes into the same product, not separate products. Both should leave the user with evidence for how to operationalize a moat.
+These are two routes into the same product, not separate products. Both should leave the user with evidence for what can run locally and whether the private business context creates a defensible advantage.
 
-## Current Initiative: Whole-Record Check
+## Current Initiative: Local Run Receipt
+
+`scripts/run_local_moat_eval.py` is the first runtime-neutral measurement contract. It runs a bounded JSONL eval pack against an OpenAI-compatible endpoint, allows loopback by default, refuses remote inference without explicit `--allow-remote`, and writes a receipt without raw tasks, targets, prompts, or predictions.
+
+The receipt binds the task-pack digest to model, runtime, hardware, and optimization provenance; aggregates prompt/completion/total tokens, elapsed time, end-to-end output tokens per second, strict exact-match quality, and optional compute-hour cost; and can compare a candidate with a baseline only when both used the same immutable task pack.
+
+Techniques such as speculative decoding, quantization, prompt caching, and KV-cache optimization remain replaceable. [DFlash2](https://inco.ai/blog/dflash2/) is a current example of how the local-inference floor can move; it is not bundled here, it does not reduce token count by itself, and Automoat makes no speed claim until a specific model/runtime/hardware/task combination has its own receipt.
+
+## Released Moat Builder Capability: Whole-Record Check
 
 Whole-Record Check is one released application of that core loop. It provides a backend-neutral check for the moment before a recommendation becomes an operator action. It compares the candidate answer with one immutable, bounded case snapshot. Agreement produces a Coverage Receipt; a material action or evidence mismatch produces an Evidence Conflict card with stable source IDs and existing correction-ledger context.
 
@@ -40,6 +55,7 @@ The current validation is deliberately narrow: 30 versioned Dallas residential-e
 - 24-hour supervisor runner: `./scripts/codex-day.sh [hours] [session-minutes]`
 - Auto-publish helper: `./scripts/codex-publish.sh ["commit message"]`
 - MVP loop runner: `python3 scripts/run_mvp_loop.py --iterations 3 --interval 5`
+- Local AI eval receipt: `python3 scripts/run_local_moat_eval.py --url http://127.0.0.1:8080 --tasks <tasks.jsonl> --receipt <receipt.json> --runtime <runtime> --hardware <hardware> --model <model>`
 - Autonomous Codex loop runner: `python3 scripts/run_autonomous_agent_loop.py --iterations 1 --interval 300`
 - Loop status JSON: `.automoat/state/mvp-loop-status.json` includes `artifacts.import_pipeline.execution_readiness` from `generated/pipeline/dallas-import-pipeline-summary-v1/summary.json`, so local cockpit readers can see Dallas import readiness without reparsing the pipeline artifact.
 - MVP cockpit server: `python3 scripts/serve_mvp_cockpit.py --auto-start --loop-mode agent --interval 300 --port 4174`

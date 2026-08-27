@@ -1,25 +1,27 @@
 # Next Task
 
-Current priority: make the Render-hosted autonomous worker useful, visible, and
-safe. Keep the Dallas electricians permit data as the MVP wedge, but do not
-default to adding more synthetic `ELZ-*` fixture rows when readiness and coverage
-are already green.
+Current priority: make the corrected Automoat product executable. Automoat is
+local AI on consumer hardware plus a harness for building a proprietary moat;
+token economics and privacy are core gates. Keep the Dallas electricians data as
+one moat task pack and Whole-Record Check as one released capability. Neither is
+the product identity.
 
 ## Immediate Objectives
 
-1. Improve the autonomous loop, cockpit visibility, Render worker reliability, and product clarity.
-2. Keep the Dallas electricians MVP executable, not just well-described.
-3. Prefer real ingest mechanics, checks, and reusable writers over hidden fixture-row expansion.
+1. Prove the Local Run Receipt against a real loopback model on consumer hardware: pinned model/runtime/hardware/optimization, token totals, wall time, effective compute cost, strict task quality, and no undeclared egress.
+2. Compare one generic baseline with one moat-enhanced run on the identical task-pack digest; stop if private context adds no measured task lift.
+3. Keep the Dallas and Whole-Record artifacts executable and subordinate; do not grow them merely to create activity.
+4. Treat Modal as a remote cloud comparator. Treat DFlash2 and other inference techniques as candidates until a hardware- and task-bound receipt proves them.
 
 ## Good Outputs
 
 Useful artifacts for the next few runs:
 
-- `implementation-spec.md`
-- `schema.md`
-- `evals.md`
-- `discovery-artifacts.md`
-- improvements to `generated/landing.html`
+- a secret-free Local Run Receipt under ignored `.automoat/runs/`
+- a baseline-versus-moat comparison bound to one immutable task digest
+- a measured local hardware/runtime adapter with no remote fallback
+- tests that fail on silent egress, raw-content receipts, unpriced cost claims, or mismatched task packs
+- product-surface updates only when the implementation truth changes
 
 ## Current Status
 

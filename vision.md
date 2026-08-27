@@ -6,13 +6,18 @@ It is not marketing copy. It is the current product thesis, the constraints behi
 
 ## What Automoat Is
 
-`automoat` is a product for turning fragile business operations into durable, self-improving automated systems.
+`automoat` is a product for running useful AI on consumer hardware and turning a business's private work into a durable, measurable advantage.
 
 The core belief is that in the AI age, data is the real moat. Models become cheaper, more available, and more interchangeable over time. What remains hard to copy is a company's proprietary operational context: its workflows, decisions, edge cases, outcomes, customer patterns, and accumulated institutional knowledge.
 
-`automoat` should help a business define that moat, capture it, structure it, and use AI to turn it into durable operational advantage.
+`automoat` should help a business define that moat, capture it, structure it, and use local AI to turn it into durable operational advantage.
 
-`automoat` is primarily a local-first tool. It should be useful on a developer or operator machine without requiring a cloud service as the core product dependency.
+The product has two inseparable systems:
+
+1. a local-inference harness that can run supported models on hardware the user controls and measure token economics, task quality, and the execution boundary across replaceable runtimes;
+2. a moat-building harness that converts workflows, decisions, corrections, outcomes, and datasets into immutable task packs, evaluations, and reusable systems.
+
+`automoat` is local-first by topology, not merely by branding. The core path should be useful on a developer or operator machine without a cloud model service. Loopback is the default model boundary; remote inference must be an explicit, receipt-visible choice.
 
 The moat is not "AI" in the abstract. The moat is the company's growing body of useful internal data and the reliable workflows built on top of it.
 
@@ -53,11 +58,12 @@ Model tooling also has a related gap:
 
 `automoat` should help teams build an operational moat by:
 
-1. identifying high-value recurring work
-2. turning that work into legible workflow definitions
-3. capturing the data, decisions, and outcomes those workflows produce
-4. executing workflows with the right level of human oversight
-5. using that growing operational dataset to make the workflows better over time
+1. identifying one high-value recurring job and its privacy boundary
+2. running a supported model locally and measuring its real tokens, time, compute cost, and task quality
+3. turning the job into a legible workflow and immutable evaluation contract
+4. capturing the private data, decisions, corrections, and outcomes that the workflow produces
+5. comparing a generic baseline with the moat-enhanced system on the same task pack
+6. using that growing operational dataset to make the local system better over time
 
 This should feel less like "chat with an AI" and more like "build a reliable operating system for the work your company repeats, and make the resulting data compound."
 
@@ -101,7 +107,9 @@ The ideal early customer already feels the pain of recurring work and already us
 
 At a high level, the product should combine:
 
-- a local-first AI workbench
+- a consumer-hardware local AI workbench
+- runtime-neutral inference adapters
+- token, wall-time, effective-cost, and privacy receipts
 - process mapping
 - AI-assisted workflow design
 - approval-aware automation
@@ -126,7 +134,22 @@ Those surfaces should all point at the same underlying job: helping a user defin
 
 `automoat` should support two primary entry points that feed the same underlying system.
 
-### 1. Business-First Discovery
+### 1. Hardware-First Local Run
+
+The user gives `automoat` a consumer machine, a supported model/runtime configuration, and a bounded task pack.
+
+`automoat` should then:
+
+- enforce the chosen local or remote execution boundary
+- record model, runtime, hardware, quantization, caching, and speculative-decoding provenance
+- measure prompt, completion, and total tokens plus end-to-end time
+- calculate effective local compute cost only from an explicit rate
+- keep raw prompts, proprietary records, targets, and outputs out of aggregate receipts
+- compare quality and cost only across the same immutable task pack
+
+Techniques such as quantization, prompt caching, KV-cache optimization, and speculative decoding remain replaceable. A runtime technique earns product status only after a hardware- and task-bound receipt proves it.
+
+### 2. Moat-First Business And Data
 
 The user gives `automoat` their business, domain, workflows, customers, and constraints.
 
@@ -141,7 +164,7 @@ The user gives `automoat` their business, domain, workflows, customers, and cons
 
 This is the mode for users who know their business but do not yet have a clean moat dataset.
 
-### 2. Dataset-First Build / Eval
+Dataset-first build/eval is a route inside the moat-first entry point. A user who already has a dataset can skip workflow discovery and begin with inspection, task formulation, and baseline comparison.
 
 The user gives `automoat` a dataset directly.
 
@@ -159,7 +182,7 @@ This is the mode for users who already have data and want to prove or improve it
 
 ### Shared System
 
-These should not be treated as separate products.
+These should not be treated as separate products. The local runtime provides the measured engine; the moat harness provides the proprietary task and improvement loop.
 
 Business-first discovery should produce artifacts such as:
 
@@ -182,7 +205,10 @@ In both cases, the product is doing the same job:
 ## Core Principles
 
 - Automate painful recurring work before clever edge cases.
-- Stay local-first by default.
+- Stay local-first by topology: loopback by default and explicit egress otherwise.
+- Put token counts, end-to-end time, effective compute cost, and task quality in one receipt.
+- Never call local compute free; hardware, power, storage, and operator time still count.
+- Do not copy raw business content or model output into aggregate receipts.
 - Treat proprietary operational data as a first-class asset.
 - Research should produce artifacts and decisions, not just chat output.
 - Prefer clarity over magic.
@@ -200,7 +226,7 @@ V1 should be opinionated and narrow.
 
 The likely first promise:
 
-`automoat` helps a team define and build its moat by capturing proprietary workflow data, turning it into usable training assets, and showing whether that moat performs better than generic frontier-model behavior on the tasks that matter.
+`automoat` helps a team run useful AI on hardware it controls, account for the real token economics and privacy boundary, then prove whether proprietary workflow data performs better than a generic baseline on the tasks that matter.
 
 That implies a first version centered on:
 
@@ -225,7 +251,7 @@ Do not try to build the whole platform first.
 
 The first proof of concept should answer one question:
 
-`Can automoat help a user take a local proprietary dataset or workflow trace, turn it into a usable training/eval asset, and show measurable improvement over a generic baseline on a narrow task?`
+`Can automoat run a bounded task locally, show its real token economics and privacy boundary, then prove whether a proprietary dataset or workflow trace improves the result over a generic baseline?`
 
 That is the core thesis that needs validation.
 

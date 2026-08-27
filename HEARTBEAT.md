@@ -10,18 +10,19 @@ If a work session is active, keep making concrete progress on the current missio
 
 The current mission is:
 
-- make the Dallas electricians MVP more executable
-- reduce ambiguity in schema, evals, and discovery outputs
+- make consumer-hardware local inference measurable and private by default
+- prove whether private workflow context improves a fixed task per token
+- keep Dallas and Whole-Record evidence executable but subordinate
 - keep the landing page and logs aligned with the real project state
 
 ## Primary Priority Order
 
 When deciding what to do next during a work session, prefer this order:
 
-1. `schema.md`
-2. `evals.md`
-3. `discovery-artifacts.md`
-4. implementation-facing scaffolding
+1. real loopback Local Run Receipts and adapter tests
+2. token-economics, task-quality, provenance, and egress guards
+3. baseline-versus-moat comparisons on immutable task packs
+4. implementation-facing moat capture/eval scaffolding
 5. landing page and documentation alignment
 
 ## Session Behavior
@@ -61,7 +62,9 @@ The reporter pass should:
 
 ## Avoid
 
-- broadening scope past Dallas electricians
+- claiming an inference technique is integrated before a real receipt proves it
+- calling remote Modal execution local
+- copying raw tasks, prompts, targets, predictions, or secrets into aggregate receipts
 - redoing completed planning work unless it is clearly wrong
 - acting like a generic research assistant
 - producing vague brainstorming without repo artifacts

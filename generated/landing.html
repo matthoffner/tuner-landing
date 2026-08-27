@@ -3,15 +3,15 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Automoat | Turn proprietary work into a durable moat</title>
+    <title>Automoat | Local AI that compounds your private advantage</title>
     <meta
       name="description"
-      content="Automoat is a local-first workbench for discovering, defining, proving, and operationalizing a moat from proprietary workflows, decisions, outcomes, and datasets."
+      content="Run AI on consumer hardware you control, measure the token economics, and turn private workflows, corrections, and outcomes into a moat you can prove."
     />
-    <meta property="og:title" content="Automoat | Turn proprietary work into a durable moat" />
+    <meta property="og:title" content="Automoat | Local AI that compounds your private advantage" />
     <meta
       property="og:description"
-      content="Discover, define, prove, and operationalize a moat from the proprietary work and data your business already creates."
+      content="Run AI locally, account for every token, and build a measurable moat from the private work your business already creates."
     />
     <style>
       :root {
@@ -402,7 +402,7 @@
       }
 
       .moat-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
       }
 
       .moat-card {
@@ -1126,7 +1126,8 @@
           <div class="nav-links">
             <a href="#identity">Product</a>
             <a href="#entry-points">Start here</a>
-            <a href="#whole-record">Current initiative</a>
+            <a href="#local-run">Local run receipt</a>
+            <a href="#whole-record">Moat proof</a>
             <a href="#terminal">Runtime evidence</a>
             <a href="#release-notes">Release notes</a>
             <a href="/mvp.html">Proof archive</a>
@@ -1136,81 +1137,85 @@
         <div class="hero">
           <div class="hero-brand">
             <img class="hero-logo" src="assets/automoat-icon.svg" alt="" aria-hidden="true" />
-            <div class="eyebrow">Local-first moat workbench</div>
+            <div class="eyebrow">Local AI · Private advantage</div>
           </div>
-          <h1>Discover, define, prove, and operationalize the moat already inside your business.</h1>
+          <h1>Run AI locally. Build what only your business can know.</h1>
           <p class="hero-copy">
-            Automoat turns proprietary workflows, decisions, corrections, outcomes, and datasets
-            into an inspectable operating system that compounds with use. Start with the business
-            process or start with the data; either way, prove what is defensible before automating it.
+            Automoat is a harness for running AI on consumer hardware and a moat builder for the
+            private workflows, corrections, and outcomes that generic models do not have. Every
+            run accounts for token cost, task quality, and whether the work crossed the device boundary.
           </p>
           <div class="hero-actions">
             <a class="button button-primary" href="#entry-points">Choose a starting path</a>
-            <a class="button button-secondary" href="#whole-record">See current initiative</a>
+            <a class="button button-secondary" href="#local-run">Inspect the run contract</a>
+            <a class="button button-secondary" href="#whole-record">See a moat proof</a>
             <a class="button button-secondary" href="/mvp.html">Open Proof Archive</a>
           </div>
 
           <div class="section" id="identity" data-product-identity>
             <div class="section-header">
-              <div class="kicker">Product identity</div>
+              <div class="kicker">One product · Two connected systems</div>
             </div>
-            <h2>The moat is operational memory</h2>
+            <h2>Local AI is the engine. Your private work is the advantage.</h2>
             <p>
-              Generic models do not have your corrections, exceptions, follow-ups, or outcomes.
-              Automoat captures that private workflow exhaust as structured, reusable evidence the
-              business owns, then shows whether it improves the work that matters.
+              Faster inference is useful only when it makes a valuable job cheaper or more private.
+              Proprietary data is useful only when it improves that job under a fixed evaluation.
+              Automoat keeps those two systems inside one measurable loop.
             </p>
             <div class="moat-grid">
               <div class="moat-card">
                 <span class="moat-index">1</span>
                 <div>
-                  <strong>Workflow-to-dataset capture</strong>
-                  <p>Repeated work becomes structured records: inputs, decisions, approvals, exceptions, follow-ups, and outcomes.</p>
+                  <strong>Local AI on hardware you control</strong>
+                  <p>Run supported models behind a loopback endpoint and compare runtimes, quantization, prompt caching, or speculative decoding without tying the product to one engine.</p>
                 </div>
               </div>
               <div class="moat-card">
                 <span class="moat-index">2</span>
                 <div>
-                  <strong>Human correction memory</strong>
-                  <p>Every accepted, rejected, or edited recommendation becomes a label that generic models and public datasets do not have.</p>
+                  <strong>A harness for building your moat</strong>
+                  <p>Turn repeated work into task packs, evals, corrections, and outcome-linked datasets, then prove whether that private context beats the generic baseline.</p>
                 </div>
               </div>
-              <div class="moat-card">
-                <span class="moat-index">3</span>
-                <div>
-                  <strong>Reusable eval contracts</strong>
-                  <p>Each domain has to prove the captured data improves predictions, routing, recommendations, or automation.</p>
-                </div>
+            </div>
+            <div class="artifact-grid" data-core-gates>
+              <div class="artifact-card">
+                <span class="artifact-label">Token economics</span>
+                Count prompt, completion, and total tokens; measure wall time and effective cost per
+                million tokens and per correct outcome. Faster is not cheaper until the receipt proves it.
               </div>
-              <div class="moat-card">
-                <span class="moat-index">4</span>
-                <div>
-                  <strong>Compounding operating system</strong>
-                  <p>Proprietary examples, edge cases, and outcome-linked playbooks accumulate into an advantage the team can inspect and reuse.</p>
-                </div>
+              <div class="artifact-card">
+                <span class="artifact-label">Privacy boundary</span>
+                Loopback is the default. Remote inference requires an explicit opt-in, and run receipts
+                keep raw prompts, targets, proprietary records, and predictions out of the artifact.
+              </div>
+              <div class="artifact-card">
+                <span class="artifact-label">Task lift</span>
+                Compare the same immutable task pack across a generic baseline and a moat-enhanced run.
+                If private context does not improve the chosen task, it has not earned production use.
               </div>
             </div>
           </div>
 
           <div class="section" id="entry-points" data-product-entry-points>
             <div class="section-header">
-              <div class="kicker">Two entry points · one product</div>
+              <div class="kicker">Two starting points · one loop</div>
             </div>
-            <h2>Start with the business or start with the data.</h2>
+            <h2>Start with the hardware or start with the work.</h2>
             <p>
-              Both paths end in the same place: an evidence-backed plan to discover, define, prove,
-              and operationalize a proprietary moat.
+              Both paths end in the same receipt: what ran, where it ran, how many tokens it used,
+              what it cost, what stayed private, and whether the business-specific system was better.
             </p>
             <div class="artifact-grid">
               <div class="artifact-card">
-                <span class="artifact-label">Business-first discovery</span>
-                Map recurring work, identify defensible workflow knowledge, and produce a data
-                collection, evaluation, and monetization plan before choosing the automation.
+                <span class="artifact-label">Hardware-first local run</span>
+                Bring a Mac, PC, or workstation. Pin a model and runtime, record the active inference
+                technique, run a bounded task pack, and learn the real token economics on that machine.
               </div>
               <div class="artifact-card">
-                <span class="artifact-label">Dataset-first build + eval</span>
-                Inspect local proprietary data, formulate the tasks it can improve, compare against
-                a generic baseline, and choose retrieval, adaptation, fine-tuning, or no deployment.
+                <span class="artifact-label">Moat-first business + data</span>
+                Map recurring work or inspect a local dataset, capture the decisions and corrections
+                that are actually proprietary, then test retrieval, adaptation, fine-tuning, or no deployment.
               </div>
             </div>
           </div>
@@ -1223,7 +1228,7 @@
                 <p>
                   Render runs Codex, GitHub records the work, and Vercel exposes the live stream.
                   This is inspectable development and runtime evidence for Automoat, not the product
-                  identity. It shows how bounded improvements are checked and recorded.
+                  identity or the local inference path. It shows how bounded improvements are checked and recorded.
                 </p>
               </div>
               <div class="terminal-facts" aria-label="Cockpit runtime facts">
@@ -1277,9 +1282,50 @@
         </div>
 
         <div class="content">
+          <div class="section" id="local-run">
+            <div class="section-header">
+              <div class="kicker">Current initiative · Local Run Receipt</div>
+            </div>
+            <h2>One receipt for speed, token cost, privacy, and task quality.</h2>
+            <p>
+              The first local-inference harness runs an immutable JSONL task pack against an
+              OpenAI-compatible model endpoint. It permits loopback endpoints by default, refuses
+              remote inference without an explicit opt-in, and records measurements without copying
+              raw business inputs or model outputs into the receipt.
+            </p>
+            <div class="artifact-grid">
+              <div class="artifact-card">
+                <span class="artifact-label">Measured, not marketed</span>
+                Prompt, completion, and total tokens sit beside wall time and end-to-end output
+                tokens per second. An optional compute-hour rate yields effective cost per million
+                tokens and per strict exact match.
+              </div>
+              <div class="artifact-card">
+                <span class="artifact-label">Reproducible boundary</span>
+                The task-pack digest, model identity, runtime, hardware description, and active
+                optimization travel with the result. A changed task pack cannot inherit an old comparison.
+              </div>
+              <div class="artifact-card">
+                <span class="artifact-label">Moat comparison</span>
+                A candidate run can compare with a baseline only when both receipts bind the same
+                task digest. The useful question is quality per token on the work your business owns.
+              </div>
+            </div>
+            <div class="hero-actions">
+              <a class="button button-primary" href="/README.md">Run the local harness</a>
+              <a class="button button-secondary" href="https://inco.ai/blog/dflash2/">Read the DFlash2 example</a>
+            </div>
+            <p class="footer-note">
+              DFlash2 is one example of the moving local-inference frontier, not a bundled Automoat
+              dependency and not a universal speed claim. The harness keeps speculative decoding,
+              quantization, caching, and future runtime techniques replaceable and proves each one
+              on the actual hardware and task pack.
+            </p>
+          </div>
+
           <div class="section" id="whole-record">
             <div class="section-header">
-              <div class="kicker">Current initiative · Released</div>
+              <div class="kicker">Released capability · Moat Builder</div>
             </div>
             <h2>Whole-Record Check</h2>
             <p>
@@ -1326,6 +1372,16 @@
             </div>
             <h2>What changed</h2>
             <div class="timeline">
+              <div class="timeline-item">
+                <div class="timeline-meta">2026-08-27</div>
+                <p>
+                  Recentered Automoat on its two connected systems: measurable local AI on consumer
+                  hardware and a harness that compounds proprietary work into a proved moat. Added
+                  the Local Run Receipt contract so token economics, the device boundary, runtime
+                  provenance, and task quality stay in the same artifact; Whole-Record Check remains
+                  a released Moat Builder capability rather than the product identity.
+                </p>
+              </div>
               <div class="timeline-item">
                 <div class="timeline-meta">2026-08-19</div>
                 <p>
