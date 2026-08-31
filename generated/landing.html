@@ -3,15 +3,15 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Automoat | Local AI that compounds your private advantage</title>
+    <title>Automoat | Put your local tokens to useful work</title>
     <meta
       name="description"
-      content="Run AI on consumer hardware you control, measure the token economics, and turn private workflows, corrections, and outcomes into a moat you can prove."
+      content="Choose a memory tier and turn recurring work into a bounded, verifiable operating plan for your local AI agent."
     />
-    <meta property="og:title" content="Automoat | Local AI that compounds your private advantage" />
+    <meta property="og:title" content="Automoat | Put your local tokens to useful work" />
     <meta
       property="og:description"
-      content="Run AI locally, account for every token, and build a measurable moat from the private work your business already creates."
+      content="Build a local-agent plan that matches your memory, recurring work, privacy boundary, and strongest verifier."
     />
     <style>
       :root {
@@ -1114,6 +1114,7 @@
         }
       }
     </style>
+    <link rel="stylesheet" href="/assets/moat-planner.css" />
   </head>
   <body>
     <main>
@@ -1124,99 +1125,345 @@
             <div class="brand-name">automoat</div>
           </a>
           <div class="nav-links">
-            <a href="#identity">Product</a>
-            <a href="#entry-points">Start here</a>
-            <a href="#local-run">Local run receipt</a>
-            <a href="#whole-record">Moat proof</a>
-            <a href="#terminal">Runtime evidence</a>
-            <a href="#release-notes">Release notes</a>
-            <a href="/mvp.html">Proof archive</a>
+            <a href="#planner">Planner</a>
+            <a href="#how-it-works">How it works</a>
+            <a href="#examples">Examples</a>
+            <a href="#local-run">Measurement</a>
+            <a href="#terminal">Evidence</a>
           </div>
         </div>
 
-        <div class="hero">
-          <div class="hero-brand">
-            <img class="hero-logo" src="assets/automoat-icon.svg" alt="" aria-hidden="true" />
-            <div class="eyebrow">Local AI · Private advantage</div>
-          </div>
-          <h1>Run AI locally. Build what only your business can know.</h1>
-          <p class="hero-copy">
-            Automoat is a harness for running AI on consumer hardware and a moat builder for the
-            private workflows, corrections, and outcomes that generic models do not have. Every
-            run accounts for token cost, task quality, and whether the work crossed the device boundary.
-          </p>
-          <div class="hero-actions">
-            <a class="button button-primary" href="#entry-points">Choose a starting path</a>
-            <a class="button button-secondary" href="#local-run">Inspect the run contract</a>
-            <a class="button button-secondary" href="#whole-record">See a moat proof</a>
-            <a class="button button-secondary" href="/mvp.html">Open Proof Archive</a>
-          </div>
-
-          <div class="section" id="identity" data-product-identity>
-            <div class="section-header">
-              <div class="kicker">One product · Two connected systems</div>
-            </div>
-            <h2>Local AI is the engine. Your private work is the advantage.</h2>
-            <p>
-              Faster inference is useful only when it makes a valuable job cheaper or more private.
-              Proprietary data is useful only when it improves that job under a fixed evaluation.
-              Automoat keeps those two systems inside one measurable loop.
-            </p>
-            <div class="moat-grid">
-              <div class="moat-card">
-                <span class="moat-index">1</span>
-                <div>
-                  <strong>Local AI on hardware you control</strong>
-                  <p>Run supported models behind a loopback endpoint and compare runtimes, quantization, prompt caching, or speculative decoding without tying the product to one engine.</p>
-                </div>
+        <div class="hero planner-hero" id="planner">
+          <div class="planner-hero-grid">
+            <div class="planner-intro">
+              <div class="hero-brand">
+                <img class="hero-logo" src="assets/automoat-icon.svg" alt="" aria-hidden="true" />
+                <div class="eyebrow">Local AI · Useful by design</div>
               </div>
-              <div class="moat-card">
-                <span class="moat-index">2</span>
+              <h1>Put your local tokens to useful work.</h1>
+              <p class="hero-copy">
+                Choose the memory you have—or want. Tell Automoat what repeats in your work.
+                It will build a bounded local-agent plan, or suggest a useful starting point if
+                you are beginning with spare compute and no moat idea yet.
+              </p>
+              <div class="planner-intro-actions">
+                <a class="button button-primary" href="#plan-builder">Build my local plan</a>
+                <button class="planner-text-button" type="button" data-planner-example>Load example answers</button>
+                <a class="planner-text-button" href="#how-it-works">See how Automoat decides</a>
+              </div>
+              <div class="planner-definition">
+                <span class="planner-definition-mark" aria-hidden="true">M</span>
                 <div>
-                  <strong>A harness for building your moat</strong>
-                  <p>Turn repeated work into task packs, evals, corrections, and outcome-linked datasets, then prove whether that private context beats the generic baseline.</p>
+                  <strong>What is a moat here?</strong><br />
+                  One recurring job, private context generic models do not have, an objective
+                  verifier, and recorded feedback that makes the job improve over time.
                 </div>
               </div>
             </div>
-            <div class="artifact-grid" data-core-gates>
-              <div class="artifact-card">
-                <span class="artifact-label">Token economics</span>
-                Count prompt, completion, and total tokens; measure wall time and effective cost per
-                million tokens and per correct outcome. Faster is not cheaper until the receipt proves it.
+
+            <div class="planner-card" id="plan-builder" data-moat-planner>
+              <div class="planner-card-header">
+                <span class="planner-card-label">Build your operating plan</span>
+                <span class="planner-step-count" data-planner-step-count>Step 1 of 4</span>
               </div>
-              <div class="artifact-card">
-                <span class="artifact-label">Privacy boundary</span>
-                Loopback is the default. Remote inference requires an explicit opt-in, and run receipts
-                keep raw prompts, targets, proprietary records, and predictions out of the artifact.
+              <div
+                class="planner-progress-track"
+                role="progressbar"
+                aria-label="Questionnaire progress"
+                aria-valuemin="1"
+                aria-valuemax="4"
+                aria-valuenow="1"
+              >
+                <div class="planner-progress-bar" data-planner-progress></div>
               </div>
-              <div class="artifact-card">
-                <span class="artifact-label">Task lift</span>
-                Compare the same immutable task pack across a generic baseline and a moat-enhanced run.
-                If private context does not improve the chosen task, it has not earned production use.
-              </div>
+
+              <form class="planner-form" data-planner-form novalidate>
+                <fieldset class="planner-step" data-planner-step data-step-name="hardware">
+                  <legend tabindex="-1">What should your local agent run on?</legend>
+                  <p class="planner-step-copy">Start with the machine decision. The plan will keep model size provisional until a real local benchmark exists.</p>
+
+                  <span class="planner-subquestion" id="hardware-intent-label">Your starting point</span>
+                  <div class="planner-choice-grid" role="group" aria-labelledby="hardware-intent-label">
+                    <label class="planner-choice">
+                      <input type="radio" name="hardwareIntent" value="existing" />
+                      <span class="planner-choice-body"><span class="planner-choice-title">Use my machine</span><span class="planner-choice-note">Plan around hardware you already own.</span></span>
+                    </label>
+                    <label class="planner-choice">
+                      <input type="radio" name="hardwareIntent" value="choose" />
+                      <span class="planner-choice-body"><span class="planner-choice-title">Help me choose</span><span class="planner-choice-note">Recommend a useful memory tier.</span></span>
+                    </label>
+                    <label class="planner-choice">
+                      <input type="radio" name="hardwareIntent" value="unknown" />
+                      <span class="planner-choice-body"><span class="planner-choice-title">I’m not sure yet</span><span class="planner-choice-note">Start with a conservative assumption.</span></span>
+                    </label>
+                  </div>
+
+                  <span class="planner-subquestion" id="platform-label">Hardware type</span>
+                  <div class="planner-choice-grid" role="group" aria-labelledby="platform-label">
+                    <label class="planner-choice">
+                      <input type="radio" name="platform" value="apple_silicon" />
+                      <span class="planner-choice-body"><span class="planner-choice-title">Apple Silicon</span><span class="planner-choice-note">Unified memory.</span></span>
+                    </label>
+                    <label class="planner-choice">
+                      <input type="radio" name="platform" value="nvidia" />
+                      <span class="planner-choice-body"><span class="planner-choice-title">NVIDIA GPU</span><span class="planner-choice-note">VRAM plus system RAM.</span></span>
+                    </label>
+                    <label class="planner-choice">
+                      <input type="radio" name="platform" value="cpu_other" />
+                      <span class="planner-choice-body"><span class="planner-choice-title">CPU or other</span><span class="planner-choice-note">System memory and measured speed.</span></span>
+                    </label>
+                    <label class="planner-choice">
+                      <input type="radio" name="platform" value="unknown" />
+                      <span class="planner-choice-body"><span class="planner-choice-title">Not sure</span><span class="planner-choice-note">Keep the runtime assumption open.</span></span>
+                    </label>
+                  </div>
+
+                  <span class="planner-subquestion" id="memory-label">Memory available or desired</span>
+                  <div class="planner-choice-grid memory-grid" role="group" aria-labelledby="memory-label">
+                    <label class="planner-choice"><input type="radio" name="memoryGb" value="8" /><span class="planner-choice-body"><span class="planner-choice-title">8 GB</span><span class="planner-choice-note">Tiny models, tight jobs.</span></span></label>
+                    <label class="planner-choice"><input type="radio" name="memoryGb" value="16" /><span class="planner-choice-body"><span class="planner-choice-title">16 GB</span><span class="planner-choice-note">Light local work.</span></span></label>
+                    <label class="planner-choice"><input type="radio" name="memoryGb" value="24" /><span class="planner-choice-body"><span class="planner-choice-title">24 GB</span><span class="planner-choice-note">A common compact tier.</span></span></label>
+                    <label class="planner-choice"><input type="radio" name="memoryGb" value="32" /><span class="planner-choice-body"><span class="planner-choice-title">32 GB</span><span class="planner-choice-note">Balanced starting tier.</span></span></label>
+                    <label class="planner-choice"><input type="radio" name="memoryGb" value="48" /><span class="planner-choice-body"><span class="planner-choice-title">48 GB</span><span class="planner-choice-note">Mid-size model headroom.</span></span></label>
+                    <label class="planner-choice"><input type="radio" name="memoryGb" value="64" /><span class="planner-choice-body"><span class="planner-choice-title">64 GB</span><span class="planner-choice-note">More model headroom.</span></span></label>
+                    <label class="planner-choice"><input type="radio" name="memoryGb" value="96" /><span class="planner-choice-body"><span class="planner-choice-title">96 GB</span><span class="planner-choice-note">Large local headroom.</span></span></label>
+                    <label class="planner-choice"><input type="radio" name="memoryGb" value="128" /><span class="planner-choice-body"><span class="planner-choice-title">128+ GB</span><span class="planner-choice-note">Maximum local headroom.</span></span></label>
+                    <label class="planner-choice"><input type="radio" name="memoryGb" value="recommend" /><span class="planner-choice-body"><span class="planner-choice-title">Recommend it</span><span class="planner-choice-note">Match memory to the proposed work.</span></span></label>
+                  </div>
+                  <p class="planner-inline-note" data-memory-guidance>Choose the memory available to inference. Automoat will benchmark the actual machine before promising throughput.</p>
+                </fieldset>
+
+                <fieldset class="planner-step" data-planner-step data-step-name="schedule" hidden>
+                  <legend tabindex="-1">When can it spend tokens?</legend>
+                  <p class="planner-step-copy">Available hours and a resource ceiling become a measured token budget after calibration.</p>
+                  <span class="planner-subquestion" id="schedule-label">Run window</span>
+                  <div class="planner-choice-grid" role="group" aria-labelledby="schedule-label">
+                    <label class="planner-choice"><input type="radio" name="schedule" value="overnight" /><span class="planner-choice-body"><span class="planner-choice-title">Overnight</span><span class="planner-choice-note">A predictable off-hours window.</span></span></label>
+                    <label class="planner-choice"><input type="radio" name="schedule" value="idle" /><span class="planner-choice-body"><span class="planner-choice-title">When idle</span><span class="planner-choice-note">Use otherwise-unused capacity.</span></span></label>
+                    <label class="planner-choice"><input type="radio" name="schedule" value="quiet" /><span class="planner-choice-body"><span class="planner-choice-title">While I work</span><span class="planner-choice-note">Stay inside a quiet ceiling.</span></span></label>
+                    <label class="planner-choice"><input type="radio" name="schedule" value="custom" /><span class="planner-choice-body"><span class="planner-choice-title">Custom window</span><span class="planner-choice-note">Bring your own scheduler later.</span></span></label>
+                  </div>
+                  <span class="planner-subquestion">Daily capacity</span>
+                  <div class="planner-fields">
+                    <label class="planner-field">
+                      <span>Hours available per day</span>
+                      <input type="number" name="hoursPerDay" min="1" max="24" step="1" value="8" inputmode="numeric" />
+                    </label>
+                  </div>
+                  <span class="planner-subquestion" id="resource-label">Resource posture</span>
+                  <div class="planner-choice-grid memory-grid" role="group" aria-labelledby="resource-label">
+                    <label class="planner-choice"><input type="radio" name="resourceCeiling" value="25" /><span class="planner-choice-body"><span class="planner-choice-title">Quiet · 25%</span><span class="planner-choice-note">Protect foreground work.</span></span></label>
+                    <label class="planner-choice"><input type="radio" name="resourceCeiling" value="60" /><span class="planner-choice-body"><span class="planner-choice-title">Balanced · 60%</span><span class="planner-choice-note">Useful work with headroom.</span></span></label>
+                    <label class="planner-choice"><input type="radio" name="resourceCeiling" value="90" /><span class="planner-choice-body"><span class="planner-choice-title">Max useful · 90%</span><span class="planner-choice-note">Spend idle compute aggressively.</span></span></label>
+                  </div>
+                </fieldset>
+
+                <fieldset class="planner-step" data-planner-step data-step-name="moat" hidden>
+                  <legend tabindex="-1">What should get better every week?</legend>
+                  <p class="planner-step-copy">Think about what you repeatedly review, decide, fix, summarize, or create. You can bring an idea or ask for one.</p>
+                  <span class="planner-subquestion" id="categories-label">Recurring work categories</span>
+                  <div class="planner-choice-grid memory-grid" role="group" aria-labelledby="categories-label">
+                    <label class="planner-choice"><input type="checkbox" name="workCategories" value="code" /><span class="planner-choice-body"><span class="planner-choice-title">Code</span><span class="planner-choice-note">Maintenance and patches.</span></span></label>
+                    <label class="planner-choice"><input type="checkbox" name="workCategories" value="research" /><span class="planner-choice-body"><span class="planner-choice-title">Research</span><span class="planner-choice-note">Sources and writing.</span></span></label>
+                    <label class="planner-choice"><input type="checkbox" name="workCategories" value="documents" /><span class="planner-choice-body"><span class="planner-choice-title">Documents</span><span class="planner-choice-note">Private knowledge.</span></span></label>
+                    <label class="planner-choice"><input type="checkbox" name="workCategories" value="operations" /><span class="planner-choice-body"><span class="planner-choice-title">Operations</span><span class="planner-choice-note">Records and exceptions.</span></span></label>
+                    <label class="planner-choice"><input type="checkbox" name="workCategories" value="creative" /><span class="planner-choice-body"><span class="planner-choice-title">Creative</span><span class="planner-choice-note">Drafts shaped by your taste.</span></span></label>
+                    <label class="planner-choice"><input type="checkbox" name="workCategories" value="personal" /><span class="planner-choice-body"><span class="planner-choice-title">Personal</span><span class="planner-choice-note">Local workflow chores.</span></span></label>
+                  </div>
+                  <span class="planner-subquestion" id="moat-mode-label">Do you already have an idea?</span>
+                  <div class="planner-choice-grid" role="group" aria-labelledby="moat-mode-label">
+                    <label class="planner-choice"><input type="radio" name="moatMode" value="shape" /><span class="planner-choice-body"><span class="planner-choice-title">Shape my idea</span><span class="planner-choice-note">Turn it into a measurable loop.</span></span></label>
+                    <label class="planner-choice"><input type="radio" name="moatMode" value="suggest" /><span class="planner-choice-body"><span class="planner-choice-title">Suggest one</span><span class="planner-choice-note">Rank useful ideas for my setup.</span></span></label>
+                  </div>
+                  <label class="planner-disclosure planner-ai-choice">
+                    <input type="checkbox" name="useHostedPlanner" checked />
+                    <span><strong>Tailor with hosted AI.</strong> On Generate, the questionnaire answers below are sent to a hosted model. No files or paths are sent. Uncheck this for a browser-only rule-based starter, and do not paste secrets.</span>
+                  </label>
+                  <div class="planner-fields" style="margin-top: 16px">
+                    <label class="planner-field planner-field-wide" data-idea-field hidden>
+                      <span>I want my local agent to…</span>
+                      <textarea name="idea" maxlength="1200" placeholder="Review my repositories overnight and propose one tested improvement"></textarea>
+                    </label>
+                    <label class="planner-field">
+                      <span>Private context available</span>
+                      <textarea name="privateContext" maxlength="600" placeholder="Describe the kind of context—do not paste it"></textarea>
+                    </label>
+                    <label class="planner-field">
+                      <span>What does a useful result look like?</span>
+                      <textarea name="usefulResult" maxlength="600" placeholder="A reviewed patch, cited brief, or ranked exception queue"></textarea>
+                    </label>
+                  </div>
+                </fieldset>
+
+                <fieldset class="planner-step" data-planner-step data-step-name="boundaries" hidden>
+                  <legend tabindex="-1">What are the boundaries?</legend>
+                  <p class="planner-step-copy">Pick the strongest practical verifier and the least authority the job needs. You can change these before anything runs locally.</p>
+                  <div class="planner-fields">
+                    <label class="planner-field">
+                      <span>What should improve?</span>
+                      <select name="goal">
+                        <option value="">Choose a goal</option>
+                        <option value="time">Time saved</option>
+                        <option value="quality">Quality and reliability</option>
+                        <option value="revenue">Revenue-supporting work</option>
+                        <option value="knowledge">Private knowledge reuse</option>
+                        <option value="performance">Verified value per local token</option>
+                      </select>
+                    </label>
+                    <label class="planner-field">
+                      <span>Future local workload network</span>
+                      <select name="network">
+                        <option value="">Choose a boundary</option>
+                        <option value="loopback_only">Local and loopback only</option>
+                        <option value="local_plus_readonly_web">Local plus read-only web research</option>
+                        <option value="remote_opt_in">Explicit remote fallback allowed</option>
+                      </select>
+                    </label>
+                    <label class="planner-field">
+                      <span>Autonomy</span>
+                      <select name="autonomy">
+                        <option value="">Choose an autonomy level</option>
+                        <option value="recommend">Recommend only</option>
+                        <option value="draft">Create drafts and patches</option>
+                        <option value="bounded_execute">Execute bounded changes after checks</option>
+                      </select>
+                    </label>
+                    <label class="planner-field">
+                      <span>Primary verifier</span>
+                      <select name="verifier">
+                        <option value="">Choose a verifier</option>
+                        <option value="tests">Tests and checks</option>
+                        <option value="citations">Citations and source coverage</option>
+                        <option value="schema">Schema validation</option>
+                        <option value="accepted_edits">Accepted edits</option>
+                        <option value="known_outcomes">Known outcomes</option>
+                        <option value="manual">Manual approval</option>
+                      </select>
+                    </label>
+                  </div>
+                  <div class="planner-disclosure">
+                    <span aria-hidden="true">↗</span>
+                    <div><strong>Planning boundary.</strong> If “Tailor with hosted AI” is enabled, these planning answers are sent to a hosted model. If it is disabled, the starter stays in this browser. No files are uploaded, and the future local workloads follow the network boundary above.</div>
+                  </div>
+                </fieldset>
+
+                <p class="planner-error" id="planner-error" data-planner-error role="alert"></p>
+                <div class="planner-actions">
+                  <button class="planner-button planner-button-secondary" type="button" data-planner-back hidden>Back</button>
+                  <div class="planner-generation-status" data-planner-generation-status hidden aria-live="polite">
+                    <span class="planner-spinner" aria-hidden="true"></span>
+                    Matching useful work to a verifier…
+                  </div>
+                  <button class="planner-button planner-button-secondary" type="button" data-planner-cancel hidden>Cancel</button>
+                  <button class="planner-button planner-button-primary" type="button" data-planner-next>Continue</button>
+                  <button class="planner-button planner-button-primary" type="submit" data-planner-generate hidden>Generate my operating plan</button>
+                </div>
+              </form>
+
+              <noscript>
+                <p class="planner-result-notice">This planner needs JavaScript. A safe manual starter is: choose a memory ceiling, freeze 10 representative tasks, run a 15-minute local calibration, and spend more tokens only when an objective verifier passes.</p>
+              </noscript>
+
+              <section class="planner-result" data-planner-result hidden tabindex="-1" aria-live="polite">
+                <div class="planner-result-header">
+                  <span class="planner-card-label">Your local token operating plan</span>
+                  <span class="planner-result-badge" data-plan-mode>Ready</span>
+                </div>
+                <h2 data-plan-title>Your local token operating plan</h2>
+                <p class="planner-result-summary" data-plan-summary>Start small. Earn the right to spend more tokens.</p>
+                <p class="planner-result-notice" data-plan-notice></p>
+
+                <div class="planner-plan-grid">
+                  <div class="planner-plan-card">
+                    <span class="planner-plan-label">Hardware envelope</span>
+                    <h3><span data-plan-memory>—</span> recommended</h3>
+                    <p data-plan-memory-range>—</p>
+                    <p data-plan-hardware-reason></p>
+                    <div class="planner-hardware-facts">
+                      <div class="planner-hardware-fact"><strong data-plan-model>—</strong><span>model-size band</span></div>
+                      <div class="planner-hardware-fact"><strong data-plan-concurrency>—</strong><span>safe concurrency</span></div>
+                      <div class="planner-hardware-fact"><strong data-plan-context>—</strong><span>context target</span></div>
+                    </div>
+                  </div>
+                  <div class="planner-plan-card">
+                    <span class="planner-plan-label">Proposed moat</span>
+                    <h3 data-plan-moat-title>—</h3>
+                    <p><strong>Recurring job:</strong> <span data-plan-moat-job>—</span></p>
+                    <p><strong>Private context:</strong> <span data-plan-moat-context>—</span></p>
+                    <p><strong>Artifact:</strong> <span data-plan-moat-artifact>—</span></p>
+                    <p><strong>Verify:</strong> <span data-plan-moat-verifier>—</span></p>
+                    <p><strong>Metric:</strong> <span data-plan-metric>—</span></p>
+                  </div>
+                  <div class="planner-plan-card">
+                    <span class="planner-plan-label">Token allocation</span>
+                    <ul class="planner-allocation" data-plan-allocation></ul>
+                  </div>
+                  <div class="planner-plan-card">
+                    <span class="planner-plan-label">Operating boundaries</span>
+                    <p><strong>Window:</strong> <span data-plan-boundary-schedule>—</span></p>
+                    <p><strong>Capacity:</strong> <span data-plan-boundary-capacity>—</span></p>
+                    <p><strong>Network:</strong> <span data-plan-boundary-network>—</span></p>
+                    <p><strong>Autonomy:</strong> <span data-plan-boundary-autonomy>—</span></p>
+                    <p><strong>Primary verifier:</strong> <span data-plan-boundary-verifier>—</span></p>
+                  </div>
+                  <div class="planner-plan-card">
+                    <span class="planner-plan-label">First three bounded jobs</span>
+                    <ul class="planner-queue" data-plan-queue></ul>
+                  </div>
+                  <div class="planner-plan-card">
+                    <span class="planner-plan-label">Promotion scorecard</span>
+                    <p><strong>Primary metric:</strong> <span data-plan-scorecard-metric>—</span></p>
+                    <p><strong>Promote when:</strong> <span data-plan-promotion>—</span></p>
+                    <p><strong>Stop rule:</strong> <span data-plan-stop>—</span></p>
+                  </div>
+                  <div class="planner-plan-card">
+                    <span class="planner-plan-label">First-week experiment</span>
+                    <ol class="planner-week" data-plan-week></ol>
+                  </div>
+                  <div class="planner-plan-card planner-plan-card-wide" data-plan-alternatives-card>
+                    <span class="planner-plan-label">Other moat ideas</span>
+                    <ul class="planner-alternatives" data-plan-alternatives></ul>
+                  </div>
+                  <div class="planner-plan-card planner-plan-card-wide">
+                    <span class="planner-plan-label">Privacy boundary</span>
+                    <p data-plan-privacy>—</p>
+                  </div>
+                </div>
+                <div class="planner-result-actions">
+                  <button class="planner-button planner-button-primary" type="button" data-plan-download>Download plan.json</button>
+                  <button class="planner-button planner-button-secondary" type="button" data-plan-copy>Copy plan JSON</button>
+                  <button class="planner-button planner-button-secondary" type="button" data-plan-edit>Edit answers</button>
+                </div>
+                <p class="planner-action-status" data-plan-action-status aria-live="polite"></p>
+              </section>
             </div>
           </div>
 
-          <div class="section" id="entry-points" data-product-entry-points>
-            <div class="section-header">
-              <div class="kicker">Two starting points · one loop</div>
+          <div class="planner-how" id="how-it-works">
+            <div class="planner-how-card">
+              <span class="moat-index">1</span>
+              <strong>Calibrate the machine</strong>
+              <p>Memory sets a safe model band. A short local receipt measures real speed, token use, and task quality before the budget expands.</p>
             </div>
-            <h2>Start with the hardware or start with the work.</h2>
-            <p>
-              Both paths end in the same receipt: what ran, where it ran, how many tokens it used,
-              what it cost, what stayed private, and whether the business-specific system was better.
-            </p>
+            <div class="planner-how-card">
+              <span class="moat-index">2</span>
+              <strong>Choose a compounding job</strong>
+              <p>Automoat joins recurring work with private context, an artifact, and a verifier. If any piece is missing, it is not a moat yet.</p>
+            </div>
+            <div class="planner-how-card">
+              <span class="moat-index">3</span>
+              <strong>Spend, verify, promote</strong>
+              <p>Useful work gets a bounded queue. Verification and corrections earn future token budget; unverified activity stops early.</p>
+            </div>
+          </div>
+
+          <div class="section" id="examples">
+            <div class="section-header"><div class="kicker">Useful starting points</div></div>
+            <h2>A moat can start as one job that gets measurably better.</h2>
             <div class="artifact-grid">
-              <div class="artifact-card">
-                <span class="artifact-label">Hardware-first local run</span>
-                Bring a Mac, PC, or workstation. Pin a model and runtime, record the active inference
-                technique, run a bounded task pack, and learn the real token economics on that machine.
-              </div>
-              <div class="artifact-card">
-                <span class="artifact-label">Moat-first business + data</span>
-                Map recurring work or inspect a local dataset, capture the decisions and corrections
-                that are actually proprietary, then test retrieval, adaptation, fine-tuning, or no deployment.
-              </div>
+              <div class="artifact-card"><span class="artifact-label">Local token yield lab</span>Test model, prompt, context, and task combinations; promote the route with the best held-out value per token.</div>
+              <div class="artifact-card"><span class="artifact-label">Nightly codebase caretaker</span>Turn failing checks and explicit backlog signals into one tested patch or an evidence-backed investigation.</div>
+              <div class="artifact-card"><span class="artifact-label">Workflow exception finder</span>Review recurring records, rank exceptions, and propose the next bounded action against known outcomes.</div>
             </div>
           </div>
 
@@ -1372,6 +1619,15 @@
             </div>
             <h2>What changed</h2>
             <div class="timeline">
+              <div class="timeline-item">
+                <div class="timeline-meta">2026-08-30</div>
+                <p>
+                  Turned the landing page into the product: a four-step local-token planner that
+                  matches memory, idle capacity, recurring work, privacy, autonomy, and verification.
+                  It can shape an existing moat idea or suggest one, returns a downloadable operating
+                  plan, and falls back to a private rule-based starter when the hosted planner is unavailable.
+                </p>
+              </div>
               <div class="timeline-item">
                 <div class="timeline-meta">2026-08-27</div>
                 <p>
@@ -1824,17 +2080,17 @@
               <div class="truth good">
                 <h3>Built</h3>
                 <p>
-                  Broad product framing, a narrow permit-data proof wedge, artifact contracts,
-                  deterministic writers, two discovery variants, three normalized Dallas dataset paths,
-                  three eval scaffolds, and a shared unattended loop for keeping generated status surfaces current.
+                  An interactive operating-plan questionnaire, bounded hosted planning synthesis,
+                  a browser-only deterministic fallback, a narrow permit-data proof wedge, artifact
+                  contracts, local run receipts, and an unattended evidence loop.
                 </p>
               </div>
               <div class="truth warn">
                 <h3>Not built</h3>
                 <p>
-                  No automatic end-to-end moat builder yet, no production workflow runner, no live
-                  baseline-versus-moat benchmarking, no dynamic local app route, and no evidence yet
-                  that the permit-data wedge generalizes into a durable data moat.
+                  The plan does not yet install or operate a local model automatically. There is no
+                  production workflow runner or live baseline-versus-moat benchmark, and no evidence
+                  yet that the permit-data wedge generalizes into a durable data moat.
                 </p>
               </div>
             </div>
@@ -1878,6 +2134,7 @@
         </div>
       </div>
     </main>
+    <script src="/assets/moat-planner.js" defer></script>
     <script>
       (() => {
         const panels = Array.from(document.querySelectorAll("[data-bridge-url]"));
@@ -2030,8 +2287,24 @@
           }
         }
 
-        refreshBridge();
-        window.setInterval(refreshBridge, 3000);
+        let pollingTimer = null;
+        function beginBridgePolling() {
+          if (pollingTimer !== null) return;
+          refreshBridge();
+          pollingTimer = window.setInterval(refreshBridge, 3000);
+        }
+
+        const terminalStage = document.getElementById("terminal");
+        if (terminalStage && "IntersectionObserver" in window) {
+          const observer = new IntersectionObserver((entries) => {
+            if (!entries.some((entry) => entry.isIntersecting)) return;
+            observer.disconnect();
+            beginBridgePolling();
+          }, { rootMargin: "240px" });
+          observer.observe(terminalStage);
+        } else {
+          beginBridgePolling();
+        }
       })();
     </script>
   </body>

@@ -13,6 +13,12 @@ Neither half is sufficient alone. Faster local inference is useful only when it 
 
 Token cost and privacy are core product gates, not settings added later. A run should disclose prompt, completion, and total tokens; end-to-end time; effective compute cost when a rate is supplied; whether any request left the device; and whether the result improved the chosen task. Raw business inputs and model outputs do not belong in the aggregate run receipt.
 
+## Landing-Page Planner
+
+The root page is an interactive four-step product flow. It collects the machine or desired memory tier, available compute window, recurring work or moat idea, and the network, autonomy, and verification boundaries. It then returns a downloadable local-token operating plan with a provisional model band, token allocation, bounded first jobs, promotion gate, and stop rule.
+
+The hosted model receives questionnaire answers only and is used to tailor the plan; it does not receive local files or paths. The page tells users not to paste secrets and falls back to a deterministic browser-generated starter if the hosted planner does not return. Hardware fit and throughput remain provisional until the local run receipt measures the actual machine.
+
 ## Product Entry Points
 
 - **Hardware-first local run:** pin a model, runtime, hardware profile, and optimization; execute an immutable task pack on a loopback endpoint; and measure tokens, time, effective cost, privacy boundary, and strict task quality.
