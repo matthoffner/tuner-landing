@@ -42,6 +42,7 @@ class ProductIdentitySurfaceTest(unittest.TestCase):
             'id="examples"',
             'id="terminal"',
             'id="local-run"',
+            'id="private-workload-fit"',
             'id="whole-record"',
             'id="release-notes"',
         ]
@@ -58,7 +59,14 @@ class ProductIdentitySurfaceTest(unittest.TestCase):
         self.assertIn("Prompt, completion, and total tokens", local_run_text)
         self.assertIn("refuses remote inference without an explicit opt-in", local_run_text)
 
-        whole_record = self.html[positions[5]:positions[6]]
+        fit_card = self.html[positions[5]:positions[6]]
+        self.assertIn("Local Run Receipt capability · Private Workload Fit", fit_card)
+        self.assertIn("observed sequential task pack", fit_card)
+        self.assertIn("cannot establish parallel capacity", fit_card)
+        self.assertIn("not a listener or telemetry audit", fit_card)
+        self.assertIn("never starts a model or agent", fit_card)
+
+        whole_record = self.html[positions[6]:positions[7]]
         self.assertIn("Released capability · Moat Builder", whole_record)
         self.assertIn("Whole-Record Check", whole_record)
         self.assertIn("Dallas validation set", whole_record)
@@ -163,6 +171,10 @@ class ProductIdentitySurfaceTest(unittest.TestCase):
     def test_public_release_notes_record_the_identity_correction(self) -> None:
         release_notes_start = self.html.index('id="release-notes"')
         release_notes = self.html[release_notes_start:]
+        self.assertIn("2026-09-19", release_notes)
+        self.assertIn("Added Private Workload Fit beneath Local Run Receipt", release_notes)
+        self.assertIn("one observed sequential task pack", release_notes)
+        self.assertIn("does not infer parallel capacity", release_notes)
         self.assertIn("2026-08-27", release_notes)
         self.assertIn("measurable local AI on consumer", release_notes)
         self.assertIn("Local Run Receipt contract", release_notes)
@@ -174,10 +186,12 @@ class ProductIdentitySurfaceTest(unittest.TestCase):
         local_ai = self.readme.index("Local AI on consumer hardware")
         moat_harness = self.readme.index("A harness for building the user's moat")
         local_receipt = self.readme.index("Current Initiative: Local Run Receipt")
+        private_fit = self.readme.index("Subordinate capability: Private Workload Fit")
         whole_record = self.readme.index("Released Moat Builder Capability: Whole-Record Check")
         self.assertLess(local_ai, local_receipt)
         self.assertLess(moat_harness, local_receipt)
-        self.assertLess(local_receipt, whole_record)
+        self.assertLess(local_receipt, private_fit)
+        self.assertLess(private_fit, whole_record)
         self.assertIn("Token cost and privacy are core product gates", self.readme)
         self.assertIn("not Automoat's product identity", self.readme)
 

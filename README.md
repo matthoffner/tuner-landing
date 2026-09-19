@@ -34,6 +34,12 @@ The receipt binds the task-pack digest to model, runtime, hardware, and optimiza
 
 Techniques such as speculative decoding, quantization, prompt caching, and KV-cache optimization remain replaceable. [DFlash2](https://inco.ai/blog/dflash2/) is a current example of how the local-inference floor can move; it is not bundled here, it does not reduce token count by itself, and Automoat makes no speed claim until a specific model/runtime/hardware/task combination has its own receipt.
 
+### Subordinate capability: Private Workload Fit
+
+`scripts/plan_local_workload.py` turns one existing Local Run Receipt and a frozen human policy into a content-free, human-readable decision card: `fit`, `not_fit`, or `unmeasured` for that **observed sequential task pack only**. It checks exact task digest, strict-match quality, measured wall time, estimated compute cost from an operator-supplied rate, and loopback endpoint address scope. It never calls a model or network, installs a runtime, changes the source receipt, authorizes work, or creates a WIP/global lock.
+
+The v1 receipt cannot prove parallel capacity, peak memory, cache reuse, or no egress. Asking for any of those returns `unmeasured` unless a known policy miss already yields `not_fit`; a loopback URL is not a private listener or telemetry audit. [Contract and policy example](./docs/private-workload-fit.md). Splash and every other runtime remain replaceable, unmeasured candidates until an eligible machine and a frozen Automoat job produce their own valid receipts.
+
 ## Released Moat Builder Capability: Whole-Record Check
 
 Whole-Record Check is one released application of that core loop. It provides a backend-neutral check for the moment before a recommendation becomes an operator action. It compares the candidate answer with one immutable, bounded case snapshot. Agreement produces a Coverage Receipt; a material action or evidence mismatch produces an Evidence Conflict card with stable source IDs and existing correction-ledger context.
@@ -62,6 +68,7 @@ The current validation is deliberately narrow: 30 versioned Dallas residential-e
 - Auto-publish helper: `./scripts/codex-publish.sh ["commit message"]`
 - MVP loop runner: `python3 scripts/run_mvp_loop.py --iterations 3 --interval 5`
 - Local AI eval receipt: `python3 scripts/run_local_moat_eval.py --url http://127.0.0.1:8080 --tasks <tasks.jsonl> --receipt <receipt.json> --runtime <runtime> --hardware <hardware> --model <model>`
+- Private Workload Fit card: `python3 scripts/plan_local_workload.py --receipt <receipt.json> --policy <policy.json> [--output-prefix <new-prefix>]`
 - Autonomous Codex loop runner: `python3 scripts/run_autonomous_agent_loop.py --iterations 1 --interval 300`
 - Loop status JSON: `.automoat/state/mvp-loop-status.json` includes `artifacts.import_pipeline.execution_readiness` from `generated/pipeline/dallas-import-pipeline-summary-v1/summary.json`, so local cockpit readers can see Dallas import readiness without reparsing the pipeline artifact.
 - MVP cockpit server: `python3 scripts/serve_mvp_cockpit.py --auto-start --loop-mode agent --interval 300 --port 4174`

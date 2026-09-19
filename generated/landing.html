@@ -1570,6 +1570,43 @@
             </p>
           </div>
 
+          <div class="section" id="private-workload-fit">
+            <div class="section-header">
+              <div class="kicker">Local Run Receipt capability · Private Workload Fit</div>
+            </div>
+            <h2>Know if this run met your work's limits.</h2>
+            <p>
+              Set the task-pack digest and your quality, time, and estimated-cost limits first.
+              Automoat reads an existing content-free run receipt and returns a short decision
+              card: fit, not fit, or unmeasured for that observed sequential task pack. You see
+              the exact reason and the next bounded measurement, not another runtime leaderboard.
+            </p>
+            <div class="artifact-grid">
+              <div class="artifact-card">
+                <span class="artifact-label">What was observed</span>
+                Strict task matches, measured sequential wall time, operator-rate estimated cost,
+                and whether the request addressed a loopback endpoint.
+              </div>
+              <div class="artifact-card">
+                <span class="artifact-label">What stays unknown</span>
+                A sequential receipt cannot establish parallel capacity, peak memory, cache reuse,
+                or verified no egress. Loopback address scope is not a listener or telemetry audit.
+              </div>
+              <div class="artifact-card">
+                <span class="artifact-label">Your decision remains yours</span>
+                The card never starts a model or agent, chooses a runtime, downloads weights, or
+                grants authority. Any runtime speed claim still needs its own eligible-machine proof.
+              </div>
+            </div>
+            <div class="hero-actions">
+              <a class="button button-primary" href="/docs/private-workload-fit.md">Read the policy and CLI contract</a>
+            </div>
+            <p class="footer-note">
+              A fit result applies only to the supplied receipt and frozen policy. It is not a
+              general model benchmark, a privacy guarantee, or an autonomous work permission.
+            </p>
+          </div>
+
           <div class="section" id="whole-record">
             <div class="section-header">
               <div class="kicker">Released capability · Moat Builder</div>
@@ -1619,6 +1656,15 @@
             </div>
             <h2>What changed</h2>
             <div class="timeline">
+              <div class="timeline-item">
+                <div class="timeline-meta">2026-09-19</div>
+                <p>
+                  Added Private Workload Fit beneath Local Run Receipt: a content-free decision
+                  card that checks one observed sequential task pack against a frozen human policy.
+                  It reports fit, not fit, or unmeasured with the exact reason and next measurement;
+                  it does not infer parallel capacity, memory, cache reuse, or verified no egress.
+                </p>
+              </div>
               <div class="timeline-item">
                 <div class="timeline-meta">2026-08-30</div>
                 <p>
